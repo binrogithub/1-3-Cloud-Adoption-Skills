@@ -16,3 +16,7 @@ This use case defines the core security baseline required for cloud adoption, in
 - Control mapping and hardening plan
 - Audit and compliance checklist
 - Risk findings and remediation actions
+
+## Included Skills
+
+- [CFW Finance Skill](./CFW-Finance-Skill/README.md): Reuse a financial-industry security foundation skill for deploying and validating Huawei Cloud Firewall with compliance-oriented controls.
