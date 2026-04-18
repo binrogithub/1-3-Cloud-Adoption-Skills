@@ -16,3 +16,7 @@ This use case covers migration and modernization paths for enterprise databases,
 - Migration architecture and tooling plan
 - Cutover and rollback plan
 - Data validation and performance checklist
+
+## Included Skills
+
+- [GaussDB Adaptation Skill](./GaussDB-Adaptation-Skill/README.md): Reuse a database migration skill for adapting SQL Server or PostgreSQL workloads to Huawei GaussDB and openGauss-compatible environments.
