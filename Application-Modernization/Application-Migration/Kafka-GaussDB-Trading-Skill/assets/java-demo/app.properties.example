@@ -1,0 +1,16 @@
+app.topic.request=trade.request
+app.topic.processed=trade.processed
+app.consumer.group=trading-demo-consumer
+
+kafka.bootstrap.servers=broker1:9093,broker2:9093,broker3:9093
+kafka.security.protocol=SASL_SSL
+kafka.sasl.mechanism=SCRAM-SHA-512
+kafka.sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username="replace-me" password="replace-me";
+kafka.ssl.truststore.location=/path/to/client.truststore.jks
+kafka.ssl.truststore.password=dms@kafka
+kafka.ssl.endpoint.identification.algorithm=
+
+db.driver=com.huawei.opengauss.jdbc.Driver
+db.url=jdbc:opengauss://db-host:8000/postgres
+db.user=app_user
+db.password=replace-me

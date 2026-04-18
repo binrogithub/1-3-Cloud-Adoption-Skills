@@ -16,3 +16,7 @@ This use case focuses on moving applications to Huawei Cloud with the right bala
 - Dependency map
 - Migration approach recommendation
 - Transformation backlog and plan
+
+## Included Skills
+
+- [Kafka GaussDB Trading Skill](./Kafka-GaussDB-Trading-Skill/README.md): Reuse a deployable Huawei Cloud application migration skill for high-frequency transaction systems built on DMS for Kafka and GaussDB.
