@@ -16,3 +16,7 @@ This use case focuses on migrating or upgrading large-scale data platforms, incl
 - Target platform architecture
 - Upgrade or migration roadmap
 - Validation and cutover checklist
+
+## Included Skills
+
+- [MRS DWS Finance Skill](./MRS-DWS-Finance-Skill/README.md): Reuse a financial analytics migration skill for building OBS, MRS, and DWS big-data pipelines on Huawei Cloud.
