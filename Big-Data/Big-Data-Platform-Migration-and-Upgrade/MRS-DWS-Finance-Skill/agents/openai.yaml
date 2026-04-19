@@ -1,0 +1,4 @@
+interface:
+  display_name: "MRS-DWS Finance Risk Control"
+  short_description: "Configure OBS+MRS+DWS for financial risk control and regulatory compliance"
+  default_prompt: "Use $mrs-dws-finance-skill to set up a financial risk control pipeline on Huawei Cloud with OBS storage, MRS Spark analysis, and DWS data warehousing, then generate regulatory compliance reports."
