@@ -13,3 +13,7 @@ This domain contains Level 2 use cases for AI-oriented Huawei Cloud adoption ski
 - [Fine-Tuning and Model Adaptation](./Fine-Tuning-and-Model-Adaptation/README.md): Adapt models to domain requirements through data preparation, tuning, and evaluation.
 - [Responsible AI and Governance](./Responsible-AI-and-Governance/README.md): Control model outputs, permissions, auditability, security, and compliance boundaries.
 - [AI Applications](./AI-Applications/README.md): Build AI-powered business applications such as chatbots, assistants, AICC, and fraud-related solutions.
+
+### Implemented Skills
+
+- [Telco Call Center AI](./AI-Applications/Telco-Call-Center-AI-Skill/README.md) — Battle-tested pattern for telecom AI demos: customer intelligence + agentic engineering on Huawei Cloud ECS GPU. Includes executive POC strategy, deterministic fallback design, and Mexico regulatory compliance.
