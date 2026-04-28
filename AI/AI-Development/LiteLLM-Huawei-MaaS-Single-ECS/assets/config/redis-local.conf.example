@@ -1,0 +1,9 @@
+bind 127.0.0.1
+port 6379
+protected-mode yes
+daemonize no
+supervised systemd
+dir /var/lib/redis
+logfile /var/log/redis/redis-local.log
+appendonly yes
+requirepass replace-with-redis-password
