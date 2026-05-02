@@ -43,6 +43,7 @@ If the user only gives one model, prefer explicit routing for that model instead
 - Use systemd units for Redis, PostgreSQL, and LiteLLM.
 - Validate both direct MaaS access and proxied LiteLLM access.
 - For FinOps, make the proxy the only egress path for MaaS traffic so budgets, rate limits, and spend logs stay centralized.
+- For budget enforcement, always confirm the exposed model has non-zero `input_cost_per_token` and `output_cost_per_token`; otherwise successful calls may not consume spend.
 - For multi-user proxying, keep the master key admin-only and mint child keys per team, service, or environment.
 - For cache design, distinguish Redis-backed response caching from auth-key metadata caching and explain both clearly.
 
@@ -128,6 +129,8 @@ model_list:
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY
       timeout: 120
+      input_cost_per_token: 1.078e-06
+      output_cost_per_token: 3.774e-06
 
   - model_name: "huawei-glm-5.1"
     litellm_params:
@@ -135,6 +138,8 @@ model_list:
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY
       timeout: 120
+      input_cost_per_token: 1.078e-06
+      output_cost_per_token: 3.774e-06
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
@@ -149,6 +154,13 @@ router_settings:
 ```
 
 Do not add wildcard model exposure unless the user accepts noisier health checks and looser routing.
+
+For `glm-5.1`, use the highest validated Huawei MaaS unit prices when the user wants conservative budget enforcement:
+
+- `input_cost_per_token: 1.078e-06`
+- `output_cost_per_token: 3.774e-06`
+
+These values are USD per token. Convert prices quoted per 1M tokens by dividing by `1_000_000`.
 
 If the deployment needs FinOps and multi-user controls from day one, also configure:
 
@@ -202,6 +214,8 @@ Always validate in this order:
 5. LiteLLM `/health` works with the master key
 6. LiteLLM `/chat/completions` succeeds with the exposed model name
 7. LiteLLM `/key/generate` can mint a virtual key for downstream users
+8. LiteLLM `/model/info` shows non-zero input and output token costs for budgeted models
+9. A low-budget virtual key is blocked with `budget_exceeded` after spend crosses `max_budget`
 
 Use a direct MaaS request similar to:
 

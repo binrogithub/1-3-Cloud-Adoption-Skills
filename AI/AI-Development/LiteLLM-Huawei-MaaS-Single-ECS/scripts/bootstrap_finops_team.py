@@ -74,6 +74,8 @@ def main() -> int:
         }
         if args.max_budget is not None:
             key_payload["max_budget"] = args.max_budget
+        if args.budget_duration is not None:
+            key_payload["budget_duration"] = args.budget_duration
         if args.tpm_limit is not None:
             key_payload["tpm_limit"] = args.tpm_limit
         if args.rpm_limit is not None:

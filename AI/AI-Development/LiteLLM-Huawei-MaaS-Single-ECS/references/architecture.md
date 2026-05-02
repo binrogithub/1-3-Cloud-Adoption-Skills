@@ -82,6 +82,126 @@ Then apply tighter key-level controls only where needed.
 
 This avoids unmanaged sprawl and makes reporting easier.
 
+### Unit Cost Controls
+
+LiteLLM budgets are enforced against spend in USD. Model unit costs must be configured before budget tests are meaningful.
+
+For Huawei MaaS `glm-5.1`, use the highest validated unit prices when the user wants conservative budget enforcement:
+
+- Input: `$1.078 / 1M tokens` -> `input_cost_per_token = 1.078e-06`
+- Output: `$3.774 / 1M tokens` -> `output_cost_per_token = 3.774e-06`
+
+Set these directly on each exposed LiteLLM model group in `litellm_params`:
+
+```yaml
+model_list:
+  - model_name: "huawei-glm-5.1"
+    litellm_params:
+      model: "openai/glm-5.1"
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      timeout: 120
+      input_cost_per_token: 1.078e-06
+      output_cost_per_token: 3.774e-06
+```
+
+If using `model_prices_and_context_window.json`, the price-map key must match the provider path used by LiteLLM. For generic OpenAI-compatible MaaS usage:
+
+```json
+"custom_openai/glm-5.1": {
+  "input_cost_per_token": 1.078e-06,
+  "litellm_provider": "custom_openai",
+  "mode": "chat",
+  "output_cost_per_token": 3.774e-06
+}
+```
+
+If the live proxy config uses `model: openai/glm-5.1`, setting only `custom_openai/glm-5.1` will not affect the running model group. Put pricing in `litellm_params` or update the matching price-map entry and restart/reload LiteLLM.
+
+### Virtual-Key Budget Operations
+
+Create a monthly child key:
+
+```bash
+curl -X POST "$LITELLM_BASE/key/generate" \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key_alias": "huawei-glm-5.1-monthly",
+    "models": ["huawei-glm-5.1"],
+    "max_budget": 0.1,
+    "budget_duration": "1mo"
+  }'
+```
+
+Update an existing key budget:
+
+```bash
+curl -X POST "$LITELLM_BASE/key/update" \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "<virtual_key>",
+    "max_budget": 0.00001,
+    "budget_duration": "1mo"
+  }'
+```
+
+Check current key spend:
+
+```bash
+curl "$LITELLM_BASE/key/info?key=<virtual_key>" \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY"
+```
+
+Reset spend only when explicitly requested:
+
+```bash
+curl -X POST "$LITELLM_BASE/key/reset-spend" \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"key": "<virtual_key>", "reset_to": 0}'
+```
+
+Expected budget block:
+
+```json
+{
+  "error": {
+    "message": "Budget has been exceeded! Current cost: <spend>, Max budget: <budget>",
+    "type": "budget_exceeded",
+    "code": "400"
+  }
+}
+```
+
+If a budget does not trigger, inspect `/model/info`; if the deployed model shows `input_cost_per_token: 0` and `output_cost_per_token: 0`, successful calls will not consume spend.
+
+### Currency Conversion
+
+LiteLLM `max_budget` is USD. Convert user-provided local currency before setting budgets.
+
+Example:
+
+```text
+0.001 CNY * 0.1465 USD/CNY ~= 0.0001465 USD
+```
+
+Use a current exchange rate for production accounting. For a conservative enforcement test, set `max_budget` lower than the expected request cost.
+
+### External VS Code and Cline Through LiteLLM
+
+When Cline should call Huawei MaaS through LiteLLM:
+
+```text
+Provider: OpenAI Compatible
+Base URL: http://<litellm-host>:4000/v1
+API Key: <LiteLLM virtual key>
+Model: huawei-glm-5.1
+```
+
+Start with a plain text prompt such as `Reply with exactly: ok`. Only enable agentic or tool-heavy Cline behavior after `/v1/chat/completions` succeeds.
+
 ### Spend Ownership
 
 For good chargeback, make sure:
