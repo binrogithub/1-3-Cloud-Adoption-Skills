@@ -16,6 +16,7 @@ This skill assumes:
 Use bundled resources selectively:
 
 - Read [references/architecture.md](references/architecture.md) when the user asks about architecture, FinOps, multi-user isolation, spend control, or cache design.
+- Read [references/finops-ecs-cache-exploration.md](references/finops-ecs-cache-exploration.md) when the user asks for a narrative explanation, article, solution overview, or customer-facing write-up about LiteLLM with Huawei MaaS, FinOps, ECS stability, and cache limitations.
 - Use [assets/config/litellm.config.yaml.example](assets/config/litellm.config.yaml.example) as the base proxy config.
 - Use [assets/config/litellm.env.example](assets/config/litellm.env.example) for runtime secrets and ports.
 - Use [assets/config/redis-local.conf.example](assets/config/redis-local.conf.example) and [assets/config/litellm.service.example](assets/config/litellm.service.example) as starting templates for system files.
