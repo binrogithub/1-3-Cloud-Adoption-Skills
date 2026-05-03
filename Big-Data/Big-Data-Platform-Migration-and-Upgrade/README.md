@@ -20,3 +20,4 @@ This use case focuses on migrating or upgrading large-scale data platforms, incl
 ## Included Skills
 
 - [MRS DWS Finance Skill](./MRS-DWS-Finance-Skill/README.md): Reuse a financial analytics migration skill for building OBS, MRS, and DWS big-data pipelines on Huawei Cloud.
+- [Cloudera to Huawei Cloud MRS Migration Skill](./Cloudera-to-Huawei-MRS-Skill/README.md): Migrate CDH or HDP Hadoop, Hive, Spark, and Impala workloads to Huawei Cloud MRS with OBS data landing, external table migration, Spark SQL conversion, and end-to-end parity validation.
