@@ -21,3 +21,4 @@ AI Coding focuses on applying AI directly to software engineering work, especial
 ## Included Skills
 
 - [OpenShift Huawei Cloud MaaS Skill](./OpenShift-Huawei-Cloud-MaaS-Skill/README.md): Integrate browser-based coding environments such as OpenShift Dev Spaces or Eclipse Che with Cline and Huawei Cloud MaaS through an OpenAI-compatible interface.
+- [claude-code-huawei-maas](./claude-code-huawei-maas/README.md): Configure the Claude Code CLI command to use Huawei Cloud MaaS through `claude-code-router`, including `glm-5.1`, `$API_KEY` authentication, context length, wrapper setup, and verification.
