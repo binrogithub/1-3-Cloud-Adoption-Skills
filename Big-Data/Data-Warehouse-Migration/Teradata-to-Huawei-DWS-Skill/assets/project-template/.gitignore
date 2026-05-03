@@ -1,0 +1,16 @@
+.secrets/
+config/dws.env
+config/teradata.env
+config/obs.env
+reports/output/
+reports/dws/
+reports/dws_optimized/
+reports/report_data/
+reports/migration_report.md
+reports/dws_benchmark.csv
+reports/teradata_compatibility_scan.csv
+reports/teradata_compatibility_scan.md
+sql/dws/08_load_from_obs.generated.sql
+data/export/
+__pycache__/
+*.pyc

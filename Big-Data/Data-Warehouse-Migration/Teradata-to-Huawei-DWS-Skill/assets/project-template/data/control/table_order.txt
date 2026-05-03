@@ -1,0 +1,9 @@
+finance_dw.dim_branch
+finance_dw.dim_product
+finance_dw.dim_customer
+finance_dw.dim_account
+finance_dw.dim_date
+finance_dw.fact_transaction
+finance_dw.fact_daily_balance
+finance_dw.fact_loan_snapshot
+

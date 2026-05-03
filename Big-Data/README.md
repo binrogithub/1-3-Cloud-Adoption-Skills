@@ -4,7 +4,7 @@ Big Data covers migration, modernization, governance, analytics, and AI-ready da
 
 This domain contains Level 2 use cases for data-oriented Huawei Cloud adoption skills:
 
-- [Data Warehouse Migration](./Data-Warehouse-Migration/README.md): Move existing analytical warehouses into Huawei Cloud data warehouse platforms.
+- [Data Warehouse Migration](./Data-Warehouse-Migration/README.md): Move existing analytical warehouses into Huawei Cloud data warehouse platforms, including the reusable [Teradata to Huawei DWS Skill](./Data-Warehouse-Migration/Teradata-to-Huawei-DWS-Skill/README.md).
 - [Big Data Platform Migration and Upgrade](./Big-Data-Platform-Migration-and-Upgrade/README.md): Transform Hadoop and legacy data platforms into modern cloud data architectures.
 - [Data Governance](./Data-Governance/README.md): Establish standards, quality, metadata, security, and asset management across data environments.
 - [ChatBI and Intelligent Analytics](./ChatBI-and-Intelligent-Analytics/README.md): Enable conversational BI, metric question answering, and automated analysis generation.

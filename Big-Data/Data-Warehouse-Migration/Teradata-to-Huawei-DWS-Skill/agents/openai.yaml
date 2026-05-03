@@ -1,0 +1,4 @@
+interface:
+  display_name: "Teradata to Huawei DWS"
+  short_description: "Migrate Teradata finance workloads to DWS"
+  default_prompt: "Use $teradata-to-huawei-dws to build and validate a Teradata-to-DWS finance migration demo."
