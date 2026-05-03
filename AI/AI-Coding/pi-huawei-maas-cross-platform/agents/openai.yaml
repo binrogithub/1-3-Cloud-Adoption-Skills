@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pi Huawei MaaS Cross Platform"
+  short_description: "Configure Pi MaaS on Windows or Linux."
+  default_prompt: "Configure Pi Coding Agent on Windows or Linux to use Huawei Cloud MaaS with GLM 5.1 using a secure local model registry pattern."
