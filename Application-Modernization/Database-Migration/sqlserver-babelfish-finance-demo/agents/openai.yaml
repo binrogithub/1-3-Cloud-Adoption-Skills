@@ -1,0 +1,4 @@
+interface:
+  display_name: "SQL Server Babelfish Finance Demo"
+  short_description: "Run a finance Babelfish migration demo."
+  default_prompt: "Create or adapt a local FinanceDemo migration from SQL Server to Babelfish/PostgreSQL, then validate source and target results."
