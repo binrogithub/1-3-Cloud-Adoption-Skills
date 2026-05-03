@@ -4,6 +4,12 @@ This repository defines a practical skill framework for Huawei Cloud adoption wo
 
 An AI skill in this repository is not just a prompt. It is a reusable capability unit built around a cloud scenario, where AI helps with understanding, design, migration, operations, development, analysis, or optimization.
 
+The framework now includes reusable support for:
+
+- **SQL Server migration** scenarios, including SQL Server to PostgreSQL modernization through Babelfish.
+- **Claude Code** adoption scenarios, including Claude Code SDK and Claude Code-compatible MaaS proxy configuration.
+- **Codex and other coding agents** that can consume `SKILL.md`, `references/`, `scripts/`, and reusable demo assets.
+
 Each skill should include:
 
 - Scenario: what business problem or cloud scenario it addresses
@@ -21,6 +27,7 @@ Use this index when Codex, Claude Code, or another AI agent needs to locate the 
 | Cloud Foundation | Security Foundation | [CFW Finance Skill](./Cloud-Foundation/Security-Foundation/CFW-Finance-Skill/README.md) | Configure Huawei Cloud Firewall for finance, banking, PCI DSS, IPS, ACL, logging, alarm, or compliance-oriented security baselines. |
 | Application Modernization | Application Migration | [Kafka GaussDB Trading Skill](./Application-Modernization/Application-Migration/Kafka-GaussDB-Trading-Skill/README.md) | Design or migrate high-frequency transaction systems using DMS for Kafka plus GaussDB, Java consumers, idempotency, partitioning, retry, and DLQ patterns. |
 | Application Modernization | Database Migration | [GaussDB Adaptation Skill](./Application-Modernization/Database-Migration/GaussDB-Adaptation-Skill/README.md) | Port SQL Server or PostgreSQL code to Huawei GaussDB or openGauss-compatible environments, including SQL dialect, driver, auth, and bulk-load adaptation. |
+| Application Modernization | Database Migration | [SQLServer PostgreSQL Babelfish Finance Demo](./Application-Modernization/Database-Migration/SQLServer-postgreSQL-babelfish-finance-demo/Readme.md) | Run a finance-focused SQL Server to PostgreSQL migration demo through Babelfish, covering banking customers, accounts, payments, risk alerts, views, stored procedures, and parity validation. |
 | Application Modernization | DevOps and PaaS | [Karmada K8s Switch Skill](./Application-Modernization/DevOps-and-PaaS/karmada-k8s-switch-skill/README.md) | Prepare a Karmada lab, install and verify Karmada, deploy multi-cluster failover PoCs, switch traffic, or validate cutover behavior. |
 | Big Data | Databricks Migration | [Databricks to Huawei Cloud Skill](./Big-Data/Databricks-to-Huawei-Cloud-Skill/README.md) | Migrate Databricks tables, notebooks, SQL warehouse flows, or Spark pipelines to OBS, MRS Spark, Hive, and curated Parquet patterns. |
 | Big Data | Big Data Platform Migration and Upgrade | [MRS DWS Finance Skill](./Big-Data/Big-Data-Platform-Migration-and-Upgrade/MRS-DWS-Finance-Skill/README.md) | Build financial risk-control pipelines with OBS, MRS, and DWS for risk scoring, AML/KYC, anomaly detection, compliance, and reporting. |
@@ -37,6 +44,14 @@ Use this index when Codex, Claude Code, or another AI agent needs to locate the 
 4. Open the child skill folder when a concrete reusable package exists.
 5. Read `README.md` for the human-readable overview and `SKILL.md` for the agent-facing workflow.
 6. Use bundled `references/`, `scripts/`, `assets/`, or `examples/` only when the skill package provides them.
+
+## Agent Runtime Support
+
+The skill packages are written so they can be used by multiple AI coding agents.
+
+- **Codex**: use `SKILL.md` as the agent-facing workflow, then load `references/` or run bundled scripts only when needed.
+- **Claude Code**: use the same `SKILL.md` and reusable assets as task context. For Huawei Cloud MaaS-backed Claude Code setup, start from the Claude Code SDK Agent MaaS skill in the AI Coding domain.
+- **Other coding agents**: use the repository index to locate the scenario package, then treat `README.md` or `Readme.md` as the human overview and `SKILL.md` as the operational instruction set.
 
 ## Level 1 Domains
 
