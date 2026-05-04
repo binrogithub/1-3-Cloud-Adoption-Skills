@@ -1,0 +1,19 @@
+{
+  "source_input_id": "4fb3d857-aa08-4b79-8810-760cab680418",
+  "source_sms_id": "dceb9146-c28f-4596-8c42-a55b068c31d5",
+  "matched_task_count": 1,
+  "deleted_count": 1,
+  "skipped_active_count": 0,
+  "failed_delete_count": 0,
+  "deleted_tasks": [
+    {
+      "id": "073f5212-6175-4f65-9497-cdaeac0f4666",
+      "name": "filetask4fb3d857laso",
+      "state": "MIGRATE_SUCCESS",
+      "target_vm_id": "46f41f1e-18cf-4959-8863-f8ea7b509ab3",
+      "create_date": "1776708044000"
+    }
+  ],
+  "skipped_active_tasks": [],
+  "failed_delete_tasks": []
+}
