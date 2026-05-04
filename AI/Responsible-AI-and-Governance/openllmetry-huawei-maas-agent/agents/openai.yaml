@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenLLMetry Huawei MaaS Agent"
+  short_description: "Instrument Huawei MaaS agents with OpenLLMetry safely."
+  default_prompt: "Instrument this Agent or application with OpenLLMetry while it calls Huawei Cloud MaaS through an OpenAI-compatible API. Keep provider API keys out of traces and configuration output."
