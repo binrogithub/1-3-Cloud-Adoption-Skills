@@ -7,7 +7,8 @@ An AI skill in this repository is not just a prompt. It is a reusable capability
 The framework now includes reusable support for:
 
 - **SQL Server migration** scenarios, including SQL Server to PostgreSQL modernization through Babelfish.
-- **Claude Code** adoption scenarios, including Claude Code SDK and Claude Code-compatible MaaS proxy configuration.
+- **MaaS-backed AI coding** scenarios, including Claude Code SDK, Claude Code router, Pi Coding Agent, OpenShift Dev Spaces, and LiteLLM proxy configuration.
+- **AI application and observability** scenarios, including RAGFlow, Langfuse, OpenLLMetry, and telecom call center AI packages.
 - **Codex and other coding agents** that can consume `SKILL.md`, `references/`, `scripts/`, and reusable demo assets.
 
 Each skill should include:
@@ -34,9 +35,14 @@ Use this index when Codex, Claude Code, or another AI agent needs to locate the 
 | Big Data | Big Data Platform Migration and Upgrade | [MRS DWS Finance Skill](./Big-Data/Big-Data-Platform-Migration-and-Upgrade/MRS-DWS-Finance-Skill/README.md) | Build financial risk-control pipelines with OBS, MRS, and DWS for risk scoring, AML/KYC, anomaly detection, compliance, and reporting. |
 | Big Data | Big Data Platform Migration and Upgrade | [Cloudera to Huawei Cloud MRS Migration Skill](./Big-Data/Big-Data-Platform-Migration-and-Upgrade/Cloudera-to-Huawei-MRS-Skill/README.md) | Migrate CDH or HDP Hadoop, Hive, Spark, and Impala workloads to Huawei Cloud MRS with OBS data landing, Hive external table migration, Spark SQL conversion, and parity validation. |
 | AI | AI Applications | [Telco Call Center AI Skill](./AI/AI-Applications/Telco-Call-Center-AI-Skill/README.md) | Build or pitch AI-powered telecom customer intelligence, AICC demos, call analytics, churn prediction, or executive POCs on Huawei Cloud. |
+| AI | AI Applications | [RAGFlow Huawei MaaS](./AI/AI-Applications/ragflow-huawei-maas/SKILL.md) | Deploy RAGFlow with Docker Compose, connect it to Huawei Cloud MaaS through the OpenAI-compatible provider, register `glm-5.1`, and validate UI/API/LLM calls without exposing keys. |
 | AI | AI Coding | [Claude Code SDK Agent MaaS Skill](./AI/AI-Coding/Claude-Code-SDK-Agent-MaaS-Skill/README.md) | Configure Claude Code or Claude Agent SDK through a local Anthropic Messages API compatible proxy backed by Huawei Cloud MaaS. |
+| AI | AI Coding | [Claude Code Huawei MaaS](./AI/AI-Coding/claude-code-huawei-maas/README.md) | Route Claude Code through claude-code-router to Huawei Cloud MaaS, configure `glm-5.1`, tune context/output limits, and optionally add Z.ai web-search-prime MCP search. |
 | AI | AI Coding | [OpenShift Huawei Cloud MaaS Skill](./AI/AI-Coding/OpenShift-Huawei-Cloud-MaaS-Skill/README.md) | Connect OpenShift Dev Spaces or Eclipse Che browser-based VS Code with Cline and Huawei Cloud MaaS through an OpenAI-compatible endpoint. |
+| AI | AI Coding | [Pi Huawei MaaS Cross Platform](./AI/AI-Coding/pi-huawei-maas-cross-platform/README.md) | Configure Pi Coding Agent on Windows or Linux to use Huawei Cloud ModelArts MaaS through an OpenAI-compatible endpoint, preserving platform-specific config paths and model registry casing. |
 | AI | AI Development | [LiteLLM Huawei MaaS Single ECS](./AI/AI-Development/LiteLLM-Huawei-MaaS-Single-ECS/README.md) | Deploy LiteLLM Proxy on one Huawei Cloud ECS host with local Redis, PostgreSQL, systemd services, MaaS routing, and multi-user token proxying. |
+| AI | Responsible AI and Governance | [Langfuse LLM Observability](./AI/Responsible-AI-and-Governance/langfuse-llm-observability/SKILL.md) | Deploy or integrate Langfuse for LLM tracing, generations, usage, latency, cost, errors, evaluations, prompt management, and observability workflows. |
+| AI | Responsible AI and Governance | [OpenLLMetry Huawei MaaS Agent](./AI/Responsible-AI-and-Governance/openllmetry-huawei-maas-agent/SKILL.md) | Instrument Huawei MaaS-backed agents with OpenLLMetry, Traceloop, and OpenTelemetry while preventing API keys and prompt content from leaking into telemetry. |
 
 ## How To Navigate This Repository
 
@@ -52,7 +58,7 @@ Use this index when Codex, Claude Code, or another AI agent needs to locate the 
 The skill packages are written so they can be used by multiple AI coding agents.
 
 - **Codex**: use `SKILL.md` as the agent-facing workflow, then load `references/` or run bundled scripts only when needed.
-- **Claude Code**: use the same `SKILL.md` and reusable assets as task context. For Huawei Cloud MaaS-backed Claude Code setup, start from the Claude Code SDK Agent MaaS skill in the AI Coding domain.
+- **Claude Code**: use the same `SKILL.md` and reusable assets as task context. For Huawei Cloud MaaS-backed Claude Code setup, start from the Claude Code SDK Agent MaaS skill or the Claude Code Huawei MaaS router skill in the AI Coding domain.
 - **Other coding agents**: use the repository index to locate the scenario package, then treat `README.md` or `Readme.md` as the human overview and `SKILL.md` as the operational instruction set.
 
 ## Level 1 Domains
