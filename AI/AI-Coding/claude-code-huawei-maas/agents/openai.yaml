@@ -1,4 +1,4 @@
 interface:
   display_name: "Claude Code Huawei MaaS"
-  short_description: "Connect Claude Code to Huawei MaaS"
-  default_prompt: "Configure this host so Claude Code uses Huawei Cloud MaaS through claude-code-router, then verify the active backend model."
+  short_description: "Connect Claude Code to Huawei MaaS and Z.ai search"
+  default_prompt: "Configure this host so Claude Code uses Huawei Cloud MaaS through claude-code-router, optionally add Z.ai web-search-prime MCP search with Z_API_KEY, then verify the active backend model and MCP connection."

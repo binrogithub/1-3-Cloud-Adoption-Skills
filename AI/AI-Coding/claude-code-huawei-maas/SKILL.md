@@ -1,13 +1,13 @@
 ---
 name: claude-code-huawei-maas
-description: Configure Claude Code to use Huawei Cloud MaaS or ModelArts MaaS through an OpenAI-compatible endpoint. Use when Codex needs to migrate Claude Code from Anthropic/Sonnet/Opus to Huawei MaaS models such as glm-5.1, install or configure claude-code-router, set API_KEY-based authentication, create a claude wrapper, adjust context length, or verify that interactive Claude Code is actually backed by MaaS.
+description: Configure Claude Code to use Huawei Cloud MaaS or ModelArts MaaS through an OpenAI-compatible endpoint, and optionally add Z.ai web-search-prime MCP search. Use when Codex needs to migrate Claude Code from Anthropic/Sonnet/Opus to Huawei MaaS models such as glm-5.1, install or configure claude-code-router, set API_KEY-based authentication, create a claude wrapper, adjust context length, verify that interactive Claude Code is actually backed by MaaS, or configure Z.ai MCP search with Z_API_KEY.
 ---
 
 # Claude Code Huawei MaaS
 
 ## Overview
 
-Use this skill to make `claude` route through `claude-code-router` (`ccr`) to Huawei Cloud MaaS OpenAI-compatible chat completions. Prefer the bundled script for repeatability, then inspect or patch only if the host has unusual paths or package managers.
+Use this skill to make `claude` route through `claude-code-router` (`ccr`) to Huawei Cloud MaaS OpenAI-compatible chat completions. It can also add the Z.ai `web-search-prime` MCP search tool for Claude Code. Prefer bundled scripts for repeatability, then inspect or patch only if the host has unusual paths or package managers.
 
 ## Quick Path
 
@@ -21,6 +21,7 @@ Use this skill to make `claude` route through `claude-code-router` (`ccr`) to Hu
    - `ccr status`
    - `claude --bare --print --output-format json 'Reply with OK only'`
    - In interactive mode, the header should show `glm-5.1`, not Sonnet/Opus.
+4. If the user also wants Z.ai search MCP, confirm they have a Z.ai account and API key, export it as `Z_API_KEY`, then run `scripts/configure-zai-search-mcp.sh`.
 
 Example:
 
@@ -37,6 +38,13 @@ MAAS_MODEL='glm-5.1' \
 MAAS_CONTEXT_TOKENS=190000 \
 MAAS_MAX_OUTPUT_TOKENS=32768 \
 /root/.codex/skills/claude-code-huawei-maas/scripts/configure.sh
+```
+
+Add Z.ai search MCP:
+
+```bash
+export Z_API_KEY='...'
+/root/.codex/skills/claude-code-huawei-maas/scripts/configure-zai-search-mcp.sh
 ```
 
 ## What The Script Does
@@ -117,6 +125,45 @@ export CLAUDE_CODE_MAX_CONTEXT_TOKENS=190000
 unset CLAUDE_CODE_USE_BEDROCK
 ```
 
+## Z.ai Web Search MCP
+
+Use this when the user wants Claude Code to have the Z.ai `web-search-prime` MCP search tool, exposed as `mcp__web-search-prime__web_search_prime`.
+
+Prerequisites:
+
+- The user has a Z.ai account.
+- The user has created a Z.ai API key.
+- The key is available in the shell as `Z_API_KEY`.
+
+Do not write the raw Z.ai API key into Claude config. Store it in the environment and configure Claude Code to build the MCP `Authorization` header at runtime.
+
+Preferred setup:
+
+```bash
+export Z_API_KEY='...'
+/root/.codex/skills/claude-code-huawei-maas/scripts/configure-zai-search-mcp.sh
+```
+
+Manual user-scope config in `~/.claude.json`:
+
+```json
+{
+  "mcpServers": {
+    "web-search-prime": {
+      "type": "http",
+      "url": "https://api.z.ai/api/mcp/web_search_prime/mcp",
+      "headersHelper": "python3 -c 'import json, os; print(json.dumps({\"Authorization\": \"Bearer \" + os.environ[\"Z_API_KEY\"]}))'"
+    }
+  }
+}
+```
+
+The helper produces this HTTP header when Claude Code starts the MCP connection:
+
+```text
+Authorization: Bearer <Z_API_KEY>
+```
+
 ## Verification
 
 Prefer a non-interactive JSON check because it reports actual `modelUsage`:
@@ -137,11 +184,22 @@ Successful output should include:
 
 If the interactive header still says Sonnet/Opus, check whether the user launched an old shell or old session. The wrapper must export `ANTHROPIC_MODEL` and `ANTHROPIC_CUSTOM_MODEL_OPTION`; then restart the interactive `claude` process.
 
+For Z.ai MCP search, verify the MCP connection:
+
+```bash
+claude mcp get web-search-prime
+```
+
+Successful output should show `Status: ✓ Connected`. If it is connected, Claude Code can call `mcp__web-search-prime__web_search_prime`.
+
 ## Troubleshooting
 
 - **`Not logged in`**: Claude was started without router environment variables. Use the wrapper, `ccr code`, or export `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN`.
 - **Interactive mode shows Sonnet but JSON shows `glm-5.1`**: Add `ANTHROPIC_MODEL` and `ANTHROPIC_CUSTOM_MODEL_OPTION` to the wrapper and restart `claude`.
 - **`API_KEY is not set`**: Export `API_KEY` before `ccr start` or before launching `claude`; the config intentionally references `$API_KEY`.
+- **`Z_API_KEY is not set`**: Export `Z_API_KEY` before starting Claude Code or before running `claude mcp get web-search-prime`.
+- **Z.ai MCP fails with auth errors**: Confirm the user has a Z.ai account, the API key is active, and the environment variable name is exactly `Z_API_KEY`.
+- **Z.ai MCP was added with a literal `${Z_API_KEY}` header**: Replace the static `headers` entry with `headersHelper` so Claude Code reads the current environment at runtime.
 - **`curl` fails with shared library errors**: Use Node `fetch` or `claude --print` for verification instead of curl.
 - **Long context mismatch**: Treat `190k` as context length, not output length. Keep `maxtoken.max_tokens` as a generation cap such as `32768`; set `CLAUDE_CODE_MAX_CONTEXT_TOKENS=190000`.
 - **Existing `claude` wrapper**: Preserve user changes. Inspect the wrapper before replacing it, and keep the original binary or script as `.real`.
@@ -149,3 +207,4 @@ If the interactive header still says Sonnet/Opus, check whether the user launche
 ## Resources
 
 - `scripts/configure.sh`: end-to-end installer/configurator and smoke test.
+- `scripts/configure-zai-search-mcp.sh`: add and verify Z.ai `web-search-prime` MCP search using `Z_API_KEY`.
