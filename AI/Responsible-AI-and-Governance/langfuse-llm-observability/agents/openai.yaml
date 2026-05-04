@@ -1,0 +1,7 @@
+interface:
+  display_name: "Langfuse LLM Observability"
+  short_description: "Trace and evaluate LLM applications"
+  default_prompt: "Use $langfuse-llm-observability to add Langfuse tracing to an OpenAI-compatible LLM application."
+
+policy:
+  allow_implicit_invocation: true
