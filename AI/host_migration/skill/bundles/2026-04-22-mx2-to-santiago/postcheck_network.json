@@ -1,0 +1,32 @@
+{
+  "target_vpc": {
+    "id": "8c31defc-3fd2-4c1d-9fa0-04f807e26689",
+    "name": "vpc-migration",
+    "cidr": "10.250.0.0/16",
+    "expected_name": "vpc-migration"
+  },
+  "target_server": {
+    "id": "7f110bb2-3332-4ef8-a19b-9013746b76a8",
+    "name": "mx2-to-santiago-migrated-1776812959",
+    "status": "ACTIVE",
+    "fixed_ip": "10.250.1.37",
+    "floating_ip": "119.8.149.199",
+    "has_eip": true
+  },
+  "security_group_check": {
+    "target_sg_ids": [
+      "620c0923-3211-42aa-b2b7-c4b66e914006"
+    ],
+    "source_sg_ids": [
+      "74593d3e-d063-4bad-9e50-34db9f92b85c"
+    ],
+    "target_missing_rules": {
+      "620c0923-3211-42aa-b2b7-c4b66e914006": []
+    },
+    "source_missing_rules": {
+      "74593d3e-d063-4bad-9e50-34db9f92b85c": []
+    },
+    "target_all_connected": true,
+    "source_all_connected": true
+  }
+}

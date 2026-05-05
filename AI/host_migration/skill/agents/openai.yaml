@@ -1,0 +1,4 @@
+interface:
+  display_name: "MGC Cross-Region Migration"
+  short_description: "Run Huawei MGC/SMS cross-region migration workflow"
+  default_prompt: "Use $mgc-cross-region-migration to execute and troubleshoot the migration runbook."
