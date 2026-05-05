@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenHands Huawei MaaS"
+  short_description: "Run OpenHands with Huawei MaaS"
+  default_prompt: "Configure OpenHands to use Huawei Cloud MaaS through an OpenAI-compatible endpoint."

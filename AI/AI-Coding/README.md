@@ -22,4 +22,5 @@ AI Coding focuses on applying AI directly to software engineering work, especial
 
 - [OpenShift Huawei Cloud MaaS Skill](./OpenShift-Huawei-Cloud-MaaS-Skill/README.md): Integrate browser-based coding environments such as OpenShift Dev Spaces or Eclipse Che with Cline and Huawei Cloud MaaS through an OpenAI-compatible interface.
 - [claude-code-huawei-maas](./claude-code-huawei-maas/README.md): Configure the Claude Code CLI command to use Huawei Cloud MaaS through `claude-code-router`, including `glm-5.1`, `$API_KEY` authentication, context length, wrapper setup, and verification.
+- [openhands-huawei-maas](./openhands-huawei-maas/README.md): Configure OpenHands Web GUI or CLI to use Huawei Cloud MaaS through an OpenAI-compatible endpoint with `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and safe MaaS connectivity validation.
 - [pi-huawei-maas-cross-platform](./pi-huawei-maas-cross-platform/README.md): Configure Pi Coding Agent on Windows or Linux to use Huawei Cloud ModelArts MaaS through an OpenAI-compatible endpoint with `glm-5.1`.
