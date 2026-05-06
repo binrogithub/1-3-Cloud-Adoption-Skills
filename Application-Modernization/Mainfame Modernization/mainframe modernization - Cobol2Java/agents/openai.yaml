@@ -1,0 +1,3 @@
+display_name: Mainframe Modernization Cobol2Java
+short_description: COBOL-to-Java modernization workflow
+default_prompt: Modernize this mainframe application step by step: discover legacy entry points, extract business logic, design Java Spring Boot microservices and frontend, generate tests, then prepare container handover.
