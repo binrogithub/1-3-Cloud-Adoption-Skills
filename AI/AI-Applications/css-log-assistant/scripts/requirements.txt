@@ -1,0 +1,6 @@
+elasticsearch>=7.10,<8.0
+faker>=20.0.0
+python-dotenv>=1.0.0
+httpx>=0.24.0
+streamlit>=1.30.0
+python-dotenv>=1.0.0
