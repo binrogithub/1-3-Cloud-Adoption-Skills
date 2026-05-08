@@ -74,6 +74,7 @@ export Z_API_KEY='...'
   - `ANTHROPIC_MODEL=<model>`
   - `ANTHROPIC_CUSTOM_MODEL_OPTION=<model>`
   - `CLAUDE_CODE_MAX_CONTEXT_TOKENS=<context>`
+  - `DISABLE_COMPACT=true`, required by Claude Code 2.1.133 for `CLAUDE_CODE_MAX_CONTEXT_TOKENS` to override the default `200000` context window
 - Starts `ccr` when needed and runs the real `claude` command with `--model <model>` unless the user already passed `--model` or invoked a Claude Code management subcommand.
 - Restarts `ccr` and validates a small request through `claude-glm`.
 
@@ -152,6 +153,7 @@ export ANTHROPIC_MODEL=glm-5.1
 export ANTHROPIC_CUSTOM_MODEL_OPTION=glm-5.1
 export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME=glm-5.1
 export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION='Huawei Cloud MaaS glm-5.1'
+export DISABLE_COMPACT=true
 export CLAUDE_CODE_MAX_CONTEXT_TOKENS=190000
 unset CLAUDE_CODE_USE_BEDROCK
 ccr status >/dev/null 2>&1 || ccr start >/dev/null
@@ -210,7 +212,7 @@ Successful output should include:
 ```json
 "modelUsage": {
   "glm-5.1": {
-    "contextWindow": 200000
+    "contextWindow": 190000
   }
 }
 ```
@@ -237,6 +239,7 @@ Successful output should show `Status: ✓ Connected`. If it is connected, Claud
 - **Z.ai MCP was added with a literal `${Z_API_KEY}` header**: Replace the static `headers` entry with `headersHelper` so Claude Code reads the current environment at runtime.
 - **`curl` fails with shared library errors**: Use Node `fetch` or `claude --print` for verification instead of curl.
 - **Long context mismatch**: Treat `190k` as context length, not output length. Keep `maxtoken.max_tokens` as a generation cap such as `32768`; set `CLAUDE_CODE_MAX_CONTEXT_TOKENS=190000`.
+- **`contextWindow` still reports `200000`**: In Claude Code 2.1.133, `CLAUDE_CODE_MAX_CONTEXT_TOKENS` only overrides the default when `DISABLE_COMPACT=true` is also set in the wrapper.
 - **Existing `claude` wrapper**: Preserve user changes. Inspect the wrapper before replacing it, and keep the original binary or script as `.real`.
 
 ## Resources
