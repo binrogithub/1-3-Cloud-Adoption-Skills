@@ -1,0 +1,25 @@
+{
+  "HOST": "127.0.0.1",
+  "PORT": 3456,
+  "APIKEY": "$CLAUDE_GLM_ROUTER_KEY",
+  "LOG": true,
+  "API_TIMEOUT_MS": 600000,
+  "Providers": [
+    {
+      "name": "litellm",
+      "api_base_url": "http://@@ECS_PUBLIC_IP@@:4000/v1/chat/completions",
+      "api_key": "$LITELLM_VIRTUAL_KEY",
+      "models": ["huawei-glm-5.1"],
+      "transformer": {
+        "use": ["enhancetool"]
+      }
+    }
+  ],
+  "Router": {
+    "default": "litellm,huawei-glm-5.1",
+    "background": "litellm,huawei-glm-5.1",
+    "think": "litellm,huawei-glm-5.1",
+    "longContext": "litellm,huawei-glm-5.1",
+    "longContextThreshold": 190000
+  }
+}

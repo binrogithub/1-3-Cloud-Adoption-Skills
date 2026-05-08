@@ -1,6 +1,6 @@
 [Unit]
 Description=LiteLLM Proxy for Huawei Cloud MaaS
-After=network-online.target redis-local.service postgresql-local.service
+After=network-online.target redis-server.service postgresql.service
 Wants=network-online.target
 
 [Service]

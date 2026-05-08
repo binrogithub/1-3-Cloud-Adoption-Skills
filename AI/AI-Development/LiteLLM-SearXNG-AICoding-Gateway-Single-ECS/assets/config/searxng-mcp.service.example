@@ -1,0 +1,19 @@
+[Unit]
+Description=SearXNG MCP HTTP server
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=searxmcp
+Group=searxmcp
+WorkingDirectory=/opt/searxng-mcp
+Environment=SEARXNG_URL=http://127.0.0.1:8080
+Environment=MCP_PORT=8788
+Environment=MCP_TOKEN=@@TOKEN@@
+ExecStart=/opt/searxng-mcp/venv/bin/python /opt/searxng-mcp/server.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

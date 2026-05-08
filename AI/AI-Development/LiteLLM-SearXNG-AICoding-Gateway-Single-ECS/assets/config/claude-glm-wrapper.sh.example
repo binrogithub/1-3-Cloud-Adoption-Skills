@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ -f "$HOME/.config/claude-glm/env" ]]; then
+  # shellcheck disable=SC1091
+  source "$HOME/.config/claude-glm/env"
+fi
+
+export ANTHROPIC_AUTH_TOKEN="${CLAUDE_GLM_ROUTER_KEY:-claude-glm-local}"
+export ANTHROPIC_BASE_URL="http://127.0.0.1:3456"
+export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude-glm-config}"
+export NO_PROXY="${NO_PROXY:-127.0.0.1}"
+export DISABLE_TELEMETRY="${DISABLE_TELEMETRY:-true}"
+export DISABLE_COST_WARNINGS="${DISABLE_COST_WARNINGS:-true}"
+export DISABLE_COMPACT="${DISABLE_COMPACT:-true}"
+export API_TIMEOUT_MS="${API_TIMEOUT_MS:-600000}"
+export CLAUDE_CODE_MAX_CONTEXT_TOKENS="${CLAUDE_CODE_MAX_CONTEXT_TOKENS:-190000}"
+export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-huawei-glm-5.1}"
+export ANTHROPIC_CUSTOM_MODEL_OPTION="${ANTHROPIC_CUSTOM_MODEL_OPTION:-huawei-glm-5.1}"
+export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="${ANTHROPIC_CUSTOM_MODEL_OPTION_NAME:-huawei-glm-5.1}"
+export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="${ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION:-LiteLLM -> Huawei MaaS glm-5.1}"
+unset CLAUDE_CODE_USE_BEDROCK
+
+if ! command -v ccr >/dev/null 2>&1; then
+  echo "claude-glm wrapper: ccr is not in PATH" >&2
+  exit 127
+fi
+
+if ! ccr status >/dev/null 2>&1; then
+  if [[ -z "${LITELLM_VIRTUAL_KEY:-}" ]]; then
+    echo "claude-glm wrapper: LITELLM_VIRTUAL_KEY is not set" >&2
+    exit 1
+  fi
+  ccr start >/dev/null
+fi
+
+inject_model=1
+case "${1:-}" in
+  --model|--model=*)
+    inject_model=0
+    ;;
+  agents|auth|auto-mode|doctor|install|mcp|plugin|plugins|project|setup-token|ultrareview|update|upgrade)
+    inject_model=0
+    ;;
+esac
+
+for arg in "$@"; do
+  if [[ "$arg" == "--model" || "$arg" == --model=* ]]; then
+    inject_model=0
+    break
+  fi
+done
+
+if [[ "$inject_model" == "1" ]]; then
+  exec claude --model "$ANTHROPIC_MODEL" "$@"
+fi
+
+exec claude "$@"

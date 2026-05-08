@@ -1,0 +1,13 @@
+use_default_settings: true
+server:
+  secret_key: "@@SEARXNG_SECRET@@"
+  bind_address: "0.0.0.0"
+  port: 8080
+  limiter: false
+  image_proxy: false
+search:
+  formats:
+    - html
+    - json
+ui:
+  static_use_hash: true
