@@ -48,6 +48,7 @@ The side-by-side script configures:
 - `ANTHROPIC_MODEL=glm-5.1` only inside the `claude-glm` wrapper
 - `ANTHROPIC_CUSTOM_MODEL_OPTION=glm-5.1` only inside the `claude-glm` wrapper
 - `CLAUDE_CODE_MAX_CONTEXT_TOKENS=190000` only inside the `claude-glm` wrapper
+- `claude --model glm-5.1` only from the `claude-glm` wrapper, so the interactive header also selects `glm-5.1`
 
 It also runs a smoke test and expects the result to report `modelUsage.glm-5.1`.
 

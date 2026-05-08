@@ -127,7 +127,41 @@ export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="\${ANTHROPIC_CUSTOM_MODEL_OPTION_NAME
 export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="\${ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION:-Huawei Cloud MaaS $MAAS_MODEL}"
 unset CLAUDE_CODE_USE_BEDROCK
 
-exec ccr code "\$@"
+if ! command -v ccr >/dev/null 2>&1; then
+  echo "claude-glm wrapper: ccr is not in PATH" >&2
+  exit 127
+fi
+
+if ! ccr status >/dev/null 2>&1; then
+  if [[ -z "\${HUAWEI_MAAS_API_KEY:-}" ]]; then
+    echo "claude-glm wrapper: HUAWEI_MAAS_API_KEY is not set" >&2
+    exit 1
+  fi
+  ccr start >/dev/null
+fi
+
+inject_model=1
+case "\${1:-}" in
+  --model|--model=*)
+    inject_model=0
+    ;;
+  agents|auth|auto-mode|doctor|install|mcp|plugin|plugins|project|setup-token|ultrareview|update|upgrade)
+    inject_model=0
+    ;;
+esac
+
+for arg in "\$@"; do
+  if [[ "\$arg" == "--model" || "\$arg" == --model=* ]]; then
+    inject_model=0
+    break
+  fi
+done
+
+if [[ "\$inject_model" == "1" ]]; then
+  exec claude --model "\$ANTHROPIC_MODEL" "\$@"
+fi
+
+exec claude "\$@"
 EOF
 chmod 700 "$CLAUDE_GLM_BIN"
 ln -sfn "$CLAUDE_GLM_BIN" "$CLAUDE_GLM_BIN_DIR/Claude-glm"

@@ -74,6 +74,7 @@ export Z_API_KEY='...'
   - `ANTHROPIC_MODEL=<model>`
   - `ANTHROPIC_CUSTOM_MODEL_OPTION=<model>`
   - `CLAUDE_CODE_MAX_CONTEXT_TOKENS=<context>`
+- Starts `ccr` when needed and runs the real `claude` command with `--model <model>` unless the user already passed `--model` or invoked a Claude Code management subcommand.
 - Restarts `ccr` and validates a small request through `claude-glm`.
 
 `scripts/configure.sh` is the legacy migration path. It wraps the current `claude` command and preserves the original binary as `<claude-path>.real`.
@@ -153,7 +154,8 @@ export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME=glm-5.1
 export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION='Huawei Cloud MaaS glm-5.1'
 export CLAUDE_CODE_MAX_CONTEXT_TOKENS=190000
 unset CLAUDE_CODE_USE_BEDROCK
-exec ccr code "$@"
+ccr status >/dev/null 2>&1 || ccr start >/dev/null
+exec claude --model "$ANTHROPIC_MODEL" "$@"
 ```
 
 ## Z.ai Web Search MCP
@@ -213,7 +215,7 @@ Successful output should include:
 }
 ```
 
-If `claude-glm` still says Sonnet/Opus, check whether the user launched an old shell or old session. The wrapper must export `ANTHROPIC_MODEL` and `ANTHROPIC_CUSTOM_MODEL_OPTION`; then restart the interactive `claude-glm` process. If plain `claude` says Sonnet/Opus, that is expected in side-by-side mode.
+If `claude-glm` still says Sonnet/Opus, check whether the user launched an old shell or old session. The wrapper must export `ANTHROPIC_MODEL` and `ANTHROPIC_CUSTOM_MODEL_OPTION` and pass `--model "$ANTHROPIC_MODEL"` to `claude`; then restart the interactive `claude-glm` process. If plain `claude` says Sonnet/Opus, that is expected in side-by-side mode.
 
 For Z.ai MCP search, verify the MCP connection:
 
@@ -227,7 +229,7 @@ Successful output should show `Status: ✓ Connected`. If it is connected, Claud
 
 - **`Not logged in` from `claude-glm`**: Claude was started without router environment variables. Use the wrapper, `ccr code`, or export `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN`.
 - **Plain `claude` still uses Claude/Sonnet/Opus**: Expected in side-by-side mode. Use `claude-glm` for Huawei MaaS.
-- **`claude-glm` interactive mode shows Sonnet but JSON shows `glm-5.1`**: Add `ANTHROPIC_MODEL` and `ANTHROPIC_CUSTOM_MODEL_OPTION` to the wrapper and restart `claude-glm`.
+- **`claude-glm` interactive mode shows Sonnet/Opus but JSON shows `glm-5.1`**: Ensure the wrapper invokes `claude --model "$ANTHROPIC_MODEL"` instead of only `ccr code`.
 - **`HUAWEI_MAAS_API_KEY, MAAS_API_KEY, or API_KEY is not set`**: Export one of those variables before running `configure-claude-glm.sh`.
 - **`API_KEY is not set` from legacy configure**: Export `API_KEY` before `ccr start` or before launching `claude`; the legacy config intentionally references `$API_KEY`.
 - **`Z_API_KEY is not set`**: Export `Z_API_KEY` before starting Claude Code or before running `claude mcp get web-search-prime`.
