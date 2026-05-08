@@ -1,0 +1,34 @@
+{
+  "index": "government-knowledge-chunks",
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "multilingual_default": {
+          "type": "standard"
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "doc_id": { "type": "keyword" },
+      "chunk_id": { "type": "keyword" },
+      "title": { "type": "text", "analyzer": "multilingual_default" },
+      "content": { "type": "text", "analyzer": "multilingual_default" },
+      "embedding": { "type": "knn_vector", "dimension": 1024 },
+      "department": { "type": "keyword" },
+      "security_level": { "type": "keyword" },
+      "acl_roles": { "type": "keyword" },
+      "acl_departments": { "type": "keyword" },
+      "document_type": { "type": "keyword" },
+      "language": { "type": "keyword" },
+      "jurisdiction": { "type": "keyword" },
+      "effective_date": { "type": "date" },
+      "source_uri": { "type": "keyword" },
+      "page_start": { "type": "integer" },
+      "page_end": { "type": "integer" },
+      "section_path": { "type": "keyword" },
+      "hash": { "type": "keyword" }
+    }
+  }
+}

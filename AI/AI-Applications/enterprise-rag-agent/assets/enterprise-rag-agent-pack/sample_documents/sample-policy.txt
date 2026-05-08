@@ -1,0 +1,5 @@
+Sample policy text for validating ingestion.
+
+This starter file is public, effective 2026-01-01, and owned by Sample Agency.
+Replace it with customer-approved laws, policies, official correspondence, FAQ,
+procedures, or historical cases.

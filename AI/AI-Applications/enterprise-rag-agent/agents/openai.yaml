@@ -1,0 +1,4 @@
+interface:
+  display_name: "Enterprise RAG Agent"
+  short_description: "Build cited enterprise RAG agents"
+  default_prompt: "Use $enterprise-rag-agent to generate an Enterprise RAG Agent Pack with RAGFlow, LlamaIndex, Huawei Cloud MaaS, and a document upload/search demo portal."

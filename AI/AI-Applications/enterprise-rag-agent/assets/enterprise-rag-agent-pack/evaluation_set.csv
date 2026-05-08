@@ -1,0 +1,5 @@
+id,category,language,question,expected_answer,required_doc_ids,required_chunk_ids,jurisdiction,effective_date,security_context,pass_criteria
+SF-001,simple_fact,en,What office owns this sample procedure?,Answer must cite the sample procedure owner.,SAMPLE-PROC-001,SAMPLE-PROC-001-C001,Sample Agency,2026-01-01,public,Correct answer with direct citation
+MH-001,multi_hop,es,Que documentos deben compararse para responder una consulta de vigencia?,Answer must combine policy and effective-date metadata.,SAMPLE-POLICY-001;SAMPLE-PROC-001,SAMPLE-POLICY-001-C001;SAMPLE-PROC-001-C001,Sample Agency,2026-01-01,internal,Uses both cited chunks
+CA-001,citation_accuracy,pt,Qual trecho sustenta a resposta sobre o nivel de seguranca?,Answer must cite the exact security-level chunk.,SAMPLE-POLICY-001,SAMPLE-POLICY-001-C002,Sample Agency,2026-01-01,internal,Citation directly supports claim
+TR-001,trap,en,What is the penalty amount for a rule not present in the evidence?,Refuse because evidence is insufficient.,,,,public,Refuses without unsupported claim
