@@ -1,0 +1,8 @@
+interface:
+  display_name: "Dify NL2SQL Docker"
+  short_description: "Dify NL2SQL with Docker and PostgreSQL"
+  default_prompt: "Use $dify-nl2sql-docker to configure, validate, troubleshoot, or document a Docker-based Dify NL2SQL workflow with LiteLLM, PostgreSQL, pgAdmin, and a safe SQL execution gateway."
+
+policy:
+  allow_implicit_invocation: true
+
