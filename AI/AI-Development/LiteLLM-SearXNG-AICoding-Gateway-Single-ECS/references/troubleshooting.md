@@ -193,15 +193,51 @@ The LiteLLM Postgres connection pool dropped. LiteLLM's auto-reconnect handles
 this, but the first call after a long idle can show a one-off retry. Watch
 `journalctl -u litellm.service`. No action needed.
 
+### `400 the prompt length N must less than the maximum input length 196608`
+
+GLM-5.1's hard input ceiling is **196608 tokens**. The error surfaces from
+LiteLLM as a 400 with the upstream message `Inference failed: the prompt
+length N must less than the maximum input length 196608`. This is the model
+limit, not a LiteLLM, ccr, or network fault. ccr will not retry it; Claude
+Code shows it as `API Error: 400 Error from provider(litellm,...)`.
+
+Two settings combine to make this trip in long coding sessions:
+
+1. The wrapper exports `DISABLE_COMPACT=true`, which turns Claude Code's
+   automatic conversation compaction off. The session keeps growing past the
+   model's window.
+2. `CLAUDE_CODE_MAX_CONTEXT_TOKENS=190000` leaves only ~6.6k headroom under
+   the 196608 cap, so tool definitions, system prompt, and the next user
+   turn easily overflow.
+
+**Fix.**
+
+- Wrapper defaults: set `DISABLE_COMPACT=false` and
+  `CLAUDE_CODE_MAX_CONTEXT_TOKENS=180000` (~8% headroom).
+- For an existing stuck session, run `/compact` (Claude Code summarizes
+  history in place) or `/clear` (fresh session) before continuing.
+- Single oversize requests (e.g., dumping a whole repository in one turn)
+  cannot be compacted away. Split the task.
+
+`longContextThreshold` in `~/.claude-code-router/config.json` only matters
+if a separate long-context Provider exists. We point all four router slots
+at the same `litellm,huawei-glm-5.1`, so that field has no effect on this
+error.
+
 ## Security group
 
 ### Laptop's outbound IP changes mid-session
 
 Mobile networks, VPNs, and ISP rebalancing. Symptom: SSH/curl to the ECS
-times out from the laptop.
+times out from the laptop. In `claude-glm` this surfaces as a long stall
+followed by `Retrying in 10s · attempt N/10 · API_TIMEOUT_MS=...`, because
+ccr's call to LiteLLM at `:4000` is being silently dropped by the SG.
 
 **Fix.** Get the new IP (`curl -s https://ifconfig.me`). Add a new SG rule
-for the new `/32` and remove the stale rule. Do not relax to `0.0.0.0/0`.
+for the new `/32` on the affected ports (typically 22, 4000, 8788) and remove
+the stale rule. Do not relax to `0.0.0.0/0`. When `claude-glm` retries
+loop on `API_TIMEOUT_MS=...`, check `curl ifconfig.me` first; almost every
+mid-session "retry storm" is an IP drift, not a server-side fault.
 
 ### SSH works but `:4000` does not
 
