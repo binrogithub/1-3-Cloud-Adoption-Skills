@@ -19,6 +19,7 @@ This domain contains Level 2 use cases for AI-oriented Huawei Cloud adoption ski
 - [Telco Call Center AI](./AI-Applications/Telco-Call-Center-AI-Skill/README.md) — Battle-tested pattern for telecom AI demos: customer intelligence + agentic engineering on Huawei Cloud ECS GPU. Includes executive POC strategy, deterministic fallback design, and Mexico regulatory compliance.
 - [RAGFlow Huawei MaaS](./AI-Applications/ragflow-huawei-maas/SKILL.md) — Deploy RAGFlow with Huawei Cloud MaaS through the OpenAI-compatible provider and validate UI, API, and LLM integration safely.
 - [CSS Log Query Assistant](./AI-Applications/css-log-assistant/README.md) — Build a natural language log query assistant on Huawei Cloud CSS and MaaS for Latin American delivery operations.
+- [Dify NL2SQL Docker](./AI-Applications/dify-nl2sql-docker/README.md) — Build and operate a local Dify workflow that converts natural language into safe read-only SQL through Docker Compose, LiteLLM or another OpenAI-compatible model endpoint, and a PostgreSQL query gateway.
 - [Claude Code SDK Agent MaaS Skill](./AI-Coding/Claude-Code-SDK-Agent-MaaS-Skill/README.md) — Adapt Claude Code or Claude Agent SDK to Huawei Cloud MaaS through a local compatible proxy.
 - [Claude Code Huawei MaaS](./AI-Coding/claude-code-huawei-maas/README.md) — Route Claude Code through `claude-code-router` to Huawei Cloud MaaS with `glm-5.1`.
 - [OpenHands Huawei MaaS](./AI-Coding/openhands-huawei-maas/README.md) — Configure OpenHands Web GUI or CLI to use Huawei Cloud MaaS through an OpenAI-compatible endpoint.
