@@ -383,6 +383,28 @@ claude-glm --permission-mode bypassPermissions -p \
 
 Expect three real results from SearXNG, formatted by GLM-5.1, returned through LiteLLM through ccr to Claude Code. If you see `tool_use_id` errors, ccr did not receive the tool result; fall back to non-streaming, then re-enable.
 
+### 17. Onboarding additional client laptops
+
+Steps 14–16 wire the laptop you deployed *from*. When a teammate or a second laptop needs to plug into the same gateway, do **not** redeploy LiteLLM/SearXNG/Prisma — they are already up. Hand off three values to the new client out-of-band (1Password, encrypted message, internal vault) and add their `/32` to the SG.
+
+Operator hand-off checklist:
+
+- [ ] Mint a new LiteLLM virtual key for the new client (one key per laptop is best for spend attribution and clean revocation; see `references/aicoding-agent-integration.md`).
+- [ ] Share `<ECS_PUBLIC_IP>`, `<LITELLM_VIRTUAL_KEY>`, and the SearXNG `<MCP_BEARER_TOKEN>` over a confidential channel.
+- [ ] Add the new laptop's `curl ifconfig.me` value as an ingress `/32` rule on the existing SG for `tcp/22`, `tcp/4000`, `tcp/8788`. Do not widen to `0.0.0.0/0`.
+- [ ] If the SG hits its rule quota, retire `/32`s for laptops that off-boarded.
+
+The client then runs the bundled installer:
+
+```
+ECS_PUBLIC_IP='<ECS_PUBLIC_IP>' \
+LITELLM_VIRTUAL_KEY='<LITELLM_VIRTUAL_KEY>' \
+MCP_TOKEN='<MCP_BEARER_TOKEN>' \
+bash scripts/install_claude_glm_client.sh
+```
+
+Full client recipe (manual install, day-2 ops, off-boarding) is in [references/laptop-client-onboarding.md](references/laptop-client-onboarding.md).
+
 ## Health Check Interpretation
 
 Inherits everything from `litellm-huawei-maas-single-ecs`. New cases:
@@ -422,6 +444,7 @@ When completing the task, leave behind:
 - [references/deployment-walkthrough.md](references/deployment-walkthrough.md) — full chronological recipe, copy-paste ready.
 - [references/aicoding-agent-integration.md](references/aicoding-agent-integration.md) — Claude Code + ccr + LiteLLM + isolation.
 - [references/searxng-mcp.md](references/searxng-mcp.md) — FastMCP HTTP transport details.
+- [references/laptop-client-onboarding.md](references/laptop-client-onboarding.md) — onboarding additional client laptops onto an already-running gateway.
 - [references/troubleshooting.md](references/troubleshooting.md) — every issue we hit, with the actual fix.
 - [assets/config/litellm.config.yaml.example](assets/config/litellm.config.yaml.example)
 - [assets/config/litellm.env.example](assets/config/litellm.env.example)
@@ -434,5 +457,6 @@ When completing the task, leave behind:
 - [assets/config/claude-glm-wrapper.sh.example](assets/config/claude-glm-wrapper.sh.example)
 - [scripts/install_litellm.sh](scripts/install_litellm.sh) — idempotent installer for LiteLLM + Redis + PostgreSQL on a fresh ECS.
 - [scripts/install_searxng_and_mcp.sh](scripts/install_searxng_and_mcp.sh) — idempotent installer for SearXNG + MCP server.
-- [scripts/wire_claude_glm.sh](scripts/wire_claude_glm.sh) — runs on the laptop to wire ccr + CLAUDE_CONFIG_DIR isolation + register the MCP.
+- [scripts/wire_claude_glm.sh](scripts/wire_claude_glm.sh) — operator-side: mints a virtual key, then wires ccr + CLAUDE_CONFIG_DIR + MCP on the laptop the operator deployed from.
+- [scripts/install_claude_glm_client.sh](scripts/install_claude_glm_client.sh) — client-side: takes a pre-issued virtual key + bearer token + ECS IP and wires a teammate's laptop onto an already-running gateway.
 - [scripts/validate_e2e.sh](scripts/validate_e2e.sh) — runs all health checks in order.

@@ -244,6 +244,23 @@ mid-session "retry storm" is an IP drift, not a server-side fault.
 Two SG rules are needed (port 22 and port 4000). Adding only one is the
 common typo. List rules and verify both are present for the same CIDR.
 
+### A fresh client laptop cannot reach the gateway
+
+Symptom on the new laptop: `curl http://<ECS_PUBLIC_IP>:4000/health/liveliness`
+times out (`http=000`) or `claude-glm -p '...'` retries on
+`API_TIMEOUT_MS=...`. This is the same SG hygiene issue as the IP-drift
+case above, just on a laptop that never had a `/32` rule to begin with.
+
+**Fix.** The client runs `curl -s https://ifconfig.me` and shares the
+value with the operator over a confidential channel. The operator adds an
+ingress `/32` rule for that IP on `tcp/22`, `tcp/4000`, and `tcp/8788`. The
+client retries the connectivity probes (Step 1–3 of `references/laptop-
+client-onboarding.md`); if `tcp/4000` returns `200` and `tcp/8788` returns
+`401`, the SG is correct and onboarding can proceed.
+
+If the operator's SG is at the rule quota, retire stale `/32`s for laptops
+that off-boarded before adding new ones.
+
 ## State drift
 
 ### State file says resources `DELETED` but they exist in the console
