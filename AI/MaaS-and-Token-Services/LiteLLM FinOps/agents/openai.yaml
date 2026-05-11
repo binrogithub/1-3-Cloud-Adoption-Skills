@@ -1,0 +1,4 @@
+interface:
+  display_name: "Huawei MaaS FinOps Gateway"
+  short_description: "Deploy and operate the Huawei Cloud MaaS FinOps gateway."
+  default_prompt: "Use this skill to deploy, update, validate, or troubleshoot the Huawei Cloud MaaS FinOps gateway with LiteLLM-compatible routes, virtual keys, model connections, and Web Search MCP."
