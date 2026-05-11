@@ -19,4 +19,4 @@ This use case focuses on improving software engineering productivity with AI, in
 
 ## Included Skills
 
-- [LiteLLM SearXNG AICoding Gateway Single ECS](./LiteLLM-SearXNG-AICoding-Gateway-Single-ECS/README.md): Single-host LiteLLM + SearXNG MCP gateway on Huawei Cloud ECS, integrated with Claude Code via claude-code-router and `CLAUDE_CONFIG_DIR` isolation.
+- [LiteLLM Huawei MaaS Single ECS](./LiteLLM-Huawei-MaaS-Single-ECS/README.md): Reuse a deployment and validation skill for running LiteLLM Proxy on a single Huawei Cloud ECS host and connecting it to Huawei Cloud MaaS.
