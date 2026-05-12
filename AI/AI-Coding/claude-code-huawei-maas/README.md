@@ -50,6 +50,7 @@ The side-by-side script configures:
 - `CLAUDE_CODE_MAX_CONTEXT_TOKENS=190000` only inside the `claude-glm` wrapper
 - `DISABLE_COMPACT=true` only inside the `claude-glm` wrapper so Claude Code honors the 190K context override
 - `claude --model glm-5.1` only from the `claude-glm` wrapper, so the interactive header also selects `glm-5.1`
+- background startup and readiness checks for `ccr` when the router is not already running
 
 It also runs a smoke test and expects the result to report `modelUsage.glm-5.1`.
 

@@ -75,7 +75,7 @@ export Z_API_KEY='...'
   - `ANTHROPIC_CUSTOM_MODEL_OPTION=<model>`
   - `CLAUDE_CODE_MAX_CONTEXT_TOKENS=<context>`
   - `DISABLE_COMPACT=true`, required by Claude Code 2.1.133 for `CLAUDE_CODE_MAX_CONTEXT_TOKENS` to override the default `200000` context window
-- Starts `ccr` when needed and runs the real `claude` command with `--model <model>` unless the user already passed `--model` or invoked a Claude Code management subcommand.
+- Starts `ccr` in the background when needed, waits for it to report `Status: Running`, and runs the real `claude` command with `--model <model>` unless the user already passed `--model` or invoked a Claude Code management subcommand.
 - Restarts `ccr` and validates a small request through `claude-glm`.
 
 `scripts/configure.sh` is the legacy migration path. It wraps the current `claude` command and preserves the original binary as `<claude-path>.real`.
@@ -156,7 +156,24 @@ export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION='Huawei Cloud MaaS glm-5.1'
 export DISABLE_COMPACT=true
 export CLAUDE_CODE_MAX_CONTEXT_TOKENS=190000
 unset CLAUDE_CODE_USE_BEDROCK
-ccr status >/dev/null 2>&1 || ccr start >/dev/null
+if ! ccr status 2>/dev/null | grep -q "Status: Running"; then
+  ccr_log="${CLAUDE_GLM_CCR_LOG:-/tmp/claude-glm-ccr.log}"
+  if command -v setsid >/dev/null 2>&1; then
+    setsid ccr start > "$ccr_log" 2>&1 < /dev/null &
+  else
+    nohup ccr start > "$ccr_log" 2>&1 < /dev/null &
+  fi
+
+  for _ in {1..30}; do
+    ccr status 2>/dev/null | grep -q "Status: Running" && break
+    sleep 0.2
+  done
+
+  if ! ccr status 2>/dev/null | grep -q "Status: Running"; then
+    echo "ccr failed to start; see $ccr_log" >&2
+    exit 1
+  fi
+fi
 exec claude --model "$ANTHROPIC_MODEL" "$@"
 ```
 
@@ -234,6 +251,7 @@ Successful output should show `Status: ✓ Connected`. If it is connected, Claud
 - **`claude-glm` interactive mode shows Sonnet/Opus but JSON shows `glm-5.1`**: Ensure the wrapper invokes `claude --model "$ANTHROPIC_MODEL"` instead of only `ccr code`.
 - **`HUAWEI_MAAS_API_KEY, MAAS_API_KEY, or API_KEY is not set`**: Export one of those variables before running `configure-claude-glm.sh`.
 - **`API_KEY is not set` from legacy configure**: Export `API_KEY` before `ccr start` or before launching `claude`; the legacy config intentionally references `$API_KEY`.
+- **`claude-glm` hangs before Claude Code starts**: Check the generated wrapper. It must not run foreground `ccr start >/dev/null`; it should background `ccr start`, then wait until `ccr status` includes `Status: Running`.
 - **`Z_API_KEY is not set`**: Export `Z_API_KEY` before starting Claude Code or before running `claude mcp get web-search-prime`.
 - **Z.ai MCP fails with auth errors**: Confirm the user has a Z.ai account, the API key is active, and the environment variable name is exactly `Z_API_KEY`.
 - **Z.ai MCP was added with a literal `${Z_API_KEY}` header**: Replace the static `headers` entry with `headersHelper` so Claude Code reads the current environment at runtime.

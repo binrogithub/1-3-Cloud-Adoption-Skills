@@ -133,12 +133,27 @@ if ! command -v ccr >/dev/null 2>&1; then
   exit 127
 fi
 
-if ! ccr status >/dev/null 2>&1; then
+if ! ccr status 2>/dev/null | grep -q "Status: Running"; then
   if [[ -z "\${HUAWEI_MAAS_API_KEY:-}" ]]; then
     echo "claude-glm wrapper: HUAWEI_MAAS_API_KEY is not set" >&2
     exit 1
   fi
-  ccr start >/dev/null
+  ccr_log="\${CLAUDE_GLM_CCR_LOG:-/tmp/claude-glm-ccr.log}"
+  if command -v setsid >/dev/null 2>&1; then
+    setsid ccr start > "\$ccr_log" 2>&1 < /dev/null &
+  else
+    nohup ccr start > "\$ccr_log" 2>&1 < /dev/null &
+  fi
+
+  for _ in {1..30}; do
+    ccr status 2>/dev/null | grep -q "Status: Running" && break
+    sleep 0.2
+  done
+
+  if ! ccr status 2>/dev/null | grep -q "Status: Running"; then
+    echo "claude-glm wrapper: ccr failed to start; see \$ccr_log" >&2
+    exit 1
+  fi
 fi
 
 inject_model=1
