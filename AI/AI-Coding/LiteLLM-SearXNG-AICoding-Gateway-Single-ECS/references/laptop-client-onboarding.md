@@ -126,7 +126,7 @@ placeholder.
 ```bash
 mkdir -p ~/.claude-code-router
 sed "s|@@ECS_PUBLIC_IP@@|<ECS_PUBLIC_IP>|g" \
-  AI/AI-Development/LiteLLM-SearXNG-AICoding-Gateway-Single-ECS/assets/config/claude-code-router.config.json.example \
+  AI/AI-Coding/LiteLLM-SearXNG-AICoding-Gateway-Single-ECS/assets/config/claude-code-router.config.json.example \
   > ~/.claude-code-router/config.json
 chmod 600 ~/.claude-code-router/config.json
 ```
@@ -140,7 +140,7 @@ from the env file when ccr starts. Do not paste the literal key into
 ```bash
 mkdir -p ~/.local/bin
 install -m 755 \
-  AI/AI-Development/LiteLLM-SearXNG-AICoding-Gateway-Single-ECS/assets/config/claude-glm-wrapper.sh.example \
+  AI/AI-Coding/LiteLLM-SearXNG-AICoding-Gateway-Single-ECS/assets/config/claude-glm-wrapper.sh.example \
   ~/.local/bin/claude-glm
 
 case ":$PATH:" in
