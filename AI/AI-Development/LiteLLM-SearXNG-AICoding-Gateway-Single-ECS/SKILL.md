@@ -5,7 +5,7 @@ description: Use this skill when deploying a single-ECS AI coding gateway on Hua
 
 # LiteLLM + SearXNG AI Coding Gateway on Single Huawei Cloud ECS
 
-This skill supersedes `litellm-huawei-maas-single-ecs`. It reuses every rule from that skill and adds:
+This skill provides:
 
 - A reproducible end-to-end deployment recipe that survives Prisma, systemd, and SearXNG quirks on Ubuntu 22.04 ECS images.
 - A **SearXNG search MCP** (FastMCP HTTP transport, bearer-auth) so AI coding agents can call `web_search` and `fetch_url`.
@@ -46,7 +46,12 @@ If the user only gives one model, prefer explicit routing for that model (`huawe
 
 ## Core Rules
 
-Inherit all rules from `litellm-huawei-maas-single-ecs` (explicit model mappings, local-only Redis/PostgreSQL, env-file secrets, systemd everywhere, validate both direct and proxied paths, FinOps pricing, multi-user keys). Additionally:
+- Prefer explicit model mappings such as `huawei/glm-5.1 -> openai/glm-5.1`. Avoid wildcard mappings unless the user explicitly wants dynamic model passthrough.
+- Bind Redis and PostgreSQL to localhost unless the user asks for external access.
+- Store runtime secrets in an environment file and keep the LiteLLM config free of hardcoded secrets.
+- Use systemd units for Redis, PostgreSQL, and LiteLLM.
+- Validate both direct MaaS access and proxied LiteLLM access.
+- For FinOps, make the proxy the only egress path for MaaS traffic so budgets, rate limits, and spend logs stay centralized.
 
 - For budget enforcement, always confirm the exposed model has non-zero `input_cost_per_token` and `output_cost_per_token`; otherwise successful calls may not consume spend.
 - For multi-user proxying, keep the master key admin-only and mint child keys per team, service, or environment.
@@ -422,7 +427,14 @@ Use [scripts/bootstrap_finops_team.py](scripts/bootstrap_finops_team.py) to crea
 
 ## Health Check Interpretation
 
-Inherits everything from `litellm-huawei-maas-single-ecs`. New cases:
+If `/health` returns:
+
+- `401`: missing LiteLLM auth header
+- upstream auth error: MaaS API key is invalid or missing
+- `Invalid model`: the mapped upstream model name is wrong
+- rate limit error: the mapping is valid, but the upstream provider is throttling frequent probes
+
+Additional cases:
 
 - LiteLLM service `active` but no `:4000` listener → still in startup; check `journalctl -u litellm.service` for `Application startup complete.` Most "active but no listener" cases are Prisma engine startup, not LiteLLM itself.
 - `Not connected to the query engine` with no other detail → engine binary unreadable or absent; see Prisma section.
@@ -433,7 +445,16 @@ Inherits everything from `litellm-huawei-maas-single-ecs`. New cases:
 
 ## Repair Playbook
 
-Inherits everything from `litellm-huawei-maas-single-ecs`. Add:
+When fixing an existing deployment:
+
+- Inspect current `config.yaml` before editing; preserve working explicit models.
+- Remove wildcard passthrough if health checks are noisy.
+- Confirm the environment file still contains the real MaaS key.
+- Inspect `journalctl -u litellm.service` for startup errors.
+- Inspect whether Prisma schema sync or query engine startup is the actual blocker.
+- If cost or usage attribution problems appear, confirm all real clients use LiteLLM child keys instead of the MaaS key directly, and confirm teams and keys carry distinct aliases, tags, or metadata for chargeback.
+
+Additional repair guidance:
 
 - If you hit Prisma `Not connected to the query engine` after a LiteLLM upgrade, re-run `prisma generate` and `prisma db push`. The cached engine path may be for an older version.
 - If ccr config file changes are not picked up, `ccr stop` then `ccr start`. There is no SIGHUP path; restart is mandatory.
