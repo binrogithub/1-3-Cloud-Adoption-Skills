@@ -73,9 +73,9 @@ After this, `claude-glm` works end-to-end through LiteLLM and can call
 
 ## MaaS-Only Utilities
 
-The following files are carried over from the MaaS-only skill
-(`litellm-huawei-maas-single-ecs`) for operators who need them independently
-of the full gateway stack:
+The following MaaS-only utilities are included for operators who need LiteLLM
+deployment, FinOps, and validation assets independently of the full gateway
+stack:
 
 - `assets/config/redis-local.conf.example` — reference Redis config (for
   source-built Redis or `redis-local.service`)

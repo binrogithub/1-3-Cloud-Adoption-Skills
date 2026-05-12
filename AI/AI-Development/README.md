@@ -19,4 +19,4 @@ This use case focuses on improving software engineering productivity with AI, in
 
 ## Included Skills
 
-- [LiteLLM Huawei MaaS Single ECS](./LiteLLM-Huawei-MaaS-Single-ECS/README.md): Reuse a deployment and validation skill for running LiteLLM Proxy on a single Huawei Cloud ECS host and connecting it to Huawei Cloud MaaS.
+- [LiteLLM SearXNG AICoding Gateway Single ECS](./LiteLLM-SearXNG-AICoding-Gateway-Single-ECS/README.md): Deploy a single Huawei Cloud ECS gateway that fronts Huawei Cloud MaaS through LiteLLM, adds FinOps and multi-user controls, and exposes SearXNG as a bearer-authenticated remote MCP for AI coding agents.

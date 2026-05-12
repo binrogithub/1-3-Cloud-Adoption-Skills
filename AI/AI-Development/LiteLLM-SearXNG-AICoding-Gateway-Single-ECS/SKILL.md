@@ -175,7 +175,7 @@ chown -R litellm:litellm /opt/litellm-venv
 
 `/etc/litellm/litellm.env` (mode `0640 root:litellm`):
 
-See [assets/config/litellm.env.example](assets/config/litellm.env.example). Critical fields beyond the skeleton in `litellm-huawei-maas-single-ecs`:
+See [assets/config/litellm.env.example](assets/config/litellm.env.example). Critical runtime fields:
 
 - `PRISMA_QUERY_ENGINE_BINARY=` absolute path to the engine binary that Prisma fetched (see Prisma section).
 - `HOME=/opt/litellm` so Prisma's config loader does not try to read the invoking user's `pyproject.toml`.
