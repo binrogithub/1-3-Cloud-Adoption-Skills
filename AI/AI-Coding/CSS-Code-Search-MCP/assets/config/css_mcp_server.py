@@ -103,7 +103,7 @@ async def get_file(repo_path: str) -> str:
     Use after search_code to retrieve the full content of a file that matched.
 
     Args:
-        repo_path: file path in the repo, e.g. "AI/AI-Development/LiteLLM-SearXNG-AICoding-Gateway-Single-ECS/SKILL.md"
+        repo_path: file path in the repo, e.g. "AI/AI-Coding/LiteLLM-SearXNG-AICoding-Gateway-Single-ECS/SKILL.md"
     Returns: concatenated content of all chunks for the file
     """
     body = {
