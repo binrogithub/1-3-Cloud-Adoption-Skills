@@ -48,6 +48,10 @@ Use this index when Codex, Claude Code, or another AI agent needs to locate the 
 | 28 | AI | Responsible AI and Governance | [Langfuse LLM Observability](./AI/Responsible-AI-and-Governance/langfuse-llm-observability/SKILL.md) | Deploy or integrate Langfuse for LLM tracing, generations, usage, latency, cost, errors, evaluations, prompt management, and observability workflows. |
 | 29 | AI | Responsible AI and Governance | [OpenLLMetry Huawei MaaS Agent](./AI/Responsible-AI-and-Governance/openllmetry-huawei-maas-agent/SKILL.md) | Instrument Huawei MaaS-backed agents with OpenLLMetry, Traceloop, and OpenTelemetry while preventing API keys and prompt content from leaking into telemetry. |
 | 30 | AI | AI Infrastructure | [detectron2 Ascend NPU Demo](./AI/AI-Infrastructure/detectron2-ascend-demo.md) | Deploy and test detectron2 on Huawei Ascend 910B3 NPU (ModelArts) with COCO val2017 and OGNet oil/gas refinery inference demos, NPU compatibility patches, result packaging, and test report generation. |
+| 31 | AI | AI Coding | [MaaS AI Coding Quality Skill](./AI/AI-Coding/maas-ai-coding-quality-skill/README.md) | Enforce AI coding quality gates (lint, test, coverage, security) with evidence-based exit criteria before code reaches review or production. |
+| 32 | AI | AI Coding | [MaaS Code Review and Security Skill](./AI/AI-Coding/maas-code-review-and-security-skill/README.md) | Run structured code review and security audit with OWASP classification, secret detection, dependency audit, and evidence-based findings for compliance. |
+| 33 | AI | AI Coding | [MaaS Spec-Plan-Build-Test Skill](./AI/AI-Coding/maas-spec-plan-build-test-skill/README.md) | Execute the Spec→Plan→Build→Test engineering workflow with gated phase transitions, human review between Plan and Build, and vertical slicing. |
+| 34 | AI | AI Coding | [MaaS Legacy Code Migration Skill](./AI/AI-Coding/maas-legacy-code-migration-skill/README.md) | Understand, refactor, and migrate legacy code (Java/COBOL/.NET) with reviewable batch transforms, characterization tests, and behavior preservation. |
 
 ## How To Navigate This Repository
 
