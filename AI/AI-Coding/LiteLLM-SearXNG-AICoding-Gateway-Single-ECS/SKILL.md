@@ -279,29 +279,22 @@ LiteLLM ships a built-in admin dashboard for managing virtual keys, teams, spend
 
 **Known issue — browser login form returns "Invalid credentials":**
 
-In LiteLLM ≤ 1.83.x, the browser JS frontend sends a JSON `POST /login` that the backend rejects with `401 Invalid credentials`. The backend **does** accept `application/x-www-form-urlencoded` logins, but the frontend doesn't use that content type. Three workarounds, in order of preference:
+In some LiteLLM builds derived from the older `/login` flow, the UI login page can report `401 Invalid credentials` even when `UI_USERNAME` and `UI_PASSWORD` are set correctly. Treat this as a version-specific UI bug, not as proof that the backend rejected the credentials.
 
-1. **SSH tunnel + form login (most reliable):** Tunnel port 4000 to localhost and log in through the tunnel. The browser's native form submission uses the correct content type when the origin is `127.0.0.1`:
+Recommended handling:
 
-   ```
-   ssh -L 4000:127.0.0.1:4000 root@<ECS_PUBLIC_IP>
-   # Then open http://127.0.0.1:4000/ui/ in the browser
-   ```
-
-2. **Direct token URL (quick but expires):** Obtain a JWT token via the API and open the UI with it as a query parameter. The token is a session cookie; it expires after the server's JWT TTL:
+1. **Verify the backend accepts the credentials first:** check the login endpoint directly from the ECS host. A `303` confirms the backend accepted the credentials and the problem is UI-side:
 
    ```
-   curl -s -X POST http://127.0.0.1:4000/login \
+   curl -X POST http://127.0.0.1:4000/login \
      -H "Content-Type: application/x-www-form-urlencoded" \
      -d "username=$UI_USERNAME&password=$UI_PASSWORD" \
-     -c /tmp/litellm-cookies.txt -o /dev/null
-
-   TOKEN=$(grep token /tmp/litellm-cookies.txt | awk '{print $NF}')
-   echo "http://<ECS_PUBLIC_IP>:4000/ui/?token=$TOKEN"
-   # Open the printed URL in the browser
+     -o /dev/null -w "%{http_code}\n"
    ```
 
-3. **Upgrade LiteLLM** to a version that fixes the frontend login. Check the [LiteLLM changelog](https://docs.litellm.ai/docs/changelog) for fixes to the `/login` endpoint.
+2. **If the backend accepts the credentials but the UI still fails, upgrade LiteLLM** to a version that fixes the frontend login path. Check the [LiteLLM changelog](https://docs.litellm.ai/docs/changelog) for fixes to the `/login` endpoint before investing time in local workarounds.
+
+Do **not** document or rely on URL query-string token injection for admin access. Keep session tokens in cookies or normal server-side login flows only.
 
 **What you can do in the UI:**
 
@@ -517,7 +510,7 @@ Additional repair guidance:
 - If `claude-glm` shows the **interactive Anthropic model picker** after a wrapper edit, the wrapper failed to set `ANTHROPIC_MODEL` before `claude` started. Use `claude --model "$ANTHROPIC_MODEL"`, not `--model=$ANTHROPIC_MODEL` — Claude Code's CLI parser is tolerant of both, but quoting the value avoids surprises with model names containing slashes.
 - If `mcp list` reports `searxng: ! Failed` but `curl` to `:8788/mcp` works, check that the `--header` you registered exactly matches `Authorization: Bearer <token>`. Quotes and trailing spaces are silent killers.
 - If the laptop's outbound IP changed, **do not** widen SG to `0.0.0.0/0`. Add a new `/32` rule for the new IP and remove the stale rule.
-- If the LiteLLM UI login form returns `Invalid credentials` even though `UI_USERNAME`/`UI_PASSWORD` are correctly set in the env file, this is a frontend bug in LiteLLM ≤ 1.83.x. Use the SSH tunnel workaround or the direct token URL workaround described in step 10a. Verify the credentials work via `curl -X POST http://127.0.0.1:4000/login -H "Content-Type: application/x-www-form-urlencoded" -d "username=$UI_USERNAME&password=$UI_PASSWORD" -o /dev/null -w "%{http_code}"` — a `303` confirms the backend accepts them and the issue is frontend-only.
+- If the LiteLLM UI login form returns `Invalid credentials` even though `UI_USERNAME`/`UI_PASSWORD` are correctly set in the env file, treat it as a likely version-specific UI bug. Verify the credentials first with `curl -X POST http://127.0.0.1:4000/login -H "Content-Type: application/x-www-form-urlencoded" -d "username=$UI_USERNAME&password=$UI_PASSWORD" -o /dev/null -w "%{http_code}\n"` — a `303` confirms the backend accepts them and the issue is UI-side. Prefer upgrading LiteLLM over inventing local admin-login workarounds.
 
 ## Output Expectations
 
