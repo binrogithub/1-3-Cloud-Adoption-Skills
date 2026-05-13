@@ -4,6 +4,8 @@ This repository defines a practical skill framework for Huawei Cloud adoption wo
 
 An AI skill in this repository is not just a prompt. It is a reusable capability unit built around a cloud scenario, where AI helps with understanding, design, migration, operations, development, analysis, or optimization.
 
+Recent updates expanded the `AI / AI-Coding` area with four MaaS engineering workflow skills, refreshed the LiteLLM single-ECS gateway skill with merged MaaS-only utilities and clearer Admin UI guidance, and added new `AI / Agent-Platform` memory and orchestration skills.
+
 Each skill should include:
 
 - Scenario: what business problem or cloud scenario it addresses
@@ -15,6 +17,8 @@ Each skill should include:
 ## Agent Skill Index
 
 Use this index when Codex, Claude Code, or another AI agent needs to locate the right reusable skill quickly. Start from the business scenario, then open the linked skill folder. The child skill `README.md` gives the repository-facing summary, while `SKILL.md` contains the agent-facing workflow and trigger rules when present.
+
+For the latest additions, check the `AI / AI-Coding` and `AI / Agent Platform` entries near the end of the index, including the updated LiteLLM gateway entry.
 
 | # | Domain | Use Case | Skill | Use When |
 | --- | --- | --- | --- | --- |
@@ -44,14 +48,18 @@ Use this index when Codex, Claude Code, or another AI agent needs to locate the 
 | 24 | AI | AI Coding | [OpenHands Huawei MaaS](./AI/AI-Coding/openhands-huawei-maas/README.md) | Configure OpenHands Web GUI or CLI to use Huawei Cloud MaaS through an OpenAI-compatible endpoint with safe API key handling, local Docker startup, CLI setup, and MaaS connectivity verification. |
 | 25 | AI | AI Coding | [OpenShift Huawei Cloud MaaS Skill](./AI/AI-Coding/OpenShift-Huawei-Cloud-MaaS-Skill/README.md) | Connect OpenShift Dev Spaces or Eclipse Che browser-based VS Code with Cline and Huawei Cloud MaaS through an OpenAI-compatible endpoint. |
 | 26 | AI | AI Coding | [Pi Huawei MaaS Cross Platform](./AI/AI-Coding/pi-huawei-maas-cross-platform/README.md) | Configure Pi Coding Agent on Windows or Linux to use Huawei Cloud ModelArts MaaS through an OpenAI-compatible endpoint, preserving platform-specific config paths and model registry casing. |
-| 27 | AI | AI Coding | [LiteLLM SearXNG AICoding Gateway Single ECS](./AI/AI-Coding/LiteLLM-SearXNG-AICoding-Gateway-Single-ECS/README.md) | Deploy a single Huawei Cloud ECS that fronts MaaS through LiteLLM, provides FinOps and multi-user controls, includes MaaS-only validation utilities, and exposes SearXNG as a bearer-auth remote MCP for Claude Code via claude-code-router. |
-| 28 | AI | Responsible AI and Governance | [Langfuse LLM Observability](./AI/Responsible-AI-and-Governance/langfuse-llm-observability/SKILL.md) | Deploy or integrate Langfuse for LLM tracing, generations, usage, latency, cost, errors, evaluations, prompt management, and observability workflows. |
-| 29 | AI | Responsible AI and Governance | [OpenLLMetry Huawei MaaS Agent](./AI/Responsible-AI-and-Governance/openllmetry-huawei-maas-agent/SKILL.md) | Instrument Huawei MaaS-backed agents with OpenLLMetry, Traceloop, and OpenTelemetry while preventing API keys and prompt content from leaking into telemetry. |
-| 30 | AI | AI Infrastructure | [detectron2 Ascend NPU Demo](./AI/AI-Infrastructure/detectron2-ascend-demo.md) | Deploy and test detectron2 on Huawei Ascend 910B3 NPU (ModelArts) with COCO val2017 and OGNet oil/gas refinery inference demos, NPU compatibility patches, result packaging, and test report generation. |
-| 31 | AI | AI Coding | [MaaS AI Coding Quality Skill](./AI/AI-Coding/maas-ai-coding-quality-skill/README.md) | Enforce AI coding quality gates (lint, test, coverage, security) with evidence-based exit criteria before code reaches review or production. |
-| 32 | AI | AI Coding | [MaaS Code Review and Security Skill](./AI/AI-Coding/maas-code-review-and-security-skill/README.md) | Run structured code review and security audit with OWASP classification, secret detection, dependency audit, and evidence-based findings for compliance. |
-| 33 | AI | AI Coding | [MaaS Spec-Plan-Build-Test Skill](./AI/AI-Coding/maas-spec-plan-build-test-skill/README.md) | Execute the Spec→Plan→Build→Test engineering workflow with gated phase transitions, human review between Plan and Build, and vertical slicing. |
-| 34 | AI | AI Coding | [MaaS Legacy Code Migration Skill](./AI/AI-Coding/maas-legacy-code-migration-skill/README.md) | Understand, refactor, and migrate legacy code (Java/COBOL/.NET) with reviewable batch transforms, characterization tests, and behavior preservation. |
+| 27 | AI | AI Coding | [LiteLLM SearXNG AICoding Gateway Single ECS](./AI/AI-Coding/LiteLLM-SearXNG-AICoding-Gateway-Single-ECS/README.md) | Deploy a single Huawei Cloud ECS that fronts MaaS through LiteLLM, provides FinOps and multi-user controls, includes MaaS-only validation utilities, adds LiteLLM Admin UI login guidance, and exposes SearXNG as a bearer-auth remote MCP for Claude Code via claude-code-router. |
+| 28 | AI | Agent Platform | [Enterprise Agent Memory](./AI/Agent-Platform/enterprise-agent-memory-skill/README.md) | Build cross-session persistent memory for enterprise agents with hook-based capture, AI compression, tiered retrieval, privacy controls, and audit trails. |
+| 29 | AI | Agent Platform | [Agent Context Compression and Retrieval](./AI/Agent-Platform/agent-context-compression-and-retrieval-skill/README.md) | Build automatic context compression and tiered recall for enterprise agents with recall probes, artifact probes, and token cost visibility. |
+| 30 | AI | Agent Platform | [Project Memory RAG](./AI/Agent-Platform/project-memory-rag-skill/README.md) | Build project-level knowledge persistence that combines learned memory, document RAG, GraphRAG, MCP access, and skill-based procedural memory. |
+| 31 | AI | Agent Platform | [HuaweiClaw](./AI/Agent-Platform/huaweiclaw/README.md) | Deploy a personal multi-agent Huawei Cloud operations and coding system with orchestration, memory, MCP tool routing, web cockpit, and chat interfaces. |
+| 32 | AI | Responsible AI and Governance | [Langfuse LLM Observability](./AI/Responsible-AI-and-Governance/langfuse-llm-observability/SKILL.md) | Deploy or integrate Langfuse for LLM tracing, generations, usage, latency, cost, errors, evaluations, prompt management, and observability workflows. |
+| 33 | AI | Responsible AI and Governance | [OpenLLMetry Huawei MaaS Agent](./AI/Responsible-AI-and-Governance/openllmetry-huawei-maas-agent/SKILL.md) | Instrument Huawei MaaS-backed agents with OpenLLMetry, Traceloop, and OpenTelemetry while preventing API keys and prompt content from leaking into telemetry. |
+| 34 | AI | AI Infrastructure | [detectron2 Ascend NPU Demo](./AI/AI-Infrastructure/detectron2-ascend-demo.md) | Deploy and test detectron2 on Huawei Ascend 910B3 NPU (ModelArts) with COCO val2017 and OGNet oil/gas refinery inference demos, NPU compatibility patches, result packaging, and test report generation. |
+| 35 | AI | AI Coding | [MaaS AI Coding Quality Skill](./AI/AI-Coding/maas-ai-coding-quality-skill/README.md) | Enforce AI coding quality gates (lint, test, coverage, security) with evidence-based exit criteria before code reaches review or production. |
+| 36 | AI | AI Coding | [MaaS Code Review and Security Skill](./AI/AI-Coding/maas-code-review-and-security-skill/README.md) | Run structured code review and security audit with OWASP classification, secret detection, dependency audit, and evidence-based findings for compliance. |
+| 37 | AI | AI Coding | [MaaS Spec-Plan-Build-Test Skill](./AI/AI-Coding/maas-spec-plan-build-test-skill/README.md) | Execute the Spec→Plan→Build→Test engineering workflow with gated phase transitions, human review between Plan and Build, and vertical slicing. |
+| 38 | AI | AI Coding | [MaaS Legacy Code Migration Skill](./AI/AI-Coding/maas-legacy-code-migration-skill/README.md) | Understand, refactor, and migrate legacy code (Java/COBOL/.NET) with reviewable batch transforms, characterization tests, and behavior preservation. |
 
 ## How To Navigate This Repository
 
