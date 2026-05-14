@@ -51,8 +51,30 @@ The side-by-side script configures:
 - `DISABLE_COMPACT=true` only inside the `claude-glm` wrapper so Claude Code honors the 190K context override
 - `claude --model glm-5.1` only from the `claude-glm` wrapper, so the interactive header also selects `glm-5.1`
 - background startup and readiness checks for `ccr` when the router is not already running
+- real router health checks against `http://127.0.0.1:3456/`, so stale pid/status files do not cause `FailedToOpenSocket` or `ConnectionRefused` retries
+- stop/start race handling: if `ccr` is unhealthy, the wrapper stops it, waits for the old process to release, then waits up to 30 seconds for the restarted router to become healthy
 
 It also runs a smoke test and expects the result to report `modelUsage.glm-5.1`.
+
+## Local Router Recovery
+
+When Claude Code reports errors such as:
+
+```text
+Unable to connect to API (FailedToOpenSocket)
+ConnectionRefused: http://127.0.0.1:3456/v1/messages?beta=true
+ccr failed to start; see /tmp/claude-glm-ccr.log
+```
+
+Check the local router before changing MaaS credentials:
+
+```bash
+ccr status
+ss -ltnp | grep ':3456'
+curl -fsS -H "Authorization: Bearer ${CLAUDE_GLM_ROUTER_KEY:-claude-glm-local}" http://127.0.0.1:3456/
+```
+
+If `ccr status` says running but the curl check fails, the router state is stale. Re-run `./scripts/configure-claude-glm.sh` or use the generated `claude-glm` wrapper; it now stops stale `ccr`, waits for shutdown, starts it in the background, and verifies the local socket before launching Claude Code.
 
 To wrap plain `claude` instead:
 

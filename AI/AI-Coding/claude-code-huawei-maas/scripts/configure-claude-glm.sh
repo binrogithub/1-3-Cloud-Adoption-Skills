@@ -40,6 +40,7 @@ if ! command -v ccr >/dev/null 2>&1; then
 fi
 need_cmd ccr
 need_cmd claude
+need_cmd curl
 
 mkdir -p "$CLAUDE_CONFIG_DIR" "$CLAUDE_GLM_CONFIG_DIR" "$CLAUDE_GLM_BIN_DIR"
 chmod 700 "$CLAUDE_CONFIG_DIR" "$CLAUDE_GLM_CONFIG_DIR" "$CLAUDE_GLM_BIN_DIR"
@@ -116,7 +117,10 @@ fi
 
 export ANTHROPIC_AUTH_TOKEN="$CLAUDE_GLM_ROUTER_KEY"
 export ANTHROPIC_BASE_URL="$CCR_BASE_URL"
-export NO_PROXY="\${NO_PROXY:-127.0.0.1}"
+case ",\${NO_PROXY:-}," in
+  *,127.0.0.1,localhost,*) ;;
+  *) export NO_PROXY="\${NO_PROXY:+\$NO_PROXY,}127.0.0.1,localhost" ;;
+esac
 export DISABLE_TELEMETRY="\${DISABLE_TELEMETRY:-true}"
 export DISABLE_COST_WARNINGS="\${DISABLE_COST_WARNINGS:-true}"
 export DISABLE_COMPACT="\${DISABLE_COMPACT:-true}"
@@ -133,7 +137,23 @@ if ! command -v ccr >/dev/null 2>&1; then
   exit 127
 fi
 
-if ! ccr status 2>/dev/null | grep -q "Status: Running"; then
+ccr_healthy() {
+  ccr status 2>/dev/null | grep -q "Status: Running" &&
+    curl -fsS -m 2 \
+      -H "Authorization: Bearer \$ANTHROPIC_AUTH_TOKEN" \
+      "\$ANTHROPIC_BASE_URL/" >/dev/null 2>&1
+}
+
+wait_for_ccr_stop() {
+  for _ in {1..20}; do
+    if ! ccr status 2>/dev/null | grep -q "Status: Running"; then
+      return 0
+    fi
+    sleep 0.25
+  done
+}
+
+start_ccr() {
   if [[ -z "\${HUAWEI_MAAS_API_KEY:-}" ]]; then
     echo "claude-glm wrapper: HUAWEI_MAAS_API_KEY is not set" >&2
     exit 1
@@ -145,15 +165,22 @@ if ! ccr status 2>/dev/null | grep -q "Status: Running"; then
     nohup ccr start > "\$ccr_log" 2>&1 < /dev/null &
   fi
 
-  for _ in {1..30}; do
-    ccr status 2>/dev/null | grep -q "Status: Running" && break
-    sleep 0.2
+  for _ in {1..60}; do
+    ccr_healthy && break
+    sleep 0.5
   done
 
-  if ! ccr status 2>/dev/null | grep -q "Status: Running"; then
+  if ! ccr_healthy; then
     echo "claude-glm wrapper: ccr failed to start; see \$ccr_log" >&2
+    ccr status >&2 || true
     exit 1
   fi
+}
+
+if ! ccr_healthy; then
+  ccr stop >/dev/null 2>&1 || true
+  wait_for_ccr_stop
+  start_ccr
 fi
 
 inject_model=1
