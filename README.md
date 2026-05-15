@@ -60,6 +60,7 @@ For the latest additions, check the `AI / AI-Coding` and `AI / Agent Platform` e
 | 36 | AI | AI Coding | [MaaS Code Review and Security Skill](./AI/AI-Coding/maas-code-review-and-security-skill/README.md) | Run structured code review and security audit with OWASP classification, secret detection, dependency audit, and evidence-based findings for compliance. |
 | 37 | AI | AI Coding | [MaaS Spec-Plan-Build-Test Skill](./AI/AI-Coding/maas-spec-plan-build-test-skill/README.md) | Execute the Spec→Plan→Build→Test engineering workflow with gated phase transitions, human review between Plan and Build, and vertical slicing. |
 | 38 | AI | AI Coding | [MaaS Legacy Code Migration Skill](./AI/AI-Coding/maas-legacy-code-migration-skill/README.md) | Understand, refactor, and migrate legacy code (Java/COBOL/.NET) with reviewable batch transforms, characterization tests, and behavior preservation. |
+| 39 | Cloud Foundation | Cross-Cloud and Hybrid Network | [Huawei ECS HTTP Proxy SSH Skill](./Cloud-Foundation/Cross-Cloud-and-Hybrid-Network/Huawei-ECS-HTTP-Proxy-SSH-Skill/README.md) | Run SSH commands on Huawei Cloud ECS through a corporate HTTP or HTTPS proxy when direct SSH is blocked, while avoiding persisted SSH passphrases, proxy passwords, private keys, and tokens. |
 
 ## How To Navigate This Repository
 

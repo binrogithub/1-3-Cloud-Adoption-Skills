@@ -1,0 +1,7 @@
+interface:
+  display_name: "HTTP Proxy SSH"
+  short_description: "SSH to ECS through corporate HTTP CONNECT proxy."
+  default_prompt: "Use $huawei-ecs-http-proxy-ssh to run a command on my ECS through the corporate HTTP proxy."
+
+policy:
+  allow_implicit_invocation: true
