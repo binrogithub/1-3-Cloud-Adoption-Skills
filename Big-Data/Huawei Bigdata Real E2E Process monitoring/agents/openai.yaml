@@ -1,0 +1,3 @@
+display_name: Huawei Cloud SEC Big Data POC
+short_description: Run Huawei SEC big-data POCs.
+default_prompt: Use this skill to deploy, operate, troubleshoot, or document the Huawei Cloud SEC EDGAR big-data lifecycle monitoring POC with OBS, MRS Spark, DWS, Superset, Terraform, and the monitoring website.
