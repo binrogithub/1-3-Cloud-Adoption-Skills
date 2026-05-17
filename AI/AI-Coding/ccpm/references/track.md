@@ -14,9 +14,9 @@ Scripts live in `references/scripts/` relative to this skill, but need to run fr
 bash <skill_path>/references/scripts/<script>.sh [args]
 ```
 
-Or if ccpm is installed project-locally:
+Or after running the CCPM init flow, use the copied project-local scripts:
 ```bash
-bash ccpm/scripts/pm/<script>.sh [args]
+bash .claude/scripts/pm/<script>.sh [args]
 ```
 
 ---

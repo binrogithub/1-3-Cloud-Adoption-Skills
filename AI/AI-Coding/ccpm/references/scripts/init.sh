@@ -73,11 +73,12 @@ mkdir -p .claude/agents
 mkdir -p .claude/scripts/pm
 echo "  ✅ Directories created"
 
-# Copy scripts if in main repo
-if [ -d "scripts/pm" ] && [ ! "$(pwd)" = *"/.claude"* ]; then
+# Copy scripts from the skill bundle into the project-local .claude helper directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -d "$SCRIPT_DIR" ] && [ ! "$(pwd)" = *"/.claude"* ]; then
   echo ""
   echo "📝 Copying PM scripts..."
-  cp -r scripts/pm/* .claude/scripts/pm/
+  cp -r "$SCRIPT_DIR"/* .claude/scripts/pm/
   chmod +x .claude/scripts/pm/*.sh
   echo "  ✅ Scripts copied and made executable"
 fi
