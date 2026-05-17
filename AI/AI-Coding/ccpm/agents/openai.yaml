@@ -1,0 +1,7 @@
+interface:
+  display_name: "CCPM"
+  short_description: "Spec-driven AI coding project management with GitHub Issues and worktrees"
+  brand_color: "#1F4B99"
+  default_prompt: "Use CCPM to turn a feature idea into a PRD, epic, GitHub issues, worktrees, and parallel execution with tracked progress"
+policy:
+  allow_implicit_invocation: true
