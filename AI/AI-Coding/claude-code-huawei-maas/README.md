@@ -45,6 +45,7 @@ The side-by-side script configures:
 - `~/.config/claude-glm/env`
 - `~/.local/bin/claude-glm`
 - `~/.local/bin/Claude-glm`
+- `~/.local/bin/claude-glm-recover`
 - `~/.local/bin/claude-glm-ccr-run`
 - `~/.local/bin/claude-glm-ccr-health`
 - `~/.config/systemd/user/claude-glm-ccr.service`
@@ -104,6 +105,61 @@ curl -fsS -H "Authorization: Bearer ${CLAUDE_GLM_ROUTER_KEY:-claude-glm-local}" 
 
 If `ccr status` says running but the curl check fails, the router state is stale. Re-run `./scripts/configure-claude-glm.sh` or use the generated `claude-glm` wrapper; it now stops stale `ccr`, waits for shutdown, starts it in the background, and verifies the local socket before launching Claude Code.
 
+## Session Recovery After Context Overflow
+
+Claude Code and `claude-glm` can fail hard after a long tool-heavy session:
+
+```text
+Inference failed: the prompt length 197218 must less than the maximum input length 196608
+Context low · Run /compact to compact & continue
+```
+
+For Huawei MaaS `glm-5.1`, this skill now includes `claude-glm-recover`, a recovery helper for overflowed or unrecoverable sessions.
+
+What it does:
+
+- reads the saved session JSONL under `~/.claude-glm-config/projects/`
+- extracts the last user request, recent high-signal context, and the overflow error
+- writes a compact recovery pack to `/tmp/claude-glm-recovery-<session-id>.md`
+- starts a fresh `claude-glm` session without using `--resume`
+
+Basic usage:
+
+```bash
+claude-glm-recover <session-id>
+```
+
+Launch a fresh session immediately after generating the recovery pack:
+
+```bash
+claude-glm-recover <session-id> --launch
+```
+
+Example:
+
+```bash
+claude-glm-recover 8b635e4f-95d8-4ef3-9672-97d2a1dab344 --launch
+```
+
+The helper intentionally does not call `--resume`. Current Claude Code resume paths are not reliable after context-limit failure, and on some root/sudo environments interactive prompt injection is blocked. The stable path is:
+
+1. generate the recovery pack
+2. open a fresh `claude-glm` session
+3. paste the recovery markdown as the first prompt
+
+You can also inspect the recovery prompt manually:
+
+```bash
+cat /tmp/claude-glm-recovery-<session-id>.md
+```
+
+Recommended operating pattern:
+
+- keep MaaS prompt input below the model hard limit
+- prefer narrow reads and summaries over full file dumps
+- avoid piping large tool outputs straight back into the conversation
+- recover into a fresh session instead of relying on `--resume` after overflow
+
 To wrap plain `claude` instead:
 
 ```bash
@@ -131,6 +187,7 @@ claude-code-huawei-maas/
 ├── agents/
 │   └── openai.yaml
 └── scripts/
+    ├── claude-glm-recover.sh
     ├── configure-claude-glm.sh
     └── configure.sh
 ```

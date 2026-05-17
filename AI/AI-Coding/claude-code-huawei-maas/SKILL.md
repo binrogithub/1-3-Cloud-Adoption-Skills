@@ -22,7 +22,11 @@ Use this skill to route Claude Code through `claude-code-router` (`ccr`) to Huaw
    - `systemctl --user status claude-glm-ccr.service --no-pager` when systemd user services are available
    - `claude-glm --bare --print --output-format json 'Reply with OK only'`
    - `claude --version` still resolves to the original Claude Code install and is not wrapped by this path.
-4. If the user also wants Z.ai search MCP, confirm they have a Z.ai account and API key, export it as `Z_API_KEY`, then run `scripts/configure-zai-search-mcp.sh`.
+4. If the user has already hit MaaS context overflow or Claude Code resume failure, use the bundled recovery helper:
+   - `claude-glm-recover <session-id>`
+   - `claude-glm-recover <session-id> --launch`
+   - then paste `/tmp/claude-glm-recovery-<session-id>.md` into the fresh session as the first prompt
+5. If the user also wants Z.ai search MCP, confirm they have a Z.ai account and API key, export it as `Z_API_KEY`, then run `scripts/configure-zai-search-mcp.sh`.
 
 Example:
 
@@ -68,6 +72,7 @@ export Z_API_KEY='...'
 - Sets the provider URL to `${MAAS_BASE_URL}/chat/completions`.
 - Routes `default`, `background`, `think`, and `longContext` to `huawei-maas,<model>`.
 - Creates `~/.local/bin/claude-glm` and a compatibility symlink `~/.local/bin/Claude-glm`.
+- Installs `~/.local/bin/claude-glm-recover` for post-overflow recovery into a fresh session.
 - Creates `~/.local/bin/claude-glm-ccr-run` and `~/.local/bin/claude-glm-ccr-health` when systemd user services are available.
 - Installs `~/.config/systemd/user/claude-glm-ccr.service`, `claude-glm-ccr-health.service`, and `claude-glm-ccr-health.timer` by default when `systemctl --user` works.
 - Leaves the existing `claude` command untouched.
@@ -85,6 +90,49 @@ export Z_API_KEY='...'
 Set `INSTALL_SYSTEMD_USER_SERVICE=0` before running `scripts/configure-claude-glm.sh` if the user wants wrapper-only startup and no systemd user units.
 
 `scripts/configure.sh` is the legacy migration path. It wraps the current `claude` command and preserves the original binary as `<claude-path>.real`.
+
+## Recovery Workflow
+
+Use this when the user reports one of these patterns:
+
+- `prompt length ... must less than the maximum input length ...`
+- repeated `/compact` failure
+- `--resume` or `/resume` no longer restores usable context
+- a long `claude-glm` session has become too large to continue safely
+
+Preferred recovery flow:
+
+1. Find the failed session id from the terminal history or `~/.claude-glm-config/history.jsonl`.
+2. Run:
+
+```bash
+claude-glm-recover <session-id>
+```
+
+3. Open a fresh `claude-glm` session:
+
+```bash
+cd <original-project-dir>
+claude-glm
+```
+
+4. Paste the generated recovery file:
+
+```bash
+cat /tmp/claude-glm-recovery-<session-id>.md
+```
+
+Or let the helper open the fresh session for you:
+
+```bash
+claude-glm-recover <session-id> --launch
+```
+
+Important limits:
+
+- The helper does not repair the old session in place.
+- The helper does not use `--resume`.
+- On root/sudo environments, Claude Code often blocks interactive first-prompt injection, so the reliable recovery path is still a fresh session plus a pasted recovery pack.
 
 ## Manual Configuration
 

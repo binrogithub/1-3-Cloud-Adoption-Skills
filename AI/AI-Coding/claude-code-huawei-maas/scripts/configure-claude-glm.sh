@@ -110,6 +110,7 @@ EOF
 chmod 600 "$ENV_FILE"
 
 CLAUDE_GLM_BIN="$CLAUDE_GLM_BIN_DIR/claude-glm"
+RECOVER_SCRIPT_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/claude-glm-recover.sh"
 cat > "$CLAUDE_GLM_BIN" <<EOF
 #!/usr/bin/env bash
 # claude-glm side-by-side wrapper: keep claude on Anthropic, route only this command to Huawei MaaS.
@@ -212,6 +213,10 @@ exec claude "\$@"
 EOF
 chmod 700 "$CLAUDE_GLM_BIN"
 ln -sfn "$CLAUDE_GLM_BIN" "$CLAUDE_GLM_BIN_DIR/Claude-glm"
+
+if [[ -f "$RECOVER_SCRIPT_SRC" ]]; then
+  install -m 0755 "$RECOVER_SCRIPT_SRC" "$CLAUDE_GLM_BIN_DIR/claude-glm-recover"
+fi
 
 install_systemd_user_service() {
   if [[ "$INSTALL_SYSTEMD_USER_SERVICE" != "1" ]]; then
