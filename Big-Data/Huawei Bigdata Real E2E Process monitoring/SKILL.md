@@ -9,7 +9,7 @@ description: Deploy, operate, document, or troubleshoot the Huawei Cloud SEC EDG
 
 Never embed Huawei Cloud AK/SK, account passwords, DWS/MRS passwords, Superset passwords, SSH private keys, or Terraform state secrets in this skill, code, docs, logs, screenshots, or chat. Load secrets only from environment variables, DPAPI-encrypted local XML, SSH agent/key files, or cloud secret services. Do not print command lines that contain Spark OBS access-key/secret-key settings.
 
-Use this skill together with the general `huawei-cloud-bigdata` skill when available.
+Use this skill together with any broader Huawei Cloud big-data architecture or migration skill that fits the user's scenario.
 
 ## Repository Shape
 

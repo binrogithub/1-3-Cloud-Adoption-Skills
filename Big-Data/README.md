@@ -10,3 +10,4 @@ This domain contains Level 2 use cases for data-oriented Huawei Cloud adoption s
 - [ChatBI and Intelligent Analytics](./ChatBI-and-Intelligent-Analytics/README.md): Enable conversational BI, metric question answering, and automated analysis generation.
 - [AI Knowledge Base](./AI-Knowledge-Base/README.md): Build the structured and unstructured data foundation needed for RAG and model consumption.
 - [Databricks to Huawei Cloud Skill](./Databricks-to-Huawei-Cloud-Skill/README.md): Reuse a migration skill package for Databricks notebooks, tables, SQL warehouse flows, and Spark pipelines moving to Huawei Cloud.
+- [Huawei Cloud SEC EDGAR Big Data POC](./Huawei%20Bigdata%20Real%20E2E%20Process%20monitoring/README.md): Reproduce and operate an end-to-end Huawei Cloud big-data monitoring PoC across OBS, MRS Spark, DWS, Superset, ECS, and a public lifecycle-monitoring website.
