@@ -21,6 +21,7 @@ AI Coding focuses on applying AI directly to software engineering work, especial
 ## Included Skills
 
 - [LiteLLM + SearXNG AI Coding Gateway (Single ECS)](./LiteLLM-SearXNG-AICoding-Gateway-Single-ECS/README.md): Deploy a single-ECS gateway that fronts Huawei Cloud MaaS through LiteLLM (FinOps, multi-user keys, caching), hosts SearXNG as a bearer-authenticated remote MCP, and wires Claude Code via `claude-code-router` (`claude-glm`) with `CLAUDE_CONFIG_DIR` isolation.
+- [LiteLLM Huawei MaaS Proxy](./LiteLLM-Huawei-MaaS-Proxy/README.md): Deploy a single-host Docker Compose LiteLLM proxy for Huawei Cloud MaaS with PostgreSQL, Prometheus, Grafana, virtual key management, and custom TTFT/TPOT/ITL metrics — the observability-focused counterpart to the single-ECS gateway.
 - [Claude Code SDK Agent MaaS Skill](./Claude-Code-SDK-Agent-MaaS-Skill/README.md): Configure Claude Code or Claude Agent SDK through a local Anthropic Messages API compatible proxy backed by Huawei Cloud MaaS.
 - [OpenShift Huawei Cloud MaaS Skill](./OpenShift-Huawei-Cloud-MaaS-Skill/README.md): Integrate browser-based coding environments such as OpenShift Dev Spaces or Eclipse Che with Cline and Huawei Cloud MaaS through an OpenAI-compatible interface.
 - [claude-code-huawei-maas](./claude-code-huawei-maas/README.md): Configure the Claude Code CLI command to use Huawei Cloud MaaS through `claude-code-router`, including `glm-5.1`, `$API_KEY` authentication, context length, wrapper setup, and verification.
