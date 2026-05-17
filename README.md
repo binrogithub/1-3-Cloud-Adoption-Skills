@@ -4,7 +4,7 @@ This repository defines a practical skill framework for Huawei Cloud adoption wo
 
 An AI skill in this repository is not just a prompt. It is a reusable capability unit built around a cloud scenario, where AI helps with understanding, design, migration, operations, development, analysis, or optimization.
 
-Recent updates expanded the `AI / AI-Coding` area with four MaaS engineering workflow skills, refreshed the LiteLLM single-ECS gateway skill with merged MaaS-only utilities and clearer Admin UI guidance, and added new `AI / Agent-Platform` memory and orchestration skills.
+Recent updates added the LiteLLM Huawei MaaS Proxy skill, the Huawei Cloud SEC EDGAR big-data monitoring PoC skill, and the Huawei ECS HTTP proxy SSH skill, while also refreshing the Claude Code Huawei MaaS and LiteLLM single-ECS gateway workflows.
 
 Each skill should include:
 
@@ -18,7 +18,7 @@ Each skill should include:
 
 Use this index when Codex, Claude Code, or another AI agent needs to locate the right reusable skill quickly. Start from the business scenario, then open the linked skill folder. The child skill `README.md` gives the repository-facing summary, while `SKILL.md` contains the agent-facing workflow and trigger rules when present.
 
-For the latest additions, check the `AI / AI-Coding` and `AI / Agent Platform` entries near the end of the index, including the updated LiteLLM gateway entry.
+For the latest additions, check the `AI / AI-Coding`, `Big Data`, and `Cloud Foundation` entries near the end of the index, including the LiteLLM Huawei MaaS Proxy, SEC EDGAR monitoring, and HTTP proxy SSH skills.
 
 | # | Domain | Use Case | Skill | Use When |
 | --- | --- | --- | --- | --- |
@@ -28,14 +28,14 @@ For the latest additions, check the `AI / AI-Coding` and `AI / Agent Platform` e
 | 4 | Application Modernization | Database Migration | [GaussDB Adaptation Skill](./Application-Modernization/Database-Migration/GaussDB-Adaptation-Skill/README.md) | Port SQL Server or PostgreSQL code to Huawei GaussDB or openGauss-compatible environments, including SQL dialect, driver, auth, and bulk-load adaptation. |
 | 5 | Application Modernization | Database Migration | [SQLServer PostgreSQL Babelfish Finance Demo](./Application-Modernization/Database-Migration/SQLServer-postgreSQL-babelfish-finance-demo/Readme.md) | Run a finance-focused SQL Server to PostgreSQL migration demo through Babelfish, covering banking customers, accounts, payments, risk alerts, views, stored procedures, and parity validation. |
 | 6 | Application Modernization | DevOps and PaaS | [Karmada K8s Switch Skill](./Application-Modernization/DevOps-and-PaaS/karmada-k8s-switch-skill/README.md) | Prepare a Karmada lab, install and verify Karmada, deploy multi-cluster failover PoCs, switch traffic, or validate cutover behavior. |
-| 7 | Application Modernization | Mainframe Modernization | [Cobol2Java](./Application-Modernization/Mainfame%20Modernization/mainframe%20modernization%20-%20Cobol2Java/SKILL.md) | Migrate COBOL batch programs to Java, including CICS translation, JCL conversion, data structure mapping, and parity validation. |
+| 7 | Application Modernization | Mainframe Modernization | [Cobol2Java](./Application-Modernization/Mainfame Modernization/mainframe modernization - Cobol2Java/SKILL.md) | Migrate COBOL batch programs to Java, including CICS translation, JCL conversion, data structure mapping, and parity validation. |
 | 8 | Big Data | Databricks Migration | [Databricks to Huawei Cloud Skill](./Big-Data/Databricks-to-Huawei-Cloud-Skill/README.md) | Migrate Databricks tables, notebooks, SQL warehouse flows, or Spark pipelines to OBS, MRS Spark, Hive, and curated Parquet patterns. |
 | 9 | Big Data | Data Warehouse Migration | [Teradata to Huawei DWS Skill](./Big-Data/Data-Warehouse-Migration/Teradata-to-Huawei-DWS-Skill/README.md) | Build, migrate, validate, and optimize a Teradata-to-Huawei-Cloud-DWS finance warehouse demo with SQL compatibility scans, OBS load templates, report parity checks, and migration reports. |
 | 10 | Big Data | Big Data Platform Migration and Upgrade | [MRS DWS Finance Skill](./Big-Data/Big-Data-Platform-Migration-and-Upgrade/MRS-DWS-Finance-Skill/README.md) | Build financial risk-control pipelines with OBS, MRS, and DWS for risk scoring, AML/KYC, anomaly detection, compliance, and reporting. |
 | 11 | Big Data | Big Data Platform Migration and Upgrade | [Cloudera to Huawei Cloud MRS Migration Skill](./Big-Data/Big-Data-Platform-Migration-and-Upgrade/Cloudera-to-Huawei-MRS-Skill/README.md) | Migrate CDH or HDP Hadoop, Hive, Spark, and Impala workloads to Huawei Cloud MRS with OBS data landing, Hive external table migration, Spark SQL conversion, and parity validation. |
 | 12 | Big Data | ChatBI and Intelligent Analytics | [Simple ChatBI Skill](./Big-Data/ChatBI-and-Intelligent-Analytics/Simple-ChatBI-Skill/README.md) | Build a conversational BI demo with natural language to SQL translation, metric question answering, and automated analysis on Huawei Cloud DWS. |
 | 13 | Big Data | AI Knowledge Base | [CSS Autoscaling Benchmark Skill](./Big-Data/AI-Knowledge-Base/CSS-Autoscaling-Benchmark-Skill/README.md) | Benchmark and autoscaling test harness for Huawei Cloud CSS (OpenSearch): ingestion throughput, query latency, vector search quality, data-node horizontal autoscaling, and consolidated reports. |
-| 14 | Big Data | End-to-End Process Monitoring | [Huawei Cloud SEC EDGAR Big Data POC](./Big-Data/Huawei%20Bigdata%20Real%20E2E%20Process%20monitoring/README.md) | Reproduce and operate a full Huawei Cloud SEC EDGAR monitoring PoC across OBS ingestion, MRS Spark processing, DWS loading, Superset dashboards, and a public lifecycle-monitoring website. |
+| 14 | Big Data | End-to-End Process Monitoring | [Huawei Cloud SEC EDGAR Big Data POC](./Big-Data/Huawei Bigdata Real E2E Process monitoring/README.md) | Reproduce and operate a full Huawei Cloud SEC EDGAR monitoring PoC across OBS ingestion, MRS Spark processing, DWS loading, Superset dashboards, and a public lifecycle-monitoring website. |
 | 15 | AI | AI Applications | [Telco Call Center AI Skill](./AI/AI-Applications/Telco-Call-Center-AI-Skill/README.md) | Build or pitch AI-powered telecom customer intelligence, AICC demos, call analytics, churn prediction, or executive POCs on Huawei Cloud. |
 | 16 | AI | AI Applications | [Enterprise RAG Agent](./AI/AI-Applications/enterprise-rag-agent/SKILL.md) | Build enterprise RAG agents for regulated document search with RAGFlow parsing, LlamaIndex retrieval workflows, Huawei Cloud MaaS inference, OBS/CSS/ECS demo provisioning, and upload/search portal assets. |
 | 17 | AI | AI Applications | [RAGFlow Huawei MaaS](./AI/AI-Applications/ragflow-huawei-maas/SKILL.md) | Deploy RAGFlow with Docker Compose, connect it to Huawei Cloud MaaS through the OpenAI-compatible provider, register `glm-5.1`, and validate UI/API/LLM calls without exposing keys. |
