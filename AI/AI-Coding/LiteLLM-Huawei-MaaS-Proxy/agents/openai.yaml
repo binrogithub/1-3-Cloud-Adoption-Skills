@@ -1,0 +1,4 @@
+interface:
+  display_name: "LiteLLM Huawei MaaS Proxy"
+  short_description: "Deploy and validate an OpenAI-compatible LiteLLM proxy for Huawei MaaS"
+  default_prompt: "Deploy the LiteLLM Huawei MaaS Proxy stack. Run scripts/init_env.sh --auto to configure .env (it will prompt for the MaaS API key), then docker compose up -d, then scripts/validate_e2e.sh to confirm all services are healthy, chat completions work, metrics flow, and virtual key minting succeeds."

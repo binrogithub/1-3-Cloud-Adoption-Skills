@@ -1,0 +1,1684 @@
+{
+  "uid": "litellm-overview",
+  "title": "LiteLLM Proxy Overview",
+  "tags": [
+    "litellm",
+    "llm-proxy"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 0,
+  "refresh": "10s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "model",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(litellm_requests_metric_total, model)",
+        "query": {
+          "query": "label_values(litellm_requests_metric_total, model)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "sort": 1,
+        "label": "Model",
+        "hide": 0
+      },
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "Prometheus"
+        },
+        "hide": 0,
+        "label": "Datasource",
+        "refresh": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "uid": "row-request-rates",
+      "title": "Request Rates",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "collapsed": false
+    },
+    {
+      "type": "stat",
+      "uid": "panel-rps",
+      "title": "RPS (Requests Per Second)",
+      "description": "Request throughput averaged over 5 minutes. Measures the rate of incoming requests per second across all selected models.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(litellm_requests_metric_total{model=~\"$model\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "RPS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "req/sec",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "min": 0
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "uid": "panel-rpm",
+      "title": "RPM (Requests Per Minute)",
+      "description": "Request throughput averaged over 5 minutes, expressed as requests per minute. Useful for comparing against rate limits. Equivalent to RPS \u00d7 60.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(litellm_requests_metric_total{model=~\"$model\"}[5m])) * 60",
+          "refId": "A",
+          "legendFormat": "RPM"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "req/min",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "min": 0
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "uid": "panel-tps",
+      "title": "TPS (Tokens Per Second)",
+      "description": "Output token throughput averaged over 5 minutes. Measures how fast the proxy is generating completion tokens per second across all selected models.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(litellm_output_tokens_metric_total{model=~\"$model\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "TPS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "tokens/sec",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 2,
+          "min": 0
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "uid": "panel-tpm",
+      "title": "TPM (Tokens Per Minute)",
+      "description": "Output token throughput averaged over 5 minutes, expressed as tokens per minute. Useful for comparing against provider TPM rate limits. Equivalent to TPS \u00d7 60.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(litellm_output_tokens_metric_total{model=~\"$model\"}[5m])) * 60",
+          "refId": "A",
+          "legendFormat": "TPM"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "tokens/min",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "min": 0
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "uid": "panel-total-requests",
+      "title": "Total Requests",
+      "description": "Cumulative total number of requests processed by the proxy since Prometheus started collecting metrics. Includes both successful and failed requests.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 5
+      },
+      "targets": [
+        {
+          "expr": "sum(litellm_requests_metric_total{model=~\"$model\"})",
+          "refId": "A",
+          "legendFormat": "Total"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "uid": "panel-successful-requests",
+      "title": "Successful Requests",
+      "description": "Cumulative count of requests that completed successfully with a non-error response from the upstream LLM provider.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 5
+      },
+      "targets": [
+        {
+          "expr": "sum(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\"})",
+          "refId": "A",
+          "legendFormat": "Success"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "uid": "panel-failed-requests",
+      "title": "Failed Requests",
+      "description": "Cumulative count of requests that failed with an error response. Includes upstream provider errors, timeouts, rate limits, and any other failure conditions.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 5
+      },
+      "targets": [
+        {
+          "expr": "sum(litellm_deployment_failure_responses_total{litellm_model_name=~\"$model\"})",
+          "refId": "A",
+          "legendFormat": "Failed"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "red"
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "uid": "panel-error-rate",
+      "title": "Error Rate",
+      "description": "Cumulative percentage of requests that failed out of total completed requests (successful + failed) since metrics collection began. Formula: failed / (successful + failed) \u00d7 100. Thresholds: green (<1%) \u2192 yellow (1\u20135%) \u2192 red (>5%).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 5
+      },
+      "targets": [
+        {
+          "expr": "sum(litellm_deployment_failure_responses_total{litellm_model_name=~\"$model\"}) / (sum(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\"}) + sum(litellm_deployment_failure_responses_total{litellm_model_name=~\"$model\"})) * 100",
+          "refId": "A",
+          "legendFormat": "Error %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "gauge",
+      "uid": "panel-in-flight-requests",
+      "title": "In-Flight Requests",
+      "description": "Number of requests currently being processed (started but not yet completed). A consistently high value may indicate the proxy is saturated or upstream responses are slow.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 9
+      },
+      "targets": [
+        {
+          "expr": "litellm_in_flight_requests",
+          "refId": "A",
+          "legendFormat": "In-Flight"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "field": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-queue-time",
+      "title": "Request Queue Time (P95)",
+      "description": "95th percentile time requests spend waiting in the proxy's internal queue before being dispatched to the upstream LLM. Rising queue time indicates the proxy is receiving requests faster than it can process them.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 18,
+        "x": 6,
+        "y": 9
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(litellm_request_queue_time_seconds_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "A",
+          "legendFormat": "P95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "drawStyle": "line"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "uid": "row-latency",
+      "title": "Latency",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 39
+      },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-e2e-latency",
+      "title": "E2E Request Latency (P50/P95/P99)",
+      "description": "End-to-end request latency from the moment the proxy receives the request to when the full response is returned. Includes proxy overhead, queue time, and the upstream LLM call. P50 = median, P95 = 95th percentile, P99 = 99th percentile (worst 1% of requests).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 40
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(litellm_request_total_latency_metric_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P50",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(litellm_request_total_latency_metric_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P95",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(litellm_request_total_latency_metric_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P99",
+          "legendFormat": "P99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "drawStyle": "line"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-llm-api-latency",
+      "title": "LLM API Latency (P50/P95/P99)",
+      "description": "Upstream LLM API call latency only \u2014 the time spent waiting for the model provider (Huawei MaaS) to respond. Excludes proxy overhead and queue time. Useful for isolating provider-side slowdowns from proxy-side issues.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 40
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(litellm_llm_api_latency_metric_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P50",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(litellm_llm_api_latency_metric_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P95",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(litellm_llm_api_latency_metric_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P99",
+          "legendFormat": "P99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "drawStyle": "line"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "type": "gauge",
+      "uid": "panel-p95-latency-gauge",
+      "title": "P95 Latency",
+      "description": "95th percentile end-to-end request latency. Thresholds: green (<1s) \u2192 yellow (1\u20135s) \u2192 red (>5s). If this gauge enters the red zone, 5% of users are experiencing >5s response times.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 16,
+        "y": 40
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(litellm_request_total_latency_metric_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "A",
+          "legendFormat": "P95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "max": 10000,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "field": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "gauge",
+      "uid": "panel-p99-latency-gauge",
+      "title": "P99 Latency",
+      "description": "99th percentile end-to-end request latency. Thresholds: green (<2s) \u2192 yellow (2\u201310s) \u2192 red (>10s). Represents the worst 1% of request latencies.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 20,
+        "y": 40
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(litellm_request_total_latency_metric_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "A",
+          "legendFormat": "P99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "max": 20000,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2000
+              },
+              {
+                "color": "red",
+                "value": 10000
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "field": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2000
+              },
+              {
+                "color": "red",
+                "value": 10000
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "row",
+      "uid": "row-token-metrics",
+      "title": "Token Metrics (TTFT / TPOT / ITL)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-ttft",
+      "title": "TTFT (Time To First Token)",
+      "description": "Streaming only. Time from when the API call starts to when the first token of the response is received. This is the 'time to first byte' equivalent for LLMs \u2014 critical for perceived responsiveness in streaming chat. Formula: completion_start_time - api_call_start_time.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 14
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(litellm_custom_ttft_seconds_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P50",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(litellm_custom_ttft_seconds_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P95",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(litellm_custom_ttft_seconds_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P99",
+          "legendFormat": "P99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "drawStyle": "line"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-tpot",
+      "title": "TPOT (Time Per Output Token)",
+      "description": "Average time spent generating each output token. Applies to both streaming and non-streaming requests. Formula: total_latency / output_tokens. Lower is better \u2014 indicates raw generation speed of the model.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 14
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(litellm_custom_tpot_seconds_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P50",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(litellm_custom_tpot_seconds_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P95",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(litellm_custom_tpot_seconds_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P99",
+          "legendFormat": "P99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "drawStyle": "line"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-itl",
+      "title": "ITL (Inter-Token Latency)",
+      "description": "Streaming only. Average time between successive tokens during streaming output. Formula: (end_time - completion_start_time) / (output_tokens - 1). Spikes in ITL indicate provider-side throttling, rate limiting, or network jitter mid-stream.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 14
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(litellm_custom_itl_seconds_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P50",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(litellm_custom_itl_seconds_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P95",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(litellm_custom_itl_seconds_bucket{model=~\"$model\"}[5m])) by (le)) * 1000",
+          "refId": "P99",
+          "legendFormat": "P99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "drawStyle": "line"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "uid": "row-throughput",
+      "title": "Throughput",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-input-tokens-rate",
+      "title": "Input Tokens Per Second",
+      "description": "Rate of input (prompt) tokens being consumed per second, broken down by model. Shows which models receive the most prompt traffic.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(litellm_input_tokens_metric_total{model=~\"$model\"}[5m])) by (model)",
+          "refId": "A",
+          "legendFormat": "{{model}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "tokens/sec",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "drawStyle": "line"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "none",
+          "min": 0
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-output-tokens-rate",
+      "title": "Output Tokens Per Second",
+      "description": "Rate of output (completion) tokens being generated per second, broken down by model. Shows which models produce the most output.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(litellm_output_tokens_metric_total{model=~\"$model\"}[5m])) by (model)",
+          "refId": "A",
+          "legendFormat": "{{model}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "tokens/sec",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "drawStyle": "line"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "none",
+          "min": 0
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-input-tokens-rate-min",
+      "title": "Input Tokens Per Minute",
+      "description": "Rate of input (prompt) tokens consumed per minute, broken down by model. Useful for comparing against provider input TPM rate limits and quota tracking.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 31
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(litellm_input_tokens_metric_total{model=~\"$model\"}[5m])) by (model) * 60",
+          "refId": "A",
+          "legendFormat": "{{model}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "tokens/min",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "drawStyle": "line"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "none",
+          "min": 0
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-output-tokens-rate-min",
+      "title": "Output Tokens Per Minute",
+      "description": "Rate of output (completion) tokens generated per minute, broken down by model. Useful for comparing against provider output TPM rate limits and quota tracking.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 31
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(litellm_output_tokens_metric_total{model=~\"$model\"}[5m])) by (model) * 60",
+          "refId": "A",
+          "legendFormat": "{{model}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "tokens/min",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "drawStyle": "line"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "none",
+          "min": 0
+        }
+      }
+    },
+    {
+      "type": "row",
+      "uid": "row-expenditure",
+      "title": "Expenditure",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-spend-rate",
+      "title": "Spend Per Minute",
+      "description": "USD spent per minute, broken down by model. Shows the actual cost rate at each point in time \u2014 useful for spotting cost spikes and tracking spend patterns.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 49
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(litellm_spend_metric_total{model=~\"$model\"}[5m])) by (model) * 60",
+          "refId": "A",
+          "legendFormat": "{{model}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "drawStyle": "line"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "min": 0
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "uid": "panel-total-spend",
+      "title": "Total Spend",
+      "description": "Cumulative total spend in USD across all selected models since metrics collection began. Use this to track actual cost against budget.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 49
+      },
+      "targets": [
+        {
+          "expr": "sum(litellm_spend_metric_total{model=~\"$model\"})",
+          "refId": "A",
+          "legendFormat": "Total"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "field": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "min": 0
+        }
+      }
+    },
+    {
+      "type": "row",
+      "uid": "row-health-monitoring",
+      "title": "Health Monitoring",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 57
+      },
+      "collapsed": false
+    },
+    {
+      "type": "table",
+      "uid": "panel-deployment-state",
+      "title": "Deployment State",
+      "description": "Health state of each model deployment. 0 = Healthy (green, all endpoints responding), 1 = Partial outage (yellow, some endpoints down), 2 = Full outage (red, model completely unavailable).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 58
+      },
+      "targets": [
+        {
+          "expr": "litellm_deployment_state{litellm_model_name=~\"$model\"}",
+          "refId": "A",
+          "legendFormat": "{{model}}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "renameByName": {
+              "model": "Model",
+              "Value": "State"
+            },
+            "indexByName": {
+              "Value": 0,
+              "model": 1
+            }
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "fields": {
+              "State": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "State"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "color-background-solid"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Healthy",
+                        "color": "green"
+                      },
+                      "1": {
+                        "text": "Partial Outage",
+                        "color": "yellow"
+                      },
+                      "2": {
+                        "text": "Full Outage",
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 2
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "State",
+            "desc": true
+          }
+        ]
+      },
+      "field": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      }
+    }
+  ],
+  "overwrite": true
+}

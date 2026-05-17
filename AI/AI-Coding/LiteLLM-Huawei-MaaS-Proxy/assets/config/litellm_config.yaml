@@ -1,0 +1,90 @@
+model_list:
+
+  # ───────── Huawei MaaS Models ───────────
+
+  - model_name: glm-5.1
+    litellm_params:
+      model: openai/glm-5.1
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      tpm: 500000
+      rpm: 30
+    model_info:
+      max_tokens: 198000
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+      input_cost_per_token: 0.000001078
+      output_cost_per_token: 0.000003774
+
+  - model_name: glm-5
+    litellm_params:
+      model: openai/glm-5
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      tpm: 500000
+      rpm: 30
+    model_info:
+      max_tokens: 198000
+      max_input_tokens: 192000
+      max_output_tokens: 64000
+      input_cost_per_token: 0.000000809
+      output_cost_per_token: 0.000002965
+
+  - model_name: deepseek-v4-pro
+    litellm_params:
+      model: openai/deepseek-v4-pro
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      tpm: 30000
+      rpm: 3
+    model_info:
+      max_tokens: 1000000
+      max_input_tokens: 1000000
+      max_output_tokens: 128000
+      input_cost_per_token: 0.000001617
+      output_cost_per_token: 0.000003235
+
+  - model_name: deepseek-v4-flash
+    litellm_params:
+      model: openai/deepseek-v4-flash
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      tpm: 30000
+      rpm: 3  
+    model_info:
+      max_tokens: 1000000
+      max_input_tokens: 1000000
+      max_output_tokens: 128000
+      input_cost_per_token: 0.000000135
+      output_cost_per_token: 0.00000027
+
+  - model_name: deepseek-v3.2
+    litellm_params:
+      model: openai/deepseek-v3.2
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      tpm: 500000
+      rpm: 700
+    model_info:
+      max_tokens: 160000
+      max_input_tokens: 128000
+      max_output_tokens: 32000
+      input_cost_per_token: 0.00000027
+      output_cost_per_token: 0.000000404
+
+
+litellm_settings:
+  num_retries: 3 # retry call 3 times on each model_name (e.g. zephyr-beta)
+  request_timeout: 10 # raise Timeout error if call takes longer than 10s. Sets litellm.request_timeout 
+  drop_params: True
+  set_verbose: False
+  callbacks:
+    - "prometheus"
+    - custom_callbacks.my_prometheus_logger
+  ui_theme_config:
+    logo_url: "https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Huawei_Standard_logo.svg/3840px-Huawei_Standard_logo.svg.png"
+    favicon_url: "https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Huawei_Standard_logo.svg/3840px-Huawei_Standard_logo.svg.png"
+
+general_settings:
+  database_connection_pool_limit: 10
+  database_connection_timeout: 60
