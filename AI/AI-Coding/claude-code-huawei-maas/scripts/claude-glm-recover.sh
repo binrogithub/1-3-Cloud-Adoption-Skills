@@ -178,6 +178,8 @@ if not last_prompt:
 if not cwd:
     cwd = os.getcwd()
 
+last_prompt = compact(last_prompt, 900) if last_prompt else "(not found)"
+
 lines = [
     "# Claude GLM Recovery Pack",
     "",
@@ -193,7 +195,7 @@ lines = [
     compact(api_error, 1200) if api_error else "Context likely overflowed or the session became too large.",
     "",
     "## Last User Request",
-    last_prompt or "(not found)",
+    last_prompt,
     "",
     "## Recent Context",
 ]
@@ -215,6 +217,7 @@ lines.extend([
 ])
 
 out_md.write_text("\n".join(lines), encoding="utf-8")
+os.chmod(out_md, 0o600)
 print(cwd)
 PY
 
@@ -223,8 +226,10 @@ import sys
 from pathlib import Path
 text = Path(sys.argv[1]).read_text(encoding="utf-8")
 for line in text.splitlines():
-    if line.startswith("- Original cwd: `") and line.endswith("`"):
-        print(line[len("- Original cwd: `"):-1])
+    prefix = '- Original cwd: `'
+    suffix = '`'
+    if line.startswith(prefix) and line.endswith(suffix):
+        print(line[len(prefix):-1])
         break
 PY
 )"
