@@ -8,6 +8,7 @@ import argparse
 import base64
 import os
 import socket
+import ssl
 import sys
 from urllib.parse import unquote, urlparse
 
@@ -21,7 +22,14 @@ def connect_proxy(host: str, port: int) -> socket.socket:
     if not parsed.hostname:
         raise RuntimeError("proxy host is missing")
 
+    scheme = (parsed.scheme or "http").lower()
+    if scheme not in {"http", "https"}:
+        raise RuntimeError(f"unsupported proxy scheme: {parsed.scheme}")
+
     sock = socket.create_connection((parsed.hostname, parsed.port or 8080), timeout=30)
+    if scheme == "https":
+        context = ssl.create_default_context()
+        sock = context.wrap_socket(sock, server_hostname=parsed.hostname)
     headers = [
         f"CONNECT {host}:{port} HTTP/1.1",
         f"Host: {host}:{port}",
@@ -78,8 +86,10 @@ def main() -> int:
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--user")
     parser.add_argument("--key")
+    parser.add_argument("--known-hosts")
     parser.add_argument("--command")
     parser.add_argument("--command-file")
+    parser.add_argument("--insecure-accept-host-key", action="store_true")
     parser.add_argument("--probe-banner", action="store_true")
     args = parser.parse_args()
 
@@ -105,7 +115,13 @@ def main() -> int:
 
     sock = connect_proxy(args.host, args.port)
     client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.load_system_host_keys()
+    if args.known_hosts:
+        client.load_host_keys(args.known_hosts)
+    if args.insecure_accept_host_key:
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    else:
+        client.set_missing_host_key_policy(paramiko.RejectPolicy())
     key = load_key(paramiko, args.key)
     client.connect(
         hostname=args.host,

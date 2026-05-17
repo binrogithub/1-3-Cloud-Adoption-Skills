@@ -12,6 +12,7 @@ Use this skill when SSH to an ECS works only through a corporate HTTP proxy. Pre
 - Host and SSH port, e.g. `<ecs_public_ip>:4444`.
 - SSH user, usually `root` or `ubuntu`.
 - Private key path.
+- Known-hosts file path if the ECS host key is not already in the user's standard SSH known-hosts store.
 - Proxy source:
   - Existing `HTTP_PROXY` / `HTTPS_PROXY` environment variables, or
   - explicit proxy URL.
@@ -22,6 +23,7 @@ Use this skill when SSH to an ECS works only through a corporate HTTP proxy. Pre
 - Never persist SSH passphrases, proxy passwords, ECS credentials, API keys, or bearer tokens in skill files or generated artifacts.
 - Prefer `/32` security group rules for the current client egress IP. Do not suggest `0.0.0.0/0` unless the user explicitly accepts that risk.
 - When using a passphrase, pass it through an environment variable for a single command and remove that variable immediately afterward.
+- Verify SSH host keys by default. Only use `--insecure-accept-host-key` for short-lived diagnostics when the user explicitly accepts the MITM risk.
 - If standard OpenSSH `ProxyCommand` hangs on Windows, use `scripts/http_proxy_ssh_exec.py`; it creates the HTTP CONNECT socket itself and hands it to Paramiko.
 - Treat a proxy `302` security warning page or `netentsec` response as corporate proxy interception, not an ECS service response.
 
@@ -60,6 +62,7 @@ Use this skill when SSH to an ECS works only through a corporate HTTP proxy. Pre
    python <skill_dir>\scripts\http_proxy_ssh_exec.py `
      --host <ecs_public_ip> --port <ssh_port> `
      --user root --key C:\path\to\private_key `
+     --known-hosts C:\path\to\known_hosts `
      --command "echo ssh-ok; hostname; whoami; uname -a; cat /etc/os-release | grep -E 'PRETTY|VERSION_ID'"
    Remove-Item Env:KEY_PASSPHRASE -ErrorAction SilentlyContinue
    ```
@@ -70,6 +73,7 @@ Use this skill when SSH to an ECS works only through a corporate HTTP proxy. Pre
    python <skill_dir>\scripts\http_proxy_ssh_exec.py `
      --host <ecs_public_ip> --port <ssh_port> `
      --user root --key C:\path\to\private_key `
+     --known-hosts C:\path\to\known_hosts `
      --command-file .\remote_check.sh
    ```
 
@@ -108,6 +112,7 @@ journalctl -u <service>.service -n 80 --no-pager
 
 - `Connection timed out` direct to SSH port: likely corporate network or security group; try proxy CONNECT.
 - `proxy CONNECT failed: HTTP/1.1 504`: proxy cannot reach that host/port or security group blocks the proxy egress.
+- `Server not found in known_hosts`: add the ECS host key to a trusted known-hosts file or use `--known-hosts` to point at the right file.
 - SSH banner probe succeeds but OpenSSH `ProxyCommand` hangs on Windows: use the bundled Paramiko script.
 - Paramiko says `private key file is encrypted`: ask for passphrase or have user load key into an agent; do not store passphrase.
 - Paramiko RSA unpack errors: try multiple key types. The bundled script already tries RSA, ECDSA, and Ed25519.
