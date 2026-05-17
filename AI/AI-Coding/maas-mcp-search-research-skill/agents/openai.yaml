@@ -1,0 +1,7 @@
+interface:
+  display_name: "MaaS MCP Search Research"
+  short_description: "AI coding research with Huawei MaaS and pluggable MCP search tools"
+  brand_color: "#C2410C"
+  default_prompt: "Research with Huawei MaaS plus MCP web, code, crawl, or deep-research tools and return source-backed engineering guidance"
+policy:
+  allow_implicit_invocation: true
