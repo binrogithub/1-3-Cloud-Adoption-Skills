@@ -45,20 +45,21 @@ These skills use MaaS-backed AI coding agents as enterprise engineering tools, n
 
 ## Imported General Engineering Skills
 
-These skills are selectively imported from `mattpocock/skills` and kept as first-class entries inside `AI/AI-Coding` because they strengthen AI coding discipline beyond vendor-specific setup.
+These skills are selectively imported from `mattpocock/skills` and grouped into one reusable bundle because they strengthen AI coding discipline beyond vendor-specific setup.
 
-- [diagnose](./diagnose/README.md): Structured debugging loop for hard bugs, flaky behavior, and performance regressions.
-- [tdd](./tdd/README.md): Test-driven delivery workflow with tracer bullets, red-green-refactor, and post-green cleanup.
-- [triage](./triage/README.md): Issue triage state machine that produces durable agent-ready briefs and explicit out-of-scope decisions.
-- [to-prd](./to-prd/README.md): Turn current context into a PRD suitable for downstream planning and implementation.
-- [to-issues](./to-issues/README.md): Break a PRD or plan into independently executable vertical-slice issues.
-- [zoom-out](./zoom-out/README.md): Explain a local code area in the context of the broader system.
-- [improve-codebase-architecture](./improve-codebase-architecture/README.md): Surface deepening opportunities to improve locality, seams, and AI navigability.
-- [grill-with-docs](./grill-with-docs/README.md): Stress-test a plan against the repo's domain language and ADRs while updating those docs inline.
-- [grill-me](./grill-me/README.md): Run a high-pressure clarification interview before implementation begins.
-- [handoff](./handoff/README.md): Compress current execution state into a reusable handoff artifact for another agent or engineer.
-- [write-a-skill](./write-a-skill/README.md): Author new reusable skills with a cleaner structure and supporting references.
-- [setup-matt-pocock-skills](./setup-matt-pocock-skills/README.md): Bootstrap the `docs/agents/` metadata and repo conventions consumed by the imported engineering workflow skills.
+- [Matt Pocock Engineering Skills](./skills/matt-pocock-engineering-skills/README.md): Curated bundle of 12 general engineering workflow skills adapted for AI coding work.
+- [diagnose](./skills/matt-pocock-engineering-skills/diagnose/README.md): Structured debugging loop for hard bugs, flaky behavior, and performance regressions.
+- [tdd](./skills/matt-pocock-engineering-skills/tdd/README.md): Test-driven delivery workflow with tracer bullets, red-green-refactor, and post-green cleanup.
+- [triage](./skills/matt-pocock-engineering-skills/triage/README.md): Issue triage state machine that produces durable agent-ready briefs and explicit out-of-scope decisions.
+- [to-prd](./skills/matt-pocock-engineering-skills/to-prd/README.md): Turn current context into a PRD suitable for downstream planning and implementation.
+- [to-issues](./skills/matt-pocock-engineering-skills/to-issues/README.md): Break a PRD or plan into independently executable vertical-slice issues.
+- [zoom-out](./skills/matt-pocock-engineering-skills/zoom-out/README.md): Explain a local code area in the context of the broader system.
+- [improve-codebase-architecture](./skills/matt-pocock-engineering-skills/improve-codebase-architecture/README.md): Surface deepening opportunities to improve locality, seams, and AI navigability.
+- [grill-with-docs](./skills/matt-pocock-engineering-skills/grill-with-docs/README.md): Stress-test a plan against the repo's domain language and ADRs while updating those docs inline.
+- [grill-me](./skills/matt-pocock-engineering-skills/grill-me/README.md): Run a high-pressure clarification interview before implementation begins.
+- [handoff](./skills/matt-pocock-engineering-skills/handoff/README.md): Compress current execution state into a reusable handoff artifact for another agent or engineer.
+- [write-a-skill](./skills/matt-pocock-engineering-skills/write-a-skill/README.md): Author new reusable skills with a cleaner structure and supporting references.
+- [setup-matt-pocock-skills](./skills/matt-pocock-engineering-skills/setup-matt-pocock-skills/README.md): Bootstrap the `docs/agents/` metadata and repo conventions consumed by the imported engineering workflow skills.
 
 ## Source Skill Repositories
 
