@@ -13,7 +13,7 @@ Bootstrap a complete AI coding stack on a single host: deploy LiteLLM proxy (via
 
 Both skills should live in the same parent directory:
 ```
-/home/
+<parent-directory>/
 ├── litellm-huawei-maas/          ← LiteLLM proxy deployment
 └── oh-my-opencode-slim-huawei-maas/  ← this project
 ```
@@ -27,7 +27,7 @@ If litellm-huawei-maas is already installed, find and use it. If not, deploy it 
 | 3 | `<parent-of-project>/litellm-huawei-maas` | Sibling directory |
 | 4 | `$HOME/litellm-huawei-maas` | Home directory |
 | 5 | `/opt/litellm-huawei-maas` | System location |
-| — | **None found** → `/home/litellm-huawei-maas` | Deploy to /home/ |
+| — | **None found** → `<parent-of-project>/litellm-huawei-maas` | Deploy as sibling of this project |
 
 ## Three Scenarios
 

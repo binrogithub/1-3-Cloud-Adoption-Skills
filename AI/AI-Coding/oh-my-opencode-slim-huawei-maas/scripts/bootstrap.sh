@@ -10,7 +10,7 @@ set -euo pipefail
 #
 # LiteLLM location strategy:
 #   - If litellm-huawei-maas is already installed somewhere → find it, use it
-#   - If not found → deploy as subdirectory of this project
+#   - If not found → deploy as sibling of this project
 #
 # Usage:
 #   ./bootstrap.sh                                    # interactive — prompts for keys
@@ -101,7 +101,7 @@ find_litellm_dir() {
 # Priority: env var → .master-key files → .env files
 # Prints info lines + key to stdout. Returns 1 if not found.
 resolve_master_key() {
-  local litellm_dir="${LITELLM_DIR:-/home/litellm-huawei-maas}"
+  local litellm_dir="${LITELLM_DIR:-$(dirname "$PROJECT_DIR")/litellm-huawei-maas}"
 
   # 1. Environment variable
   if [ -n "${LITELLM_MASTER_KEY:-}" ]; then
@@ -158,7 +158,7 @@ try_resolve_master_key() {
   resolve_output="$(resolve_master_key 2>&1)" || true
   LITELLM_MASTER_KEY="$(echo "$resolve_output" | tail -1)"
   if [ -n "$LITELLM_MASTER_KEY" ]; then
-    echo "$resolve_output" | head -n -1
+    printf '%s\n' "$resolve_output" | sed '$d'
     return 0
   fi
   return 1
@@ -274,7 +274,7 @@ if [ -n "$FOUND_LITELLM_DIR" ]; then
     echo ""
   fi
 else
-  LITELLM_DIR="/home/litellm-huawei-maas"
+  LITELLM_DIR="$(dirname "$PROJECT_DIR")/litellm-huawei-maas"
   echo "  No existing LiteLLM found. Will deploy to: $LITELLM_DIR"
 fi
 
