@@ -70,12 +70,14 @@ fi
 
 # ── Step 2: Service health ─────────────────────────────────────
 step "2: All services healthy"
-if docker compose ps --format json 2>/dev/null | python3 -c "
+SERVICE_HEALTH_LINE=$(docker compose ps --format json 2>/dev/null | python3 -c "
 import sys, json
 services = [json.loads(l) for l in sys.stdin if l.strip()]
 ok = all(s.get('Health','') == 'healthy' or s.get('Status','').startswith('Up') for s in services)
 print('healthy' if ok and len(services) >= 4 else 'unhealthy', len(services))
-" 2>/dev/null | read -r STATUS COUNT; then
+" 2>/dev/null || true)
+if [ -n "$SERVICE_HEALTH_LINE" ]; then
+  read -r STATUS COUNT <<< "$SERVICE_HEALTH_LINE"
   if [ "$STATUS" = "healthy" ]; then
     pass "All $COUNT services are healthy/running"
   else
@@ -140,10 +142,12 @@ fi
 
 # ── Step 7: Streaming ──────────────────────────────────────────
 step "7: Streaming chat completion"
-STREAM_RESP=$(curl -s --connect-timeout 30 "$LITELLM_URL/v1/chat/completions" \
-  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"deepseek-v3.2","messages":[{"role":"user","content":"Count to 3."}],"stream":true}' 2>/dev/null | head -3)
+STREAM_RESP=$({
+  curl -s --connect-timeout 30 "$LITELLM_URL/v1/chat/completions" \
+    -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{"model":"deepseek-v3.2","messages":[{"role":"user","content":"Count to 3."}],"stream":true}' 2>/dev/null || true
+} | head -3)
 if echo "$STREAM_RESP" | grep -q '^data:'; then
   pass "Streaming returned SSE chunks"
 else
