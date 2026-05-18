@@ -1,0 +1,19 @@
+# Never commit real API keys or configs containing secrets
+opencode.json
+opencode.jsonc
+oh-my-opencode-slim.json
+oh-my-opencode-slim.jsonc
+
+# Environment files with secrets
+.env
+*.env
+
+# Master key files
+.master-key
+
+# Stale config files
+config.json
+
+# Backups created by install.sh
+*.bak
+*.bak.*

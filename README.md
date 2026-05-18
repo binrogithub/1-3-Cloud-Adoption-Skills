@@ -4,7 +4,7 @@ This repository defines a practical skill framework for Huawei Cloud adoption wo
 
 An AI skill in this repository is not just a prompt. It is a reusable capability unit built around a cloud scenario, where AI helps with understanding, design, migration, operations, development, analysis, or optimization.
 
-Recent updates added the LiteLLM Huawei MaaS Proxy skill, the Huawei Cloud SEC EDGAR big-data monitoring PoC skill, and the Huawei ECS HTTP proxy SSH skill, while also refreshing the Claude Code Huawei MaaS and LiteLLM single-ECS gateway workflows.
+Recent updates added the oh-my-opencode-slim-huawei-maas skill (idempotent bootstrap for opencode + LiteLLM proxy + oh-my-opencode-slim on Huawei MaaS), the LiteLLM Huawei MaaS Proxy skill, the Huawei Cloud SEC EDGAR big-data monitoring PoC skill, and the Huawei ECS HTTP proxy SSH skill, while also refreshing the Claude Code Huawei MaaS and LiteLLM single-ECS gateway workflows.
 
 Each skill should include:
 
@@ -18,7 +18,7 @@ Each skill should include:
 
 Use this index when Codex, Claude Code, or another AI agent needs to locate the right reusable skill quickly. Start from the business scenario, then open the linked skill folder. The child skill `README.md` gives the repository-facing summary, while `SKILL.md` contains the agent-facing workflow and trigger rules when present.
 
-For the latest additions, check the `AI / AI-Coding`, `Big Data`, and `Cloud Foundation` entries near the end of the index, including the LiteLLM Huawei MaaS Proxy, SEC EDGAR monitoring, and HTTP proxy SSH skills.
+For the latest additions, check the `AI / AI-Coding`, `Big Data`, and `Cloud Foundation` entries near the end of the index, including the oh-my-opencode-slim-huawei-maas, LiteLLM Huawei MaaS Proxy, SEC EDGAR monitoring, and HTTP proxy SSH skills.
 
 | # | Domain | Use Case | Skill | Use When |
 | --- | --- | --- | --- | --- |
@@ -63,6 +63,7 @@ For the latest additions, check the `AI / AI-Coding`, `Big Data`, and `Cloud Fou
 | 39 | AI | AI Coding | [MaaS Legacy Code Migration Skill](./AI/AI-Coding/maas-legacy-code-migration-skill/README.md) | Understand, refactor, and migrate legacy code (Java/COBOL/.NET) with reviewable batch transforms, characterization tests, and behavior preservation. |
 | 40 | Cloud Foundation | Cross-Cloud and Hybrid Network | [Huawei ECS HTTP Proxy SSH Skill](./Cloud-Foundation/Cross-Cloud-and-Hybrid-Network/Huawei-ECS-HTTP-Proxy-SSH-Skill/README.md) | Run SSH commands on Huawei Cloud ECS through a corporate HTTP or HTTPS proxy when direct SSH is blocked, while avoiding persisted SSH passphrases, proxy passwords, private keys, and tokens. |
 | 41 | AI | AI Coding | [LiteLLM Huawei MaaS Proxy](./AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy/README.md) | Deploy a single-host Docker Compose LiteLLM proxy for Huawei Cloud MaaS with PostgreSQL persistence, Prometheus metrics, Grafana dashboards, virtual key management, and custom TTFT/TPOT/ITL observability. |
+| 42 | AI | AI Coding | [oh-my-opencode-slim-huawei-maas](./AI/AI-Coding/oh-my-opencode-slim-huawei-maas/README.md) | Bootstrap a complete AI coding stack on a single host: deploy LiteLLM proxy, install opencode with oh-my-opencode-slim plugin, mint scoped virtual key, configure dual providers with four presets, fallback chains, and council, then validate end-to-end. |
 
 ## How To Navigate This Repository
 
