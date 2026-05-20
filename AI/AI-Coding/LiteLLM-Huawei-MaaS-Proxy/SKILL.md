@@ -1,5 +1,5 @@
 ---
-name: litellm-huawei-maas
+name: LiteLLM-Huawei-MaaS-Proxy
 description: Deploy, configure, validate, troubleshoot, or extend an OpenAI-compatible API proxy backed by PostgreSQL, Prometheus, and Grafana, routing through Huawei ModelArts MaaS (ap-southeast-1). TRIGGER when the task involves LiteLLM proxy deployment, Docker Compose stack with litellm_config.yaml, Huawei MaaS model routing, virtual key or budget management, Prometheus/Grafana observability for LLM traffic, custom_callbacks.py TTFT/TPOT/ITL metrics, or any reference to `LITELLM_MASTER_KEY`, `HUAWEI_MAAS_API_KEY`, or `docker compose` with this stack.
 ---
 
@@ -171,10 +171,17 @@ docker --version          # expect 20.10+
 docker compose version    # expect v2
 ```
 
-### 1. Clone and prepare
+### 1. Install from monorepo
 
 ```bash
-git clone <repo-url> && cd litellm-huawei-maas
+MONOREPO="https://github.com/binrogithub/1-3-Cloud-Adoption-Skills.git"
+TEMP_DIR="/home/1-3-Cloud-Adoption-Skills"
+LITELLM_DIR="/home/LiteLLM-Huawei-MaaS-Proxy"
+
+git clone --depth 1 "$MONOREPO" "$TEMP_DIR"
+cp -r "$TEMP_DIR/AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy" "$LITELLM_DIR"
+rm -rf "$TEMP_DIR"
+cd "$LITELLM_DIR"
 ```
 
 ### 2. Configure `.env`

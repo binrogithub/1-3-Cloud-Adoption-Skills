@@ -72,7 +72,7 @@ Single-host AI gateway for centralized key management, spend tracking, rate limi
 
 ## Workflow
 
-1. **Clone and configure** — `git clone`, then `./scripts/init_env.sh` (guided) or manual `.env` setup.
+1. **Install and configure** — extract from monorepo to `/home/LiteLLM-Huawei-MaaS-Proxy`, then `./scripts/init_env.sh` (guided) or manual `.env` setup.
 2. **Deploy** — `docker compose up -d`. Healthcheck-gated chain: PostgreSQL → LiteLLM → Prometheus → Grafana.
 3. **Validate** — `./scripts/validate_e2e.sh` (12-step).
 4. **Operate** — mint virtual keys per team/service with budget and model restrictions.
@@ -131,7 +131,10 @@ See [SKILL.md](./SKILL.md) **Verification Exit Criteria** — 12-item checklist 
 **Guided setup (recommended):**
 
 ```bash
-git clone <repo-url> && cd litellm-huawei-maas
+git clone --depth 1 https://github.com/binrogithub/1-3-Cloud-Adoption-Skills.git /home/1-3-Cloud-Adoption-Skills
+cp -r /home/1-3-Cloud-Adoption-Skills/AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy /home/LiteLLM-Huawei-MaaS-Proxy
+rm -rf /home/1-3-Cloud-Adoption-Skills
+cd /home/LiteLLM-Huawei-MaaS-Proxy
 ./scripts/init_env.sh              # interactive — choose each secret
 docker compose up -d
 ./scripts/validate_e2e.sh
@@ -140,7 +143,10 @@ docker compose up -d
 **Agent-guided setup:**
 
 ```bash
-git clone <repo-url> && cd litellm-huawei-maas
+git clone --depth 1 https://github.com/binrogithub/1-3-Cloud-Adoption-Skills.git /home/1-3-Cloud-Adoption-Skills
+cp -r /home/1-3-Cloud-Adoption-Skills/AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy /home/LiteLLM-Huawei-MaaS-Proxy
+rm -rf /home/1-3-Cloud-Adoption-Skills
+cd /home/LiteLLM-Huawei-MaaS-Proxy
 ./scripts/init_env.sh --auto       # auto-generate secrets, prompt only for MaaS API key
 docker compose up -d
 ./scripts/validate_e2e.sh
@@ -149,7 +155,10 @@ docker compose up -d
 **Manual setup (full control):**
 
 ```bash
-git clone <repo-url> && cd litellm-huawei-maas
+git clone --depth 1 https://github.com/binrogithub/1-3-Cloud-Adoption-Skills.git /home/1-3-Cloud-Adoption-Skills
+cp -r /home/1-3-Cloud-Adoption-Skills/AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy /home/LiteLLM-Huawei-MaaS-Proxy
+rm -rf /home/1-3-Cloud-Adoption-Skills
+cd /home/LiteLLM-Huawei-MaaS-Proxy
 cp assets/config/.env.example .env
 ./scripts/generate_secrets.sh      # copy output into .env
 $EDITOR .env                       # add HUAWEI_MAAS_API_KEY

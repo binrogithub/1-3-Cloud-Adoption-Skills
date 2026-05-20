@@ -1,5 +1,5 @@
 ---
-name: litellm-huawei-maas
+name: LiteLLM-Huawei-MaaS-Proxy
 description: Deploy, configure, validate, troubleshoot, or extend an OpenAI-compatible API proxy backed by PostgreSQL, Prometheus, and Grafana, routing through Huawei ModelArts MaaS (ap-southeast-1). TRIGGER when the task involves LiteLLM proxy deployment, Docker Compose stack with litellm_config.yaml, Huawei MaaS model routing, virtual key or budget management, Prometheus/Grafana observability for LLM traffic, custom_callbacks.py TTFT/TPOT/ITL metrics, or any reference to `LITELLM_MASTER_KEY`, `HUAWEI_MAAS_API_KEY`, or `docker compose` with this stack.
 version: "1.0"
 triggers:

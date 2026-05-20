@@ -1,6 +1,6 @@
 ---
 name: oh-my-opencode-slim-huawei-maas
-description: "Bootstrap AI coding stack: deploy LiteLLM proxy (via litellm-huawei-maas skill), install opencode + oh-my-opencode-slim, mint virtual key, wire everything. TRIGGER on: opencode + Huawei MaaS setup, full-stack bootstrap, oh-my-opencode-slim-huawei-maas, deploy-litellm."
+description: "Bootstrap AI coding stack: deploy LiteLLM proxy (via LiteLLM-Huawei-MaaS-Proxy skill), install opencode + oh-my-opencode-slim, mint virtual key, wire everything. TRIGGER on: opencode + Huawei MaaS setup, full-stack bootstrap, oh-my-opencode-slim-huawei-maas, deploy-litellm."
 ---
 
 # oh-my-opencode-slim-huawei-maas Skill
@@ -9,33 +9,38 @@ description: "Bootstrap AI coding stack: deploy LiteLLM proxy (via litellm-huawe
 
 Bootstrap a complete AI coding stack on a single host: deploy LiteLLM proxy (via [LiteLLM Huawei MaaS Proxy](https://github.com/binrogithub/1-3-Cloud-Adoption-Skills/tree/main/AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy)), install opencode with oh-my-opencode-slim plugin, mint a scoped virtual key, configure end-to-end. Idempotent — safe to re-run.
 
-## LiteLLM Location Strategy
+## Canonical Installation Paths
 
-Both skills should live in the same parent directory:
+Both skills must be installed at these exact paths:
 ```
 /home/
-├── litellm-huawei-maas/          ← LiteLLM proxy deployment
-└── oh-my-opencode-slim-huawei-maas/  ← this project
+├── LiteLLM-Huawei-MaaS-Proxy/          ← LiteLLM proxy deployment
+└── oh-my-opencode-slim-huawei-maas/    ← this project
 ```
 
-If litellm-huawei-maas is already installed, find and use it. If not, deploy it as a sibling of this project. If litellm is found but this project isn't in the same parent dir, a warning is printed.
+These paths are enforced — no search, no fallback. The LiteLLM proxy is always at `/home/LiteLLM-Huawei-MaaS-Proxy`.
 
-| Priority | Search Method | What it finds |
-|----------|---------------|---------------|
-| 1 | `--workdir` flag | Explicit override |
-| 2 | `docker inspect litellm_proxy` → compose project working_dir | Container's source directory |
-| 3 | `<parent-of-project>/litellm-huawei-maas` | Sibling directory |
-| 4 | `$HOME/litellm-huawei-maas` | Home directory |
-| 5 | `/opt/litellm-huawei-maas` | System location |
-| — | **None found** → `/home/litellm-huawei-maas` | Deploy to /home/ |
+## Installation Source
+
+Both skills are extracted from the monorepo `https://github.com/binrogithub/1-3-Cloud-Adoption-Skills.git`:
+
+```bash
+MONOREPO="https://github.com/binrogithub/1-3-Cloud-Adoption-Skills.git"
+TEMP_DIR="/home/1-3-Cloud-Adoption-Skills"
+
+git clone --depth 1 "$MONOREPO" "$TEMP_DIR"
+cp -r "$TEMP_DIR/AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy" /home/LiteLLM-Huawei-MaaS-Proxy
+cp -r "$TEMP_DIR/AI/AI-Coding/oh-my-opencode-slim-huawei-maas" /home/oh-my-opencode-slim-huawei-maas
+rm -rf "$TEMP_DIR"
+```
 
 ## Three Scenarios
 
 | Scenario | Detection | Action |
 |----------|-----------|--------|
 | LiteLLM running | Health endpoint responds | Resolve master key, skip deploy |
-| LiteLLM deployed but offline | Docker container exists (stopped) OR repo + compose + .env exist | `docker compose up -d`, resolve master key |
-| No LiteLLM | No container, no files | Clone, init_env.sh, docker compose up -d |
+| LiteLLM deployed but offline | Docker container exists (stopped) OR compose + .env exist at `/home/LiteLLM-Huawei-MaaS-Proxy` | `docker compose up -d`, resolve master key |
+| No LiteLLM | No container, no files at canonical path | Extract from monorepo, init_env.sh, docker compose up -d |
 
 In all scenarios, `LITELLM_MASTER_KEY` is required to mint the opencode virtual key. If not found in env/files, the user is prompted.
 
@@ -58,15 +63,15 @@ In all scenarios, `LITELLM_MASTER_KEY` is required to mint the opencode virtual 
 - **Post-condition**: bun, jq, Docker, git, python3 installed; HUAWEI_MAAS_API_KEY set
 
 ### Step 2: Deploy LiteLLM proxy
-- **First**: Resolve `LITELLM_DIR` using the location strategy above
+- **First**: Set `LITELLM_DIR=/home/LiteLLM-Huawei-MaaS-Proxy` (canonical path)
 - **Guard**: `curl -sf http://127.0.0.1:4000/health/liveliness` succeeds
 - **If guard passes** (running): Resolve LITELLM_MASTER_KEY (see below), skip deployment
 - **If guard fails, but Docker container exists** (stopped): `docker compose up -d`, wait for healthy, resolve master key
-- **If guard fails, but repo + compose + .env exist** (containers removed via `compose down`): `docker compose up -d`, wait for healthy, resolve master key
-- **If guard fails, nothing found** (fresh): Clone `litellm-huawei-maas` into `LITELLM_DIR`, run `scripts/init_env.sh --ci`, `docker compose up -d`
+- **If guard fails, but compose + .env exist** at `$LITELLM_DIR` (containers removed via `compose down`): `docker compose up -d`, wait for healthy, resolve master key
+- **If guard fails, nothing found** (fresh): Extract from monorepo into `$LITELLM_DIR`, run `scripts/init_env.sh --ci`, `docker compose up -d`
 - **In all cases**: If LITELLM_MASTER_KEY not found automatically, prompt user
 - **Post-condition**: LiteLLM healthy on `:4000`, LITELLM_MASTER_KEY available
-- **Failure modes**: git clone fails → check network; Docker Compose fails → check ports 4000/5432/9090/3000; health fails → `docker compose logs litellm`
+- **Failure modes**: monorepo clone fails → check network; Docker Compose fails → check ports 4000/5432/9090/3000; health fails → `docker compose logs litellm`
 
 #### Master Key Resolution
 
@@ -198,7 +203,7 @@ Switch at runtime: `/preset LiteLLM-Huawei-MaaS-Lite`
 | Symptom | Fix |
 |---------|-----|
 | LiteLLM won't start | `docker compose ps`, check port conflicts (4000, 5432, 9090, 3000), check `.env` |
-| LiteLLM deployed but offline | `docker compose -f <parent>/litellm-huawei-maas/docker-compose.yml up -d` |
+| LiteLLM deployed but offline | `docker compose -f /home/LiteLLM-Huawei-MaaS-Proxy/docker-compose.yml up -d` |
 | opencode won't start | `jq . ~/.config/opencode/opencode.jsonc`, check `@ai-sdk/openai-compatible` installed |
 | Models not found | `curl http://127.0.0.1:4000/v1/models`, compare with litellm_config.yaml |
 | Plugin not loaded | Add `"oh-my-opencode-slim"` to plugin array, re-run `bunx oh-my-opencode-slim@1.1.1 install` |
@@ -206,7 +211,7 @@ Switch at runtime: `/preset LiteLLM-Huawei-MaaS-Lite`
 | Wrong preset | Set `"preset": "LiteLLM-Huawei-MaaS"` or run `/preset LiteLLM-Huawei-MaaS` |
 | "No presets configured" | Ensure `council.presets` is defined in oh-my-opencode-slim.json |
 | Fallback not triggering | Set `fallback.enabled: true`, add chains for v4-model agents |
-| Repo clone fails | Verify https://github.com/wallacelw/litellm-huawei-maas is reachable |
+| Repo clone fails | Verify https://github.com/binrogithub/1-3-Cloud-Adoption-Skills is reachable |
 
 ## Sanitization Rules
 

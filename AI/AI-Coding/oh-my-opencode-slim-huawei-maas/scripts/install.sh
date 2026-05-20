@@ -5,7 +5,7 @@ set -euo pipefail
 #
 # Prerequisites:
 #   - Docker + Docker Compose V2 installed (for LiteLLM proxy)
-#   - LiteLLM proxy running on 127.0.0.1:4000 (from litellm-huawei-maas skill)
+#   - LiteLLM proxy running on 127.0.0.1:4000 (from LiteLLM-Huawei-MaaS-Proxy skill)
 #   - bun installed (https://bun.sh)
 #   - jq installed (https://stedolan.github.io/jq/)
 #   - LITELLM_MASTER_KEY set in environment
@@ -100,7 +100,7 @@ fi
 if curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/health/liveliness" &>/dev/null; then
   echo "   LiteLLM proxy: reachable at http://127.0.0.1:4000"
 else
-  echo "WARNING: LiteLLM proxy not reachable at http://127.0.0.1:4000. Start it first with the litellm-huawei-maas skill."
+  echo "WARNING: LiteLLM proxy not reachable at http://127.0.0.1:4000. Start it first with the LiteLLM-Huawei-MaaS-Proxy skill."
 fi
 
 echo ""

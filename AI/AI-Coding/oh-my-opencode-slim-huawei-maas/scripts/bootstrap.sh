@@ -8,15 +8,19 @@ set -euo pipefail
 #
 # Idempotent — safe to re-run.
 #
-# LiteLLM location strategy:
-#   - If litellm-huawei-maas is already installed somewhere → find it, use it
-#   - If not found → deploy as subdirectory of this project
+# Canonical paths (enforced):
+#   - LiteLLM-Huawei-MaaS-Proxy → /home/LiteLLM-Huawei-MaaS-Proxy
+#   - oh-my-opencode-slim-huawei-maas → /home/oh-my-opencode-slim-huawei-maas
+#
+# Installation source: monorepo extraction
+#   - Clone https://github.com/binrogithub/1-3-Cloud-Adoption-Skills.git
+#   - Extract both skills to /home/
+#   - Delete monorepo clone
 #
 # Usage:
 #   ./bootstrap.sh                                    # interactive — prompts for keys
 #   ./bootstrap.sh --maas-key=KEY                     # non-interactive MaaS key
 #   ./bootstrap.sh --virtual-key=sk-...               # use existing virtual key (skip minting)
-#   ./bootstrap.sh --workdir=/path                    # custom LiteLLM working directory
 #   ./bootstrap.sh --dry-run                          # preview changes
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -24,13 +28,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 LITELLM_URL="http://127.0.0.1:4000"
-LITELLM_REPO="https://github.com/wallacelw/litellm-huawei-maas.git"
+LITELLM_DIR="/home/LiteLLM-Huawei-MaaS-Proxy"
+MONOREPO="https://github.com/binrogithub/1-3-Cloud-Adoption-Skills.git"
+MONOREPO_TEMP="/home/1-3-Cloud-Adoption-Skills"
 CURL_TIMEOUT=15
 
 # ── Defaults ──
 MAAS_KEY=""
 VIRTUAL_KEY=""
-WORKDIR=""
 DRY_RUN=false
 
 # ── Parse command-line arguments ──
@@ -38,70 +43,23 @@ for arg in "$@"; do
   case "$arg" in
     --maas-key=*)       MAAS_KEY="${arg#--maas-key=}" ;;
     --virtual-key=*)    VIRTUAL_KEY="${arg#--virtual-key=}" ;;
-    --workdir=*)        WORKDIR="${arg#--workdir=}" ;;
     --dry-run)          DRY_RUN=true ;;
     *)
       echo "ERROR: Unknown argument: $arg"
-      echo "Usage: $0 [--maas-key=KEY] [--virtual-key=sk-...] [--workdir=/path] [--dry-run]"
+      echo "Usage: $0 [--maas-key=KEY] [--virtual-key=sk-...] [--dry-run]"
       exit 1
       ;;
   esac
 done
 
-# ── Find existing litellm-huawei-maas installation ──
-# Search order:
-#   1. --workdir flag (explicit override)
-#   2. Docker container label (compose project working_dir)
-#   3. Sibling of this project (<parent>/litellm-huawei-maas)
-#   4. $HOME/litellm-huawei-maas
-#   5. /opt/litellm-huawei-maas
-# Returns path if found, empty if not.
-find_litellm_dir() {
-  # 1. Explicit override
-  if [ -n "$WORKDIR" ]; then
-    echo "$WORKDIR"
-    return 0
-  fi
-
-  # 2. Docker container compose project working_dir (most reliable)
-  if command -v docker &>/dev/null; then
-    local compose_dir
-    compose_dir="$(docker inspect litellm_proxy \
-      --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' 2>/dev/null || true)"
-    if [ -n "$compose_dir" ] && [ -d "$compose_dir" ]; then
-      echo "$compose_dir"
-      return 0
-    fi
-  fi
-
-  # 3. Sibling of this project
-  local sibling="$(dirname "$PROJECT_DIR")/litellm-huawei-maas"
-  if [ -d "$sibling/.git" ] && [ -f "$sibling/docker-compose.yml" ]; then
-    echo "$sibling"
-    return 0
-  fi
-
-  # 4. Home directory
-  if [ -d "$HOME/litellm-huawei-maas/.git" ] && [ -f "$HOME/litellm-huawei-maas/docker-compose.yml" ]; then
-    echo "$HOME/litellm-huawei-maas"
-    return 0
-  fi
-
-  # 5. /opt
-  if [ -d "/opt/litellm-huawei-maas/.git" ] && [ -f "/opt/litellm-huawei-maas/docker-compose.yml" ]; then
-    echo "/opt/litellm-huawei-maas"
-    return 0
-  fi
-
-  # Not found — return empty
-  return 1
-}
+# ── LiteLLM is always at the canonical path ──
+# No search — enforced: /home/LiteLLM-Huawei-MaaS-Proxy
 
 # ── Resolve LITELLM_MASTER_KEY from multiple sources ──
 # Priority: env var → .master-key files → .env files
 # Prints info lines + key to stdout. Returns 1 if not found.
 resolve_master_key() {
-  local litellm_dir="${LITELLM_DIR:-/home/litellm-huawei-maas}"
+  local litellm_dir="${LITELLM_DIR:-/home/LiteLLM-Huawei-MaaS-Proxy}"
 
   # 1. Environment variable
   if [ -n "${LITELLM_MASTER_KEY:-}" ]; then
@@ -245,38 +203,15 @@ export HUAWEI_MAAS_API_KEY="$MAAS_KEY"
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. LiteLLM running       → resolve master key, skip deploy
 # 2. LiteLLM deployed but offline → docker compose up -d, resolve master key
-# 3. No LiteLLM            → clone, init_env.sh, docker compose up -d
+# 3. No LiteLLM            → extract from monorepo, init_env.sh, docker compose up -d
 #
-# Location strategy:
-#   - Find existing installation (Docker labels, sibling, $HOME, /opt)
-#   - If not found → deploy as sibling of this project
-#   - Always keep both skills in the same parent directory
+# Canonical path enforced: /home/LiteLLM-Huawei-MaaS-Proxy
 # ──────────────────────────────────────────────────────────────────────────────
 STEP_NAME="Deploy LiteLLM"
 print_step "3" "Deploy LiteLLM"
 LITELLM_MASTER_KEY=""
 
-# Resolve LITELLM_DIR: find existing or default to sibling of this project
-FOUND_LITELLM_DIR="$(find_litellm_dir)" || true
-if [ -n "$FOUND_LITELLM_DIR" ]; then
-  LITELLM_DIR="$FOUND_LITELLM_DIR"
-  echo "  Found existing LiteLLM at: $LITELLM_DIR"
-
-  # Co-location check: both skills should share the same parent directory
-  LITELLM_PARENT="$(dirname "$LITELLM_DIR")"
-  PROJECT_PARENT="$(dirname "$PROJECT_DIR")"
-  if [ "$LITELLM_PARENT" != "$PROJECT_PARENT" ]; then
-    echo ""
-    echo "  ⚠ LiteLLM is at: $LITELLM_DIR"
-    echo "  ⚠ This project is at: $PROJECT_DIR"
-    echo "  ⚠ They are in different parent directories."
-    echo "  ⚠ For best organization, move this project to: $LITELLM_PARENT/oh-my-opencode-slim-huawei-maas"
-    echo ""
-  fi
-else
-  LITELLM_DIR="/home/litellm-huawei-maas"
-  echo "  No existing LiteLLM found. Will deploy to: $LITELLM_DIR"
-fi
+echo "  LiteLLM canonical path: $LITELLM_DIR"
 
 # Helper: check if LiteLLM Docker container exists (running or stopped)
 litellm_container_exists() {
@@ -285,7 +220,7 @@ litellm_container_exists() {
 
 # Helper: check if LiteLLM deployment files exist at LITELLM_DIR
 litellm_files_exist() {
-  [ -d "$LITELLM_DIR/.git" ] && [ -f "$LITELLM_DIR/docker-compose.yml" ] && [ -f "$LITELLM_DIR/.env" ]
+  [ -f "$LITELLM_DIR/docker-compose.yml" ] && [ -f "$LITELLM_DIR/.env" ]
 }
 
 if curl -sf -m "$CURL_TIMEOUT" "$LITELLM_URL/health/liveliness" &>/dev/null; then
@@ -324,22 +259,36 @@ elif litellm_files_exist; then
   fi
 
 else
-  # ── Scenario 3: Fresh deploy via upstream skill ──
+  # ── Scenario 3: Fresh deploy via monorepo extraction ──
   if [ "$DRY_RUN" = true ]; then
-    echo "  Would clone $LITELLM_REPO into $LITELLM_DIR"
+    echo "  Would clone $MONOREPO into $MONOREPO_TEMP"
+    echo "  Would extract AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy to $LITELLM_DIR"
+    echo "  Would delete $MONOREPO_TEMP"
     echo "  Would run: scripts/init_env.sh --ci"
     echo "  Would run: docker compose up -d"
     LITELLM_MASTER_KEY="<LITELLM_MASTER_KEY>"
   else
-    echo "  No LiteLLM deployment found. Deploying via upstream skill..."
+    echo "  No LiteLLM deployment found. Extracting from monorepo..."
 
-    # Clone if not already present
-    if [ ! -d "$LITELLM_DIR/.git" ]; then
-      echo "  Cloning $LITELLM_REPO ..."
-      git clone --depth 1 "$LITELLM_REPO" "$LITELLM_DIR"
+    # Clone monorepo
+    if [ ! -d "$MONOREPO_TEMP/.git" ]; then
+      echo "  Cloning $MONOREPO ..."
+      git clone --depth 1 "$MONOREPO" "$MONOREPO_TEMP"
     else
-      echo "  Repo already cloned at $LITELLM_DIR"
+      echo "  Monorepo already cloned at $MONOREPO_TEMP"
     fi
+
+    # Extract LiteLLM skill to canonical path
+    if [ ! -d "$LITELLM_DIR" ]; then
+      echo "  Extracting LiteLLM-Huawei-MaaS-Proxy to $LITELLM_DIR ..."
+      cp -r "$MONOREPO_TEMP/AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy" "$LITELLM_DIR"
+    else
+      echo "  $LITELLM_DIR already exists — skipping extraction"
+    fi
+
+    # Clean up monorepo
+    echo "  Removing monorepo clone ..."
+    rm -rf "$MONOREPO_TEMP"
 
     # Configure .env via upstream script
     if [ ! -f "$LITELLM_DIR/.env" ]; then
@@ -405,7 +354,7 @@ fi
 echo ""
 echo "=== Bootstrap complete ==="
 echo ""
-echo "LiteLLM location:  $LITELLM_DIR"
+echo "LiteLLM location:  $LITELLM_DIR (canonical)"
 echo "LiteLLM proxy:     $LITELLM_URL"
 echo "LiteLLM Admin UI:  ${LITELLM_URL}/ui"
 echo "Prometheus:         http://127.0.0.1:9090"

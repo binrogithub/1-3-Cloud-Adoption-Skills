@@ -104,8 +104,11 @@ See SKILL.md Verification Exit Criteria. Run `scripts/validate.sh` for automated
 ### From scratch (fresh machine)
 
 ```bash
-git clone https://github.com/wallacelw/oh-my-opencode-slim-huawei-maas.git
-cd oh-my-opencode-slim-huawei-maas
+git clone --depth 1 https://github.com/binrogithub/1-3-Cloud-Adoption-Skills.git /home/1-3-Cloud-Adoption-Skills
+cp -r /home/1-3-Cloud-Adoption-Skills/AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy /home/LiteLLM-Huawei-MaaS-Proxy
+cp -r /home/1-3-Cloud-Adoption-Skills/AI/AI-Coding/oh-my-opencode-slim-huawei-maas /home/oh-my-opencode-slim-huawei-maas
+rm -rf /home/1-3-Cloud-Adoption-Skills
+cd /home/oh-my-opencode-slim-huawei-maas
 export HUAWEI_MAAS_API_KEY="your-key-from-huawei-console"
 ./scripts/bootstrap.sh
 opencode
