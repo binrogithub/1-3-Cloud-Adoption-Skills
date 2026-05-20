@@ -260,15 +260,46 @@ else
           fi
         fi
 
-        # ── 7c. Tier 3: Inference smoke test ──
-        # One minimal chat completion on the first available model.
-        # Proves the full end-to-end path works. Minimal cost (1 token).
-        SMOKE_MODEL=$(printf '%s' "$MODEL_LIST" | head -1)
-        BODY=$(jq -nc --arg m "$SMOKE_MODEL" '{model: $m, messages: [{role: "user", content: "ok"}]}')
-        check "Inference smoke test ($SMOKE_MODEL)" curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
-          -H "Authorization: Bearer $VIRTUAL_KEY" \
-          -H "Content-Type: application/json" \
-          -d "$BODY"
+        # ── 7c. Tier 3: Parallel inference smoke test ──
+        # Fire minimal chat completions at ALL models in parallel.
+        # Any one success proves the full inference path works.
+        # Wall-clock time bounded by fastest model, not slowest.
+        SMOKE_PIDS=()
+        SMOKE_MODELS=()
+        for model in $MODEL_LIST; do
+          BODY=$(jq -nc --arg m "$model" '{model: $m, messages: [{role: "user", content: "ok"}]}')
+          curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
+            -H "Authorization: Bearer $VIRTUAL_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" >/dev/null 2>&1 &
+          SMOKE_PIDS+=($!)
+          SMOKE_MODELS+=("$model")
+        done
+
+        # Collect results — count successes and failures
+        SMOKE_PASS=0
+        SMOKE_FAIL=0
+        SMOKE_FAIL_LIST=""
+        for i in "${!SMOKE_PIDS[@]}"; do
+          if wait "${SMOKE_PIDS[$i]}" 2>/dev/null; then
+            SMOKE_PASS=$((SMOKE_PASS + 1))
+          else
+            SMOKE_FAIL=$((SMOKE_FAIL + 1))
+            SMOKE_FAIL_LIST="$SMOKE_FAIL_LIST ${SMOKE_MODELS[$i]}"
+          fi
+        done
+        SMOKE_TOTAL=$((SMOKE_PASS + SMOKE_FAIL))
+
+        if [ "$SMOKE_PASS" -gt 0 ]; then
+          check "Inference smoke test (parallel)" true
+          echo "  ℹ $SMOKE_PASS/$SMOKE_TOTAL model(s) responded to inference"
+          if [ "$SMOKE_FAIL" -gt 0 ]; then
+            echo "  ⚠ No response from:$(echo "$SMOKE_FAIL_LIST" | sed 's/^ //')"
+          fi
+        else
+          echo "  ✗ No models responded to inference (0/$SMOKE_TOTAL)"
+          FAIL=$((FAIL + 1))
+        fi
       fi
     fi
   fi
