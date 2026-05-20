@@ -218,39 +218,27 @@ else
     FAIL=$((FAIL + 1))
   else
     # ── 7a. Discover models dynamically from /v1/models ──
-    MODELS_JSON=""
-    check "Model catalog reachable" bash -c '
-      RESPONSE=$(curl -sf -m 10 "$1/v1/models" -H "Authorization: Bearer $2" 2>/dev/null) && \
-      [ -n "$RESPONSE" ] && \
-      echo "$RESPONSE" | jq -e ".data | length > 0" >/dev/null
-    ' _ "$LITELLM_URL" "$VIRTUAL_KEY"
-
     MODELS_JSON=$(curl -sf -m 10 "$LITELLM_URL/v1/models" \
       -H "Authorization: Bearer $VIRTUAL_KEY" 2>/dev/null)
 
-    if [ -z "$MODELS_JSON" ]; then
-      echo "  ✗ Cannot retrieve model catalog from LiteLLM"
+    if [ -z "$MODELS_JSON" ] || ! printf '%s' "$MODELS_JSON" | jq -e '.data | length > 0' >/dev/null 2>&1; then
+      echo "  ✗ Model catalog not reachable or empty"
       FAIL=$((FAIL + 1))
     else
+      check "Model catalog reachable" true
+
+      MODEL_COUNT=$(printf '%s' "$MODELS_JSON" | jq '.data | length' 2>/dev/null)
       MODEL_LIST=$(printf '%s' "$MODELS_JSON" | jq -r '.data[].id' 2>/dev/null)
-      MODEL_COUNT=$(printf '%s' "$MODEL_LIST" | wc -l | tr -d ' ')
 
-      if [ "$MODEL_COUNT" -eq 0 ] 2>/dev/null; then
-        echo "  ✗ No models found in LiteLLM catalog"
-        FAIL=$((FAIL + 1))
-      else
-        echo "  ℹ Discovered $MODEL_COUNT model(s): $(echo "$MODEL_LIST" | tr '\n' ' ' | sed 's/ $//')"
+      echo "  ℹ Discovered $MODEL_COUNT model(s): $(echo "$MODEL_LIST" | tr '\n' ' ' | sed 's/ $//')"
 
-        # ── 7b. Minimal chat completion per model ──
-        for model in $MODEL_LIST; do
-          check "Model $model inference" bash -c '
-            curl -sf -m 15 "$1/v1/chat/completions" \
-              -H "Authorization: Bearer $2" \
-              -H "Content-Type: application/json" \
-              -d "{\"model\": \"$3\", \"messages\": [{\"role\": \"user\", \"content\": \"ok\"}], \"max_tokens\": 1}" >/dev/null 2>&1
-          ' _ "$LITELLM_URL" "$VIRTUAL_KEY" "$model"
-        done
-      fi
+      # ── 7b. Minimal chat completion per model ──
+      for model in $MODEL_LIST; do
+        check "Model $model inference" curl -sf -m 15 "$LITELLM_URL/v1/chat/completions" \
+          -H "Authorization: Bearer $VIRTUAL_KEY" \
+          -H "Content-Type: application/json" \
+          -d "{\"model\": \"$model\", \"messages\": [{\"role\": \"user\", \"content\": \"ok\"}], \"max_tokens\": 1}"
+      done
     fi
   fi
 fi
