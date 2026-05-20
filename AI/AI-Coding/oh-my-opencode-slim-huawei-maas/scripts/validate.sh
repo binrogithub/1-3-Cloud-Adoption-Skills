@@ -201,9 +201,8 @@ echo ""
 # ── 7. LiteLLM model availability ──
 echo "7. LiteLLM model availability (via proxy)"
 if [ "$DRY_RUN" = true ]; then
-  for model in glm-5.1 glm-5 deepseek-v4-pro deepseek-v4-flash deepseek-v3.2; do
-    skip_check "Model $model available"
-  done
+  skip_check "Model catalog reachable"
+  skip_check "All models available"
 else
   VIRTUAL_KEY=""
   if [ -n "$CONFIG_FILE" ]; then
@@ -214,16 +213,45 @@ else
     VIRTUAL_KEY="${LITELLM_MASTER_KEY:-}"
   fi
 
-  if [ -n "$VIRTUAL_KEY" ]; then
-    for model in glm-5.1 glm-5 deepseek-v4-pro deepseek-v4-flash deepseek-v3.2; do
-      check "Model $model available" curl -sf -m 10 "$LITELLM_URL/v1/chat/completions" \
-        -H "Authorization: Bearer $VIRTUAL_KEY" \
-        -H "Content-Type: application/json" \
-        -d "{\"model\": \"$model\", \"messages\": [{\"role\": \"user\", \"content\": \"OK\"}], \"max_tokens\": 1}"
-    done
-  else
+  if [ -z "$VIRTUAL_KEY" ]; then
     echo "  ✗ No API key available for model checks"
-    FAIL=$((FAIL + 5))
+    FAIL=$((FAIL + 1))
+  else
+    # ── 7a. Discover models dynamically from /v1/models ──
+    MODELS_JSON=""
+    check "Model catalog reachable" bash -c '
+      RESPONSE=$(curl -sf -m 10 "$1/v1/models" -H "Authorization: Bearer $2" 2>/dev/null) && \
+      [ -n "$RESPONSE" ] && \
+      echo "$RESPONSE" | jq -e ".data | length > 0" >/dev/null
+    ' _ "$LITELLM_URL" "$VIRTUAL_KEY"
+
+    MODELS_JSON=$(curl -sf -m 10 "$LITELLM_URL/v1/models" \
+      -H "Authorization: Bearer $VIRTUAL_KEY" 2>/dev/null)
+
+    if [ -z "$MODELS_JSON" ]; then
+      echo "  ✗ Cannot retrieve model catalog from LiteLLM"
+      FAIL=$((FAIL + 1))
+    else
+      MODEL_LIST=$(printf '%s' "$MODELS_JSON" | jq -r '.data[].id' 2>/dev/null)
+      MODEL_COUNT=$(printf '%s' "$MODEL_LIST" | wc -l | tr -d ' ')
+
+      if [ "$MODEL_COUNT" -eq 0 ] 2>/dev/null; then
+        echo "  ✗ No models found in LiteLLM catalog"
+        FAIL=$((FAIL + 1))
+      else
+        echo "  ℹ Discovered $MODEL_COUNT model(s): $(echo "$MODEL_LIST" | tr '\n' ' ' | sed 's/ $//')"
+
+        # ── 7b. Minimal chat completion per model ──
+        for model in $MODEL_LIST; do
+          check "Model $model inference" bash -c '
+            curl -sf -m 15 "$1/v1/chat/completions" \
+              -H "Authorization: Bearer $2" \
+              -H "Content-Type: application/json" \
+              -d "{\"model\": \"$3\", \"messages\": [{\"role\": \"user\", \"content\": \"ok\"}], \"max_tokens\": 1}" >/dev/null 2>&1
+          ' _ "$LITELLM_URL" "$VIRTUAL_KEY" "$model"
+        done
+      fi
+    fi
   fi
 fi
 echo ""
