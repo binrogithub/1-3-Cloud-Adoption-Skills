@@ -234,10 +234,11 @@ else
 
       # ── 7b. Minimal chat completion per model ──
       for model in $MODEL_LIST; do
+        BODY=$(jq -nc --arg m "$model" '{model: $m, messages: [{role: "user", content: "ok"}]}')
         check "Model $model inference" curl -sf -m 15 "$LITELLM_URL/v1/chat/completions" \
           -H "Authorization: Bearer $VIRTUAL_KEY" \
           -H "Content-Type: application/json" \
-          -d "{\"model\": \"$model\", \"messages\": [{\"role\": \"user\", \"content\": \"ok\"}], \"max_tokens\": 1}"
+          -d "$BODY"
       done
     fi
   fi
