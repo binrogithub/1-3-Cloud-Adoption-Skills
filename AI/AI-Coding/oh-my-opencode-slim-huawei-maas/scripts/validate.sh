@@ -202,7 +202,8 @@ echo ""
 echo "7. LiteLLM model availability (via proxy)"
 if [ "$DRY_RUN" = true ]; then
   skip_check "Model catalog reachable"
-  skip_check "All models available"
+  skip_check "Upstream health (all models)"
+  skip_check "Inference smoke test"
 else
   VIRTUAL_KEY=""
   if [ -n "$CONFIG_FILE" ]; then
@@ -215,31 +216,60 @@ else
 
   if [ -z "$VIRTUAL_KEY" ]; then
     echo "  ✗ No API key available for model checks"
-    FAIL=$((FAIL + 1))
+    FAIL=$((FAIL + 3))
   else
-    # ── 7a. Discover models dynamically from /v1/models ──
+    # ── 7a. Tier 1: Model catalog (/v1/models) ──
+    # Discovers all registered models. Zero cost, zero rate-limit risk.
     MODELS_JSON=$(curl -sf -m 10 "$LITELLM_URL/v1/models" \
       -H "Authorization: Bearer $VIRTUAL_KEY" 2>/dev/null)
 
     if [ -z "$MODELS_JSON" ] || ! printf '%s' "$MODELS_JSON" | jq -e '.data | length > 0' >/dev/null 2>&1; then
       echo "  ✗ Model catalog not reachable or empty"
-      FAIL=$((FAIL + 1))
+      FAIL=$((FAIL + 3))
     else
       check "Model catalog reachable" true
 
       MODEL_COUNT=$(printf '%s' "$MODELS_JSON" | jq '.data | length' 2>/dev/null)
       MODEL_LIST=$(printf '%s' "$MODELS_JSON" | jq -r '.data[].id' 2>/dev/null)
-
       echo "  ℹ Discovered $MODEL_COUNT model(s): $(echo "$MODEL_LIST" | tr '\n' ' ' | sed 's/ $//')"
 
-      # ── 7b. Minimal chat completion per model ──
-      for model in $MODEL_LIST; do
-        BODY=$(jq -nc --arg m "$model" '{model: $m, messages: [{role: "user", content: "ok"}]}')
-        check "Model $model inference" curl -sf -m 15 "$LITELLM_URL/v1/chat/completions" \
+      # ── 7b. Tier 2: Upstream health (/health) ──
+      # LiteLLM probes each upstream model and reports healthy/unhealthy.
+      # Zero cost, no rate-limit risk, no inference tokens.
+      HEALTH_JSON=$(curl -sf -m 10 "$LITELLM_URL/health" \
+        -H "Authorization: Bearer $VIRTUAL_KEY" 2>/dev/null)
+
+      if [ -z "$HEALTH_JSON" ]; then
+        echo "  ✗ /health endpoint not reachable"
+        FAIL=$((FAIL + 2))
+      else
+        HEALTHY=$(printf '%s' "$HEALTH_JSON" | jq -r '.healthy_count // 0' 2>/dev/null)
+        UNHEALTHY=$(printf '%s' "$HEALTH_JSON" | jq -r '.unhealthy_count // 0' 2>/dev/null)
+
+        if [ "$UNHEALTHY" = "0" ] 2>/dev/null; then
+          check "Upstream health (all models)" true
+          echo "  ℹ All $HEALTHY model(s) healthy upstream"
+        else
+          echo "  ✗ $UNHEALTHY model(s) unhealthy upstream ($HEALTHY healthy)"
+          FAIL=$((FAIL + 1))
+
+          # Report which models are unhealthy
+          UNHEALTHY_LIST=$(printf '%s' "$HEALTH_JSON" | jq -r '.unhealthy_models // [] | .[] | .model // .model_name // empty' 2>/dev/null)
+          if [ -n "$UNHEALTHY_LIST" ]; then
+            echo "  ℹ Unhealthy: $(echo "$UNHEALTHY_LIST" | tr '\n' ' ' | sed 's/ $//')"
+          fi
+        fi
+
+        # ── 7c. Tier 3: Inference smoke test ──
+        # One minimal chat completion on the first available model.
+        # Proves the full end-to-end path works. Minimal cost (1 token).
+        SMOKE_MODEL=$(printf '%s' "$MODEL_LIST" | head -1)
+        BODY=$(jq -nc --arg m "$SMOKE_MODEL" '{model: $m, messages: [{role: "user", content: "ok"}]}')
+        check "Inference smoke test ($SMOKE_MODEL)" curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
           -H "Authorization: Bearer $VIRTUAL_KEY" \
           -H "Content-Type: application/json" \
           -d "$BODY"
-      done
+      fi
     fi
   fi
 fi
