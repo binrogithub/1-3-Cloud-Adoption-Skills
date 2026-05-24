@@ -4,7 +4,11 @@
 
 ```
 Client → LiteLLM (:4000) → Huawei MaaS (ap-southeast-1)
-               │
+               │               │
+               │          ┌────┴────┐
+               │          │ N API   │  (N = HUAWEI_MAAS_API_KEY_COUNT)
+               │          │ keys    │  LiteLLM load-balances across N deployments
+               │          └────────┘
                ├── PostgreSQL (:5432)  — keys, usage, spend
                ├── Prometheus (:9090)  — /metrics scrape every 15s
                └── Grafana   (:3000)  — pre-built dashboard
@@ -12,7 +16,9 @@ Client → LiteLLM (:4000) → Huawei MaaS (ap-southeast-1)
 
 **Startup chain:** PostgreSQL (`pg_isready`) → LiteLLM (`/health/liveliness`) → Prometheus (scrape) → Grafana
 
-**Request flow:** Client → LiteLLM:4000 → Huawei MaaS. LiteLLM logs usage/spend to PostgreSQL, exposes `/metrics` for Prometheus, returns response.
+**Request flow:** Client → LiteLLM:4000 → (router selects deployment) → Huawei MaaS. LiteLLM logs usage/spend to PostgreSQL, exposes `/metrics` for Prometheus, returns response.
+
+**Multi-key load balancing:** When `HUAWEI_MAAS_API_KEY_COUNT=N` (N≥1), each model has N deployments (one per API key). LiteLLM's router distributes requests across deployments using the configured `routing_strategy` (default: `simple-shuffle`). Total effective RPM/TPM = per-key × N.
 
 ## Codebase
 
@@ -20,7 +26,8 @@ Client → LiteLLM (:4000) → Huawei MaaS (ap-southeast-1)
 .
 ├── docker-compose.yml            4 services, healthchecks, named volumes, YAML anchor (references assets/config/)
 ├── assets/config/
-│   ├── litellm_config.yaml       Model catalog (openai/ prefix + MaaS endpoint), tpm/rpm, pricing
+│   ├── litellm_config.yaml.template  Model catalog template (tracked in git)
+│   ├── litellm_config.yaml           Generated config (gitignored, created by generate_config.sh)
 │   ├── custom_callbacks.py       PrometheusTTFTTPOTITL — emits ttft/tpot/itl histograms
 │   ├── prometheus.yml            15s scrape → litellm:4000
 │   ├── .env.example              Template — copy to .env and fill
@@ -30,9 +37,9 @@ Client → LiteLLM (:4000) → Huawei MaaS (ap-southeast-1)
 │           │   └── prometheus.yml    Auto-linked Prometheus datasource (proxy mode)
 │           └── dashboards/
 │               ├── dashboards.yml    File-based provider, 30s refresh
-│               └── litellm_overview.json  Pre-built dashboard
+│               └── litellm_overview.json  Pre-built dashboard (with deployment panels)
 ├── .env                          Actual secrets (gitignored)
-└── .gitignore                    Only .env
+└── .gitignore                    .env and generated litellm_config.yaml
 ```
 
 ### File-by-file reference
@@ -40,12 +47,13 @@ Client → LiteLLM (:4000) → Huawei MaaS (ap-southeast-1)
 | File | Role | Key details |
 |---|---|---|
 | `docker-compose.yml` | Service orchestration | YAML anchor for restart/logging, 4 services with healthcheck chain, named volumes, mounts from `./assets/config/` |
-| `assets/config/litellm_config.yaml` | Model catalog + proxy settings | Maps `model_name` → `openai/` prefix + MaaS endpoint, tpm/rpm limits, per-token pricing, prometheus + custom callbacks |
+| `assets/config/litellm_config.yaml.template` | Model catalog template | Tracked in git. Used by `generate_config.sh` as reference. Not used at runtime. |
+| `assets/config/litellm_config.yaml` | Generated model catalog + proxy settings | Created by `generate_config.sh` from `.env`. N deployments per model (one per API key), `tpm`/`rpm` per deployment, per-token pricing, prometheus + custom callbacks, router_settings |
 | `assets/config/custom_callbacks.py` | Custom Prometheus metrics | `PrometheusTTFTTPOTITL` extends `CustomLogger`, emits 3 histograms labeled by `model`, `model_group`, `api_provider` |
 | `assets/config/prometheus.yml` | Scrape config | Single job `litellm` targeting `litellm:4000` at 15s interval |
 | `assets/config/grafana/provisioning/datasources/prometheus.yml` | Datasource | Prometheus type, proxy access, `http://prometheus:9090`, default |
 | `assets/config/grafana/provisioning/dashboards/dashboards.yml` | Dashboard provider | File-based, org 1, 30s update interval |
-| `assets/config/grafana/provisioning/dashboards/litellm_overview.json` | Pre-built dashboard | UID `litellm-overview`, 10s auto-refresh, 1h default time range, `model` and `datasource` template variables |
+| `assets/config/grafana/provisioning/dashboards/litellm_overview.json` | Pre-built dashboard | UID `litellm-overview`, 10s auto-refresh, 1h default time range, `model` and `datasource` template variables, deployment load balancing panels |
 
 ## Docker Compose Services
 
@@ -86,7 +94,9 @@ Set via `env_file: .env` plus explicit `environment`:
 | `STORE_MODEL_IN_DB` | docker-compose | `True` |
 | `LITELLM_MASTER_KEY` | .env | Admin key, must start with `sk-` |
 | `LITELLM_SALT_KEY` | .env | Key encryption salt |
-| `HUAWEI_MAAS_API_KEY` | .env | Huawei MaaS API key |
+| `HUAWEI_MAAS_API_KEY` | .env | Main Huawei MaaS API key (backward compat) |
+| `HUAWEI_MAAS_API_KEY_COUNT` | .env | Total number of MaaS API keys (≥1) |
+| `HUAWEI_MAAS_API_KEY_0` … `_N-1` | .env | Indexed MaaS API keys |
 | `HUAWEI_MAAS_API_BASE` | .env | `https://api-ap-southeast-1.modelarts-maas.com/openai/v1` |
 
 LiteLLM command: `--config=/app/config.yaml`

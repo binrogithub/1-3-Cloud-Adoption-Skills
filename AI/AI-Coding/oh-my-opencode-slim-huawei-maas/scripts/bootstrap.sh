@@ -35,6 +35,7 @@ CURL_TIMEOUT=15
 
 # ── Defaults ──
 MAAS_KEY=""
+MAAS_EXTRA_KEYS=""
 VIRTUAL_KEY=""
 DRY_RUN=false
 
@@ -42,11 +43,12 @@ DRY_RUN=false
 for arg in "$@"; do
   case "$arg" in
     --maas-key=*)       MAAS_KEY="${arg#--maas-key=}" ;;
+    --maas-keys=*)      MAAS_EXTRA_KEYS="${arg#--maas-keys=}" ;;
     --virtual-key=*)    VIRTUAL_KEY="${arg#--virtual-key=}" ;;
     --dry-run)          DRY_RUN=true ;;
     *)
       echo "ERROR: Unknown argument: $arg"
-      echo "Usage: $0 [--maas-key=KEY] [--virtual-key=sk-...] [--dry-run]"
+      echo "Usage: $0 [--maas-key=KEY] [--maas-keys=key2,key3,...] [--virtual-key=sk-...] [--dry-run]"
       exit 1
       ;;
   esac
@@ -293,6 +295,7 @@ else
     # Configure .env via upstream script
     if [ ! -f "$LITELLM_DIR/.env" ]; then
       echo "  Running init_env.sh --ci ..."
+      export HUAWEI_MAAS_EXTRA_API_KEYS="${MAAS_EXTRA_KEYS:-}"
       (cd "$LITELLM_DIR" && ./scripts/init_env.sh --ci)
     else
       echo "  .env already exists — skipping init_env.sh"

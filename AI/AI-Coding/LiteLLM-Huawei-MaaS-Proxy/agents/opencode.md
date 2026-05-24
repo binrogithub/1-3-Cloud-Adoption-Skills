@@ -1,7 +1,7 @@
 ---
 name: LiteLLM-Huawei-MaaS-Proxy
-description: Deploy, configure, validate, troubleshoot, or extend an OpenAI-compatible API proxy backed by PostgreSQL, Prometheus, and Grafana, routing through Huawei ModelArts MaaS (ap-southeast-1). TRIGGER when the task involves LiteLLM proxy deployment, Docker Compose stack with litellm_config.yaml, Huawei MaaS model routing, virtual key or budget management, Prometheus/Grafana observability for LLM traffic, custom_callbacks.py TTFT/TPOT/ITL metrics, or any reference to `LITELLM_MASTER_KEY`, `HUAWEI_MAAS_API_KEY`, or `docker compose` with this stack.
-version: "1.0"
+description: Deploy, configure, validate, troubleshoot, or extend an OpenAI-compatible API proxy backed by PostgreSQL, Prometheus, and Grafana, routing through Huawei ModelArts MaaS (ap-southeast-1) with multi-key load balancing. TRIGGER when the task involves LiteLLM proxy deployment, Docker Compose stack with litellm_config.yaml, Huawei MaaS model routing, virtual key or budget management, Prometheus/Grafana observability for LLM traffic, custom_callbacks.py TTFT/TPOT/ITL metrics, multi-key load balancing, or any reference to `LITELLM_MASTER_KEY`, `HUAWEI_MAAS_API_KEY`, or `docker compose` with this stack.
+version: "1.1"
 triggers:
   - litellm
   - huawei-maas
@@ -12,11 +12,13 @@ triggers:
   - ttft
   - tpot
   - itl
+  - multi-key
+  - load-balancing
 commands:
   deploy:
     description: "Deploy the full LiteLLM proxy stack from scratch"
     steps:
-      - "Run scripts/init_env.sh --auto to configure .env (prompts for MaaS API key)"
+      - "Run scripts/init_env.sh --auto to configure .env (prompts for MaaS API key + optional extras)"
       - "Run docker compose up -d"
       - "Run scripts/validate_e2e.sh to verify"
   validate:
@@ -26,9 +28,17 @@ commands:
     description: "Add a new model to the proxy"
     steps:
       - "Verify exact model ID in MaaS console"
-      - "Add entry to litellm_config.yaml with non-zero pricing"
+      - "Edit assets/config/litellm_config.yaml.template (add model to catalog)"
+      - "Re-run scripts/generate_config.sh"
       - "Run docker compose restart litellm"
       - "Verify with /v1/models endpoint"
+  add-key:
+    description: "Add a MaaS API key for load balancing"
+    steps:
+      - "Add HUAWEI_MAAS_API_KEY_N to .env (next index)"
+      - "Increment HUAWEI_MAAS_API_KEY_COUNT in .env"
+      - "Re-run scripts/generate_config.sh"
+      - "Run docker compose restart litellm"
   troubleshoot:
     description: "Diagnose and fix a broken deployment"
     reference: "references/troubleshooting.md"
@@ -39,12 +49,12 @@ commands:
 
 # LiteLLM Huawei MaaS Proxy
 
-Deploy an OpenAI-compatible API proxy backed by PostgreSQL, Prometheus, and Grafana, routing through Huawei ModelArts MaaS (ap-southeast-1).
+Deploy an OpenAI-compatible API proxy backed by PostgreSQL, Prometheus, and Grafana, routing through Huawei ModelArts MaaS (ap-southeast-1) with multi-key load balancing.
 
 ## Quick Start
 
 ```bash
-./scripts/init_env.sh --auto       # auto-generate secrets, prompt for MaaS API key
+./scripts/init_env.sh --auto       # auto-generate secrets, prompt for MaaS API key (+ optional extras)
 docker compose up -d
 ./scripts/validate_e2e.sh
 ```
@@ -54,7 +64,8 @@ Or full manual control:
 ```bash
 cp assets/config/.env.example .env
 ./scripts/generate_secrets.sh
-$EDITOR .env
+$EDITOR .env                       # add HUAWEI_MAAS_API_KEY + optional extras
+./scripts/generate_config.sh       # generate litellm_config.yaml from .env
 docker compose up -d
 ./scripts/validate_e2e.sh
 ```
@@ -64,10 +75,12 @@ docker compose up -d
 | File | Purpose |
 |---|---|
 | `docker-compose.yml` | 4-service Docker stack |
-| `assets/config/litellm_config.yaml` | Model catalog + proxy settings |
+| `assets/config/litellm_config.yaml.template` | Model catalog template (tracked in git) |
+| `assets/config/litellm_config.yaml` | Generated config (gitignored) |
 | `assets/config/custom_callbacks.py` | TTFT/TPOT/ITL Prometheus metrics |
 | `scripts/init_env.sh` | Interactive .env setup (manual, agent, or CI) |
-| `scripts/validate_e2e.sh` | 12-step end-to-end validation |
+| `scripts/generate_config.sh` | Generate litellm_config.yaml from .env |
+| `scripts/validate_e2e.sh` | End-to-end validation |
 | `scripts/generate_secrets.sh` | Secret generation |
 
 ## References

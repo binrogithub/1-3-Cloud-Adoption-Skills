@@ -1678,6 +1678,200 @@
           "decimals": 0
         }
       }
+    },
+    {
+      "type": "row",
+      "uid": "row-deployment-lb",
+      "title": "Deployment Load Balancing",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 65
+      },
+      "collapsed": false
+    },
+    {
+      "type": "stat",
+      "uid": "panel-deployments-per-model",
+      "title": "Deployments Per Model",
+      "description": "Number of active deployments per model. Multiple deployments = multiple API keys for load balancing.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 66
+      },
+      "targets": [
+        {
+          "expr": "count(litellm_deployment_state{litellm_model_name=~\"$model\"}) by (litellm_model_name)",
+          "refId": "A",
+          "legendFormat": "{{litellm_model_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2
+              },
+              {
+                "color": "blue",
+                "value": 3
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "type": "piechart",
+      "uid": "panel-deployment-distribution",
+      "title": "Request Distribution Across Deployments",
+      "description": "Shows how requests are distributed across deployments. Even distribution indicates healthy load balancing.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 6,
+        "y": 66
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\"}[5m])) by (litellm_model_name)",
+          "refId": "A",
+          "legendFormat": "{{litellm_model_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "displayLabels": [
+          "name",
+          "percent"
+        ],
+        "pieType": "donut",
+        "tooltip": {
+          "show": true
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "uid": "panel-deployment-cooldown",
+      "title": "Deployment Cooldown Events",
+      "description": "Number of deployments currently in cooldown (failed too many times). Should be 0 in a healthy setup.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 14,
+        "y": 66
+      },
+      "targets": [
+        {
+          "expr": "sum(litellm_deployment_cooled_down)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-per-deployment-latency",
+      "title": "Per-Deployment Latency (P95)",
+      "description": "P95 latency per deployment. Helps identify if one API key/deployment is slower than others.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 14,
+        "y": 70
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(litellm_deployment_latency_per_output_token_bucket{litellm_model_name=~\"$model\"}[5m])) by (le, litellm_model_name))",
+          "refId": "A",
+          "legendFormat": "{{litellm_model_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
     }
   ],
   "overwrite": true

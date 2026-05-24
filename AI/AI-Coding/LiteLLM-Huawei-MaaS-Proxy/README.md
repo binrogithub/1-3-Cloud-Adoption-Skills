@@ -14,7 +14,8 @@ agents/
   openai.yaml                                   skill interface (OpenAI agent format)
   opencode.md                                   skill interface (OpenCode agent format)
 assets/config/
-  litellm_config.yaml                            model catalog + proxy settings
+  litellm_config.yaml.template                   model catalog template (tracked in git)
+  litellm_config.yaml                            generated config (gitignored, created by generate_config.sh)
   custom_callbacks.py                            TTFT/TPOT/ITL Prometheus callback
   prometheus.yml                                 15s scrape config
   .env.example                                   environment template
@@ -29,10 +30,11 @@ references/
   metrics-and-dashboards.md                      PromQL, custom metrics, Grafana panel config
   operations.md                                  health checks, backup, restart, usage, endpoints
   troubleshooting.md                             repair playbook, failure modes, common mistakes
-scripts/
-  init_env.sh                                  interactive .env setup (manual, agent-guided, or CI)
-  validate_e2e.sh                                12-step end-to-end validation
-  generate_secrets.sh                            generate MASTER_KEY, SALT_KEY, passwords
+  scripts/
+    init_env.sh                                  interactive .env setup (manual, agent-guided, or CI)
+    validate_e2e.sh                                12-step end-to-end validation
+    generate_secrets.sh                            generate MASTER_KEY, SALT_KEY, passwords
+    generate_config.sh                             generates litellm_config.yaml from .env
 ```
 
 ## Skill Level
@@ -94,12 +96,14 @@ See [SKILL.md](./SKILL.md) **Verification Exit Criteria** — 12-item checklist 
 | Asset | Description |
 |---|---|
 | `docker-compose.yml` | 4-service stack with healthcheck chain, YAML anchor, named volumes |
-| `assets/config/litellm_config.yaml` | Model catalog with `openai/` prefix, MaaS endpoint, per-model tpm/rpm and pricing |
+| `assets/config/litellm_config.yaml.template` | Model catalog template with `openai/` prefix, MaaS endpoint, per-model tpm/rpm and pricing |
+| `assets/config/litellm_config.yaml` | Generated config (gitignored), created by `generate_config.sh` |
 | `assets/config/custom_callbacks.py` | TTFT/TPOT/ITL Prometheus histograms labeled by model/group/provider |
 | `assets/config/prometheus.yml` | 15s scrape job targeting `litellm:4000` |
 | `assets/config/grafana/provisioning/` | Auto-linked Prometheus datasource + pre-built dashboard |
 | `assets/config/.env.example` | Template with all required and optional variables |
 | `scripts/init_env.sh` | Interactive .env setup (manual, agent-guided, or CI) |
+| `scripts/generate_config.sh` | Generates litellm_config.yaml from .env and template |
 | `scripts/validate_e2e.sh` | 12-step end-to-end validation |
 | `scripts/generate_secrets.sh` | Generate all required secrets for `.env` |
 | `references/` | Architecture, metrics, operations, and troubleshooting deep-dives |
@@ -114,6 +118,7 @@ See [SKILL.md](./SKILL.md) **Verification Exit Criteria** — 12-item checklist 
 | Custom metric coverage | Streaming calls | TTFT and ITL for streaming; TPOT for all requests |
 | Dashboard freshness | < 15s | Prometheus scrape interval |
 | Budget enforcement | Zero bypass | All clients use virtual keys, never raw MaaS key |
+| Deployment distribution | Even | Requests evenly distributed across N deployments per model |
 
 ## Common Risks
 
@@ -125,6 +130,7 @@ See [SKILL.md](./SKILL.md) **Verification Exit Criteria** — 12-item checklist 
 | MaaS API key expired or wrong region | 403 from upstream | Verify key in MaaS console; region must be `ap-southeast-1` |
 | `.env` committed to git | All secrets leaked | `.env` is gitignored; never `git add .env` |
 | Config change without restart | New settings not applied | `docker compose restart litellm` after edits |
+| One MaaS API key expired (multi-key) | Partial degradation | Monitor cooldown events in Grafana; rotate expired key |
 
 ## Quick Start
 
@@ -135,7 +141,8 @@ git clone --depth 1 https://github.com/binrogithub/1-3-Cloud-Adoption-Skills.git
 cp -r /home/1-3-Cloud-Adoption-Skills/AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy /home/LiteLLM-Huawei-MaaS-Proxy
 rm -rf /home/1-3-Cloud-Adoption-Skills
 cd /home/LiteLLM-Huawei-MaaS-Proxy
-./scripts/init_env.sh              # interactive — choose each secret
+./scripts/init_env.sh              # interactive — choose each secret, prompts for extra keys
+./scripts/generate_config.sh       # generates litellm_config.yaml from .env
 docker compose up -d
 ./scripts/validate_e2e.sh
 ```
@@ -147,7 +154,8 @@ git clone --depth 1 https://github.com/binrogithub/1-3-Cloud-Adoption-Skills.git
 cp -r /home/1-3-Cloud-Adoption-Skills/AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy /home/LiteLLM-Huawei-MaaS-Proxy
 rm -rf /home/1-3-Cloud-Adoption-Skills
 cd /home/LiteLLM-Huawei-MaaS-Proxy
-./scripts/init_env.sh --auto       # auto-generate secrets, prompt only for MaaS API key
+./scripts/init_env.sh --auto       # auto-generate secrets, prompt for MaaS API key(s)
+./scripts/generate_config.sh       # generates litellm_config.yaml from .env
 docker compose up -d
 ./scripts/validate_e2e.sh
 ```
@@ -161,8 +169,9 @@ rm -rf /home/1-3-Cloud-Adoption-Skills
 cd /home/LiteLLM-Huawei-MaaS-Proxy
 cp assets/config/.env.example .env
 ./scripts/generate_secrets.sh      # copy output into .env
-$EDITOR .env                       # add HUAWEI_MAAS_API_KEY
+$EDITOR .env                       # add HUAWEI_MAAS_API_KEY and optional extra keys
 chmod 600 .env
+./scripts/generate_config.sh       # generates litellm_config.yaml from .env
 docker compose up -d
 ./scripts/validate_e2e.sh
 ```
@@ -178,13 +187,35 @@ docker compose up -d
 
 ## Configured Models
 
-| Name | Context (in/out) | RPM | TPM | Cost (in/out per token) |
+| Name | Context (in/out) | RPM (per-key) | TPM (per-key) | Cost (in/out per token) |
 |---|---|---|---|---|
 | `glm-5.1` | 192K / 128K | 30 | 500K | $1.078 / $3.774 × 10⁻⁶ |
 | `glm-5` | 192K / 64K | 30 | 500K | $0.809 / $2.965 × 10⁻⁶ |
 | `deepseek-v4-pro` | 1M / 128K | 3 | 30K | $1.617 / $3.235 × 10⁻⁶ |
 | `deepseek-v4-flash` | 1M / 128K | 3 | 30K | $0.135 / $0.270 × 10⁻⁶ |
 | `deepseek-v3.2` | 128K / 32K | 700 | 500K | $0.270 / $0.404 × 10⁻⁶ |
+
+> **Effective totals:** With N MaaS API keys configured, each model has N deployments. Effective RPM = per-key × N, effective TPM = per-key × N. LiteLLM load-balances across all deployments.
+
+## Multi-Key Load Balancing
+
+The proxy supports multiple MaaS API keys for load balancing and increased throughput:
+
+- **Main key** (`HUAWEI_MAAS_API_KEY`): Mandatory, always required
+- **Extra keys**: Optional, configured via `init_env.sh` prompts or `HUAWEI_MAAS_EXTRA_API_KEYS` env var
+- **Internal env vars**: `HUAWEI_MAAS_API_KEY_COUNT`, `HUAWEI_MAAS_API_KEY_0`, `HUAWEI_MAAS_API_KEY_1`, etc.
+- **Config generation**: `scripts/generate_config.sh` reads `.env` and generates `litellm_config.yaml` from the template
+- **Router settings**: `simple-shuffle` strategy (default), `cooldown_time: 60`, `allowed_fails: 3`
+- **N deployments per model**: With N keys, each model has N deployments. LiteLLM automatically load-balances.
+- **Backward compatible**: Single key = identical behavior to before
+
+### Grafana panels for multi-key
+
+The dashboard includes a "Deployment Load Balancing" row with 5 panels:
+- **Deployments Per Model**: Shows N deployments per model
+- **Request Distribution**: Per-deployment request counts
+- **Cooldown Events**: Deployments temporarily removed from rotation
+- **Per-Deployment Latency**: Latency breakdown by deployment
 
 ## Environment Variables
 
@@ -193,7 +224,10 @@ docker compose up -d
 | `LITELLM_MASTER_KEY` | Yes | — | Admin key. Must start with `sk-`. |
 | `LITELLM_SALT_KEY` | Yes | — | Encryption salt for stored keys. **Immutable after first virtual key.** |
 | `DB_PASSWORD` | Yes | — | PostgreSQL `llmproxy` user password. |
-| `HUAWEI_MAAS_API_KEY` | Yes | — | From ModelArts MaaS console (CN-Hong Kong region). |
+| `HUAWEI_MAAS_API_KEY` | Yes | — | Main MaaS API key from ModelArts console (CN-Hong Kong region). |
 | `HUAWEI_MAAS_API_BASE` | Yes | — | `https://api-ap-southeast-1.modelarts-maas.com/openai/v1` |
+| `HUAWEI_MAAS_API_KEY_COUNT` | Auto | 1 | Number of MaaS API keys (set by init_env.sh). |
+| `HUAWEI_MAAS_API_KEY_N` | Auto | — | Indexed keys (0, 1, 2...). Set by init_env.sh. |
+| `HUAWEI_MAAS_EXTRA_API_KEYS` | No | — | Comma-separated extra keys for CI mode. |
 | `PROMETHEUS_RETENTION` | No | `15d` | TSDB retention. |
 | `GRAFANA_PASSWORD` | No | `admin` | Admin password. |

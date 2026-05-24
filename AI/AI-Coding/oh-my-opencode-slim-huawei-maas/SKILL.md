@@ -1,13 +1,13 @@
 ---
 name: oh-my-opencode-slim-huawei-maas
-description: "Bootstrap AI coding stack: deploy LiteLLM proxy (via LiteLLM-Huawei-MaaS-Proxy skill), install opencode + oh-my-opencode-slim, mint virtual key, wire everything. TRIGGER on: opencode + Huawei MaaS setup, full-stack bootstrap, oh-my-opencode-slim-huawei-maas, deploy-litellm."
+description: "Bootstrap AI coding stack: deploy LiteLLM proxy (via LiteLLM-Huawei-MaaS-Proxy skill), install opencode + oh-my-opencode-slim, mint virtual key, wire everything. Supports multi-key MaaS load balancing. TRIGGER on: opencode + Huawei MaaS setup, full-stack bootstrap, oh-my-opencode-slim-huawei-maas, deploy-litellm."
 ---
 
 # oh-my-opencode-slim-huawei-maas Skill
 
 ## Overview
 
-Bootstrap a complete AI coding stack on a single host: deploy LiteLLM proxy (via [LiteLLM Huawei MaaS Proxy](https://github.com/binrogithub/1-3-Cloud-Adoption-Skills/tree/main/AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy)), install opencode with oh-my-opencode-slim plugin, mint a scoped virtual key, configure end-to-end. Idempotent — safe to re-run.
+Bootstrap a complete AI coding stack on a single host: deploy LiteLLM proxy (via [LiteLLM Huawei MaaS Proxy](https://github.com/binrogithub/1-3-Cloud-Adoption-Skills/tree/main/AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy)), install opencode with oh-my-opencode-slim plugin, mint a scoped virtual key, configure end-to-end. Supports multi-key MaaS load balancing for increased throughput. Idempotent — safe to re-run.
 
 ## Canonical Installation Paths
 
@@ -54,6 +54,7 @@ In all scenarios, `LITELLM_MASTER_KEY` is required to mint the opencode virtual 
 | 4 | git | `git --version` | install via package manager |
 | 5 | python3 | `python3 --version` | install Python 3 |
 | 6 | HUAWEI_MAAS_API_KEY | `[ -n "$HUAWEI_MAAS_API_KEY" ]` | export from Huawei Cloud console |
+| 7 | HUAWEI_MAAS_EXTRA_API_KEYS (optional) | — | comma-separated extra MaaS keys for load balancing |
 
 ## Procedure
 

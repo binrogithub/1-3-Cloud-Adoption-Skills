@@ -5,8 +5,8 @@
 When fixing an existing deployment, follow this sequence:
 
 1. **Inspect current state** — `docker compose ps`
-2. **Inspect current config** — read `assets/config/litellm_config.yaml` and `.env` before editing
-3. **Confirm environment** — verify `.env` contains the real MaaS key (not a placeholder)
+2. **Inspect current config** — read `assets/config/litellm_config.yaml` (generated) and `.env` before editing
+3. **Confirm environment** — verify `.env` contains real MaaS key(s) (not placeholders)
 4. **Check DB connectivity** — `docker compose exec db pg_isready -d litellm -U llmproxy`
 5. **Check LiteLLM health** — `curl -s http://localhost:4000/health -H "Authorization: Bearer $LITELLM_MASTER_KEY"`
 6. **Fix the specific issue** — see Common failure modes below
@@ -30,6 +30,14 @@ When fixing an existing deployment, follow this sequence:
 | Grafana shows no data | Prometheus not scraping or wrong datasource | Check Prometheus targets; verify datasource URL |
 | Virtual key 403 | Key expired, over budget, or model not in allow-list | Check key with `/key/info` |
 | Error Rate shows 0% when failures exist | Label mismatch on deployment metrics | Dashboard must use `{litellm_model_name=~"$model"}` for deployment metrics |
+| Partial degradation (some deployments cooldown) | One MaaS API key expired or rate-limited | Check cooldown events in Grafana; identify and rotate failed key |
+| Uneven request distribution | Routing strategy not optimal | Consider `least-latency` strategy; check per-deployment latency in Grafana |
+| Config file overwritten | Edited `litellm_config.yaml` directly | Edit `litellm_config.yaml.template` instead; run `generate_config.sh` |
+| Deployment count mismatch | `HUAWEI_MAAS_API_KEY_COUNT` wrong | Verify count matches indexed keys in `.env`; regenerate config |
+| One MaaS key expired | Some deployments in cooldown, partial degradation | Replace expired key in `.env`, re-run `generate_config.sh`, restart litellm |
+| Uneven request distribution | Routing strategy not optimal | Try `--routing-strategy=least-busy` or `latency-based-routing` |
+| `litellm_config.yaml` not found | Config not generated | Run `scripts/generate_config.sh` |
+| Deployment count mismatch | `.env` keys changed without regenerating config | Re-run `scripts/generate_config.sh`, restart litellm |
 
 ## Common Mistakes
 
@@ -41,9 +49,12 @@ When fixing an existing deployment, follow this sequence:
 | Using per-1K-token pricing in `model_info` | LiteLLM expects per-token pricing | Use `input_cost_per_token` (e.g. `0.000001078`) |
 | Adding a model with zero pricing | Budgets don't consume spend | Always set non-zero `input_cost_per_token` and `output_cost_per_token` |
 | Guessing model names | MaaS model IDs are case-sensitive | Verify exact name in MaaS console before adding |
-| Editing `assets/config/litellm_config.yaml` without restarting | Config is read at startup only | `docker compose restart litellm` after any config change |
+| Editing `assets/config/litellm_config.yaml` directly | File is regenerated and overwritten | Edit `litellm_config.yaml.template` and run `generate_config.sh` |
+| Editing config without restarting | Config is read at startup only | `docker compose restart litellm` after any config change |
 | Running `docker compose down` and expecting data loss | Volumes survive `down` | Use `docker compose down -v` to destroy data |
 | Checking `/health/liveliness` instead of `/health` for model status | Liveliness only checks process | Use `/health` with auth for model-level diagnostics |
+| Non-contiguous key indices | Gaps in `HUAWEI_MAAS_API_KEY_N` cause issues | Keys must be 0, 1, 2... without gaps |
+| Changing `.env` keys without regenerating config | Config still references old key count | Always run `generate_config.sh` after `.env` changes |
 
 ## Sanitization Rules
 

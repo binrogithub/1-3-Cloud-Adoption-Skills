@@ -110,6 +110,7 @@ cp -r /home/1-3-Cloud-Adoption-Skills/AI/AI-Coding/oh-my-opencode-slim-huawei-ma
 rm -rf /home/1-3-Cloud-Adoption-Skills
 cd /home/oh-my-opencode-slim-huawei-maas
 export HUAWEI_MAAS_API_KEY="your-key-from-huawei-console"
+# Optional: export HUAWEI_MAAS_EXTRA_API_KEYS="key2,key3"  # for multi-key load balancing
 ./scripts/bootstrap.sh
 opencode
 ```
@@ -125,6 +126,8 @@ export HUAWEI_MAAS_API_KEY="your-key"
 
 ```bash
 ./scripts/bootstrap.sh --maas-key="$MAAS_KEY" --virtual-key="sk-..."
+# With multi-key load balancing:
+./scripts/bootstrap.sh --maas-key="$MAAS_KEY" --maas-keys="key2,key3" --virtual-key="sk-..."
 ```
 
 ### Validate an existing setup
