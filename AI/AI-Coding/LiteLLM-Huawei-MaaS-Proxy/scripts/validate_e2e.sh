@@ -246,6 +246,8 @@ else
 fi
 
 # ── Step 11: Virtual key minting ───────────────────────────────
+# Ephemeral test key: validates key generation + DB storage.
+# Auto-expires in 1h, $1 budget — not for production use.
 step "11: Virtual key generation (ephemeral test key, 1h lifespan)"
 KEY_RESP=$(curl -s --connect-timeout 10 -X POST "$LITELLM_URL/key/generate" \
   -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
