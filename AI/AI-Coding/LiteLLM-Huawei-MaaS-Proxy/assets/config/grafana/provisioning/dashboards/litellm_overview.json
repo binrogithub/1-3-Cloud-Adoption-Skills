@@ -1745,45 +1745,6 @@
       }
     },
     {
-      "type": "piechart",
-      "uid": "panel-deployment-distribution",
-      "title": "Request Distribution Across Deployments",
-      "description": "Shows how requests are distributed across deployments. Even distribution indicates healthy load balancing.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 6,
-        "y": 66
-      },
-      "targets": [
-        {
-          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\"}[5m])) by (litellm_model_name)",
-          "refId": "A",
-          "legendFormat": "{{litellm_model_name}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "decimals": 0
-        }
-      },
-      "options": {
-        "displayLabels": [
-          "name",
-          "percent"
-        ],
-        "pieType": "donut",
-        "tooltip": {
-          "show": true
-        }
-      }
-    },
-    {
       "type": "stat",
       "uid": "panel-deployment-cooldown",
       "title": "Deployment Cooldown Events",
@@ -1828,6 +1789,45 @@
           "calcs": [
             "lastNotNull"
           ]
+        }
+      }
+    },
+    {
+      "type": "piechart",
+      "uid": "panel-deployment-distribution",
+      "title": "Request Distribution Across Deployments",
+      "description": "Shows how requests are distributed across deployments. Even distribution indicates healthy load balancing.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 6,
+        "y": 66
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\"}[5m])) by (litellm_model_name)",
+          "refId": "A",
+          "legendFormat": "{{litellm_model_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "displayLabels": [
+          "name",
+          "percent"
+        ],
+        "pieType": "donut",
+        "tooltip": {
+          "show": true
         }
       }
     },
