@@ -1633,7 +1633,7 @@
       "type": "table",
       "uid": "panel-deployment-state",
       "title": "Deployment State",
-      "description": "Health state of each model deployment. 0 = Healthy (green, all endpoints responding), 1 = Partial outage (yellow, some endpoints down), 2 = Full outage (red, model completely unavailable).",
+      "description": "Deployment state with model_id for unique identification. Shows deployments that have been used (have metrics).",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1646,7 +1646,7 @@
       },
       "targets": [
         {
-          "expr": "litellm_deployment_state{litellm_model_name=~\"$model\"}",
+          "expr": "litellm_deployment_success_responses_total{litellm_model_name=~\"$model\"}",
           "refId": "A",
           "legendFormat": "{{model}}",
           "instant": true,
@@ -1660,26 +1660,27 @@
             "excludeByName": {
               "Time": true,
               "__name__": true,
+              "instance": true,
               "job": true,
-              "instance": true
-            },
-            "renameByName": {
-              "model": "Model",
-              "Value": "State"
+              "api_provider": true,
+              "client_ip": true,
+              "user_agent": true,
+              "hashed_api_key": true,
+              "api_key_alias": true,
+              "team": true,
+              "team_alias": true
             },
             "indexByName": {
-              "Value": 0,
-              "model": 1
-            }
-          }
-        },
-        {
-          "id": "convertFieldType",
-          "options": {
-            "fields": {
-              "State": {
-                "type": "number"
-              }
+              "litellm_model_name": 0,
+              "model_id": 1,
+              "Value": 2,
+              "api_base": 3
+            },
+            "renameByName": {
+              "litellm_model_name": "Model",
+              "model_id": "Deployment ID",
+              "Value": "Requests",
+              "api_base": "API Base"
             }
           }
         }
@@ -1799,7 +1800,7 @@
       "type": "stat",
       "uid": "panel-deployments-per-model",
       "title": "Deployments Per Model",
-      "description": "Number of active deployments per model. Multiple deployments = multiple API keys for load balancing.",
+      "description": "Number of unique deployments (by model_id) per model. Shows active deployments with metrics.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1812,7 +1813,7 @@
       },
       "targets": [
         {
-          "expr": "count(litellm_deployment_state{litellm_model_name=~\"$model\"}) by (litellm_model_name)",
+          "expr": "count(count by (model_id) (litellm_deployment_success_responses_total{litellm_model_name=~\"$model\"})) by (litellm_model_name)",
           "refId": "A",
           "legendFormat": "{{litellm_model_name}}"
         }
@@ -1900,7 +1901,7 @@
       "type": "piechart",
       "uid": "panel-deployment-distribution",
       "title": "Request Distribution Across Deployments",
-      "description": "Shows how requests are distributed across deployments. Even distribution indicates healthy load balancing.",
+      "description": "Request distribution across individual deployments (identified by model_id).",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1913,9 +1914,9 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\"}[5m])) by (litellm_model_name)",
+          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\"}[5m])) by (litellm_model_name, model_id)",
           "refId": "A",
-          "legendFormat": "{{litellm_model_name}}"
+          "legendFormat": "{{litellm_model_name}} - {{model_id}}"
         }
       ],
       "fieldConfig": {
@@ -1939,7 +1940,7 @@
       "type": "timeseries",
       "uid": "panel-per-deployment-latency",
       "title": "Per-Deployment Latency (P95)",
-      "description": "P95 latency per deployment. Helps identify if one API key/deployment is slower than others.",
+      "description": "P95 latency per unique deployment (by model_id).",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1952,9 +1953,9 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(litellm_deployment_latency_per_output_token_bucket{litellm_model_name=~\"$model\"}[5m])) by (le, litellm_model_name))",
+          "expr": "histogram_quantile(0.95, sum(rate(litellm_deployment_latency_per_output_token_bucket{litellm_model_name=~\"$model\"}[5m])) by (le, litellm_model_name, model_id))",
           "refId": "A",
-          "legendFormat": "{{litellm_model_name}}"
+          "legendFormat": "{{litellm_model_name}} - {{model_id}}"
         }
       ],
       "fieldConfig": {
