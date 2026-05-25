@@ -246,14 +246,14 @@ else
 fi
 
 # ── Step 11: Virtual key minting ───────────────────────────────
-step "11: Virtual key generation"
+step "11: Virtual key generation (ephemeral test key, 1h lifespan)"
 KEY_RESP=$(curl -s --connect-timeout 10 -X POST "$LITELLM_URL/key/generate" \
   -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"models":["glm-5"],"max_budget":1.0,"duration":"1d"}' 2>/dev/null)
+  -d '{"models":["glm-5"],"max_budget":1.0,"duration":"1h"}' 2>/dev/null)
 VK=$(echo "$KEY_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('key',''))" 2>/dev/null || echo "")
 if [ -n "$VK" ] && echo "$VK" | grep -q '^sk-'; then
-  pass "Virtual key minted: ${VK:0:10}...${VK: -4}"
+  pass "Virtual key minted: ${VK:0:10}...${VK: -4} (expires in 1h)"
 else
   fail "Virtual key generation failed"
 fi
