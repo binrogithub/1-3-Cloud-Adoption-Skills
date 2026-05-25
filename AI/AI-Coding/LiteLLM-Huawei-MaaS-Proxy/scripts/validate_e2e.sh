@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # validate_e2e.sh — End-to-end validation for LiteLLM Huawei MaaS Proxy
-# Usage: ./scripts/validate_e2e.sh
-# Expects .env in the current directory or one directory up.
+# Usage: ./scripts/validate_e2e.sh  (can be run from any directory)
 
 set -euo pipefail
+
+# ── Resolve project root (script is in scripts/ subdirectory) ─────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
 
 # ── Colors ──────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; NC='\033[0m'
@@ -17,10 +21,8 @@ step() { printf "\n${YELLOW}── Step $1 ──${NC}\n"; }
 # ── Load environment ────────────────────────────────────────────
 if [ -f .env ]; then
   set -a; source .env; set +a
-elif [ -f ../.env ]; then
-  set -a; source ../.env; set +a
 else
-  printf "${RED}ERROR: .env not found. Run from the project root.\n${NC}"; exit 1
+  printf "${RED}ERROR: .env not found in $PROJECT_ROOT\n${NC}"; exit 1
 fi
 
 LITELLM_URL="${LITELLM_URL:-http://localhost:4000}"
