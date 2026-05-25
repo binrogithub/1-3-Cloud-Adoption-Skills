@@ -9,9 +9,9 @@ set -euo pipefail
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; NC='\033[0m'
 PASS=0; FAIL=0; WARN=0
 
-pass() { ((PASS++)); printf "${GREEN}✅ PASS${NC} — $1\n"; }
-fail() { ((FAIL++)); printf "${RED}❌ FAIL${NC} — $1\n"; }
-warn() { ((WARN++)); printf "${YELLOW}⚠️  WARN${NC} — $1\n"; }
+pass() { PASS=$((PASS + 1)); printf "${GREEN}✅ PASS${NC} — $1\n"; }
+fail() { FAIL=$((FAIL + 1)); printf "${RED}❌ FAIL${NC} — $1\n"; }
+warn() { WARN=$((WARN + 1)); printf "${YELLOW}⚠️  WARN${NC} — $1\n"; }
 step() { printf "\n${YELLOW}── Step $1 ──${NC}\n"; }
 
 # ── Load environment ────────────────────────────────────────────
@@ -92,12 +92,14 @@ fi
 
 # ── Step 2: Service health ─────────────────────────────────────
 step "2: All services healthy"
-if docker compose ps --format json 2>/dev/null | python3 -c "
+HEALTH_OUTPUT=$(docker compose ps --format json 2>/dev/null | python3 -c "
 import sys, json
 services = [json.loads(l) for l in sys.stdin if l.strip()]
 ok = all(s.get('Health','') == 'healthy' or s.get('Status','').startswith('Up') for s in services)
 print('healthy' if ok and len(services) >= 4 else 'unhealthy', len(services))
-" 2>/dev/null | read -r STATUS COUNT; then
+" 2>/dev/null) || HEALTH_OUTPUT=""
+if [ -n "$HEALTH_OUTPUT" ]; then
+  read -r STATUS COUNT <<< "$HEALTH_OUTPUT"
   if [ "$STATUS" = "healthy" ]; then
     pass "All $COUNT services are healthy/running"
   else
@@ -122,7 +124,7 @@ for i in $(seq 0 $((KEY_COUNT - 1))); do
   KEY_VAL="${!VAR:-}"
   if [ -z "$KEY_VAL" ]; then
     fail "MaaS API key $i ($VAR) is not set"
-    ((KEYS_FAIL++))
+    KEYS_FAIL=$((KEYS_FAIL + 1))
     continue
   fi
   MAAS_RESP=$(curl -s --connect-timeout 10 -w '\n%{http_code}' "$MAAS_API_BASE/models" -H "Authorization: Bearer $KEY_VAL" 2>/dev/null)
@@ -131,10 +133,10 @@ for i in $(seq 0 $((KEY_COUNT - 1))); do
   if [ "$MAAS_CODE" = "200" ]; then
     MODEL_COUNT=$(echo "$MAAS_BODY" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null || echo "?")
     pass "MaaS API key $i reachable — $MODEL_COUNT models listed"
-    ((KEYS_OK++))
+    KEYS_OK=$((KEYS_OK + 1))
   else
     fail "MaaS API key $i returned HTTP $MAAS_CODE (expected 200)"
-    ((KEYS_FAIL++))
+    KEYS_FAIL=$((KEYS_FAIL + 1))
   fi
 done
 if [ "$KEYS_OK" -eq 0 ]; then
