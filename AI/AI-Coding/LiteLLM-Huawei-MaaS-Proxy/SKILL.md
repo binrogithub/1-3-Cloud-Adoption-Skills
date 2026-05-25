@@ -156,9 +156,6 @@ Single key = identical behavior to before. No changes required for existing sing
 ├── README.md                                       human-facing overview
 ├── SKILL.md                                        agent-facing workflow (this file)
 ├── docker-compose.yml                              4-service orchestrator (references assets/config/)
-├── agents/
-│   ├── openai.yaml                                 skill interface (OpenAI agent format)
-│   └── opencode.md                                 skill interface (OpenCode agent format)
 ├── assets/config/
 │   ├── litellm_config.yaml.template                model catalog template (tracked in git)
 │   ├── litellm_config.yaml                         generated config (gitignored)
@@ -1204,9 +1201,6 @@ The pre-built `litellm_overview.json` dashboard is at `assets/config/grafana/pro
 - [scripts/init_env.sh](scripts/init_env.sh) — interactive .env setup (manual, agent-guided, or CI)
 - [scripts/generate_config.sh](scripts/generate_config.sh) — generates litellm_config.yaml from .env
 - [scripts/validate_e2e.sh](scripts/validate_e2e.sh) — 12-step end-to-end validation
-- [scripts/generate_secrets.sh](scripts/generate_secrets.sh) — generate all required secrets
-- [agents/openai.yaml](agents/openai.yaml) — skill interface (OpenAI agent format)
-- [agents/opencode.md](agents/opencode.md) — skill interface (OpenCode agent format)
 
 ## Output Expectations
 

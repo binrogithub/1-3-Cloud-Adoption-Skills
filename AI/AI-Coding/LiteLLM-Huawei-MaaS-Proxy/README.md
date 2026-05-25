@@ -10,9 +10,6 @@ This repo ships **runtime stack files** for deterministic clone-and-run deployme
 README.md                                       this file
 SKILL.md                                        agent-facing workflow and trigger rules
 docker-compose.yml                              4-service Docker stack (references assets/config/)
-agents/
-  openai.yaml                                   skill interface (OpenAI agent format)
-  opencode.md                                   skill interface (OpenCode agent format)
 assets/config/
   litellm_config.yaml.template                   model catalog template (tracked in git)
   litellm_config.yaml                            generated config (gitignored, created by generate_config.sh)
@@ -30,11 +27,10 @@ references/
   metrics-and-dashboards.md                      PromQL, custom metrics, Grafana panel config
   operations.md                                  health checks, backup, restart, usage, endpoints
   troubleshooting.md                             repair playbook, failure modes, common mistakes
-  scripts/
-    init_env.sh                                  interactive .env setup (manual, agent-guided, or CI)
-    validate_e2e.sh                                12-step end-to-end validation
-    generate_secrets.sh                            generate MASTER_KEY, SALT_KEY, passwords
-    generate_config.sh                             generates litellm_config.yaml from .env
+scripts/
+  init_env.sh                                    interactive .env setup (manual, agent-guided, or CI)
+  validate_e2e.sh                                12-step end-to-end validation
+  generate_config.sh                             generates litellm_config.yaml from .env
 ```
 
 ## Skill Level
@@ -105,7 +101,6 @@ See [SKILL.md](./SKILL.md) **Verification Exit Criteria** — 12-item checklist 
 | `scripts/init_env.sh` | Interactive .env setup (manual, agent-guided, or CI) |
 | `scripts/generate_config.sh` | Generates litellm_config.yaml from .env and template |
 | `scripts/validate_e2e.sh` | 12-step end-to-end validation |
-| `scripts/generate_secrets.sh` | Generate all required secrets for `.env` |
 | `references/` | Architecture, metrics, operations, and troubleshooting deep-dives |
 
 ## KPIs
@@ -168,8 +163,7 @@ cp -r /home/1-3-Cloud-Adoption-Skills/AI/AI-Coding/LiteLLM-Huawei-MaaS-Proxy /ho
 rm -rf /home/1-3-Cloud-Adoption-Skills
 cd /home/LiteLLM-Huawei-MaaS-Proxy
 cp assets/config/.env.example .env
-./scripts/generate_secrets.sh      # copy output into .env
-$EDITOR .env                       # add HUAWEI_MAAS_API_KEY and optional extra keys
+$EDITOR .env                       # add all secrets and HUAWEI_MAAS_API_KEY(s)
 chmod 600 .env
 ./scripts/generate_config.sh       # generates litellm_config.yaml from .env
 docker compose up -d
