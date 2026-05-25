@@ -176,8 +176,7 @@ Single key = identical behavior to before. No changes required for existing sing
 ├── scripts/
 │   ├── init_env.sh                                  interactive .env setup (manual or agent-guided)
 │   ├── generate_config.sh                           generates litellm_config.yaml from .env
-│   ├── validate_e2e.sh                              12-step end-to-end validation
-│   └── generate_secrets.sh                          generate MASTER_KEY, SALT_KEY, passwords
+│   └── validate_e2e.sh                              12-step end-to-end validation
 ├── .env                                             actual secrets (gitignored)
 └── .gitignore                                       .env and litellm_config.yaml
 ```
@@ -284,8 +283,7 @@ The script writes `.env` with `0600` permissions, validates required values, and
 
 ```bash
 cp assets/config/.env.example .env
-./scripts/generate_secrets.sh      # prints secrets to stdout — copy into .env
-$EDITOR .env                       # fill HUAWEI_MAAS_API_KEY and optional extra keys
+$EDITOR .env                       # fill all secrets and HUAWEI_MAAS_API_KEY(s)
 chmod 600 .env
 ```
 
