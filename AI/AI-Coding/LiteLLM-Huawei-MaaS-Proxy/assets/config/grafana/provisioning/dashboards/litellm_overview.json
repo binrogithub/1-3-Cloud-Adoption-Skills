@@ -299,7 +299,7 @@
       "type": "stat",
       "uid": "panel-total-requests",
       "title": "Total Requests",
-      "description": "Cumulative total number of requests processed by the proxy since Prometheus started collecting metrics. Includes both successful and failed requests.",
+      "description": "Total requests (successful + failed) across all selected models and deployments.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -312,7 +312,7 @@
       },
       "targets": [
         {
-          "expr": "sum(litellm_requests_metric_total{model=~\"$model\"})",
+          "expr": "sum(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\"}) + sum(litellm_deployment_failure_responses_total{litellm_model_name=~\"$model\"})",
           "refId": "A",
           "legendFormat": "Total"
         }
