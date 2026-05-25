@@ -45,9 +45,8 @@ jqc() {
 # ── Helper: strip JSONC comments for jq ──
 strip_jsonc() {
   local file="$1"
-  if command -v node &>/dev/null; then
-    node -e "const fs=require('fs'); const s=fs.readFileSync('$file','utf8'); const r=s.replace(/\/\/.*$/gm,'').replace(/\/\*[\s\S]*?\*\//g,''); process.stdout.write(r);" 2>/dev/null
-  elif command -v python3 &>/dev/null; then
+  # Prefer python3 (correct string handling) over node (broken regex)
+  if command -v python3 &>/dev/null; then
     python3 -c "
 import sys
 def strip_jsonc(s):
@@ -76,10 +75,13 @@ def strip_jsonc(s):
     return ''.join(out)
 sys.stdout.write(strip_jsonc(sys.stdin.read()))
 " < "$file"
+  elif command -v node &>/dev/null; then
+    # Node.js version - NOTE: has issues with // in URLs, prefer python3
+    node -e "const fs=require('fs'); const s=fs.readFileSync('$file','utf8'); const r=s.replace(/\\/\\/.*$/gm,'').replace(/\\/\\*[\\s\\S]*?\\*\\//g,''); process.stdout.write(r);" 2>/dev/null
   elif jq -e . "$file" &>/dev/null; then
     cat "$file"
   else
-    echo "ERROR: Cannot parse JSONC file '$file' — install node.js or python3 for JSONC support" >&2
+    echo "ERROR: Cannot parse JSONC file '$file' — install python3 for JSONC support" >&2
     return 1
   fi
 }
