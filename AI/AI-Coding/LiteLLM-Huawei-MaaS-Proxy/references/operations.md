@@ -100,7 +100,7 @@ docker compose restart litellm
 
 ### Changing routing strategy
 
-Edit `litellm_config.yaml.template` to change `routing_strategy`:
+Run `./scripts/generate_config.sh --routing-strategy=<strategy>` to change routing strategy:
 
 | Strategy | Description |
 |---|---|

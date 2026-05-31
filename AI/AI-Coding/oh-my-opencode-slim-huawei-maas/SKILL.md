@@ -213,6 +213,7 @@ Switch at runtime: `/preset LiteLLM-Huawei-MaaS-Lite`
 | "No presets configured" | Ensure `council.presets` is defined in oh-my-opencode-slim.json |
 | Fallback not triggering | Set `fallback.enabled: true`, add chains for v4-model agents |
 | Repo clone fails | Verify https://github.com/binrogithub/1-3-Cloud-Adoption-Skills is reachable |
+| Requests timing out intermittently | Check `request_timeout` in litellm_config.yaml — should be 600s, not 10s; regenerate with `./scripts/generate_config.sh` |
 
 ## Sanitization Rules
 
@@ -231,6 +232,7 @@ Switch at runtime: `/preset LiteLLM-Huawei-MaaS-Lite`
 | opencode won't start | Wrong provider npm package | Use `@ai-sdk/openai-compatible`, not `openai` |
 | Budgets not decrementing | Model pricing is zero | Set non-zero token pricing in litellm_config.yaml |
 | Virtual key expired | Duration or budget exceeded | Mint new key with `--no-budget` |
+| Intermittent timeout errors from proxy | LiteLLM `request_timeout` too low (default was 10s, should be 600s) | Increase in litellm_config.yaml, regenerate with `generate_config.sh`, restart litellm |
 
 ## Verification Exit Criteria
 

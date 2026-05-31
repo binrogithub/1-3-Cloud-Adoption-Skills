@@ -98,6 +98,7 @@ See SKILL.md Verification Exit Criteria. Run `scripts/validate.sh` for automated
 | v4 models unavailable | Deep models fail | Switch to LiteLLM-Huawei-MaaS-Lite preset |
 | Plugin not loaded | No presets available | Re-run: `bunx oh-my-opencode-slim@1.1.1 install` |
 | Wrong preset | Not using LiteLLM route | Run `/preset LiteLLM-Huawei-MaaS` |
+| Proxy timeout too low | Intermittent request failures | Increase `request_timeout` in litellm_config.yaml (600s is default) |
 
 ## Quick Start
 

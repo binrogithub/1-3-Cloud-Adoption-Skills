@@ -26,7 +26,7 @@ Client → LiteLLM (:4000) → Huawei MaaS (ap-southeast-1)
 .
 ├── docker-compose.yml            4 services, healthchecks, named volumes, YAML anchor (references assets/config/)
 ├── assets/config/
-│   ├── litellm_config.yaml.template  Model catalog template (tracked in git)
+│   ├── litellm_config.yaml.example   Model catalog example (tracked in git)
 │   ├── litellm_config.yaml           Generated config (gitignored, created by generate_config.sh)
 │   ├── custom_callbacks.py       PrometheusTTFTTPOTITL — emits ttft/tpot/itl histograms
 │   ├── prometheus.yml            15s scrape → litellm:4000
@@ -47,7 +47,7 @@ Client → LiteLLM (:4000) → Huawei MaaS (ap-southeast-1)
 | File | Role | Key details |
 |---|---|---|
 | `docker-compose.yml` | Service orchestration | YAML anchor for restart/logging, 4 services with healthcheck chain, named volumes, mounts from `./assets/config/` |
-| `assets/config/litellm_config.yaml.template` | Model catalog template | Tracked in git. Used by `generate_config.sh` as reference. Not used at runtime. |
+| `assets/config/litellm_config.yaml.example` | Model catalog example | Tracked in git. Used by `generate_config.sh` as reference. Not used at runtime. |
 | `assets/config/litellm_config.yaml` | Generated model catalog + proxy settings | Created by `generate_config.sh` from `.env`. N deployments per model (one per API key), `tpm`/`rpm` per deployment, per-token pricing, prometheus + custom callbacks, router_settings |
 | `assets/config/custom_callbacks.py` | Custom Prometheus metrics | `PrometheusTTFTTPOTITL` extends `CustomLogger`, emits 3 histograms labeled by `model`, `model_group`, `api_provider` |
 | `assets/config/prometheus.yml` | Scrape config | Single job `litellm` targeting `litellm:4000` at 15s interval |

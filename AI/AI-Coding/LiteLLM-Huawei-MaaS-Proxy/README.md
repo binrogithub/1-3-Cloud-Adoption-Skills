@@ -11,7 +11,7 @@ README.md                                       this file
 SKILL.md                                        agent-facing workflow and trigger rules
 docker-compose.yml                              4-service Docker stack (references assets/config/)
 assets/config/
-  litellm_config.yaml.template                   model catalog template (tracked in git)
+  litellm_config.yaml.example                    model catalog example (tracked in git)
   litellm_config.yaml                            generated config (gitignored, created by generate_config.sh)
   custom_callbacks.py                            TTFT/TPOT/ITL Prometheus callback
   prometheus.yml                                 15s scrape config
@@ -92,7 +92,7 @@ See [SKILL.md](./SKILL.md) **Verification Exit Criteria** — 12-item checklist 
 | Asset | Description |
 |---|---|
 | `docker-compose.yml` | 4-service stack with healthcheck chain, YAML anchor, named volumes |
-| `assets/config/litellm_config.yaml.template` | Model catalog template with `openai/` prefix, MaaS endpoint, per-model tpm/rpm and pricing |
+| `assets/config/litellm_config.yaml.example` | Model catalog example with `openai/` prefix, MaaS endpoint, per-model tpm/rpm and pricing |
 | `assets/config/litellm_config.yaml` | Generated config (gitignored), created by `generate_config.sh` |
 | `assets/config/custom_callbacks.py` | TTFT/TPOT/ITL Prometheus histograms labeled by model/group/provider |
 | `assets/config/prometheus.yml` | 15s scrape job targeting `litellm:4000` |
@@ -126,6 +126,7 @@ See [SKILL.md](./SKILL.md) **Verification Exit Criteria** — 12-item checklist 
 | `.env` committed to git | All secrets leaked | `.env` is gitignored; never `git add .env` |
 | Config change without restart | New settings not applied | `docker compose restart litellm` after edits |
 | One MaaS API key expired (multi-key) | Partial degradation | Monitor cooldown events in Grafana; rotate expired key |
+| `request_timeout` too low | Intermittent TimeoutErrors on non-trivial requests | Set `request_timeout: 600` (default); add `stream_timeout: 60` for TTFT |
 
 ## Quick Start
 
@@ -198,8 +199,8 @@ The proxy supports multiple MaaS API keys for load balancing and increased throu
 - **Main key** (`HUAWEI_MAAS_API_KEY`): Mandatory, always required
 - **Extra keys**: Optional, configured via `init_env.sh` prompts or `HUAWEI_MAAS_EXTRA_API_KEYS` env var
 - **Internal env vars**: `HUAWEI_MAAS_API_KEY_COUNT`, `HUAWEI_MAAS_API_KEY_0`, `HUAWEI_MAAS_API_KEY_1`, etc.
-- **Config generation**: `scripts/generate_config.sh` reads `.env` and generates `litellm_config.yaml` from the template
-- **Router settings**: `simple-shuffle` strategy (default), `cooldown_time: 60`, `allowed_fails: 3`
+- **Config generation**: `scripts/generate_config.sh` reads `.env` and generates `litellm_config.yaml` from the example
+- **Router settings**: `simple-shuffle` strategy (default), `cooldown_time: 30`, `allowed_fails: 3`
 - **N deployments per model**: With N keys, each model has N deployments. LiteLLM automatically load-balances.
 - **Backward compatible**: Single key = identical behavior to before
 

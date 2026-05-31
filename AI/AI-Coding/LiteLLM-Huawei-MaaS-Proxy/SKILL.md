@@ -71,7 +71,7 @@ The proxy supports multiple MaaS API keys for increased throughput and resilienc
 | Internal vars | `HUAWEI_MAAS_API_KEY_COUNT=N`, `HUAWEI_MAAS_API_KEY_0` through `_N-1` — set by `init_env.sh` |
 | Config generation | `scripts/generate_config.sh` reads `.env` and generates `litellm_config.yaml` with N deployments per model |
 | Routing strategy | `simple-shuffle` (default) — round-robin with random shuffle. Alternatives: `least-busy`, `latency-based-routing` |
-| Cooldown | `cooldown_time: 60`, `allowed_fails: 3` — failed deployments temporarily removed from rotation |
+| Cooldown | `cooldown_time: 30`, `allowed_fails: 3` — failed deployments temporarily removed from rotation |
 | Effective capacity | RPM/TPM per model = per-key × N keys |
 | Backward compatible | Single key (N=1) = identical behavior to before |
 
@@ -132,7 +132,7 @@ The proxy supports multiple MaaS API keys for load balancing and increased throu
 
 ### Config generation
 
-- `litellm_config.yaml` is **generated** by `scripts/generate_config.sh` from `litellm_config.yaml.template`
+- `litellm_config.yaml` is **generated** by `scripts/generate_config.sh` from `litellm_config.yaml.example`
 - The generated file is gitignored — never edit it directly
 - With N keys, each model has N deployments (e.g., `glm-5.1` → `glm-5.1--maas-key-0`, `glm-5.1--maas-key-1`, ...)
 - Total effective RPM/TPM = per-key × N
@@ -142,7 +142,7 @@ The proxy supports multiple MaaS API keys for load balancing and increased throu
 | Setting | Value | Purpose |
 |---|---|---|
 | `routing_strategy` | `simple-shuffle` | Random selection across healthy deployments |
-| `cooldown_time` | 60 | Seconds to remove failed deployment from rotation |
+| `cooldown_time` | 30 | Seconds to remove failed deployment from rotation |
 | `allowed_fails` | 3 | Failures before cooldown triggers |
 
 ### Backward compatibility
@@ -157,7 +157,7 @@ Single key = identical behavior to before. No changes required for existing sing
 ├── SKILL.md                                        agent-facing workflow (this file)
 ├── docker-compose.yml                              4-service orchestrator (references assets/config/)
 ├── assets/config/
-│   ├── litellm_config.yaml.template                model catalog template (tracked in git)
+│   ├── litellm_config.yaml.example                model catalog example (tracked in git)
 │   ├── litellm_config.yaml                         generated config (gitignored)
 │   ├── custom_callbacks.py                         TTFT/TPOT/ITL Prometheus histograms
 │   ├── prometheus.yml                              15s scrape → litellm:4000
@@ -186,7 +186,7 @@ Single key = identical behavior to before. No changes required for existing sing
 | File | Role | Key details |
 |---|---|---|
 | `docker-compose.yml` | Service orchestration | YAML anchor, 4 services with healthcheck chain, named volumes, mounts from `./assets/config/` |
-| `assets/config/litellm_config.yaml.template` | Model catalog template | `openai/` prefix + MaaS endpoint, `tpm`/`rpm` per model, per-token pricing, tracked in git |
+| `assets/config/litellm_config.yaml.example` | Model catalog example | `openai/` prefix + MaaS endpoint, `tpm`/`rpm` per model, per-token pricing, tracked in git |
 | `assets/config/litellm_config.yaml` | Generated config | Created by `generate_config.sh`, gitignored, N deployments per model |
 | `assets/config/custom_callbacks.py` | Custom Prometheus metrics | `PrometheusTTFTTPOTITL(CustomLogger)`, 3 histograms labeled by `model`, `model_group`, `api_provider` |
 | `assets/config/prometheus.yml` | Scrape config | Single job `litellm` at 15s interval |
@@ -515,7 +515,7 @@ LiteLLM's router load-balances across all deployments for the same `model_name`.
 ### Adding a new model
 
 1. Find model name and rate/price info in [ModelArts MaaS console](https://console.huaweicloud.com/modelarts/)
-2. Add entry to `model_list` in `assets/config/litellm_config.yaml.template` following the structure above
+2. Add entry to `model_list` in `assets/config/litellm_config.yaml.example` following the structure above
 3. Ensure `model_name` matches MaaS exactly (case-sensitive)
 4. Set `tpm`/`rpm` from MaaS console quotas
 5. Set non-zero `input_cost_per_token` and `output_cost_per_token` (per-token, not per-1K)
@@ -554,8 +554,9 @@ Configured in `assets/config/litellm_config.yaml` under `litellm_settings`:
 
 | Setting | Value | Meaning |
 |---|---|---|
-| `num_retries` | 3 | Retry failed calls 3 times per model |
-| `request_timeout` | 10 | Raise TimeoutError after 10s |
+| `num_retries` | 3 | Retry failed calls 3 times within same deployment |
+| `request_timeout` | 600 | Raise TimeoutError after 600s (full request latency; matches LiteLLM default) |
+| `stream_timeout` | 60 | Raise TimeoutError after 60s waiting for first token (TTFT only) |
 | `drop_params` | True | Drop unsupported params instead of erroring |
 | `set_verbose` | False | Suppress debug logging |
 | `callbacks` | `["prometheus", "custom_callbacks.my_prometheus_logger"]` | Built-in Prometheus + custom TTFT/TPOT/ITL |
@@ -780,6 +781,7 @@ docker compose exec litellm env | grep -E '^(LITELLM|DB_|HUAWEI|STORE_)'
 | Prometheus target down | LiteLLM not healthy or not started | Check healthcheck chain: `db` → `litellm` → `prometheus` |
 | Grafana shows no data | Prometheus not scraping or wrong datasource | Check targets; verify datasource URL is `http://prometheus:9090` |
 | Virtual key 403 | Key expired, over budget, or model not in allow-list | Check key with `/key/info` |
+| Intermittent TimeoutError | `request_timeout` too low for LLM calls (applies to full request latency, not just TTFT) | Increase `request_timeout` (default 600s); add `stream_timeout` for tighter TTFT deadline |
 
 ## Sanitization Rules
 
@@ -802,6 +804,7 @@ docker compose exec litellm env | grep -E '^(LITELLM|DB_|HUAWEI|STORE_)'
 | Editing config without restarting | Config is read at startup only | `docker compose restart litellm` after changes |
 | Running `docker compose down` expecting data loss | Volumes survive `down` | Use `docker compose down -v` to destroy data |
 | Checking `/health/liveliness` instead of `/health` for model status | Liveliness only checks process | Use `/health` with auth for model-level diagnostics |
+| Setting `request_timeout` too low (e.g. 10s) | LLM calls routinely exceed 10s end-to-end, causing intermittent TimeoutErrors | Use `request_timeout: 600` (default); use `stream_timeout` for tighter TTFT control |
 
 ## Reference: File Templates
 
@@ -825,6 +828,7 @@ DB_PASSWORD="change-me-to-a-strong-password"
 
 # ── Huawei MaaS ──────────────────────────────────
 HUAWEI_MAAS_API_KEY="change-me-to-your-maas-api-key"
+HUAWEI_MAAS_API_KEY_0="change-me-to-your-maas-api-key"
 HUAWEI_MAAS_API_BASE="https://api-ap-southeast-1.modelarts-maas.com/openai/v1"
 
 # ── Prometheus ───────────────────────────────────
@@ -1022,7 +1026,8 @@ model_list:
 
 litellm_settings:
   num_retries: 3
-  request_timeout: 10
+  request_timeout: 600
+  stream_timeout: 60
   drop_params: True
   set_verbose: False
   callbacks:
@@ -1031,6 +1036,12 @@ litellm_settings:
   ui_theme_config:
     logo_url: "https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Huawei_Standard_logo.svg/3840px-Huawei_Standard_logo.svg.png"
     favicon_url: "https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Huawei_Standard_logo.svg/3840px-Huawei_Standard_logo.svg.png"
+
+router_settings:
+  routing_strategy: simple-shuffle
+  num_retries: 3
+  cooldown_time: 30
+  allowed_fails: 3
 
 general_settings:
   database_connection_pool_limit: 10

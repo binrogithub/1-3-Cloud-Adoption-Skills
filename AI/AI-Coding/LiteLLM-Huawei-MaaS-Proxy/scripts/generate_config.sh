@@ -46,11 +46,18 @@ if [ "$KEY_COUNT" -lt 1 ]; then
 fi
 
 # ── Validate all keys exist ──────────────────────────────────────
+# Fallback: if HUAWEI_MAAS_API_KEY_0 is not set but HUAWEI_MAAS_API_KEY is,
+# use HUAWEI_MAAS_API_KEY as HUAWEI_MAAS_API_KEY_0 (supports manual .env setup)
+if [ "$KEY_COUNT" -ge 1 ] && [ -z "${HUAWEI_MAAS_API_KEY_0:-}" ] && [ -n "${HUAWEI_MAAS_API_KEY:-}" ]; then
+  export HUAWEI_MAAS_API_KEY_0="$HUAWEI_MAAS_API_KEY"
+fi
+
 for i in $(seq 0 $((KEY_COUNT - 1))); do
   VAR="HUAWEI_MAAS_API_KEY_$i"
   VAL="${!VAR:-}"
   if [ -z "$VAL" ]; then
     echo "ERROR: $VAR is not set in .env. Each key must be present." >&2
+    echo "HINT: Set HUAWEI_MAAS_API_KEY_0 or run scripts/init_env.sh to set up indexed keys." >&2
     exit 1
   fi
   if echo "$VAL" | grep -qi 'change-me\|replace\|xxx'; then
@@ -112,8 +119,9 @@ fi
 
   echo ""
   echo "litellm_settings:"
-  echo "  num_retries: 3 # retry call 3 times across deployments"
-  echo "  request_timeout: 10 # raise Timeout error if call takes longer than 10s"
+  echo "  num_retries: 3 # retry call 3 times within same deployment"
+  echo "  request_timeout: 600 # raise TimeoutError if full request takes longer than 600s (default)"
+  echo "  stream_timeout: 60 # raise TimeoutError if first token takes longer than 60s (TTFT only)"
   echo "  drop_params: True"
   echo "  set_verbose: False"
   echo "  callbacks:"
@@ -126,7 +134,7 @@ fi
   echo "router_settings:"
   echo "  routing_strategy: $ROUTING_STRATEGY"
   echo "  num_retries: 3"
-  echo "  cooldown_time: 60 # seconds to cool down a failed deployment"
+  echo "  cooldown_time: 30 # seconds to cool down a failed deployment"
   echo "  allowed_fails: 3 # failures before cooldown kicks in"
   echo ""
   echo "general_settings:"
