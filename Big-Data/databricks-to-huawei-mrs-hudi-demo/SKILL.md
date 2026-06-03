@@ -35,6 +35,29 @@ Core target:
    - MRS job list for transient runs.
    - OBS paths under `obs://docktest/lake/bronze/...` and `obs://docktest/lake/silver/...`.
 
+## Chile Stable Path
+
+Use this path when the user asks to continue or reproduce the known-good Chile environment.
+
+1. Use fallback IAM auth unless the user explicitly asks otherwise:
+   - `. .\scripts\14_select_huawei_auth.ps1 -ForceFallback`
+2. Validate and package:
+   - `python scripts\06_validate_demo_package.py`
+   - `powershell -ExecutionPolicy Bypass -File scripts\01_package_jobs.ps1`
+3. Ensure OBS and upload assets:
+   - `python scripts\07_create_minimal_chile_resources.py --execute --skip-dli`
+   - `python scripts\02_upload_assets_to_obs.py --execute`
+   - `python scripts\17_prepare_mrs_assets.py --execute`
+4. Run smoke with one table first:
+   - Existing MRS: `python -u scripts\18_run_mrs_dataflow_workflow.py --execute --cluster-id <cluster-id> --limit 1`
+   - Notebook trigger against existing MRS: `powershell -ExecutionPolicy Bypass -File scripts\15_run_notebook_auto.ps1 -Engine mrs -Bucket docktest -MrsClusterId <cluster-id> -SmokeTables 1`
+   - Transient MRS: `powershell -ExecutionPolicy Bypass -File scripts\15_run_notebook_auto.ps1 -Engine mrs -Bucket docktest -TransientMrsCluster -SmokeTables 1`
+5. Always verify:
+   - MRS bronze and silver jobs are `FINISHED` / `SUCCEEDED`.
+   - `obs://docktest/lake/bronze/payment/outbox/` exists.
+   - `obs://docktest/lake/silver/payment/outbox/` exists.
+   - Any debug/transient MRS cluster reaches `terminated`.
+
 ## Process Map
 
 - Analyze Databricks source: `task.py`, `frame_dockone/process.py`, project YAML, task table list.
@@ -55,6 +78,9 @@ Core target:
 - When using MRS `run-job-flow`, do not set log dump/log URI for `MRS 3.5.0-LTS`; that version returned `MRS.00005063: not support log dump`.
 - MRS job list `offset` starts at `1`, not `0`.
 - If a debug MRS cluster is created with `--keep-cluster`, delete it after inspection.
+- MRS `running` does not always mean JobGateway is ready. `scripts\18_run_mrs_dataflow_workflow.py` must keep the retry/adopt-existing-job logic for Chile transient clusters.
+- In manual transient mode, do not blindly resubmit the first bronze step. If run-job-flow already created a same-name bronze job, wait for or adopt that job, then submit silver.
+- Cloud notebook files can be synchronized through Jupyter Contents API, but never print or store the Jupyter token in repo/skill files. The local token is DPAPI-protected under `%LOCALAPPDATA%\Codex\huawei-cloud-bigdata\cloud-notebook-credentials.xml`.
 
 ## References
 

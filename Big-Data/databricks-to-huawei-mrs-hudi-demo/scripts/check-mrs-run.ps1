@@ -8,8 +8,6 @@ $ErrorActionPreference = "Stop"
 Set-Location $DemoRoot
 . .\scripts\14_select_huawei_auth.ps1 -ForceFallback
 
-$env:MRS_CLUSTER_ID = $ClusterId
-
 @"
 import json, os
 from huaweicloudsdkcore.auth.credentials import BasicCredentials
@@ -18,7 +16,7 @@ from huaweicloudsdkmrs.v1.region.mrs_region import MrsRegion as R1
 from huaweicloudsdkmrs.v2 import MrsClient as C2, ShowJobExeListNewRequest
 from huaweicloudsdkmrs.v2.region.mrs_region import MrsRegion as R2
 
-cluster_id = os.environ["MRS_CLUSTER_ID"]
+cluster_id = "$ClusterId"
 cred = BasicCredentials(os.environ["HUAWEICLOUD_ACCESS_KEY"], os.environ["HUAWEICLOUD_SECRET_KEY"], os.environ["HUAWEICLOUD_PROJECT_ID"])
 if os.environ.get("HUAWEICLOUD_SECURITY_TOKEN"):
     cred.with_security_token(os.environ["HUAWEICLOUD_SECURITY_TOKEN"])

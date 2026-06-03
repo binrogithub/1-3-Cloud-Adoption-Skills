@@ -30,6 +30,56 @@ Cluster config:
 
 This was not truly tiny, but it was the minimal successful MRS shape found by reusing the prior account network and historical cluster sizing.
 
+## Chile Stable Deployment Process
+
+Known-good sequence for the dockone ExampleApp smoke table:
+
+```powershell
+Set-Location C:\Users\Matebook\Documents\Codex\2026-06-02\files-mentioned-by-the-user-databricks\outputs\huawei-dli-hudi-demo
+. .\scripts\14_select_huawei_auth.ps1 -ForceFallback
+python scripts\06_validate_demo_package.py
+powershell -ExecutionPolicy Bypass -File scripts\01_package_jobs.ps1
+python scripts\07_create_minimal_chile_resources.py --execute --skip-dli
+python scripts\02_upload_assets_to_obs.py --execute
+python scripts\17_prepare_mrs_assets.py --execute
+python -u scripts\18_run_mrs_dataflow_workflow.py --execute --cluster-id <MRS_CLUSTER_ID> --limit 1
+```
+
+Notebook-triggered existing-cluster smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\15_run_notebook_auto.ps1 `
+  -Engine mrs `
+  -Bucket docktest `
+  -MrsClusterId <MRS_CLUSTER_ID> `
+  -SmokeTables 1
+```
+
+Notebook-triggered transient smoke:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\15_run_notebook_auto.ps1 `
+  -Engine mrs `
+  -Bucket docktest `
+  -TransientMrsCluster `
+  -SmokeTables 1
+```
+
+The notebook path executes `notebooks\run_notebook_auto.py`, then `scripts\19_resume_mrs_notebook_workflow.ps1`, then `scripts\18_run_mrs_dataflow_workflow.py`.
+
+Validated latest smoke:
+
+- Region: `la-south-2`.
+- Bucket: `docktest`.
+- Table: `dockone_exampleapp_payment_outbox`.
+- Bronze job examples: `d960ad3c-d19b-485e-8abf-9eaf8796ed98`, `8595bac3-7ce7-49db-b253-2cdb23adfec3`.
+- Silver job examples: `97d7dbfe-9049-47eb-97c1-218956a32756`, `e5e1f2fd-6877-4f61-b084-612a75e3ccc7`.
+- Result: bronze and silver `FINISHED` / `SUCCEEDED`.
+- Cleanup: debug cluster `6edebdbe-62b1-44db-aafd-8e15e16cda79` reached `terminated`.
+- Output prefixes:
+  - `obs://docktest/lake/bronze/payment/outbox/`
+  - `obs://docktest/lake/silver/payment/outbox/`
+
 ## Issues Found and Fixes
 
 ### DLI Blockers
@@ -96,6 +146,36 @@ Problem:
 Fix:
 
 - Use `offset=1`.
+
+### JobGateway Warm-Up and Duplicate Bronze
+
+Problem:
+
+- A transient cluster can report `running` while MRS JobGateway is not ready to accept a new explicit Spark job.
+- The first run-job-flow bronze step may be created asynchronously.
+- The old manual transient code saw the first bronze step as "not succeeded" and attempted to submit bronze again immediately.
+- MRS returned:
+
+```text
+0173 Failed to submit the job
+409 Tasks are being executed in the cluster
+```
+
+Fix:
+
+- Keep `scripts\18_run_mrs_dataflow_workflow.py` logic that:
+  - Normalizes MRS job-list fields.
+  - Finds same-name jobs.
+  - Adopts an existing same-name job instead of duplicating it.
+  - Retries job submission while JobGateway warms up.
+  - Waits for the first run-job-flow bronze step when visible.
+- Keep `scripts\19_resume_mrs_notebook_workflow.ps1` passing:
+
+```powershell
+--wait-transient --transient-submit-mode manual
+```
+
+This makes notebook-triggered transient runs wait for actual results, not just submission.
 
 ## Cleanup
 

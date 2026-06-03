@@ -57,6 +57,42 @@ Notebook-triggered transient MRS run:
 - Silver job `0d2f6ab6-307e-4a58-9aaf-fd0766879901`: `SUCCEEDED`.
 - Notebook execution reported no local failures.
 
+## Latest Chile Stable Repair Result
+
+Date: 2026-06-03.
+
+Purpose:
+
+- Stabilize the Chile MRS + OBS + Hudi workflow after transient cluster timing issues.
+- Verify notebook as an automated trigger that waits for results.
+
+Script repairs:
+
+- `scripts/18_run_mrs_dataflow_workflow.py`
+  - Uses manual transient mode by default.
+  - Adopts same-name jobs created by run-job-flow.
+  - Retries explicit job submission while JobGateway warms up.
+  - Waits for the first bronze step when it already exists.
+- `scripts/19_resume_mrs_notebook_workflow.ps1`
+  - Adds `--wait-transient --transient-submit-mode manual` for transient notebook runs.
+
+Validated existing-cluster smoke on debug cluster `6edebdbe-62b1-44db-aafd-8e15e16cda79`:
+
+- Bronze job `d960ad3c-d19b-485e-8abf-9eaf8796ed98`: `SUCCEEDED`.
+- Silver job `97d7dbfe-9049-47eb-97c1-218956a32756`: `SUCCEEDED`.
+
+Validated notebook-triggered existing-cluster smoke on the same cluster:
+
+- Cells executed: `2, 3, 4, 5, 7, 9`.
+- Failures: none.
+- Bronze job `8595bac3-7ce7-49db-b253-2cdb23adfec3`: `SUCCEEDED`.
+- Silver job `e5e1f2fd-6877-4f61-b084-612a75e3ccc7`: `SUCCEEDED`.
+
+Cleanup:
+
+- Debug cluster `6edebdbe-62b1-44db-aafd-8e15e16cda79` was deleted and reached `terminated`.
+- Latest repaired files were synced to the ECS cloud notebook through Jupyter Contents API.
+
 ## Cleanup Status
 
 - Debug MRS cluster `aa80ee9e-e55b-42c3-a7e1-9c5f652c182f` was deleted and reached `terminated`.
