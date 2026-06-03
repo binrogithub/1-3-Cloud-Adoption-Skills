@@ -1,0 +1,4 @@
+interface:
+  display_name: "Databricks to Huawei MRS Hudi Demo"
+  short_description: "Migrate Databricks CDC workflows to Huawei MRS Hudi demos"
+  default_prompt: "Use $databricks-to-huawei-mrs-hudi-demo to analyze a Databricks CDC workflow and deploy a Huawei MRS Hudi smoke demo."
