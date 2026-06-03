@@ -73,6 +73,7 @@ cat > "$CONFIG" <<EOF
             }
           ],
           "cleancache",
+          "reasoning",
           "enhancetool"
         ]
       }
@@ -81,7 +82,6 @@ cat > "$CONFIG" <<EOF
   "Router": {
     "default": "huawei-maas,$MODEL_JSON",
     "background": "huawei-maas,$MODEL_JSON",
-    "think": "huawei-maas,$MODEL_JSON",
     "longContext": "huawei-maas,$MODEL_JSON",
     "longContextThreshold": $MAAS_CONTEXT_TOKENS
   }

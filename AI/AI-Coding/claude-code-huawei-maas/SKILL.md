@@ -70,7 +70,8 @@ export Z_API_KEY='...'
 - Uses `api_key: "$HUAWEI_MAAS_API_KEY"` in router config.
 - Stores the actual MaaS key in `~/.config/claude-glm/env` with `0600` permissions.
 - Sets the provider URL to `${MAAS_BASE_URL}/chat/completions`.
-- Routes `default`, `background`, `think`, and `longContext` to `huawei-maas,<model>`.
+- Routes `default`, `background`, and `longContext` to `huawei-maas,<model>`.
+- Adds the CCR `reasoning` transformer before `enhancetool` so GLM `reasoning_content` is converted into Claude-visible thinking deltas.
 - Creates `~/.local/bin/claude-glm` and a compatibility symlink `~/.local/bin/Claude-glm`.
 - Installs `~/.local/bin/claude-glm-recover` for post-overflow recovery into a fresh session.
 - Creates `~/.local/bin/claude-glm-ccr-run` and `~/.local/bin/claude-glm-ccr-health` when systemd user services are available.
@@ -162,6 +163,7 @@ npm install -g @musistudio/claude-code-router
         "use": [
           ["maxtoken", { "max_tokens": 8192 }],
           "cleancache",
+          "reasoning",
           "enhancetool"
         ]
       }
@@ -170,7 +172,6 @@ npm install -g @musistudio/claude-code-router
   "Router": {
     "default": "huawei-maas,glm-5.1",
     "background": "huawei-maas,glm-5.1",
-    "think": "huawei-maas,glm-5.1",
     "longContext": "huawei-maas,glm-5.1",
     "longContextThreshold": 120000
   }
