@@ -6,6 +6,7 @@ It is intended for operators who want either:
 
 - side-by-side commands where `claude` continues using Anthropic Claude models and `claude-glm` uses Huawei MaaS `glm-5.1`
 - a full migration where the installed `claude` command is wrapped to use a ModelArts MaaS endpoint
+- Claude Code search prompts routed through LiteLLM `/v1/responses` and LiteLLM `search_tools` instead of local `WebFetch`
 
 ## Scope
 
@@ -19,6 +20,17 @@ claude-glm CLI
   -> claude-code-router on http://127.0.0.1:3456
   -> Huawei Cloud MaaS OpenAI-compatible /chat/completions
   -> glm-5.1
+```
+
+Optional LiteLLM-backed search scope:
+
+```text
+Claude Code search prompt
+  -> claude-code-router on http://127.0.0.1:3456
+  -> LiteLLM /v1/responses
+  -> websearch_interception
+  -> LiteLLM search_tools, for example exa-search
+  -> Huawei Cloud MaaS glm-5.1 answer
 ```
 
 Legacy full migration scope:
@@ -67,6 +79,19 @@ The side-by-side script configures:
 It also runs a smoke test and expects the result to report `modelUsage.glm-5.1`.
 
 Set `INSTALL_SYSTEMD_USER_SERVICE=0` before running the script to skip systemd service installation and keep wrapper-only startup.
+
+To route Claude Code search prompts through LiteLLM search tools, first ensure LiteLLM has a configured `search_tools` entry such as `exa-search`, then run:
+
+```bash
+./scripts/configure-ccr-litellm-search.py --dry-run
+./scripts/configure-ccr-litellm-search.py --apply
+```
+
+If the LiteLLM version fails on `/v1/responses + use_chat_completions_api + stream=true` with a `ResponsesAPIResponse` async iterator error, generate and mount the streaming patches:
+
+```bash
+./scripts/configure-ccr-litellm-search.py --apply --patch-litellm-streaming
+```
 
 ## Persistent CCR Service
 
@@ -190,10 +215,12 @@ claude-code-huawei-maas/
 │   └── openai.yaml
 └── scripts/
     ├── claude-glm-recover.sh
+    ├── configure-ccr-litellm-search.py
     ├── configure-claude-glm.sh
+    ├── configure-zai-search-mcp.sh
     └── configure.sh
 ```
 
 ## Security
 
-Do not commit a real MaaS API key. The side-by-side script writes `api_key: "$HUAWEI_MAAS_API_KEY"` into the router config and stores the local secret in `~/.config/claude-glm/env` with `0600` permissions. The legacy migration script writes `api_key: "$API_KEY"` into the router config so the secret remains in the runtime environment.
+Do not commit a real MaaS API key. The side-by-side script writes `api_key: "$HUAWEI_MAAS_API_KEY"` into the router config and stores the local secret in `~/.config/claude-glm/env` with `0600` permissions. The legacy migration script writes `api_key: "$API_KEY"` into the router config so the secret remains in the runtime environment. The LiteLLM search routing script edits config and transformer files but does not print environment values or API keys.
