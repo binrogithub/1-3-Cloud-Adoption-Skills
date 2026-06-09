@@ -1,13 +1,13 @@
 ---
 name: claude-code-huawei-maas
-description: Configure Claude Code to use Huawei Cloud MaaS or ModelArts MaaS through an OpenAI-compatible endpoint, optionally add CCR-layer search prefetching or Z.ai web-search-prime MCP search. Use when Codex needs to add a side-by-side claude-glm command that routes to Huawei MaaS glm-5.1 while preserving the original claude command on Anthropic, migrate claude itself to Huawei MaaS, install or configure claude-code-router, set API_KEY-based authentication, adjust context length, verify that Claude Code is actually backed by MaaS, route Claude Code WebSearch/current-news/latest prompts through CCR prefetch instead of LiteLLM search_tools/websearch_interception, or configure Z.ai MCP search with Z_API_KEY.
+description: Configure Claude Code to use Huawei Cloud MaaS or ModelArts MaaS through an OpenAI-compatible endpoint, optionally add a CCR bridge for LiteLLM-backed search or Z.ai web-search-prime MCP search. Use when Codex needs to add a side-by-side claude-glm command that routes to Huawei MaaS glm-5.1 while preserving the original claude command on Anthropic, migrate claude itself to Huawei MaaS, install or configure claude-code-router, set API_KEY-based authentication, adjust context length, verify that Claude Code is actually backed by MaaS, route Claude Code WebSearch/current-news/latest prompts through a LiteLLM Exa search injection path, or configure Z.ai MCP search with Z_API_KEY.
 ---
 
 # Claude Code Huawei MaaS
 
 ## Overview
 
-Use this skill to route Claude Code through `claude-code-router` (`ccr`) to Huawei Cloud MaaS OpenAI-compatible chat completions. The preferred setup is side-by-side: keep the original `claude` command on Anthropic and add `claude-glm`/`Claude-glm` for Huawei MaaS `glm-5.1`. A legacy migration script is also available if the user explicitly wants `claude` itself to route to MaaS. It can also pre-search Claude Code current-information requests in CCR or add the Z.ai `web-search-prime` MCP search tool for Claude Code.
+Use this skill to route Claude Code through `claude-code-router` (`ccr`) to Huawei Cloud MaaS OpenAI-compatible chat completions. The preferred setup is side-by-side: keep the original `claude` command on Anthropic and add `claude-glm`/`Claude-glm` for Huawei MaaS `glm-5.1`. A legacy migration script is also available if the user explicitly wants `claude` itself to route to MaaS. It can also install the CCR bridge used with LiteLLM-side Exa search injection or add the Z.ai `web-search-prime` MCP search tool for Claude Code.
 
 ## Quick Path
 
@@ -26,10 +26,11 @@ Use this skill to route Claude Code through `claude-code-router` (`ccr`) to Huaw
    - `claude-glm-recover <session-id>`
    - `claude-glm-recover <session-id> --launch`
    - then paste `/tmp/claude-glm-recovery-<session-id>.md` into the fresh session as the first prompt
-5. If the user wants Claude Code search prompts such as `搜索今天的新闻` to avoid Claude Code local `WebFetch`, configure CCR search prefetching:
-   - set `EXA_API_KEY` or `CCR_SEARCH_API_KEY` in the CCR runtime environment when live search is desired
+5. If the user wants Claude Code search prompts such as `搜索今天的新闻` to avoid Claude Code local `WebFetch`, configure the CCR bridge and LiteLLM search callback:
+   - route CCR to a LiteLLM provider that mounts `LiteLLM-Huawei-MaaS-Proxy/assets/config/custom_callbacks.py`
+   - set `EXA_API_KEY` in the LiteLLM runtime environment when live search is desired
    - run `scripts/configure-ccr-search.py --dry-run`, then `--apply`
-   - if no search API key is configured, search prompts degrade to a normal model answer with an explicit live-search-unavailable instruction instead of breaking `claude-glm`
+   - CCR removes local search/fetch tools for search-intent prompts; LiteLLM performs the actual Exa prefetch and injection
 6. If the user also wants Z.ai search MCP, confirm they have a Z.ai account and API key, export it as `Z_API_KEY`, then run `scripts/configure-zai-search-mcp.sh`.
 
 Example:
@@ -65,7 +66,7 @@ export Z_API_KEY='...'
 /root/.codex/skills/claude-code-huawei-maas/scripts/configure-zai-search-mcp.sh
 ```
 
-Add CCR search prefetching:
+Add the CCR bridge for LiteLLM-backed search:
 
 ```bash
 /root/.codex/skills/claude-code-huawei-maas/scripts/configure-ccr-search.py --dry-run
@@ -285,7 +286,7 @@ fi
 exec claude --model "$ANTHROPIC_MODEL" "$@"
 ```
 
-## CCR Search Prefetch
+## CCR Bridge For LiteLLM Search
 
 Use this when the user wants Claude Code search tasks to avoid Claude Code local `WebFetch`/`Fetch`, especially for prompts like:
 
@@ -294,13 +295,14 @@ Use this when the user wants Claude Code search tasks to avoid Claude Code local
 - `find current pricing`
 - any request that depends on current web information
 
-This path is different from Z.ai MCP search and from LiteLLM `websearch_interception`. Z.ai MCP exposes a search tool directly to Claude Code. CCR search prefetch routes the search at the router layer: `Claude Code -> ccr transformer -> search API -> injected source snippets -> MaaS model`.
+This path is different from Z.ai MCP search and from LiteLLM `websearch_interception`. Z.ai MCP exposes a search tool directly to Claude Code. The claude-glm path uses CCR only as a bridge: `Claude Code -> ccr transformer -> LiteLLM /v1/responses -> LiteLLM custom callback -> Exa snippets -> MaaS model`.
 
 Expected search API configuration:
 
-- Set `EXA_API_KEY` or `CCR_SEARCH_API_KEY` in the CCR process environment when live search is desired.
+- Set `EXA_API_KEY` in the LiteLLM process environment when live search is desired.
+- Mount `LiteLLM-Huawei-MaaS-Proxy/assets/config/custom_callbacks.py` into LiteLLM.
 - Do not configure LiteLLM `search_tools` or `websearch_interception` for this path.
-- If no search API key is present, the CCR transformer strips search/fetch tools for search-intent prompts and tells the model live search is unavailable. Normal `claude-glm` prompts continue to use the configured MaaS provider.
+- If no search API key is present, LiteLLM logs that Exa is not configured and the model answers without injected live results. Normal `claude-glm` prompts continue to use the configured provider.
 
 Expected CCR behavior:
 
@@ -310,17 +312,16 @@ Expected CCR behavior:
 [
   ["maxtoken", {"max_tokens": 8192}],
   "cleancache",
-  "ccr-search-prefetch",
-  "reasoning",
-  "enhancetool"
+  "claude-websearch-to-responses",
+  "openai-responses",
+  "claude-websearch-to-responses"
 ]
 ```
 
 - Detect search intent from the latest user message, not from `<system-reminder>` context.
-- Fetch search results in the CCR transformer when a search key is configured.
-- Inject compact source snippets and source URLs into the latest user message.
-- Remove `WebSearch`, `WebFetch`, and `Fetch` from the downstream tool list so GLM does not emit unreliable search/fetch tool calls.
-- Leave the provider `api_base_url` unchanged; it can remain the Huawei MaaS OpenAI-compatible chat completions endpoint.
+- Set `use_chat_completions_api = true` for Responses payloads so LiteLLM can bridge to OpenAI-compatible chat models.
+- Remove local Claude Code search/fetch tools for search-intent prompts so GLM does not emit unreliable tool calls.
+- Leave live search fetching to the LiteLLM callback.
 
 Preferred setup script:
 
@@ -349,8 +350,8 @@ curl -sS -N 'http://127.0.0.1:3456/v1/messages?beta=true' \
 
 Pass criteria:
 
-- With `EXA_API_KEY` or `CCR_SEARCH_API_KEY`, CCR output contains current-information text and source URLs.
-- Without a search key, `claude-glm` still answers normally and may state that live search is unavailable.
+- With `EXA_API_KEY` visible to LiteLLM, output contains current-information text and source URLs.
+- Without `EXA_API_KEY`, `claude-glm` still answers normally but has no injected live search results.
 - Claude Code does not show local `Fetch(...)` or `WebFetch(...)` tool calls for search-intent prompts.
 
 ## Z.ai Web Search MCP
@@ -420,13 +421,13 @@ claude mcp get web-search-prime
 
 Successful output should show `Status: ✓ Connected`. If it is connected, Claude Code can call `mcp__web-search-prime__web_search_prime`.
 
-For CCR search prefetch, verify that the model is not choosing Claude Code local fetch:
+For LiteLLM-backed search, verify that the model is not choosing Claude Code local fetch:
 
 ```bash
 claude-glm -p '搜索今天的新闻，只列1条。'
 ```
 
-With `EXA_API_KEY` or `CCR_SEARCH_API_KEY` available to CCR, successful output should return current-news text and source URLs. Without a search key, the request should still complete and may state that live search is unavailable. Interactive Claude Code should not show `Fetch(https://...)` for search-intent prompts after the CCR transformer filters local fetch tools.
+With `EXA_API_KEY` available to LiteLLM, successful output should return current-news text and source URLs. Without a search key, the request should still complete, but it will not have injected live search results. Interactive Claude Code should not show `Fetch(https://...)` for search-intent prompts after the CCR transformer filters local fetch tools.
 
 ## Troubleshooting
 
@@ -443,9 +444,9 @@ With `EXA_API_KEY` or `CCR_SEARCH_API_KEY` available to CCR, successful output s
 - **`Z_API_KEY is not set`**: Export `Z_API_KEY` before starting Claude Code or before running `claude mcp get web-search-prime`.
 - **Z.ai MCP fails with auth errors**: Confirm the user has a Z.ai account, the API key is active, and the environment variable name is exactly `Z_API_KEY`.
 - **Z.ai MCP was added with a literal `${Z_API_KEY}` header**: Replace the static `headers` entry with `headersHelper` so Claude Code reads the current environment at runtime.
-- **Search prompt calls Claude Code `Fetch`/`WebFetch`**: Configure CCR search prefetching with `configure-ccr-search.py`. The CCR transformer should detect search intent, inject search results when a key is configured, and filter local search/fetch tools from the downstream request.
-- **Search prompt says live search is unavailable**: Confirm `EXA_API_KEY` or `CCR_SEARCH_API_KEY` is visible to the CCR process. This is a graceful degraded state; it should not prevent normal `claude-glm` requests from working.
-- **Search results are stale or missing URLs**: Inspect the CCR plugin and search provider response first. The model should answer only from injected CCR search snippets when search succeeds.
+- **Search prompt calls Claude Code `Fetch`/`WebFetch`**: Configure the CCR bridge with `configure-ccr-search.py`. The transformer should detect search intent and filter local search/fetch tools from the downstream request.
+- **Search prompt has no live results**: Confirm `EXA_API_KEY` is visible to the LiteLLM process and inspect `litellm_proxy` logs for `[ExaSearch]`.
+- **Search results are stale or missing URLs**: Inspect the LiteLLM callback and Exa provider response first. The model should answer only from injected LiteLLM search snippets when search succeeds.
 - **`curl` fails with shared library errors**: Use Node `fetch` or `claude --print` for verification instead of curl.
 - **Long context mismatch**: Treat `120k` as context length, not output length. Keep `maxtoken.max_tokens` as a generation cap such as `8192`; set `CLAUDE_CODE_MAX_CONTEXT_TOKENS=120000`.
 - **Existing `claude` wrapper**: Preserve user changes. Inspect the wrapper before replacing it, and keep the original binary or script as `.real`.
@@ -454,5 +455,5 @@ With `EXA_API_KEY` or `CCR_SEARCH_API_KEY` available to CCR, successful output s
 
 - `scripts/configure.sh`: end-to-end installer/configurator and smoke test.
 - `scripts/configure-claude-glm.sh`: side-by-side installer that preserves `claude` and adds `claude-glm`/`Claude-glm` for Huawei MaaS.
-- `scripts/configure-ccr-search.py`: configure CCR search prefetching so Claude Code search-intent prompts get injected search snippets and do not depend on LiteLLM search tooling.
+- `scripts/configure-ccr-search.py`: install the CCR bridge that strips local search/fetch tools and routes search-intent prompts toward LiteLLM-side Exa injection.
 - `scripts/configure-zai-search-mcp.sh`: add and verify Z.ai `web-search-prime` MCP search using `Z_API_KEY`.

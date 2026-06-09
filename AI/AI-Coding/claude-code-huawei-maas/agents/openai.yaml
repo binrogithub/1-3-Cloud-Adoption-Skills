@@ -1,4 +1,4 @@
 interface:
   display_name: "Claude Code Huawei MaaS"
-  short_description: "Add claude-glm and MaaS search routing"
-  default_prompt: "Configure this host with a side-by-side claude-glm command that uses Huawei Cloud MaaS glm-5.1 through claude-code-router while preserving the original claude command on Anthropic; optionally route Claude Code search prompts through CCR-layer search prefetching or add Z.ai web-search-prime MCP search, then verify the active backend model and search path."
+  short_description: "Add claude-glm and LiteLLM-backed search routing"
+  default_prompt: "Configure this host with a side-by-side claude-glm command that uses Huawei Cloud MaaS glm-5.1 through claude-code-router while preserving the original claude command on Anthropic; optionally route Claude Code search prompts through the CCR bridge plus LiteLLM Exa search injection or add Z.ai web-search-prime MCP search, then verify the active backend model and search path."
