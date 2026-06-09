@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
-"""Install CCR-layer web search prefetching for Claude Code.
+"""Install the claude-glm CCR bridge for LiteLLM-backed search.
 
-This script intentionally avoids changing LiteLLM. Search is performed by a
-CCR transformer before the model call. If no search API key is configured,
-search prompts degrade to a normal model answer instead of breaking claude-glm.
+The current claude-glm search path is:
+
+  Claude Code -> CCR /v1/messages -> LiteLLM /v1/responses
+    -> LiteLLM custom_callbacks.py injects Exa search results
+    -> Huawei MaaS GLM answers normally
+
+This script installs the CCR transformer used by that path. The transformer
+does not call a search API itself; it strips local Claude Code search/fetch
+tools for search-intent prompts and lets the LiteLLM callback do the live
+search injection when EXA_API_KEY is configured.
 """
 
 from __future__ import annotations
@@ -18,12 +25,17 @@ from pathlib import Path
 from typing import Any
 
 
-TRANSFORMER_JS = r'''class CcrSearchPrefetch {
+TRANSFORMER_JS = r'''class ClaudeWebSearchToResponses {
   constructor(options = {}) {
     this.options = options;
   }
 
-  name = "ccr-search-prefetch";
+  name = "claude-websearch-to-responses";
+
+  isSearchIntent(body) {
+    const text = this.latestUserText(body).toLowerCase();
+    return /搜索|新闻|最新|今天|今日|current|latest|today|news|search/.test(text);
+  }
 
   latestUserText(body) {
     const textParts = [];
@@ -47,6 +59,7 @@ TRANSFORMER_JS = r'''class CcrSearchPrefetch {
         if (Array.isArray(value.content)) collect(value.content);
       }
     };
+
     const latestUserMessage = (messages) => {
       if (!Array.isArray(messages)) return undefined;
       for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -58,11 +71,6 @@ TRANSFORMER_JS = r'''class CcrSearchPrefetch {
     collect(latestUserMessage(body && body.messages));
     collect(latestUserMessage(body && body.input));
     return textParts.join("\n");
-  }
-
-  isSearchIntent(body) {
-    const text = this.latestUserText(body).toLowerCase();
-    return /搜索|新闻|最新|今天|今日|current|latest|today|news|search/.test(text);
   }
 
   addSystemInstruction(body, content) {
@@ -81,143 +89,137 @@ TRANSFORMER_JS = r'''class CcrSearchPrefetch {
     }
   }
 
-  appendLatestUserText(body, text) {
-    const appendToMessage = (message) => {
-      if (!message || message.role !== "user") return false;
-      if (typeof message.content === "string") {
-        message.content += text;
-        return true;
+  async transformRequestIn(body) {
+    const searchIntent = this.isSearchIntent(body);
+
+    if (body && Array.isArray(body.input)) {
+      body.use_chat_completions_api = true;
+    }
+
+    if (searchIntent) {
+      this.addSystemInstruction(
+        body,
+        "Live search, when configured, is handled before the model call by the LiteLLM proxy. Do not call WebSearch, WebFetch, Fetch, or shell tools for this search request."
+      );
+      if (Array.isArray(body.tools)) {
+        body.tools = [];
       }
-      if (Array.isArray(message.content)) {
-        message.content.push({ type: "text", text });
-        return true;
-      }
-      return false;
+    }
+
+    return body;
+  }
+
+  async transformResponseOut(response) {
+    if (!response || !response.body) return response;
+
+    const decoder = new TextDecoder();
+    const encoder = new TextEncoder();
+    const pendingTools = new Map();
+    let buffer = "";
+
+    const emitSse = (controller, eventName, data) => {
+      if (eventName) controller.enqueue(encoder.encode(`event: ${eventName}\n`));
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
     };
 
-    for (const key of ["messages", "input"]) {
-      if (!Array.isArray(body[key])) continue;
-      for (let i = body[key].length - 1; i >= 0; i -= 1) {
-        if (appendToMessage(body[key][i])) return;
+    const processEvent = (controller, rawEvent) => {
+      const lines = rawEvent.split(/\r?\n/);
+      let eventName = "";
+      const dataLines = [];
+      for (const line of lines) {
+        if (line.startsWith("event:")) eventName = line.slice(6).trim();
+        if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
       }
-    }
-  }
 
-  readEnvFile(path, name) {
-    try {
-      const fs = require("fs");
-      const text = fs.readFileSync(path, "utf8");
-      const line = text
-        .split(/\r?\n/)
-        .find((entry) => entry.trim().startsWith(`${name}=`));
-      if (!line) return "";
-      return line
-        .slice(line.indexOf("=") + 1)
-        .trim()
-        .replace(/^['"]|['"]$/g, "");
-    } catch {
-      return "";
-    }
-  }
+      if (dataLines.length === 0) {
+        controller.enqueue(encoder.encode(`${rawEvent}\n\n`));
+        return;
+      }
 
-  readEnvValue(name) {
-    if (process.env[name]) return process.env[name];
-    const envFiles = [
-      this.options.envFile,
-      process.env.CCR_SEARCH_ENV_FILE,
-      "/root/.config/claude-glm/env",
-      "/root/LiteLLM/.env",
-    ].filter(Boolean);
-    for (const path of envFiles) {
-      const value = this.readEnvFile(path, name);
-      if (value) return value;
-    }
-    return "";
-  }
+      const dataText = dataLines.join("\n");
+      if (dataText === "[DONE]") {
+        controller.enqueue(encoder.encode(`${rawEvent}\n\n`));
+        return;
+      }
 
-  searchApiKey() {
-    return (
-      this.readEnvValue("CCR_SEARCH_API_KEY") ||
-      this.readEnvValue("EXA_API_KEY")
-    );
-  }
+      let data;
+      try {
+        data = JSON.parse(dataText);
+      } catch {
+        controller.enqueue(encoder.encode(`${rawEvent}\n\n`));
+        return;
+      }
 
-  async fetchExa(query) {
-    const apiKey = this.searchApiKey();
-    if (!apiKey || !query) return "";
+      if (
+        data.type === "content_block_start" &&
+        data.content_block?.type === "tool_use"
+      ) {
+        pendingTools.set(data.index, { eventName, data, partialJson: "" });
+        return;
+      }
 
-    try {
-      const response = await fetch("https://api.exa.ai/search", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          query,
-          numResults: Number(this.options.numResults || 5),
-          contents: { text: true },
-        }),
-      });
-      if (!response.ok) return "";
+      if (
+        data.type === "content_block_delta" &&
+        data.delta?.type === "input_json_delta" &&
+        pendingTools.has(data.index)
+      ) {
+        pendingTools.get(data.index).partialJson += data.delta.partial_json || "";
+        return;
+      }
 
-      const data = await response.json();
-      const results = Array.isArray(data.results) ? data.results : [];
-      if (results.length === 0) return "";
+      if (data.type === "content_block_stop" && pendingTools.has(data.index)) {
+        const pending = pendingTools.get(data.index);
+        pendingTools.delete(data.index);
 
-      const lines = results.map((item, index) => {
-        const title = item.title || "Untitled";
-        const url = item.url || item.id || "";
-        const published = item.publishedDate || "unknown date";
-        const snippet = String(item.text || item.summary || "")
-          .replace(/\s+/g, " ")
-          .slice(0, 900);
-        return `${index + 1}. ${title}\nURL: ${url}\nPublished: ${published}\nSnippet: ${snippet}`;
-      });
-      return `CCR web search results for: ${query}\n\n${lines.join("\n\n")}`;
-    } catch {
-      return "";
-    }
-  }
+        const startData = JSON.parse(JSON.stringify(pending.data));
+        try {
+          startData.content_block.input = pending.partialJson
+            ? JSON.parse(pending.partialJson)
+            : startData.content_block.input || {};
+        } catch {
+          startData.content_block.input = startData.content_block.input || {};
+        }
 
-  stripSearchAndFetchTools(body) {
-    if (!Array.isArray(body.tools)) return;
-    body.tools = body.tools.filter((tool) => {
-      const name = tool && (tool.name || (tool.function && tool.function.name));
-      return !["WebSearch", "WebFetch", "Fetch", "web_search", "litellm_web_search"].includes(name);
+        emitSse(controller, pending.eventName, startData);
+        emitSse(controller, eventName, data);
+        return;
+      }
+
+      emitSse(controller, eventName, data);
+    };
+
+    const stream = new TransformStream({
+      transform(chunk, controller) {
+        buffer += decoder.decode(chunk, { stream: true });
+        let boundary;
+        while ((boundary = buffer.search(/\r?\n\r?\n/)) !== -1) {
+          const rawEvent = buffer.slice(0, boundary);
+          const match = buffer.slice(boundary).match(/^\r?\n\r?\n/);
+          buffer = buffer.slice(boundary + (match ? match[0].length : 2));
+          processEvent(controller, rawEvent);
+        }
+      },
+      flush(controller) {
+        buffer += decoder.decode();
+        if (buffer.trim()) processEvent(controller, buffer.trimEnd());
+      },
     });
-  }
 
-  async transformRequestIn(body) {
-    if (!body || !this.isSearchIntent(body)) return body;
-
-    const query = this.latestUserText(body).slice(0, 500);
-    const searchResults = await this.fetchExa(query);
-
-    if (searchResults) {
-      this.addSystemInstruction(
-        body,
-        "CCR has already searched the web for this request. Answer only from the injected CCR web search results. Include source URLs from those results. Do not call search, fetch, or shell tools."
-      );
-      this.appendLatestUserText(body, `\n\n${searchResults}`);
-    } else {
-      this.addSystemInstruction(
-        body,
-        "CCR web search is not configured or returned no results. Do not call WebSearch, WebFetch, Fetch, or shell tools for this search request. If the user asked for current information, clearly say that live search is unavailable and answer from available model knowledge only when useful."
-      );
-    }
-
-    this.stripSearchAndFetchTools(body);
-    return body;
+    return new Response(response.body.pipeThrough(stream), {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
   }
 }
 
-module.exports = CcrSearchPrefetch;
+module.exports = ClaudeWebSearchToResponses;
 '''
 
 
+BRIDGE_NAME = "claude-websearch-to-responses"
 LEGACY_TRANSFORMER_NAMES = {
-    "claude-websearch-to-responses",
+    "ccr-search-prefetch",
     "litellm_web_search",
 }
 
@@ -254,24 +256,25 @@ def normalize_transformer_item(item: Any) -> str | None:
     return None
 
 
-def without_legacy_search(items: list[Any]) -> list[Any]:
+def clean_bridge_items(items: list[Any]) -> list[Any]:
     return [
         item
         for item in items
-        if normalize_transformer_item(item) not in LEGACY_TRANSFORMER_NAMES
+        if normalize_transformer_item(item) not in LEGACY_TRANSFORMER_NAMES | {BRIDGE_NAME}
     ]
 
 
-def insert_ccr_search_prefetch(items: list[Any]) -> list[Any]:
-    items = without_legacy_search(items)
-    if "ccr-search-prefetch" in items:
-        return items
-
-    for marker in ("openai-responses", "reasoning", "enhancetool"):
-        if marker in items:
-            index = items.index(marker)
-            return items[:index] + ["ccr-search-prefetch"] + items[index:]
-    return items + ["ccr-search-prefetch"]
+def insert_bridge(items: list[Any]) -> list[Any]:
+    items = clean_bridge_items(items)
+    names = [normalize_transformer_item(item) for item in items]
+    if "openai-responses" in names:
+        index = names.index("openai-responses")
+        return items[:index] + [BRIDGE_NAME, items[index], BRIDGE_NAME] + items[index + 1 :]
+    for marker in ("reasoning", "enhancetool"):
+        if marker in names:
+            index = names.index(marker)
+            return items[:index] + [BRIDGE_NAME] + items[index:]
+    return items + [BRIDGE_NAME]
 
 
 def patch_ccr_config(path: Path, plugin_path: Path, apply: bool) -> None:
@@ -280,7 +283,7 @@ def patch_ccr_config(path: Path, plugin_path: Path, apply: bool) -> None:
     for provider in data.setdefault("Providers", []):
         transformer = provider.setdefault("transformer", {})
         use = transformer.setdefault("use", [])
-        transformer["use"] = insert_ccr_search_prefetch(use)
+        transformer["use"] = insert_bridge(use)
 
     transformers = data.setdefault("transformers", [])
     plugin_entry = {"path": str(plugin_path)}
@@ -305,7 +308,7 @@ def main() -> int:
     parser.add_argument("--ccr-config", default="/root/.claude-code-router/config.json")
     parser.add_argument(
         "--ccr-plugin",
-        default="/root/.claude-code-router/plugins/ccr-search-prefetch.js",
+        default="/root/.claude-code-router/plugins/claude-websearch-to-responses.js",
     )
     args = parser.parse_args()
 

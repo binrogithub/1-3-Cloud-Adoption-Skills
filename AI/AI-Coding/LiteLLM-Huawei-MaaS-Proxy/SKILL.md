@@ -57,6 +57,9 @@ All of these are collected by `./scripts/init_env.sh` (interactive, `--auto`, or
 - **`STORE_MODEL_IN_DB: True`** — DB models take precedence over config file models.
 - **`drop_params: True`** — unsupported parameters silently dropped rather than causing errors.
 - **TTFT and ITL custom metrics are streaming-only.**
+- **Search injection is LiteLLM-side.** `custom_callbacks.py` detects search intent and calls Exa when `EXA_API_KEY` is available.
+- **Image routing is LiteLLM-side.** `custom_callbacks.py` detects `image_url` / `image` content blocks and rewrites the request to `vision-openrouter`.
+- **Claude Code search should strip local WebSearch/WebFetch in CCR.** Pair this proxy with the `claude-code-huawei-maas` CCR bridge so GLM is not asked to emit fragile search tool JSON.
 - **With N MaaS API keys, each model has N deployments.** LiteLLM load-balances across them. Effective RPM/TPM = per-key × N.
 - **`HUAWEI_MAAS_API_KEY` is mandatory.** Extra keys are optional. `HUAWEI_MAAS_API_KEY_COUNT` and `HUAWEI_MAAS_API_KEY_N` are set by `init_env.sh`.
 
@@ -188,7 +191,7 @@ Single key = identical behavior to before. No changes required for existing sing
 | `docker-compose.yml` | Service orchestration | YAML anchor, 4 services with healthcheck chain, named volumes, mounts from `./assets/config/` |
 | `assets/config/litellm_config.yaml.example` | Model catalog example | `openai/` prefix + MaaS endpoint, `tpm`/`rpm` per model, per-token pricing, tracked in git |
 | `assets/config/litellm_config.yaml` | Generated config | Created by `generate_config.sh`, gitignored, N deployments per model |
-| `assets/config/custom_callbacks.py` | Custom Prometheus metrics | `PrometheusTTFTTPOTITL(CustomLogger)`, 3 histograms labeled by `model`, `model_group`, `api_provider` |
+| `assets/config/custom_callbacks.py` | Custom callback | `PrometheusTTFTTPOTITL(CustomLogger)`, metrics, Exa search injection, image routing, Responses tool repair |
 | `assets/config/prometheus.yml` | Scrape config | Single job `litellm` at 15s interval |
 | `assets/config/grafana/provisioning/datasources/prometheus.yml` | Datasource | Prometheus type, proxy access, `http://prometheus:9090` |
 | `assets/config/grafana/provisioning/dashboards/dashboards.yml` | Dashboard provider | File-based, org 1, 30s update interval |

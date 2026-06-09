@@ -14,9 +14,69 @@
 
 model_list:
 
+  # ───────── OpenRouter Vision Models (image requests auto-routed here) ─────────
+
+  - model_name: vision-openrouter
+    litellm_params:
+      model: openrouter/openai/gpt-4o
+      api_key: os.environ/OpenRouter_API_KEY
+      api_base: https://openrouter.ai/api/v1
+      tpm: 800000
+      rpm: 100
+    model_info:
+      supports_vision: true
+      max_tokens: 16384
+      max_input_tokens: 128000
+      max_output_tokens: 16384
+      input_cost_per_token: 0.0000025
+      output_cost_per_token: 0.00001
+
+  - model_name: vision-openrouter
+    litellm_params:
+      model: openrouter/anthropic/claude-opus-4
+      api_key: os.environ/OpenRouter_API_KEY
+      api_base: https://openrouter.ai/api/v1
+      tpm: 400000
+      rpm: 50
+    model_info:
+      supports_vision: true
+      max_tokens: 32000
+      max_input_tokens: 200000
+      max_output_tokens: 32000
+      input_cost_per_token: 0.000015
+      output_cost_per_token: 0.000075
+
   # ───────── Huawei MaaS Models ───────────
 
   - model_name: glm-5.1
+    litellm_params:
+      model: openai/glm-5.1
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      tpm: 500000
+      rpm: 30
+    model_info:
+      max_tokens: 198000
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+      input_cost_per_token: 0.000001078
+      output_cost_per_token: 0.000003774
+
+  - model_name: claude-opus-4-6
+    litellm_params:
+      model: openai/glm-5.1
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      tpm: 500000
+      rpm: 30
+    model_info:
+      max_tokens: 198000
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+      input_cost_per_token: 0.000001078
+      output_cost_per_token: 0.000003774
+
+  - model_name: claude-glm1
     litellm_params:
       model: openai/glm-5.1
       api_base: os.environ/HUAWEI_MAAS_API_BASE

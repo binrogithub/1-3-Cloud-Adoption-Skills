@@ -13,7 +13,7 @@ docker-compose.yml                              4-service Docker stack (referenc
 assets/config/
   litellm_config.yaml.example                    model catalog example (tracked in git)
   litellm_config.yaml                            generated config (gitignored, created by generate_config.sh)
-  custom_callbacks.py                            TTFT/TPOT/ITL Prometheus callback
+  custom_callbacks.py                            TTFT/TPOT/ITL metrics, Exa search injection, image routing
   prometheus.yml                                 15s scrape config
   .env.example                                   environment template
   grafana/
@@ -67,6 +67,8 @@ Single-host AI gateway for centralized key management, spend tracking, rate limi
 | Grafana | 11.5.2 | Pre-built latency/spend/token dashboard |
 | Huawei MaaS API | ap-southeast-1 | Upstream LLM inference |
 | Docker | 20.10+ with Compose V2 | Container orchestration |
+| Exa API | Optional | Current web search injection for search-intent prompts |
+| OpenRouter API | Optional | Vision model routing for image prompts |
 
 ## Workflow
 
@@ -79,7 +81,7 @@ Single-host AI gateway for centralized key management, spend tracking, rate limi
 ## Expected Outputs
 
 - 4-service Docker Compose stack, all healthy
-- OpenAI-compatible endpoint on `localhost:4000` with 5 configured models
+- OpenAI-compatible endpoint on `localhost:4000` with MaaS text models, Claude Code aliases, and optional `vision-openrouter`
 - Pre-built Grafana dashboard with request rates, latency percentiles, spend, token rates, and custom TTFT/TPOT/ITL histograms
 - Virtual key management API for multi-user budget enforcement
 
@@ -94,7 +96,7 @@ See [SKILL.md](./SKILL.md) **Verification Exit Criteria** — 12-item checklist 
 | `docker-compose.yml` | 4-service stack with healthcheck chain, YAML anchor, named volumes |
 | `assets/config/litellm_config.yaml.example` | Model catalog example with `openai/` prefix, MaaS endpoint, per-model tpm/rpm and pricing |
 | `assets/config/litellm_config.yaml` | Generated config (gitignored), created by `generate_config.sh` |
-| `assets/config/custom_callbacks.py` | TTFT/TPOT/ITL Prometheus histograms labeled by model/group/provider |
+| `assets/config/custom_callbacks.py` | TTFT/TPOT/ITL metrics, Exa result injection, image-to-OpenRouter routing, Responses tool repair |
 | `assets/config/prometheus.yml` | 15s scrape job targeting `litellm:4000` |
 | `assets/config/grafana/provisioning/` | Auto-linked Prometheus datasource + pre-built dashboard |
 | `assets/config/.env.example` | Template with all required and optional variables |
@@ -189,6 +191,9 @@ docker compose up -d
 | `deepseek-v4-pro` | 1M / 128K | 3 | 30K | $1.617 / $3.235 × 10⁻⁶ |
 | `deepseek-v4-flash` | 1M / 128K | 3 | 30K | $0.135 / $0.270 × 10⁻⁶ |
 | `deepseek-v3.2` | 128K / 32K | 700 | 500K | $0.270 / $0.404 × 10⁻⁶ |
+| `claude-glm1` | 192K / 128K | 30 | 500K | Alias to `glm-5.1` for Claude Code router clients |
+| `claude-opus-4-6` | 192K / 128K | 30 | 500K | Compatibility alias to `glm-5.1` |
+| `vision-openrouter` | Provider-dependent | 50-100 | 400K-800K | OpenRouter fallback group for image prompts |
 
 > **Effective totals:** With N MaaS API keys configured, each model has N deployments. Effective RPM = per-key × N, effective TPM = per-key × N. LiteLLM load-balances across all deployments.
 
@@ -226,3 +231,16 @@ The dashboard includes a "Deployment Load Balancing" row with 5 panels:
 | `HUAWEI_MAAS_EXTRA_API_KEYS` | No | — | Comma-separated extra keys for CI mode. |
 | `PROMETHEUS_RETENTION` | No | `15d` | TSDB retention. |
 | `GRAFANA_PASSWORD` | No | `admin` | Admin password. |
+| `EXA_API_KEY` | No | — | Enables LiteLLM-side search result injection for current/search prompts. |
+| `OpenRouter_API_KEY` | No | — | Enables automatic image request routing through `vision-openrouter`. |
+| `LITELLM_CCR_KEY` | No | — | Optional virtual key for a local CCR/`claude-glm` client. |
+
+## Claude Code Search And Image Routing
+
+`assets/config/custom_callbacks.py` extends the metrics callback with request mutation hooks:
+
+- Search prompts matching `搜索`, `新闻`, `最新`, `current`, `latest`, `today`, `news`, or `search` call Exa when `EXA_API_KEY` is set. The callback injects compact result snippets and source URLs into the request before GLM is called.
+- Image prompts containing OpenAI-style `image_url` blocks or Anthropic-style `image` blocks are rewritten to the `vision-openrouter` model group.
+- Responses API function tool shapes are repaired before deployment calls so LiteLLM can bridge CCR `/v1/responses` traffic to OpenAI-compatible chat models.
+
+For `claude-glm`, pair this LiteLLM proxy with `claude-code-huawei-maas/scripts/configure-ccr-search.py`. CCR should strip local Claude Code `WebSearch`/`WebFetch` tools for search-intent prompts, while LiteLLM performs the actual Exa prefetch.

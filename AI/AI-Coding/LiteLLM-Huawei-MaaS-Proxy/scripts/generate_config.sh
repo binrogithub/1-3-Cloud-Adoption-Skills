@@ -67,13 +67,15 @@ for i in $(seq 0 $((KEY_COUNT - 1))); do
 done
 
 # ── Model catalog ────────────────────────────────────────────────
-# Format: model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost
+# Format: model_name:upstream_model:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost
 MODELS=(
-  "glm-5.1:500000:30:198000:192000:128000:0.000001078:0.000003774"
-  "glm-5:500000:30:198000:192000:64000:0.000000809:0.000002965"
-  "deepseek-v4-pro:30000:3:1000000:1000000:128000:0.000001617:0.000003235"
-  "deepseek-v4-flash:30000:3:1000000:1000000:128000:0.000000135:0.00000027"
-  "deepseek-v3.2:500000:700:160000:128000:32000:0.00000027:0.000000404"
+  "glm-5.1:glm-5.1:500000:30:198000:192000:128000:0.000001078:0.000003774"
+  "claude-opus-4-6:glm-5.1:500000:30:198000:192000:128000:0.000001078:0.000003774"
+  "claude-glm1:glm-5.1:500000:30:198000:192000:128000:0.000001078:0.000003774"
+  "glm-5:glm-5:500000:30:198000:192000:64000:0.000000809:0.000002965"
+  "deepseek-v4-pro:deepseek-v4-pro:30000:3:1000000:1000000:128000:0.000001617:0.000003235"
+  "deepseek-v4-flash:deepseek-v4-flash:30000:3:1000000:1000000:128000:0.000000135:0.00000027"
+  "deepseek-v3.2:deepseek-v3.2:500000:700:160000:128000:32000:0.00000027:0.000000404"
 )
 
 MODEL_COUNT=${#MODELS[@]}
@@ -90,11 +92,43 @@ fi
 {
   echo "model_list:"
   echo ""
+  echo "  # ───────── OpenRouter Vision Models (image requests auto-routed here) ─────────"
+  echo ""
+  echo "  - model_name: vision-openrouter"
+  echo "    litellm_params:"
+  echo "      model: openrouter/openai/gpt-4o"
+  echo "      api_key: os.environ/OpenRouter_API_KEY"
+  echo "      api_base: https://openrouter.ai/api/v1"
+  echo "      tpm: 800000"
+  echo "      rpm: 100"
+  echo "    model_info:"
+  echo "      supports_vision: true"
+  echo "      max_tokens: 16384"
+  echo "      max_input_tokens: 128000"
+  echo "      max_output_tokens: 16384"
+  echo "      input_cost_per_token: 0.0000025"
+  echo "      output_cost_per_token: 0.00001"
+  echo ""
+  echo "  - model_name: vision-openrouter"
+  echo "    litellm_params:"
+  echo "      model: openrouter/anthropic/claude-opus-4"
+  echo "      api_key: os.environ/OpenRouter_API_KEY"
+  echo "      api_base: https://openrouter.ai/api/v1"
+  echo "      tpm: 400000"
+  echo "      rpm: 50"
+  echo "    model_info:"
+  echo "      supports_vision: true"
+  echo "      max_tokens: 32000"
+  echo "      max_input_tokens: 200000"
+  echo "      max_output_tokens: 32000"
+  echo "      input_cost_per_token: 0.000015"
+  echo "      output_cost_per_token: 0.000075"
+  echo ""
   echo "  # ───────── Huawei MaaS Models (${KEY_COUNT} deployment(s) per model, ${TOTAL_DEPLOYMENTS} total) ───────────"
   echo ""
 
   for model_entry in "${MODELS[@]}"; do
-    IFS=':' read -r model_name tpm rpm max_tokens max_input max_output input_cost output_cost <<< "$model_entry"
+    IFS=':' read -r model_name upstream_model tpm rpm max_tokens max_input max_output input_cost output_cost <<< "$model_entry"
 
     for i in $(seq 0 $((KEY_COUNT - 1))); do
       if [ "$KEY_COUNT" -gt 1 ]; then
@@ -102,7 +136,7 @@ fi
       fi
       echo "  - model_name: $model_name"
       echo "    litellm_params:"
-      echo "      model: openai/$model_name"
+      echo "      model: openai/$upstream_model"
       echo "      api_base: os.environ/HUAWEI_MAAS_API_BASE"
       echo "      api_key: os.environ/HUAWEI_MAAS_API_KEY_$i"
       echo "      tpm: $tpm"
@@ -153,7 +187,7 @@ if [ "$KEY_COUNT" -gt 1 ]; then
   echo ""
   echo "  Effective capacity (per model):"
   for model_entry in "${MODELS[@]}"; do
-    IFS=':' read -r model_name tpm rpm _ <<< "$model_entry"
+    IFS=':' read -r model_name _upstream_model tpm rpm _ <<< "$model_entry"
     total_rpm=$((rpm * KEY_COUNT))
     total_tpm=$((tpm * KEY_COUNT))
     echo "    $model_name: $total_rpm RPM, $total_tpm TPM ($KEY_COUNT × $rpm RPM, $KEY_COUNT × $tpm TPM)"
