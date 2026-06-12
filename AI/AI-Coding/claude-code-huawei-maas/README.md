@@ -220,15 +220,36 @@ It also runs a smoke test and expects the result to report `modelUsage.glm-5.1`.
 claude-code-huawei-maas/
 ├── README.md
 ├── SKILL.md
+├── adapter/                  # LiteLLM Anthropic adapter (port 4010): usage passthrough lives here
+│   ├── README.md
+│   ├── server.js
+│   ├── start.sh
+│   └── stop.sh
 ├── agents/
 │   └── openai.yaml
-└── scripts/
-    ├── claude-glm-recover.sh
-    ├── configure-ccr-search.py
-    ├── configure-claude-glm.sh
-    ├── configure-zai-search-mcp.sh
-    └── configure.sh
+├── assets/
+│   └── ccr/                  # verified production CCR config + custom router (unknown-model rejection)
+│       ├── config.json
+│       └── custom-router.js
+├── scripts/
+│   ├── claude-glm-recover.sh
+│   ├── configure-ccr-search.py
+│   ├── configure-claude-glm.sh
+│   ├── configure-zai-search-mcp.sh
+│   ├── configure.sh
+│   ├── install-anthropic-adapter.sh
+│   └── restore-ccr-config.sh
+└── tests/                    # production test plan, concurrent runner, reports
 ```
+
+## Config Ownership Warning
+
+`~/.claude-code-router/config.json` is rewritten by multiple tools on a shared host
+(`configure-claude-glm.sh`, other coding agents, manual edits). The legacy single-provider
+layout silently degrades claude-glm: `usage` drops back to 0 (auto-compact stops working)
+and unknown-model rejection is bypassed because `CUSTOM_ROUTER_PATH` is absent. If those
+symptoms appear, run `scripts/restore-ccr-config.sh` and find out what rewrote the config
+before assuming a regression.
 
 ## Security
 

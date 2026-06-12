@@ -148,6 +148,28 @@ export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="\${ANTHROPIC_CUSTOM_MODEL_OPTION_NAME
 export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="\${ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION:-Huawei Cloud MaaS $MAAS_MODEL}"
 unset CLAUDE_CODE_USE_BEDROCK
 
+# GET / on ccr is unauthenticated, so a running router passes basic checks
+# even with a wrong token and claude then retries 401s for 60s+ with no
+# visible error. Probe the authenticated /v1/messages endpoint once
+# (1 max_token) and fail fast on auth errors only; any other status
+# (200/400/5xx/000 timeout) passes through so backend hiccups never block
+# startup.
+check_router_token() {
+  token_status="\$(curl -sS -m 15 -o /dev/null -w '%{http_code}' \
+    -X POST \
+    -H "Authorization: Bearer \$ANTHROPIC_AUTH_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"model":"claude-opus-4-6","max_tokens":1,"messages":[{"role":"user","content":"ping"}]}' \
+    "\$ANTHROPIC_BASE_URL/v1/messages" 2>/dev/null)" || token_status="000"
+  if [[ "\$token_status" == "401" || "\$token_status" == "403" ]]; then
+    echo "claude wrapper: router rejected the auth token (HTTP \$token_status)." >&2
+    echo "claude wrapper: check that ANTHROPIC_AUTH_TOKEN / CCR_AUTH_TOKEN matches APIKEY in ~/.claude-code-router/config.json, then run 'ccr restart'." >&2
+    exit 1
+  fi
+}
+
+check_router_token
+
 exec "$REAL_CLAUDE" "\$@"
 EOF
 chmod 755 "$CLAUDE_BIN"

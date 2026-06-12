@@ -1,0 +1,86 @@
+{
+  "HOST": "127.0.0.1",
+  "PORT": 3456,
+  "APIKEY": "$CLAUDE_GLM_ROUTER_KEY",
+  "LOG": true,
+  "LOG_LEVEL": "info",
+  "API_TIMEOUT_MS": 600000,
+  "NON_INTERACTIVE_MODE": false,
+  "CUSTOM_ROUTER_PATH": "/root/.claude-code-router/custom-router.js",
+  "Providers": [
+    {
+      "name": "LiteLLM Anthropic Adapter",
+      "api_base_url": "http://127.0.0.1:4010/v1/messages",
+      "api_key": "$LITELLM_ANTHROPIC_KEY",
+      "models": [
+        "claude-opus-4-6",
+        "claude-glm1",
+        "glm-5.1"
+      ],
+      "transformer": {
+        "use": [
+          "Anthropic"
+        ]
+      }
+    },
+    {
+      "name": "LiteLLM Provider",
+      "api_base_url": "http://127.0.0.1:4000/v1/responses",
+      "api_key": "$LITELLM_CCR_KEY",
+      "models": [
+        "glm-5.1",
+        "claude-glm1",
+        "anon-model-a",
+        "anon-model-b"
+      ],
+      "transformer": {
+        "use": [
+          [
+            "maxtoken",
+            {
+              "max_tokens": 8192
+            }
+          ],
+          "cleancache",
+          "claude-thinking-filter",
+          "claude-websearch-to-responses",
+          "openai-responses",
+          "reasoning-effort-filter",
+          "claude-websearch-to-responses"
+        ]
+      }
+    },
+    {
+      "name": "litellm-chat",
+      "api_base_url": "http://127.0.0.1:4000/v1/chat/completions",
+      "api_key": "$LITELLM_CCR_KEY",
+      "models": [
+        "glm-5.1"
+      ],
+      "transformer": {
+        "use": [
+          "openrouter"
+        ]
+      }
+    }
+  ],
+  "Router": {
+    "default": "LiteLLM Anthropic Adapter,claude-opus-4-6",
+    "background": "LiteLLM Anthropic Adapter,claude-opus-4-6",
+    "longContext": "LiteLLM Anthropic Adapter,claude-opus-4-6",
+    "longContextThreshold": 120000,
+    "webSearch": "LiteLLM Provider,glm-5.1",
+    "image": "litellm-chat,glm-5.1"
+  },
+  "transformers": [
+    {
+      "path": "/root/.claude-code-router/plugins/claude-thinking-filter.js"
+    },
+    {
+      "path": "/root/.claude-code-router/plugins/claude-websearch-to-responses.js"
+    },
+    {
+      "path": "/root/.claude-code-router/plugins/reasoning-effort-filter.js"
+    }
+  ]
+}
