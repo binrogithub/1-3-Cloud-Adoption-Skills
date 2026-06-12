@@ -94,7 +94,7 @@ Add the CCR bridge for LiteLLM-backed search:
   - `ANTHROPIC_AUTH_TOKEN=claude-glm-local`
   - `ANTHROPIC_MODEL=<model>`
   - `ANTHROPIC_CUSTOM_MODEL_OPTION=<model>`
-  - `CLAUDE_CODE_MAX_CONTEXT_TOKENS=<context>`
+  - `CLAUDE_CODE_AUTO_COMPACT_WINDOW=<context>` (auto-compact trigger window; `CLAUDE_CODE_MAX_CONTEXT_TOKENS` is ignored by Claude Code unless `DISABLE_COMPACT` is set)
 - Starts `ccr` in the background when needed, validates the router with a real `http://127.0.0.1:3456/` health check instead of trusting only the pid/status file, and runs the real `claude` command with `--model <model>` unless the user already passed `--model` or invoked a Claude Code management subcommand.
 - If `ccr status` is stale or the router socket is closed, stops `ccr`, waits briefly for the old process/port to release, then waits up to 30 seconds for the restarted router to become healthy.
 - Keeps `ccr` resident through a systemd user service when supported, enables a 60-second health timer that restarts the service on failed status/socket checks, and best-effort enables user lingering with `loginctl enable-linger`.
@@ -239,7 +239,7 @@ export ANTHROPIC_MODEL=glm-5.1
 export ANTHROPIC_CUSTOM_MODEL_OPTION=glm-5.1
 export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME=glm-5.1
 export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION='Huawei Cloud MaaS glm-5.1'
-export CLAUDE_CODE_MAX_CONTEXT_TOKENS=120000
+export CLAUDE_CODE_AUTO_COMPACT_WINDOW=120000
 unset CLAUDE_CODE_USE_BEDROCK
 
 ccr_healthy() {
@@ -401,15 +401,13 @@ Prefer a non-interactive JSON check because it reports actual `modelUsage`:
 claude-glm --bare --print --output-format json 'Reply with OK only'
 ```
 
-Successful output should include:
-
-```json
-"modelUsage": {
-  "glm-5.1": {
-    "contextWindow": 120000
-  }
-}
-```
+Successful output should report the routed model under `modelUsage` with non-zero
+`usage.input_tokens`/`usage.output_tokens`. Note that `contextWindow` always shows
+Claude Code's built-in table value (200000 for unknown or aliased models) and cannot
+be overridden; the effective context limit is enforced by
+`CLAUDE_CODE_AUTO_COMPACT_WINDOW` instead. Zero token usage means the LiteLLM-side
+streaming path is not returning usage (`stream_options.include_usage`) and
+auto-compact will not work.
 
 If `claude-glm` still says Sonnet/Opus, check whether the user launched an old shell or old session. The wrapper must export `ANTHROPIC_MODEL` and `ANTHROPIC_CUSTOM_MODEL_OPTION` and pass `--model "$ANTHROPIC_MODEL"` to `claude`; then restart the interactive `claude-glm` process. If plain `claude` says Sonnet/Opus, that is expected in side-by-side mode.
 
@@ -441,6 +439,8 @@ With `EXA_API_KEY` available to LiteLLM, successful output should return current
 - **`ccr failed to start; see /tmp/claude-glm-ccr.log` after an automatic restart**: This can be a stop/start race where the old router process or port has not fully released. Use the current wrapper logic that waits for `ccr stop`, then waits up to 30 seconds for a real router health check. Inspect `/tmp/claude-glm-ccr.log` and `ccr status` if it still fails.
 - **Persistent `ccr` did not start after reboot/login**: Check `systemctl --user is-enabled claude-glm-ccr.service claude-glm-ccr-health.timer`, `systemctl --user status claude-glm-ccr.service --no-pager`, and `loginctl show-user "$USER" -p Linger`. On systems without a running user systemd manager, run with `INSTALL_SYSTEMD_USER_SERVICE=0` and rely on wrapper startup instead.
 - **Health timer keeps restarting `ccr`**: Check `journalctl --user -u claude-glm-ccr.service -u claude-glm-ccr-health.service --no-pager -n 100`, then verify `~/.config/claude-glm/env`, the router key, and `curl -fsS -H "Authorization: Bearer $CLAUDE_GLM_ROUTER_KEY" http://127.0.0.1:3456/`.
+- **`claude` hangs 60s+ with a wrong router token instead of failing fast**: CCR returns 401 in milliseconds, but the Claude Code CLI retries 401 responses for over a minute with no readable error. If a request appears to hang, verify `ANTHROPIC_AUTH_TOKEN` matches the router `APIKEY` before suspecting the backend.
+- **Misspelled model name still answers normally**: CCR silently falls back to the default route for unknown model names, so a typo in `--model` is masked instead of erroring. Add an explicit unknown-model rejection in `custom-router.js` if strict semantics are needed.
 - **`Z_API_KEY is not set`**: Export `Z_API_KEY` before starting Claude Code or before running `claude mcp get web-search-prime`.
 - **Z.ai MCP fails with auth errors**: Confirm the user has a Z.ai account, the API key is active, and the environment variable name is exactly `Z_API_KEY`.
 - **Z.ai MCP was added with a literal `${Z_API_KEY}` header**: Replace the static `headers` entry with `headersHelper` so Claude Code reads the current environment at runtime.
@@ -448,7 +448,8 @@ With `EXA_API_KEY` available to LiteLLM, successful output should return current
 - **Search prompt has no live results**: Confirm `EXA_API_KEY` is visible to the LiteLLM process and inspect `litellm_proxy` logs for `[ExaSearch]`.
 - **Search results are stale or missing URLs**: Inspect the LiteLLM callback and Exa provider response first. The model should answer only from injected LiteLLM search snippets when search succeeds.
 - **`curl` fails with shared library errors**: Use Node `fetch` or `claude --print` for verification instead of curl.
-- **Long context mismatch**: Treat `120k` as context length, not output length. Keep `maxtoken.max_tokens` as a generation cap such as `8192`; set `CLAUDE_CODE_MAX_CONTEXT_TOKENS=120000`.
+- **Long context mismatch**: Treat `120k` as context length, not output length. Keep `maxtoken.max_tokens` as a generation cap such as `8192`; set `CLAUDE_CODE_AUTO_COMPACT_WINDOW=120000` so auto-compact fires before the MaaS hard input limit. Do not rely on `CLAUDE_CODE_MAX_CONTEXT_TOKENS`: Claude Code only reads it when `DISABLE_COMPACT` is set.
+- **Session overflows at ~196k tokens even though usage looks fine**: Check that the LiteLLM-side streaming responses carry usage. The adapter must send `stream_options: {"include_usage": true}` upstream; without it Claude Code sees zero token usage, never triggers auto-compact, and runs into the MaaS hard input limit (196608 tokens for glm-5.1).
 - **Existing `claude` wrapper**: Preserve user changes. Inspect the wrapper before replacing it, and keep the original binary or script as `.real`.
 
 ## Resources
