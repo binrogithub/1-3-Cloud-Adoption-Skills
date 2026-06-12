@@ -58,6 +58,9 @@ For Claude Agent SDK or custom proxy patterns, use the separate `Claude-Code-SDK
 ## Quick Start
 
 ```bash
+# Install Claude Code first if `claude --version` is not available.
+npm install -g @anthropic-ai/claude-code
+
 export API_KEY='replace-with-your-maas-api-key'
 ./scripts/configure-claude-glm.sh
 ```
@@ -69,6 +72,7 @@ The side-by-side script configures:
 - `~/.local/bin/claude-glm`
 - `~/.local/bin/Claude-glm`
 - `~/.local/bin/claude-glm-recover`
+- `/usr/local/bin/claude-glm`, `/usr/local/bin/Claude-glm`, and `/usr/local/bin/claude-glm-recover` symlinks when `/usr/local/bin` is writable; otherwise shell startup files are updated to include `~/.local/bin`
 - `~/.local/bin/claude-glm-ccr-run`
 - `~/.local/bin/claude-glm-ccr-health`
 - `~/.config/systemd/user/claude-glm-ccr.service`
@@ -88,6 +92,8 @@ The side-by-side script configures:
 - `loginctl enable-linger` on best effort, so the user service can start with the user manager instead of waiting for an interactive shell
 
 It also runs a smoke test and expects the result to report `modelUsage.glm-5.1`.
+
+If `claude-glm: command not found` appears immediately after a successful run, either open a new shell or run `hash -r`. The script now also creates `/usr/local/bin` links when possible, which makes the command available even when root's default `PATH` does not include `~/.local/bin`.
 
 Set `INSTALL_SYSTEMD_USER_SERVICE=0` before running the script to skip systemd service installation and keep wrapper-only startup.
 

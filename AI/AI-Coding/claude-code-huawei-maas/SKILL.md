@@ -12,26 +12,27 @@ Use this skill to route Claude Code through `claude-code-router` (`ccr`) to Huaw
 ## Quick Path
 
 1. Confirm the user has a MaaS OpenAI-compatible base URL, model name, and API key environment variable.
-2. If the user wants to preserve the original Claude Code command, run `scripts/configure-claude-glm.sh` from this skill. Defaults match the tested setup:
+2. Confirm `claude --version` works. If it does not, install Claude Code first with `npm install -g @anthropic-ai/claude-code`.
+3. If the user wants to preserve the original Claude Code command, run `scripts/configure-claude-glm.sh` from this skill. Defaults match the tested setup:
    - base URL: `https://api-ap-southeast-1.modelarts-maas.com/openai/v1`
    - model: `glm-5.1`
    - context tokens: `120000`
    - max output tokens: `8192`
-3. Verify both the router and Claude Code:
+4. Verify both the router and Claude Code:
    - `ccr status`
    - `systemctl --user status claude-glm-ccr.service --no-pager` when systemd user services are available
    - `claude-glm --bare --print --output-format json 'Reply with OK only'`
    - `claude --version` still resolves to the original Claude Code install and is not wrapped by this path.
-4. If the user has already hit MaaS context overflow or Claude Code resume failure, use the bundled recovery helper:
+5. If the user has already hit MaaS context overflow or Claude Code resume failure, use the bundled recovery helper:
    - `claude-glm-recover <session-id>`
    - `claude-glm-recover <session-id> --launch`
    - then paste `/tmp/claude-glm-recovery-<session-id>.md` into the fresh session as the first prompt
-5. If the user wants Claude Code search prompts such as `搜索今天的新闻` to avoid Claude Code local `WebFetch`, configure the CCR bridge and LiteLLM search callback:
+6. If the user wants Claude Code search prompts such as `搜索今天的新闻` to avoid Claude Code local `WebFetch`, configure the CCR bridge and LiteLLM search callback:
    - route CCR to a LiteLLM provider that mounts `LiteLLM-Huawei-MaaS-Proxy/assets/config/custom_callbacks.py`
    - set `EXA_API_KEY` in the LiteLLM runtime environment when live search is desired
    - run `scripts/configure-ccr-search.py --dry-run`, then `--apply`
    - CCR removes local search/fetch tools for search-intent prompts; LiteLLM performs the actual Exa prefetch and injection
-6. If the user also wants Z.ai search MCP, confirm they have a Z.ai account and API key, export it as `Z_API_KEY`, then run `scripts/configure-zai-search-mcp.sh`.
+7. If the user also wants Z.ai search MCP, confirm they have a Z.ai account and API key, export it as `Z_API_KEY`, then run `scripts/configure-zai-search-mcp.sh`.
 
 Example:
 
@@ -85,6 +86,7 @@ Add the CCR bridge for LiteLLM-backed search:
 - Routes `default`, `background`, and `longContext` to `huawei-maas,<model>`.
 - Adds the CCR `reasoning` transformer before `enhancetool` so GLM `reasoning_content` is converted into Claude-visible thinking deltas.
 - Creates `~/.local/bin/claude-glm` and a compatibility symlink `~/.local/bin/Claude-glm`.
+- Makes `claude-glm` discoverable by creating `/usr/local/bin` symlinks when writable, or by appending a guarded `~/.local/bin` PATH block to shell startup files.
 - Installs `~/.local/bin/claude-glm-recover` for post-overflow recovery into a fresh session.
 - Creates `~/.local/bin/claude-glm-ccr-run` and `~/.local/bin/claude-glm-ccr-health` when systemd user services are available.
 - Installs `~/.config/systemd/user/claude-glm-ccr.service`, `claude-glm-ccr-health.service`, and `claude-glm-ccr-health.timer` by default when `systemctl --user` works.
