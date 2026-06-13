@@ -1,23 +1,23 @@
 ---
 name: claude-code-huawei-maas
-description: Configure Claude Code to use Huawei Cloud MaaS or ModelArts MaaS through an OpenAI-compatible endpoint, optionally add a CCR bridge for LiteLLM-backed search or Z.ai web-search-prime MCP search. Use when Codex needs to add a side-by-side claude-glm command that routes to Huawei MaaS glm-5.1 while preserving the original claude command on Anthropic, migrate claude itself to Huawei MaaS, install or configure claude-code-router, set API_KEY-based authentication, adjust context length, verify that Claude Code is actually backed by MaaS, route Claude Code WebSearch/current-news/latest prompts through a LiteLLM Exa search injection path, or configure Z.ai MCP search with Z_API_KEY.
+description: Configure Claude Code to use Huawei Cloud MaaS or ModelArts MaaS through claude-code-router and a LiteLLM Anthropic adapter, optionally add a CCR bridge for LiteLLM-backed search or Z.ai web-search-prime MCP search. Use when Codex needs to add a side-by-side claude-glm command that routes to Huawei MaaS glm-5.1 while preserving the original claude command on Anthropic, install or configure claude-code-router, deploy the production CCR config/custom-router/adapter, adjust context length, verify that Claude Code is actually backed by MaaS, route Claude Code WebSearch/current-news/latest prompts through a LiteLLM Exa search injection path, or configure Z.ai MCP search with Z_API_KEY.
 ---
 
 # Claude Code Huawei MaaS
 
 ## Overview
 
-Use this skill to route Claude Code through `claude-code-router` (`ccr`) to Huawei Cloud MaaS OpenAI-compatible chat completions. The preferred setup is side-by-side: keep the original `claude` command on Anthropic and add `claude-glm`/`Claude-glm` for Huawei MaaS `glm-5.1`. A legacy migration script is also available if the user explicitly wants `claude` itself to route to MaaS. It can also install the CCR bridge used with LiteLLM-side Exa search injection or add the Z.ai `web-search-prime` MCP search tool for Claude Code.
+Use this skill to route Claude Code through `claude-code-router` (`ccr`) and a LiteLLM Anthropic adapter to Huawei Cloud MaaS. The setup is side-by-side: keep the original `claude` command on Anthropic and add `claude-glm`/`Claude-glm` for Huawei MaaS `glm-5.1`. The deployed chain is `claude-glm → ccr (3456, custom router) → LiteLLM Anthropic adapter (4010) → LiteLLM (4000, docker) → MaaS glm-5.1`, routed via the `claude-opus-4-6` alias. It can also install the CCR bridge used with LiteLLM-side Exa search injection or add the Z.ai `web-search-prime` MCP search tool for Claude Code.
 
 ## Quick Path
 
-1. Confirm the user has a MaaS OpenAI-compatible base URL, model name, and API key environment variable.
-2. Confirm `claude --version` works. If it does not, install Claude Code first with `npm install -g @anthropic-ai/claude-code`.
-3. If the user wants to preserve the original Claude Code command, run `scripts/configure-claude-glm.sh` from this skill. Defaults match the tested setup:
-   - base URL: `https://api-ap-southeast-1.modelarts-maas.com/openai/v1`
-   - model: `glm-5.1`
-   - context tokens: `120000`
-   - max output tokens: `8192`
+1. Confirm the user has a MaaS API key and that the LiteLLM stack (port 4000) is running (the script provisions only the local CCR/adapter/wrapper side, not LiteLLM itself — see the separate `LiteLLM-Huawei-MaaS-Proxy` project).
+2. Confirm `claude --version` works. If it does not, install Claude Code first with `npm install -g @anthropic-ai/claude-code` (the script errors out with this hint when `claude` is missing).
+3. Run `scripts/configure-claude-glm.sh` from this skill. It deploys the verified CCR config/custom-router/plugins from `assets/ccr/`, installs the local Anthropic adapter, and writes the `claude-glm` wrapper. Defaults match the tested setup:
+   - backend model: `glm-5.1`
+   - routing alias: `claude-opus-4-6`
+   - auto-compact window: `180000`
+   - LiteLLM keys read from the environment or `/root/LiteLLM/.env`
 4. Verify both the router and Claude Code:
    - `ccr status`
    - `systemctl --user status claude-glm-ccr.service --no-pager` when systemd user services are available
@@ -37,28 +37,11 @@ Use this skill to route Claude Code through `claude-code-router` (`ccr`) to Huaw
 Example:
 
 ```bash
-export API_KEY='...'
+export HUAWEI_MAAS_API_KEY='...'
 /root/.codex/skills/claude-code-huawei-maas/scripts/configure-claude-glm.sh
 ```
 
-The side-by-side script accepts `HUAWEI_MAAS_API_KEY`, `MAAS_API_KEY`, or `API_KEY` and stores it in `~/.config/claude-glm/env` with `0600` permissions so only `claude-glm` uses it.
-
-If the user explicitly wants to replace `claude` with a MaaS-backed wrapper:
-
-```bash
-export API_KEY='...'
-/root/.codex/skills/claude-code-huawei-maas/scripts/configure.sh
-```
-
-Override defaults when needed:
-
-```bash
-MAAS_BASE_URL='https://api-ap-southeast-1.modelarts-maas.com/openai/v1' \
-MAAS_MODEL='glm-5.1' \
-MAAS_CONTEXT_TOKENS=120000 \
-MAAS_MAX_OUTPUT_TOKENS=8192 \
-/root/.codex/skills/claude-code-huawei-maas/scripts/configure.sh
-```
+The side-by-side script accepts `HUAWEI_MAAS_API_KEY`, `MAAS_API_KEY`, or `API_KEY` and stores it in `~/.config/claude-glm/env` with `0600` permissions so only `claude-glm` uses it, alongside the LiteLLM virtual keys.
 
 Add Z.ai search MCP:
 
@@ -76,35 +59,35 @@ Add the CCR bridge for LiteLLM-backed search:
 
 ## Side-By-Side Claude-GLM
 
-`scripts/configure-claude-glm.sh` is the preferred path when the user wants `claude` to keep using Anthropic Claude models and `claude-glm` to use Huawei MaaS.
+`scripts/configure-claude-glm.sh` keeps `claude` on Anthropic Claude models and adds `claude-glm` for Huawei MaaS through the deployed LiteLLM-adapter chain. It requires the LiteLLM stack (port 4000) to be running already; it provisions only the local side.
 
 - Installs `@musistudio/claude-code-router` globally with npm if `ccr` is missing.
-- Writes `~/.claude-code-router/config.json` with a provider named `huawei-maas`.
-- Uses `api_key: "$HUAWEI_MAAS_API_KEY"` in router config.
-- Stores the actual MaaS key in `~/.config/claude-glm/env` with `0600` permissions.
-- Sets the provider URL to `${MAAS_BASE_URL}/chat/completions`.
-- Routes `default`, `background`, and `longContext` to `huawei-maas,<model>`.
-- Adds the CCR `reasoning` transformer before `enhancetool` so GLM `reasoning_content` is converted into Claude-visible thinking deltas.
+- Deploys `~/.claude-code-router/config.json` from `assets/ccr/config.json` — the verified 3-provider config (`LiteLLM Anthropic Adapter` on 4010, `LiteLLM Provider` on 4000 `/v1/responses`, `litellm-chat` on 4000 `/v1/chat/completions` for the image route), with `CUSTOM_ROUTER_PATH`, `APIKEY`, and `$LITELLM_*` placeholders expanded by `ccr` at runtime. Hardcoded `/root/.claude-code-router` paths are rewritten to the actual config dir.
+- Deploys `~/.claude-code-router/custom-router.js` from `assets/ccr/custom-router.js` (maps `claude-opus-4-6`/`opus`/`claude-opus-*` to the adapter, rejects unknown models with a readable 404, allowlists `claude-*` and known models).
+- Deploys `~/.claude-code-router/plugins/*.js` from `assets/ccr/plugins/` (`claude-thinking-filter`, `claude-websearch-to-responses`, `reasoning-effort-filter`) referenced by `config.json` `transformers[]`.
+- Installs the local Anthropic adapter into `~/litellm-anthropic-adapter/` via `scripts/install-anthropic-adapter.sh`; the wrapper starts it on demand (`ensure_anthropic_adapter`).
+- Stores `HUAWEI_MAAS_API_KEY`, `CLAUDE_GLM_ROUTER_KEY`, and the LiteLLM virtual keys (`LITELLM_ANTHROPIC_KEY`, `LITELLM_CCR_KEY`) in `~/.config/claude-glm/env` with `0600` permissions.
 - Creates `~/.local/bin/claude-glm` and a compatibility symlink `~/.local/bin/Claude-glm`.
-- Makes `claude-glm` discoverable by creating `/usr/local/bin` symlinks when writable, or by appending a guarded `~/.local/bin` PATH block to shell startup files.
+- Makes `claude-glm` discoverable by creating `/usr/local/bin` symlinks when writable, or by appending a guarded `~/.local/bin` PATH block to shell startup files; warns with a `hash -r` hint if the current shell still cannot find it.
 - Installs `~/.local/bin/claude-glm-recover` for post-overflow recovery into a fresh session.
-- Creates `~/.local/bin/claude-glm-ccr-run` and `~/.local/bin/claude-glm-ccr-health` when systemd user services are available.
+- Writes `~/.config/claude-glm/settings.json` denying `WebSearch`/`WebFetch` and injects it with `--settings`, because glm-5.1 has no native Anthropic server-side search/fetch. This keeps the plain `claude` command and `~/.claude` untouched. Users can re-enable by passing their own `--settings`.
+- Creates `~/.local/bin/claude-glm-ccr-run` and `~/.local/bin/claude-glm-ccr-health` when systemd user services are available; the run unit also sources the LiteLLM env so the resident router can expand `$LITELLM_*`.
 - Installs `~/.config/systemd/user/claude-glm-ccr.service`, `claude-glm-ccr-health.service`, and `claude-glm-ccr-health.timer` by default when `systemctl --user` works.
 - Leaves the existing `claude` command untouched.
 - Exports these defaults only inside the `claude-glm` wrapper:
   - `ANTHROPIC_BASE_URL=http://127.0.0.1:3456`
   - `ANTHROPIC_AUTH_TOKEN=claude-glm-local`
-  - `ANTHROPIC_MODEL=<model>`
-  - `ANTHROPIC_CUSTOM_MODEL_OPTION=<model>`
-  - `CLAUDE_CODE_MAX_CONTEXT_TOKENS=<context>`
-- Starts `ccr` in the background when needed, validates the router with a real `http://127.0.0.1:3456/` health check instead of trusting only the pid/status file, and runs the real `claude` command with `--model <model>` unless the user already passed `--model` or invoked a Claude Code management subcommand.
+  - `ANTHROPIC_MODEL=claude-opus-4-6` (routing alias)
+  - `ANTHROPIC_CUSTOM_MODEL_OPTION=claude-opus-4-6`
+  - `CLAUDE_CODE_AUTO_COMPACT_WINDOW=180000` (auto-compact trigger window; `CLAUDE_CODE_MAX_CONTEXT_TOKENS` is ignored by Claude Code unless `DISABLE_COMPACT` is set)
+- Starts the local Anthropic adapter, then `ccr` in the background when needed, validates the router with a real `http://127.0.0.1:3456/` health check instead of trusting only the pid/status file, runs a fast `GET /v1/models` token preflight that fails immediately on 401/403, and runs the real `claude` command with `--model claude-opus-4-6` unless the user already passed `--model` or invoked a Claude Code management subcommand.
 - If `ccr status` is stale or the router socket is closed, stops `ccr`, waits briefly for the old process/port to release, then waits up to 30 seconds for the restarted router to become healthy.
 - Keeps `ccr` resident through a systemd user service when supported, enables a 60-second health timer that restarts the service on failed status/socket checks, and best-effort enables user lingering with `loginctl enable-linger`.
-- Restarts `ccr` and validates a small request through `claude-glm`.
+- Restarts `ccr` and validates a small request through `claude-glm` (expects non-zero `modelUsage`).
 
 Set `INSTALL_SYSTEMD_USER_SERVICE=0` before running `scripts/configure-claude-glm.sh` if the user wants wrapper-only startup and no systemd user units.
 
-`scripts/configure.sh` is the legacy migration path. It wraps the current `claude` command and preserves the original binary as `<claude-path>.real`.
+To reinstall just the CCR side after something rewrites the config (without re-running the full installer), use `scripts/restore-ccr-config.sh`.
 
 ## Recovery Workflow
 
@@ -159,40 +142,27 @@ Use this if the script cannot be run or if the user wants to review each step.
 npm install -g @musistudio/claude-code-router
 ```
 
-2. Write `~/.claude-code-router/config.json`:
+2. Install the verified CCR state. Copy the archived files rather than hand-writing them — the layout (3 providers, `CUSTOM_ROUTER_PATH`, transformer plugins) is load-bearing:
 
-```json
-{
-  "LOG": true,
-  "LOG_LEVEL": "info",
-  "API_TIMEOUT_MS": 600000,
-  "NON_INTERACTIVE_MODE": false,
-  "Providers": [
-    {
-      "name": "huawei-maas",
-      "api_base_url": "https://api-ap-southeast-1.modelarts-maas.com/openai/v1/chat/completions",
-      "api_key": "$API_KEY",
-      "models": ["glm-5.1"],
-      "transformer": {
-        "use": [
-          ["maxtoken", { "max_tokens": 8192 }],
-          "cleancache",
-          "reasoning",
-          "enhancetool"
-        ]
-      }
-    }
-  ],
-  "Router": {
-    "default": "huawei-maas,glm-5.1",
-    "background": "huawei-maas,glm-5.1",
-    "longContext": "huawei-maas,glm-5.1",
-    "longContextThreshold": 120000
-  }
-}
+```bash
+install -m 600 assets/ccr/config.json       ~/.claude-code-router/config.json
+install -m 644 assets/ccr/custom-router.js  ~/.claude-code-router/custom-router.js
+mkdir -p ~/.claude-code-router/plugins
+install -m 644 assets/ccr/plugins/*.js      ~/.claude-code-router/plugins/
 ```
 
-3. Start or restart CCR:
+`config.json` defines three providers:
+- `LiteLLM Anthropic Adapter` (`http://127.0.0.1:4010/v1/messages`, `Anthropic` transformer) — the default/background/longContext route via the `claude-opus-4-6` alias.
+- `LiteLLM Provider` (`http://127.0.0.1:4000/v1/responses`) — the responses/search path.
+- `litellm-chat` (`http://127.0.0.1:4000/v1/chat/completions`) — the `image` route.
+
+The `APIKEY` and provider `api_key` fields are `$CLAUDE_GLM_ROUTER_KEY` / `$LITELLM_ANTHROPIC_KEY` / `$LITELLM_CCR_KEY` placeholders that `ccr` expands from its environment at start. Install the local Anthropic adapter and start it before `ccr`:
+
+```bash
+scripts/install-anthropic-adapter.sh   # -> ~/litellm-anthropic-adapter/ (port 4010)
+```
+
+3. Start or restart CCR (with the key env vars exported so the placeholders expand):
 
 ```bash
 ccr restart
@@ -221,72 +191,78 @@ chmod 700 ~/.config/claude-glm ~/.local/bin
 cat > ~/.config/claude-glm/env <<'EOF'
 export HUAWEI_MAAS_API_KEY='replace-with-your-maas-api-key'
 export CLAUDE_GLM_ROUTER_KEY='claude-glm-local'
+export LITELLM_ANTHROPIC_KEY='replace-with-your-litellm-key'
+export LITELLM_CCR_KEY='replace-with-your-litellm-key'
 EOF
 chmod 600 ~/.config/claude-glm/env
 ```
 
-Then create `~/.local/bin/claude-glm`:
+Then create `~/.local/bin/claude-glm`. The wrapper routes through the
+`claude-opus-4-6` alias, starts the local Anthropic adapter, validates the
+router with an unauthenticated `GET /` health check, runs a fast `GET /v1/models`
+token preflight (fail fast on 401/403), and injects `--model`/`--settings`:
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 source "$HOME/.config/claude-glm/env"
-export ANTHROPIC_AUTH_TOKEN="${ANTHROPIC_AUTH_TOKEN:-$CLAUDE_GLM_ROUTER_KEY}"
+export ANTHROPIC_AUTH_TOKEN="$CLAUDE_GLM_ROUTER_KEY"
 export ANTHROPIC_BASE_URL=http://127.0.0.1:3456
 case ",${NO_PROXY:-}," in
   *,127.0.0.1,localhost,*) ;;
   *) export NO_PROXY="${NO_PROXY:+$NO_PROXY,}127.0.0.1,localhost" ;;
 esac
-export ANTHROPIC_MODEL=glm-5.1
-export ANTHROPIC_CUSTOM_MODEL_OPTION=glm-5.1
-export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME=glm-5.1
-export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION='Huawei Cloud MaaS glm-5.1'
-export CLAUDE_CODE_MAX_CONTEXT_TOKENS=120000
+export ANTHROPIC_MODEL=claude-opus-4-6
+export ANTHROPIC_CUSTOM_MODEL_OPTION=claude-opus-4-6
+export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME=claude-opus-4-6
+export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION='Claude Opus compatibility route to Huawei Cloud MaaS glm-5.1'
+export CLAUDE_CODE_AUTO_COMPACT_WINDOW=180000
 unset CLAUDE_CODE_USE_BEDROCK
 
-ccr_healthy() {
-  ccr status 2>/dev/null | grep -q "Status: Running" &&
-    curl -fsS -m 2 \
-      -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" \
-      "$ANTHROPIC_BASE_URL/" >/dev/null 2>&1
-}
+# Start the LiteLLM Anthropic adapter the default route depends on.
+[ -x "$HOME/litellm-anthropic-adapter/start.sh" ] && "$HOME/litellm-anthropic-adapter/start.sh" >/dev/null 2>&1
 
-wait_for_ccr_stop() {
-  for _ in {1..20}; do
-    if ! ccr status 2>/dev/null | grep -q "Status: Running"; then
-      return 0
-    fi
-    sleep 0.25
-  done
-}
-
-start_ccr() {
-  ccr_log="${CLAUDE_GLM_CCR_LOG:-/tmp/claude-glm-ccr.log}"
-  if command -v setsid >/dev/null 2>&1; then
-    setsid ccr start > "$ccr_log" 2>&1 < /dev/null &
-  else
-    nohup ccr start > "$ccr_log" 2>&1 < /dev/null &
-  fi
-
-  for _ in {1..60}; do
-    ccr_healthy && break
-    sleep 0.5
-  done
-
-  if ! ccr_healthy; then
-    echo "ccr failed to start; see $ccr_log" >&2
-    ccr status >&2 || true
-    exit 1
-  fi
-}
+ccr_healthy() { curl -fsS -m 2 "$ANTHROPIC_BASE_URL/" >/dev/null 2>&1; }
 
 if ! ccr_healthy; then
   ccr stop >/dev/null 2>&1 || true
-  wait_for_ccr_stop
-  start_ccr
+  ccr_log="${CLAUDE_GLM_CCR_LOG:-/tmp/claude-glm-ccr.log}"
+  setsid ccr start > "$ccr_log" 2>&1 < /dev/null &
+  for _ in {1..60}; do ccr_healthy && break; sleep 0.5; done
+  ccr_healthy || { echo "ccr failed to start; see $ccr_log" >&2; exit 1; }
 fi
-exec claude --model "$ANTHROPIC_MODEL" "$@"
+
+# /v1/models returns 401/403 on bad auth, 404 on good auth (~6ms); fail fast.
+status="$(curl -sS -m 2 -o /dev/null -w '%{http_code}' \
+  -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" "$ANTHROPIC_BASE_URL/v1/models")" || status=000
+case "$status" in 401|403) echo "router rejected the auth token (HTTP $status)" >&2; exit 1 ;; esac
+
+exec claude --model "$ANTHROPIC_MODEL" --settings "$HOME/.config/claude-glm/settings.json" "$@"
 ```
+
+The generated wrapper (`scripts/configure-claude-glm.sh`) additionally skips the
+`--model`/`--settings` injection for Claude Code management subcommands and when
+the user passes their own.
+
+## Native WebSearch/WebFetch Disabled By Default
+
+`claude-glm` denies Claude Code's native `WebSearch` and `WebFetch` tools by default,
+because glm-5.1 cannot invoke Anthropic's server-side search/fetch — left enabled, the
+model either emits unreliable tool calls or gets silently bridged elsewhere, misleading
+the user into thinking native search ran. The wrapper enforces this with a
+claude-glm-only settings file (`~/.config/claude-glm/settings.json`,
+`permissions.deny: ["WebSearch", "WebFetch"]`) injected via `--settings`, so the plain
+`claude` command on Anthropic is unaffected.
+
+Verify: `web_search_requests` stays 0 and the model reports it cannot search.
+
+```bash
+claude-glm --print --output-format json '搜索今天的新闻。如果无法联网搜索，只回复 NO-WEB。'
+```
+
+To re-enable native search for a single run, pass your own `--settings` file without the
+deny entries. The two opt-in alternatives below (LiteLLM Exa bridge, Z.ai MCP) provide
+real search through explicit, separately configured paths rather than the native tools.
 
 ## CCR Bridge For LiteLLM Search
 
@@ -403,15 +379,13 @@ Prefer a non-interactive JSON check because it reports actual `modelUsage`:
 claude-glm --bare --print --output-format json 'Reply with OK only'
 ```
 
-Successful output should include:
-
-```json
-"modelUsage": {
-  "glm-5.1": {
-    "contextWindow": 120000
-  }
-}
-```
+Successful output should report the routed model under `modelUsage` with non-zero
+`usage.input_tokens`/`usage.output_tokens`. Note that `contextWindow` always shows
+Claude Code's built-in table value (200000 for unknown or aliased models) and cannot
+be overridden; the effective context limit is enforced by
+`CLAUDE_CODE_AUTO_COMPACT_WINDOW` instead. Zero token usage means the LiteLLM-side
+streaming path is not returning usage (`stream_options.include_usage`) and
+auto-compact will not work.
 
 If `claude-glm` still says Sonnet/Opus, check whether the user launched an old shell or old session. The wrapper must export `ANTHROPIC_MODEL` and `ANTHROPIC_CUSTOM_MODEL_OPTION` and pass `--model "$ANTHROPIC_MODEL"` to `claude`; then restart the interactive `claude-glm` process. If plain `claude` says Sonnet/Opus, that is expected in side-by-side mode.
 
@@ -437,12 +411,15 @@ With `EXA_API_KEY` available to LiteLLM, successful output should return current
 - **Plain `claude` still uses Claude/Sonnet/Opus**: Expected in side-by-side mode. Use `claude-glm` for Huawei MaaS.
 - **`claude-glm` interactive mode shows Sonnet/Opus but JSON shows `glm-5.1`**: Ensure the wrapper invokes `claude --model "$ANTHROPIC_MODEL"` instead of only `ccr code`.
 - **`HUAWEI_MAAS_API_KEY, MAAS_API_KEY, or API_KEY is not set`**: Export one of those variables before running `configure-claude-glm.sh`.
-- **`API_KEY is not set` from legacy configure**: Export `API_KEY` before `ccr start` or before launching `claude`; the legacy config intentionally references `$API_KEY`.
 - **`claude-glm` hangs before Claude Code starts**: Check the generated wrapper. It must not run foreground `ccr start >/dev/null`; it should background `ccr start`, then wait until `ccr status` includes `Status: Running`.
 - **`Unable to connect to API (FailedToOpenSocket)` or `ConnectionRefused` against `http://127.0.0.1:3456/v1/messages?beta=true`**: Treat this as a local router/socket problem first, not a MaaS key problem. Check `ccr status`, `ss -ltnp | grep ':3456'`, and `curl -fsS -H "Authorization: Bearer $CLAUDE_GLM_ROUTER_KEY" http://127.0.0.1:3456/`. If status says running but curl fails, stop and restart `ccr`; the side-by-side wrapper should do this automatically.
 - **`ccr failed to start; see /tmp/claude-glm-ccr.log` after an automatic restart**: This can be a stop/start race where the old router process or port has not fully released. Use the current wrapper logic that waits for `ccr stop`, then waits up to 30 seconds for a real router health check. Inspect `/tmp/claude-glm-ccr.log` and `ccr status` if it still fails.
 - **Persistent `ccr` did not start after reboot/login**: Check `systemctl --user is-enabled claude-glm-ccr.service claude-glm-ccr-health.timer`, `systemctl --user status claude-glm-ccr.service --no-pager`, and `loginctl show-user "$USER" -p Linger`. On systems without a running user systemd manager, run with `INSTALL_SYSTEMD_USER_SERVICE=0` and rely on wrapper startup instead.
 - **Health timer keeps restarting `ccr`**: Check `journalctl --user -u claude-glm-ccr.service -u claude-glm-ccr-health.service --no-pager -n 100`, then verify `~/.config/claude-glm/env`, the router key, and `curl -fsS -H "Authorization: Bearer $CLAUDE_GLM_ROUTER_KEY" http://127.0.0.1:3456/`.
+- **`claude` hangs 60s+ with a wrong router token instead of failing fast**: CCR returns 401 in milliseconds, but the Claude Code CLI retries 401 responses for over a minute with no readable error. The generated wrapper sends one authenticated `GET /v1/models` preflight (~6ms; 404 on good auth, 401/403 on bad) and exits immediately with a readable message on 401/403; if you see that message, fix `ANTHROPIC_AUTH_TOKEN` / `CLAUDE_GLM_ROUTER_KEY` vs the CCR `APIKEY`, then `ccr restart`.
+- **Misspelled model name still answers normally**: CCR silently falls back to the default route for unknown model names. The archived `assets/ccr/custom-router.js` rejects unknown models with a readable per-request 404 (throwing from a custom router does NOT work — CCR catches it and falls back silently; route to a non-existent provider instead). The rejection only works when `config.json` sets `CUSTOM_ROUTER_PATH`; `claude-*` names and the known model list always pass through so Claude Code background models are never blocked.
+- **Prompts larger than ~128KB fail with `Argument list too long`**: Linux caps a single argv argument (MAX_ARG_STRLEN). Pipe large prompts via stdin instead of passing them as a CLI argument.
+- **`usage.input_tokens` back to 0 / unknown models answered normally again**: something rewrote `~/.claude-code-router/config.json` to the legacy single-provider layout, bypassing the LiteLLM Anthropic adapter and the custom router. Run `scripts/restore-ccr-config.sh` to reinstall the archived 3-provider config, custom router, transformer plugins, and adapter, then restart ccr with the right env. Check for other agents or tooling on the host that regenerate CCR config before assuming the fix did not stick.
 - **`Z_API_KEY is not set`**: Export `Z_API_KEY` before starting Claude Code or before running `claude mcp get web-search-prime`.
 - **Z.ai MCP fails with auth errors**: Confirm the user has a Z.ai account, the API key is active, and the environment variable name is exactly `Z_API_KEY`.
 - **Z.ai MCP was added with a literal `${Z_API_KEY}` header**: Replace the static `headers` entry with `headersHelper` so Claude Code reads the current environment at runtime.
@@ -450,12 +427,17 @@ With `EXA_API_KEY` available to LiteLLM, successful output should return current
 - **Search prompt has no live results**: Confirm `EXA_API_KEY` is visible to the LiteLLM process and inspect `litellm_proxy` logs for `[ExaSearch]`.
 - **Search results are stale or missing URLs**: Inspect the LiteLLM callback and Exa provider response first. The model should answer only from injected LiteLLM search snippets when search succeeds.
 - **`curl` fails with shared library errors**: Use Node `fetch` or `claude --print` for verification instead of curl.
-- **Long context mismatch**: Treat `120k` as context length, not output length. Keep `maxtoken.max_tokens` as a generation cap such as `8192`; set `CLAUDE_CODE_MAX_CONTEXT_TOKENS=120000`.
-- **Existing `claude` wrapper**: Preserve user changes. Inspect the wrapper before replacing it, and keep the original binary or script as `.real`.
+- **Long context mismatch**: Set `CLAUDE_CODE_AUTO_COMPACT_WINDOW=180000` so auto-compact fires before the MaaS hard input limit (196608 tokens for glm-5.1), leaving room for one full turn. Keep `maxtoken.max_tokens` as a generation cap such as `8192`. Do not rely on `CLAUDE_CODE_MAX_CONTEXT_TOKENS`: Claude Code only reads it when `DISABLE_COMPACT` is set. (`config.json` `longContextThreshold` of 120000 is the CCR routing threshold, separate from the auto-compact window.)
+- **Session overflows at ~196k tokens even though usage looks fine**: Check that the LiteLLM-side streaming responses carry usage. The adapter must send `stream_options: {"include_usage": true}` upstream; without it Claude Code sees zero token usage, never triggers auto-compact, and runs into the MaaS hard input limit (196608 tokens for glm-5.1).
+- **Existing `claude-glm` wrapper**: Preserve user changes. Inspect the wrapper before replacing it.
 
 ## Resources
 
-- `scripts/configure.sh`: end-to-end installer/configurator and smoke test.
-- `scripts/configure-claude-glm.sh`: side-by-side installer that preserves `claude` and adds `claude-glm`/`Claude-glm` for Huawei MaaS.
+- `scripts/configure-claude-glm.sh`: side-by-side installer that preserves `claude` and adds `claude-glm`/`Claude-glm`, deploying the production CCR config/custom-router/plugins and the local Anthropic adapter.
 - `scripts/configure-ccr-search.py`: install the CCR bridge that strips local search/fetch tools and routes search-intent prompts toward LiteLLM-side Exa injection.
 - `scripts/configure-zai-search-mcp.sh`: add and verify Z.ai `web-search-prime` MCP search using `Z_API_KEY`.
+- `scripts/install-anthropic-adapter.sh`: idempotently install the LiteLLM Anthropic adapter (`adapter/`) that bridges CCR to LiteLLM `/v1/chat/completions` on port 4010 and carries streaming usage (`stream_options.include_usage`).
+- `scripts/restore-ccr-config.sh`: restore the verified 3-provider CCR config, custom router, and transformer plugins from `assets/ccr/`, reinstall the adapter, and restart ccr with the env vars its placeholders need.
+- `adapter/`: archived LiteLLM Anthropic adapter (server.js/start.sh/stop.sh) used by the deployed claude-glm chain; without it, usage reporting and auto-compact degrade.
+- `assets/ccr/`: archived production CCR `config.json` (3 providers, `CUSTOM_ROUTER_PATH`, `APIKEY`), `custom-router.js` (unknown-model rejection, provider-existence guard), and `plugins/` (the transformer plugins `config.json` loads).
+- `tests/`: production test plan matrix, concurrent Top-30 runner, fix plan, and test reports.
