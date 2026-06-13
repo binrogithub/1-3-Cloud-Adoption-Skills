@@ -12,26 +12,27 @@ Use this skill to route Claude Code through `claude-code-router` (`ccr`) and a L
 ## Quick Path
 
 1. Confirm the user has a MaaS API key and that the LiteLLM stack (port 4000) is running (the script provisions only the local CCR/adapter/wrapper side, not LiteLLM itself — see the separate `LiteLLM-Huawei-MaaS-Proxy` project).
-2. Run `scripts/configure-claude-glm.sh` from this skill. It deploys the verified CCR config/custom-router/plugins from `assets/ccr/`, installs the local Anthropic adapter, and writes the `claude-glm` wrapper. Defaults match the tested setup:
+2. Confirm `claude --version` works. If it does not, install Claude Code first with `npm install -g @anthropic-ai/claude-code` (the script errors out with this hint when `claude` is missing).
+3. Run `scripts/configure-claude-glm.sh` from this skill. It deploys the verified CCR config/custom-router/plugins from `assets/ccr/`, installs the local Anthropic adapter, and writes the `claude-glm` wrapper. Defaults match the tested setup:
    - backend model: `glm-5.1`
    - routing alias: `claude-opus-4-6`
    - auto-compact window: `180000`
    - LiteLLM keys read from the environment or `/root/LiteLLM/.env`
-3. Verify both the router and Claude Code:
+4. Verify both the router and Claude Code:
    - `ccr status`
    - `systemctl --user status claude-glm-ccr.service --no-pager` when systemd user services are available
    - `claude-glm --bare --print --output-format json 'Reply with OK only'`
    - `claude --version` still resolves to the original Claude Code install and is not wrapped by this path.
-4. If the user has already hit MaaS context overflow or Claude Code resume failure, use the bundled recovery helper:
+5. If the user has already hit MaaS context overflow or Claude Code resume failure, use the bundled recovery helper:
    - `claude-glm-recover <session-id>`
    - `claude-glm-recover <session-id> --launch`
    - then paste `/tmp/claude-glm-recovery-<session-id>.md` into the fresh session as the first prompt
-5. If the user wants Claude Code search prompts such as `搜索今天的新闻` to avoid Claude Code local `WebFetch`, configure the CCR bridge and LiteLLM search callback:
+6. If the user wants Claude Code search prompts such as `搜索今天的新闻` to avoid Claude Code local `WebFetch`, configure the CCR bridge and LiteLLM search callback:
    - route CCR to a LiteLLM provider that mounts `LiteLLM-Huawei-MaaS-Proxy/assets/config/custom_callbacks.py`
    - set `EXA_API_KEY` in the LiteLLM runtime environment when live search is desired
    - run `scripts/configure-ccr-search.py --dry-run`, then `--apply`
    - CCR removes local search/fetch tools for search-intent prompts; LiteLLM performs the actual Exa prefetch and injection
-6. If the user also wants Z.ai search MCP, confirm they have a Z.ai account and API key, export it as `Z_API_KEY`, then run `scripts/configure-zai-search-mcp.sh`.
+7. If the user also wants Z.ai search MCP, confirm they have a Z.ai account and API key, export it as `Z_API_KEY`, then run `scripts/configure-zai-search-mcp.sh`.
 
 Example:
 
@@ -67,6 +68,7 @@ Add the CCR bridge for LiteLLM-backed search:
 - Installs the local Anthropic adapter into `~/litellm-anthropic-adapter/` via `scripts/install-anthropic-adapter.sh`; the wrapper starts it on demand (`ensure_anthropic_adapter`).
 - Stores `HUAWEI_MAAS_API_KEY`, `CLAUDE_GLM_ROUTER_KEY`, and the LiteLLM virtual keys (`LITELLM_ANTHROPIC_KEY`, `LITELLM_CCR_KEY`) in `~/.config/claude-glm/env` with `0600` permissions.
 - Creates `~/.local/bin/claude-glm` and a compatibility symlink `~/.local/bin/Claude-glm`.
+- Makes `claude-glm` discoverable by creating `/usr/local/bin` symlinks when writable, or by appending a guarded `~/.local/bin` PATH block to shell startup files; warns with a `hash -r` hint if the current shell still cannot find it.
 - Installs `~/.local/bin/claude-glm-recover` for post-overflow recovery into a fresh session.
 - Writes `~/.config/claude-glm/settings.json` denying `WebSearch`/`WebFetch` and injects it with `--settings`, because glm-5.1 has no native Anthropic server-side search/fetch. This keeps the plain `claude` command and `~/.claude` untouched. Users can re-enable by passing their own `--settings`.
 - Creates `~/.local/bin/claude-glm-ccr-run` and `~/.local/bin/claude-glm-ccr-health` when systemd user services are available; the run unit also sources the LiteLLM env so the resident router can expand `$LITELLM_*`.

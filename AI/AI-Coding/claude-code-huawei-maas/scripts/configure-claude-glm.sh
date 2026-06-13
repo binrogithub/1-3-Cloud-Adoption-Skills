@@ -73,7 +73,17 @@ if ! command -v ccr >/dev/null 2>&1; then
   npm install -g @musistudio/claude-code-router
 fi
 need_cmd ccr
-need_cmd claude
+if ! command -v claude >/dev/null 2>&1; then
+  cat >&2 <<'EOF'
+error: claude is required, but the Claude Code CLI is not installed or not in PATH.
+Install it first, then re-run this script:
+
+  npm install -g @anthropic-ai/claude-code
+  claude --version
+
+EOF
+  exit 1
+fi
 need_cmd curl
 
 [ -f "$REPO_DIR/assets/ccr/config.json" ] || die "archived CCR config not found: $REPO_DIR/assets/ccr/config.json"
@@ -291,6 +301,46 @@ ln -sfn "$CLAUDE_GLM_BIN" "$CLAUDE_GLM_BIN_DIR/Claude-glm"
 if [[ -f "$RECOVER_SCRIPT_SRC" ]]; then
   install -m 0755 "$RECOVER_SCRIPT_SRC" "$CLAUDE_GLM_BIN_DIR/claude-glm-recover"
 fi
+
+ensure_claude_glm_on_path() {
+  hash -r 2>/dev/null || true
+  if command -v claude-glm >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if [[ -d /usr/local/bin && -w /usr/local/bin ]]; then
+    ln -sfn "$CLAUDE_GLM_BIN" /usr/local/bin/claude-glm
+    ln -sfn "$CLAUDE_GLM_BIN_DIR/Claude-glm" /usr/local/bin/Claude-glm
+    if [[ -x "$CLAUDE_GLM_BIN_DIR/claude-glm-recover" ]]; then
+      ln -sfn "$CLAUDE_GLM_BIN_DIR/claude-glm-recover" /usr/local/bin/claude-glm-recover
+    fi
+    hash -r 2>/dev/null || true
+    if command -v claude-glm >/dev/null 2>&1; then
+      echo "installed claude-glm links in /usr/local/bin"
+      return 0
+    fi
+  fi
+
+  for shell_file in "$HOME/.bashrc" "$HOME/.profile"; do
+    [[ -e "$shell_file" || "$shell_file" == "$HOME/.profile" ]] || continue
+    touch "$shell_file" 2>/dev/null || continue
+    if [[ -w "$shell_file" ]] && ! grep -q "user-local CLI wrappers such as claude-glm" "$shell_file"; then
+      cat >> "$shell_file" <<'EOF'
+
+# Add user-local CLI wrappers such as claude-glm.
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) ;;
+  *) export PATH="$HOME/.local/bin:$PATH" ;;
+esac
+EOF
+    fi
+  done
+
+  echo "warning: claude-glm was installed at $CLAUDE_GLM_BIN, but this shell cannot find it yet." >&2
+  echo "warning: open a new shell, run hash -r, or export PATH='$CLAUDE_GLM_BIN_DIR:$PATH'." >&2
+}
+
+ensure_claude_glm_on_path
 
 install_systemd_user_service() {
   if [[ "$INSTALL_SYSTEMD_USER_SERVICE" != "1" ]]; then
