@@ -16,9 +16,31 @@ services:
     volumes:
       - ./assets/config/litellm_config.yaml:/app/config.yaml:ro
       - ./assets/config/custom_callbacks.py:/app/custom_callbacks.py:ro
+      - ./assets/config/rolling_budget_hook.py:/app/rolling_budget_hook.py:ro
+      # ── Source patches applied over the pinned image (see patches/README.md) ──
+      # Adapt the Responses-API streaming path for Huawei MaaS / Anthropic clients.
+      # Mounted over both the editable and site-packages copies of litellm.
+      - ./patches/proxy_server.py:/app/litellm/proxy/proxy_server.py:ro
+      - ./patches/utils.py:/app/litellm/proxy/utils.py:ro
+      - ./patches/proxy_server.py:/app/.venv/lib/python3.13/site-packages/litellm/proxy/proxy_server.py:ro
+      - ./patches/utils.py:/app/.venv/lib/python3.13/site-packages/litellm/proxy/utils.py:ro
+      # ── Optional: BR fintech DLP guardrail (external risk-control project) ──
+      # Enable together with the guardrails block in litellm_config.yaml.example.
+      # Provide your own br_dlp_guardrail.py + br_dlp_policy.yaml (see
+      # references/operations.md "BR DLP guardrails"); paths are examples.
+      # - ./assets/guardrails/br_dlp_guardrail.py:/app/br_dlp_guardrail.py:ro
+      # - ./assets/guardrails/br_dlp_policy.yaml:/app/br_dlp_policy.yaml:ro
     environment:
       DATABASE_URL: "postgresql://llmproxy:${DB_PASSWORD}@db:5432/litellm"
       STORE_MODEL_IN_DB: "True"
+      # ── Three-tier rolling-window budget (rolling_budget_hook.py) ──
+      # Format "<n><s|m|h|d>:<usd>". Default is effectively unlimited; set real
+      # tiers in .env. Production reference: 5h:12 / 7d:30 / 30d:60.
+      BUDGET_TIER_KEY: "${BUDGET_TIER_KEY:-999d:999999}"
+      BUDGET_TIER_USER: "${BUDGET_TIER_USER:-999d:999999}"
+      BUDGET_TIER_TEAM: "${BUDGET_TIER_TEAM:-999d:999999}"
+      # Path the optional BR DLP guardrail reads its policy from (see above).
+      # BR_DLP_POLICY_PATH: "/app/br_dlp_policy.yaml"
     env_file:
       - .env
     depends_on:
@@ -137,6 +159,30 @@ services:
       - "pip install --no-cache-dir 'fastmcp>=2,<3' httpx && python /app/server.py"
     depends_on:
       - searxng
+
+  # ───────── Optional: Anthropic-format adapter (Claude clients → :4000) ─────────
+  # Exposes an Anthropic Messages-style endpoint that forwards to LiteLLM's
+  # /v1/chat/completions. Start with: docker compose --profile adapter up -d
+  adapter:
+    <<: *default
+    image: node:20-slim
+    container_name: litellm_anthropic_adapter
+    profiles: ["adapter"]
+    ports:
+      - "4010:4010"
+    volumes:
+      - ./adapter/server.js:/app/server.js:ro
+    working_dir: /app
+    environment:
+      ADAPTER_HOST: "0.0.0.0"
+      ADAPTER_PORT: "4010"
+      LITELLM_CHAT_URL: "http://litellm:4000/v1/chat/completions"
+      LITELLM_ANTHROPIC_KEY: ${LITELLM_ANTHROPIC_KEY:-${LITELLM_CCR_KEY:-}}
+      ADAPTER_DEFAULT_MODEL: ${ADAPTER_DEFAULT_MODEL:-claude-opus-4-6}
+    command: ["node", "/app/server.js"]
+    depends_on:
+      litellm:
+        condition: service_healthy
 
 volumes:
   postgres_data:

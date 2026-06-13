@@ -1977,6 +1977,377 @@
           "placement": "bottom"
         }
       }
+    },
+    {
+      "type": "row",
+      "uid": "row-anon-model-test",
+      "title": "Anonymous Model Test",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 86
+      },
+      "collapsed": false
+    },
+    {
+      "type": "bargauge",
+      "uid": "panel-anon-requests",
+      "title": "Total Requests",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 87
+      },
+      "targets": [
+        {
+          "expr": "label_replace(label_replace(sum(litellm_requests_metric_total{model_id=~\"37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba|314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e\"}) by (model_id), \"model_label\", \"Opus 4.6\", \"model_id\", \"37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba\"), \"model_label\", \"GLM5.1\", \"model_id\", \"314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e\")",
+          "refId": "A",
+          "legendFormat": "{{model_label}}"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "displayMode": "gradient",
+        "showUnfilled": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba": {
+                  "text": "anon-model-a",
+                  "index": 0
+                },
+                "314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e": {
+                  "text": "anon-model-b",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Opus 4.6"},
+            "properties": [{"id": "color", "value": {"fixedColor": "#FF7043", "mode": "fixed"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "GLM5.1"},
+            "properties": [{"id": "color", "value": {"fixedColor": "#29B6F6", "mode": "fixed"}}]
+          }
+        ]
+      }
+    },
+    {
+      "type": "bargauge",
+      "uid": "panel-anon-input-tokens",
+      "title": "Total Input Tokens",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 87
+      },
+      "targets": [
+        {
+          "expr": "label_replace(label_replace(sum(litellm_input_tokens_metric_total{model_id=~\"37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba|314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e\"}) by (model_id), \"model_label\", \"Opus 4.6\", \"model_id\", \"37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba\"), \"model_label\", \"GLM5.1\", \"model_id\", \"314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e\")",
+          "refId": "A",
+          "legendFormat": "{{model_label}}"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "displayMode": "gradient",
+        "showUnfilled": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba": {
+                  "text": "anon-model-a",
+                  "index": 0
+                },
+                "314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e": {
+                  "text": "anon-model-b",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Opus 4.6"},
+            "properties": [{"id": "color", "value": {"fixedColor": "#FF7043", "mode": "fixed"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "GLM5.1"},
+            "properties": [{"id": "color", "value": {"fixedColor": "#29B6F6", "mode": "fixed"}}]
+          }
+        ]
+      }
+    },
+    {
+      "type": "bargauge",
+      "uid": "panel-anon-spend",
+      "title": "Total Spend",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 87
+      },
+      "targets": [
+        {
+          "expr": "label_replace(label_replace(sum(litellm_spend_metric_total{model_id=~\"37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba|314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e\"}) by (model_id), \"model_label\", \"Opus 4.6\", \"model_id\", \"37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba\"), \"model_label\", \"GLM5.1\", \"model_id\", \"314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e\")",
+          "refId": "A",
+          "legendFormat": "{{model_label}}"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "displayMode": "gradient",
+        "showUnfilled": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba": {
+                  "text": "anon-model-a",
+                  "index": 0
+                },
+                "314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e": {
+                  "text": "anon-model-b",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Opus 4.6"},
+            "properties": [{"id": "color", "value": {"fixedColor": "#FF7043", "mode": "fixed"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "GLM5.1"},
+            "properties": [{"id": "color", "value": {"fixedColor": "#29B6F6", "mode": "fixed"}}]
+          }
+        ]
+      }
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-anon-rps",
+      "title": "Requests Over Time",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 91
+      },
+      "targets": [
+        {
+          "expr": "sum(label_replace(label_replace(rate(litellm_requests_metric_total{model_id=~\"37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba|314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e\"}[5m]), \"model_label\", \"Opus 4.6\", \"model_id\", \"37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba\"), \"model_label\", \"GLM5.1\", \"model_id\", \"314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e\")) by (model_label)",
+          "refId": "A",
+          "legendFormat": "{{model_label}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "drawStyle": "line"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Opus 4.6"},
+            "properties": [{"id": "color", "value": {"fixedColor": "#FF7043", "mode": "fixed"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "GLM5.1"},
+            "properties": [{"id": "color", "value": {"fixedColor": "#29B6F6", "mode": "fixed"}}]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-anon-latency",
+      "title": "E2E Latency P95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 91
+      },
+      "targets": [
+        {
+          "expr": "label_replace(label_replace(histogram_quantile(0.95, sum(rate(litellm_request_total_latency_metric_bucket{model_id=~\"37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba|314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e\"}[5m])) by (le, model_id)) * 1000, \"model_label\", \"Opus 4.6\", \"model_id\", \"37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba\"), \"model_label\", \"GLM5.1\", \"model_id\", \"314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e\")",
+          "refId": "A",
+          "legendFormat": "{{model_label}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "drawStyle": "line"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Opus 4.6"},
+            "properties": [{"id": "color", "value": {"fixedColor": "#FF7043", "mode": "fixed"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "GLM5.1"},
+            "properties": [{"id": "color", "value": {"fixedColor": "#29B6F6", "mode": "fixed"}}]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "uid": "panel-anon-tokens",
+      "title": "Token Usage Over Time",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 97
+      },
+      "targets": [
+        {
+          "expr": "sum(label_replace(label_replace(rate(litellm_input_tokens_metric_total{model_id=~\"37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba|314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e\"}[5m]), \"model_label\", \"Opus 4.6 input\", \"model_id\", \"37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba\"), \"model_label\", \"GLM5.1 input\", \"model_id\", \"314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e\")) by (model_label)",
+          "refId": "A",
+          "legendFormat": "{{model_label}}"
+        },
+        {
+          "expr": "sum(label_replace(label_replace(rate(litellm_output_tokens_metric_total{model_id=~\"37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba|314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e\"}[5m]), \"model_label\", \"Opus 4.6 output\", \"model_id\", \"37ff2a3ff5da7388be366dcd9ee5194eca18b8fb0634c5b83d267eb8b674f2ba\"), \"model_label\", \"GLM5.1 output\", \"model_id\", \"314f6bf5b5ed758a46bb7b57a6f8a97d6d5189275a0853f3dd0f9b8d31875d9e\")) by (model_label)",
+          "refId": "B",
+          "legendFormat": "{{model_label}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "drawStyle": "line"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Opus 4.6 input"},
+            "properties": [{"id": "color", "value": {"fixedColor": "#FF7043", "mode": "fixed"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Opus 4.6 output"},
+            "properties": [{"id": "color", "value": {"fixedColor": "#FFAB91", "mode": "fixed"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "GLM5.1 input"},
+            "properties": [{"id": "color", "value": {"fixedColor": "#29B6F6", "mode": "fixed"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "GLM5.1 output"},
+            "properties": [{"id": "color", "value": {"fixedColor": "#80DEEA", "mode": "fixed"}}]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
     }
   ],
   "overwrite": true

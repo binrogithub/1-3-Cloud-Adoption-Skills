@@ -164,6 +164,7 @@ Single key = identical behavior to before. No changes required for existing sing
 │   ├── litellm_config.yaml.example                model catalog example (tracked in git)
 │   ├── litellm_config.yaml                         generated config (gitignored)
 │   ├── custom_callbacks.py                         TTFT/TPOT/ITL Prometheus histograms
+│   ├── rolling_budget_hook.py                       three-tier rolling-window budget (key/user/team)
 │   ├── prometheus.yml                              15s scrape → litellm:4000
 │   ├── .env.example                                environment template
 │   └── grafana/
@@ -177,9 +178,18 @@ Single key = identical behavior to before. No changes required for existing sing
 │   ├── metrics-and-dashboards.md                    PromQL, custom metrics, Grafana panel config
 │   ├── operations.md                                health checks, backup, restart, usage, endpoints
 │   └── troubleshooting.md                           repair playbook, failure modes, common mistakes
+├── patches/                                         patched litellm source mounted over the image
+│   ├── proxy_server.py                              Responses-API streaming adaptation
+│   ├── utils.py                                     async chunk wrapper tolerance
+│   └── README.md                                    what changed + how to refresh per image tag
+├── adapter/                                         optional Anthropic-format adapter (profile: adapter)
+│   ├── server.js                                    Anthropic Messages → LiteLLM /v1/chat/completions
+│   └── start.sh / stop.sh                           run outside Docker
+├── demo/                                            rolling-budget live demo (mock model + scripts)
 ├── scripts/
 │   ├── init_env.sh                                  interactive .env setup (manual or agent-guided)
 │   ├── generate_config.sh                           generates litellm_config.yaml from .env
+│   ├── bootstrap_finops_team.py                     create a team + scoped virtual key
 │   └── validate_e2e.sh                              12-step end-to-end validation
 ├── .env                                             actual secrets (gitignored)
 └── .gitignore                                       .env and litellm_config.yaml
@@ -192,7 +202,10 @@ Single key = identical behavior to before. No changes required for existing sing
 | `docker-compose.yml` | Service orchestration | YAML anchor, 4 services with healthcheck chain, named volumes, mounts from `./assets/config/` |
 | `assets/config/litellm_config.yaml.example` | Model catalog example | `openai/` prefix + MaaS endpoint, `tpm`/`rpm` per model, per-token pricing, tracked in git |
 | `assets/config/litellm_config.yaml` | Generated config | Created by `generate_config.sh`, gitignored, N deployments per model |
-| `assets/config/custom_callbacks.py` | Custom callback | `PrometheusTTFTTPOTITL(CustomLogger)`, metrics, Exa search injection, image routing, Responses tool repair |
+| `assets/config/custom_callbacks.py` | Custom callback | `PrometheusTTFTTPOTITL(CustomLogger)`, metrics, Exa search injection, image routing, Responses tool repair, invalid `reasoning_effort` stripping |
+| `assets/config/rolling_budget_hook.py` | Pre-call budget hook | Three-tier rolling-window budget from `LiteLLM_SpendLogs`, 429 on overage, `BUDGET_TIER_*` env, fail-open on DB error |
+| `patches/proxy_server.py`, `patches/utils.py` | Image source patches | Mounted over editable + site-packages copies; adapt Responses-API streaming. Re-derive per image tag (see `patches/README.md`) |
+| `adapter/server.js` | Optional adapter | Anthropic Messages → LiteLLM `/v1/chat/completions`; `--profile adapter`, port 4010 |
 | `assets/config/prometheus.yml` | Scrape config | Single job `litellm` at 15s interval |
 | `assets/config/grafana/provisioning/datasources/prometheus.yml` | Datasource | Prometheus type, proxy access, `http://prometheus:9090` |
 | `assets/config/grafana/provisioning/dashboards/dashboards.yml` | Dashboard provider | File-based, org 1, 30s update interval |
@@ -214,6 +227,9 @@ Single key = identical behavior to before. No changes required for existing sing
 |---|---|---|---|
 | `litellm` | `./assets/config/litellm_config.yaml` | `/app/config.yaml` | ro (generated file) |
 | `litellm` | `./assets/config/custom_callbacks.py` | `/app/custom_callbacks.py` | ro |
+| `litellm` | `./assets/config/rolling_budget_hook.py` | `/app/rolling_budget_hook.py` | ro |
+| `litellm` | `./patches/proxy_server.py` | `/app/litellm/proxy/proxy_server.py` (+ site-packages copy) | ro |
+| `litellm` | `./patches/utils.py` | `/app/litellm/proxy/utils.py` (+ site-packages copy) | ro |
 | `db` | `postgres_data` volume | `/var/lib/postgresql/data` | rw |
 | `prometheus` | `./assets/config/prometheus.yml` | `/etc/prometheus/prometheus.yml` | ro |
 | `prometheus` | `prometheus_data` volume | `/prometheus` | rw |
@@ -236,6 +252,7 @@ Set via `env_file: .env` plus explicit `environment`:
 |---|---|---|
 | `DATABASE_URL` | docker-compose | `postgresql://llmproxy:${DB_PASSWORD}@db:5432/litellm` |
 | `STORE_MODEL_IN_DB` | docker-compose | `True` |
+| `BUDGET_TIER_KEY` / `_USER` / `_TEAM` | docker-compose / .env | Rolling-window budget tiers, `<n><s\|m\|h\|d>:<usd>`; default unlimited |
 | `LITELLM_MASTER_KEY` | .env | Admin key, must start with `sk-` |
 | `LITELLM_SALT_KEY` | .env | Key encryption salt |
 | `HUAWEI_MAAS_API_KEY` | .env | Main Huawei MaaS API key |

@@ -96,7 +96,11 @@ See [SKILL.md](./SKILL.md) **Verification Exit Criteria** — 12-item checklist 
 | `docker-compose.yml` | 4-service stack with healthcheck chain, YAML anchor, named volumes |
 | `assets/config/litellm_config.yaml.example` | Model catalog example with `openai/` prefix, MaaS endpoint, per-model tpm/rpm and pricing |
 | `assets/config/litellm_config.yaml` | Generated config (gitignored), created by `generate_config.sh` |
-| `assets/config/custom_callbacks.py` | TTFT/TPOT/ITL metrics, Exa result injection, image-to-OpenRouter routing, Responses tool repair |
+| `assets/config/custom_callbacks.py` | TTFT/TPOT/ITL metrics, Exa result injection, image-to-OpenRouter routing, Responses tool repair, invalid `reasoning_effort` stripping |
+| `assets/config/rolling_budget_hook.py` | Three-tier rolling-window budget (key/user/team) enforced from `LiteLLM_SpendLogs`, rejects with 429, no fixed-time reset |
+| `patches/` | Patched copies of `proxy_server.py` + `utils.py` (mounted over the pinned image) that adapt the Responses-API streaming path; see `patches/README.md` |
+| `adapter/` | Optional Anthropic-format adapter (Node) fronting LiteLLM `:4000`; runs via `--profile adapter` |
+| `demo/` | Rolling-budget demo (mock model + setup/run scripts) for live walkthroughs |
 | `assets/config/prometheus.yml` | 15s scrape job targeting `litellm:4000` |
 | `assets/config/grafana/provisioning/` | Auto-linked Prometheus datasource + pre-built dashboard |
 | `assets/config/.env.example` | Template with all required and optional variables |
@@ -239,6 +243,12 @@ The dashboard includes a "Deployment Load Balancing" row with 5 panels:
 | `EXA_API_KEY` | No | — | Enables LiteLLM-side search result injection for current/search prompts. |
 | `OpenRouter_API_KEY` | No | — | Enables automatic image request routing through `vision-openrouter`. |
 | `LITELLM_CCR_KEY` | No | — | Optional virtual key for a local CCR/`claude-glm` client. |
+| `BUDGET_TIER_KEY` | No | unlimited | Rolling-window budget per virtual key, `<n><s\|m\|h\|d>:<usd>` (e.g. `5h:12`). |
+| `BUDGET_TIER_USER` | No | unlimited | Rolling-window budget per user (e.g. `7d:30`). |
+| `BUDGET_TIER_TEAM` | No | unlimited | Rolling-window budget per team (e.g. `30d:60`). |
+| `LITELLM_ANTHROPIC_KEY` | No | `LITELLM_CCR_KEY` | Virtual key the optional Anthropic adapter presents upstream. |
+| `ADAPTER_DEFAULT_MODEL` | No | `claude-opus-4-6` | Default model the adapter targets when a request omits one. |
+| `BR_DLP_POLICY_PATH` | No | — | Policy path for the optional external BR DLP guardrail (see operations.md). |
 
 ## Claude Code Search And Image Routing
 
@@ -249,6 +259,36 @@ The dashboard includes a "Deployment Load Balancing" row with 5 panels:
 - Responses API function tool shapes are repaired before deployment calls so LiteLLM can bridge CCR `/v1/responses` traffic to OpenAI-compatible chat models.
 
 For `claude-glm`, pair this LiteLLM proxy with `claude-code-huawei-maas/scripts/configure-ccr-search.py`. CCR should strip local Claude Code `WebSearch`/`WebFetch` tools for search-intent prompts, while LiteLLM performs the actual Exa prefetch.
+
+## Source Patches, Rolling Budget, and Anthropic Adapter
+
+These mirror the production deployment and are wired into `docker-compose.yml`:
+
+- **Source patches** (`patches/`) — `proxy_server.py` + `utils.py` are patched
+  copies of the pinned image's files, mounted read-only over both the editable
+  and site-packages copies of `litellm`. They make the **Responses-API
+  streaming path** tolerate the non-streaming response objects Huawei MaaS /
+  Anthropic-style clients return (synthesizing `response.output_item.added` /
+  `response.completed` events and emitting UTF-8 for dict chunks). See
+  [patches/README.md](patches/README.md) for what changed and how to refresh
+  against a new image tag.
+- **Rolling-window budget** (`assets/config/rolling_budget_hook.py`) — a
+  three-tier (key / user / team) budget that looks back over a sliding window
+  of `LiteLLM_SpendLogs` and rejects with 429 when a tier is exceeded; quota
+  recovers as old spend slides out (no fixed-time reset). Configure with
+  `BUDGET_TIER_KEY` / `_USER` / `_TEAM` (`<n><s|m|h|d>:<usd>`). Empty =
+  effectively unlimited. The generator sets `proxy_batch_write_at: 1` so the
+  hook sees near-real-time spend. A live walkthrough is in [demo/](demo/).
+- **Anthropic adapter** (`adapter/`, optional) — exposes an Anthropic
+  Messages-style endpoint that forwards to LiteLLM's `/v1/chat/completions`,
+  for Claude-format clients. Start with `docker compose --profile adapter up -d`
+  (listens on `:4010`); set `LITELLM_ANTHROPIC_KEY` and `ADAPTER_DEFAULT_MODEL`.
+- **BR fintech DLP guardrails** (optional, external) — the production stack
+  layers a secrets filter, a Brazilian-entity DLP guardrail, and Presidio PII
+  masking. These depend on the separate `risk-control` project, so they are
+  **referenced, not vendored**: commented mounts in `docker-compose.yml`, a
+  commented `guardrails:` block in `litellm_config.yaml.example`, and setup
+  notes in [references/operations.md](references/operations.md#br-dlp-guardrails).
 
 ## Optional: Self-Hosted SearXNG Search MCP And claude-glm Client
 
