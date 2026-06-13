@@ -34,6 +34,21 @@ for f in config.json custom-router.js; do
 done
 chmod 600 "$CCR_DIR/config.json"
 
+# config.json's transformers[] load these plugins by absolute path; without
+# them ccr fails to register the custom transformers (claude-thinking-filter,
+# claude-websearch-to-responses, reasoning-effort-filter).
+if [ -d "$REPO_DIR/assets/ccr/plugins" ]; then
+  mkdir -p "$CCR_DIR/plugins"
+  for p in "$REPO_DIR"/assets/ccr/plugins/*.js; do
+    [ -e "$p" ] || continue
+    dest="$CCR_DIR/plugins/$(basename "$p")"
+    if [ -f "$dest" ] && ! cmp -s "$p" "$dest"; then
+      cp "$dest" "$dest.bak.$(date +%Y%m%d%H%M%S)"
+    fi
+    cp "$p" "$dest"
+  done
+fi
+
 # The adapter must be running for the default route; install script is idempotent.
 "$REPO_DIR/scripts/install-anthropic-adapter.sh"
 
