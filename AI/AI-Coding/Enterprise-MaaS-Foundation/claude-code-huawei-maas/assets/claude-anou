@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# claude-anou: Anonymous-Model blind test wrapper. Routes each project directory
+# consistently to either anon-model-a or anon-model-b via CCR, without revealing
+# which underlying model is in use.
+#
+# Optional, opt-in side-by-side command installed by
+# scripts/configure-claude-anou.sh. Leaves `claude` and `claude-glm` untouched.
+# Reuses the claude-glm router env (~/.config/claude-glm/env), the CCR custom
+# router (assets/ccr/custom-router.js, "Anonymous-Model" branch), and the
+# anon-model-a/anon-model-b providers in assets/ccr/config.json.
+set -euo pipefail
+
+if [[ -f "$HOME/.config/claude-glm/env" ]]; then
+  # shellcheck disable=SC1091
+  source "$HOME/.config/claude-glm/env"
+fi
+
+export ANTHROPIC_AUTH_TOKEN="claude-glm-local"
+export ANTHROPIC_BASE_URL="http://127.0.0.1:3456"
+case ",${NO_PROXY:-}," in
+  *,127.0.0.1,localhost,*) ;;
+  *) export NO_PROXY="${NO_PROXY:+$NO_PROXY,}127.0.0.1,localhost" ;;
+esac
+export DISABLE_TELEMETRY="${DISABLE_TELEMETRY:-true}"
+export DISABLE_COST_WARNINGS="${DISABLE_COST_WARNINGS:-true}"
+export API_TIMEOUT_MS="${API_TIMEOUT_MS:-600000}"
+export CLAUDE_CODE_MAX_CONTEXT_TOKENS="${CLAUDE_CODE_MAX_CONTEXT_TOKENS:-120000}"
+export ANTHROPIC_MODEL="Anonymous-Model"
+export ANTHROPIC_CUSTOM_MODEL_OPTION="Anonymous-Model"
+export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="Anonymous-Model"
+export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="Anonymous-Model"
+unset CLAUDE_CODE_USE_BEDROCK
+
+# ── Session-model binding ────────────────────────────────────────────────────
+# .mt in the project dir is the persistent per-project assignment (a or b).
+# .session-model is the live signal CCR reads on every request.
+SESSION_FILE="${PWD}/.mt"
+ROUTING_FILE="$HOME/.claude-code-router/.session-model"
+
+if [[ ! -f "$SESSION_FILE" ]]; then
+  [[ $((RANDOM % 2)) -eq 0 ]] && echo "a" > "$SESSION_FILE" || echo "b" > "$SESSION_FILE"
+fi
+
+cp "$SESSION_FILE" "$ROUTING_FILE"
+# ────────────────────────────────────────────────────────────────────────────
+
+if ! command -v ccr >/dev/null 2>&1; then
+  echo "claude-anou: ccr is not in PATH" >&2
+  exit 127
+fi
+
+ccr_healthy() {
+  ccr status 2>/dev/null | grep -q "Status: Running" &&
+    curl -fsS -m 2 \
+      -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" \
+      "$ANTHROPIC_BASE_URL/" >/dev/null 2>&1
+}
+
+wait_for_ccr_stop() {
+  for _ in {1..20}; do
+    if ! ccr status 2>/dev/null | grep -q "Status: Running"; then
+      return 0
+    fi
+    sleep 0.25
+  done
+}
+
+start_ccr() {
+  if [[ -z "${HUAWEI_MAAS_API_KEY:-}" ]]; then
+    echo "claude-anou: HUAWEI_MAAS_API_KEY is not set" >&2
+    exit 1
+  fi
+  ccr_log="${CLAUDE_GLM_CCR_LOG:-/tmp/claude-glm-ccr.log}"
+  if command -v setsid >/dev/null 2>&1; then
+    setsid ccr start > "$ccr_log" 2>&1 < /dev/null &
+  else
+    nohup ccr start > "$ccr_log" 2>&1 < /dev/null &
+  fi
+
+  for _ in {1..60}; do
+    ccr_healthy && break
+    sleep 0.5
+  done
+
+  if ! ccr_healthy; then
+    echo "claude-anou: ccr failed to start; see $ccr_log" >&2
+    ccr status >&2 || true
+    exit 1
+  fi
+}
+
+if ! ccr_healthy; then
+  ccr stop >/dev/null 2>&1 || true
+  wait_for_ccr_stop
+  start_ccr
+fi
+
+inject_model=1
+case "${1:-}" in
+  --model|--model=*)
+    inject_model=0
+    ;;
+  agents|auth|auto-mode|doctor|install|mcp|plugin|plugins|project|setup-token|ultrareview|update|upgrade)
+    inject_model=0
+    ;;
+esac
+
+for arg in "$@"; do
+  if [[ "$arg" == "--model" || "$arg" == --model=* ]]; then
+    inject_model=0
+    break
+  fi
+done
+
+if [[ "$inject_model" == "1" ]]; then
+  exec claude --model "$ANTHROPIC_MODEL" "$@"
+fi
+
+exec claude "$@"

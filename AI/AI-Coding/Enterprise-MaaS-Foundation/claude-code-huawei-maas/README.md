@@ -38,6 +38,16 @@ Claude Code search prompt
   -> Huawei Cloud MaaS glm-5.1 answers normally
 ```
 
+Optional anonymous blind model-test scope (`claude-anou`):
+
+```text
+claude-anou CLI  (shows model "Anonymous-Model")
+  -> claude-code-router on http://127.0.0.1:3456 (custom router)
+  -> reads ~/.claude-code-router/.session-model (a | b, mirrored from <project>/.mt)
+  -> LiteLLM /v1/responses, model anon-model-a OR anon-model-b
+  -> Huawei Cloud MaaS (two hidden models, for blind A/B comparison)
+```
+
 Optional image scope:
 
 ```text
@@ -113,6 +123,34 @@ To prepare CCR for LiteLLM-backed search, route `claude-glm` through a LiteLLM p
 The CCR bridge does not call Exa itself. It converts the request path for LiteLLM Responses compatibility and removes Claude Code local search/fetch tools for search-intent prompts, so GLM is not asked to emit fragile tool-call JSON. Live search is performed by the LiteLLM callback when `EXA_API_KEY` is configured. Normal `claude-glm` requests still route through the configured provider.
 
 For image inputs, configure the LiteLLM proxy with `OpenRouter_API_KEY` and the `vision-openrouter` model group from `LiteLLM-Huawei-MaaS-Proxy`. The LiteLLM callback automatically rewrites image requests to that model group.
+
+## Optional: Anonymous Blind Model Test (claude-anou)
+
+`claude-anou` is an optional, opt-in command for blind A/B model comparison
+inside Claude Code. It launches Claude Code displaying only the model name
+`Anonymous-Model` and binds each project directory consistently to one of two
+hidden backends (`anon-model-a` / `anon-model-b`), so a tester can judge two
+models without knowing which is answering. It leaves `claude`, `claude-glm`, and
+`~/.claude` untouched.
+
+```bash
+# Prerequisite: claude-glm already configured, and the LiteLLM stack exposes the
+# anon-model-a and anon-model-b model groups.
+./scripts/configure-claude-anou.sh
+
+cd <project-dir>
+claude-anou
+```
+
+The first run in a project writes a random `a`/`b` assignment to
+`<project-dir>/.mt` and keeps it stable; each run mirrors it to
+`~/.claude-code-router/.session-model`, which the CCR custom router reads to pick
+`anon-model-a` or `anon-model-b`. Reveal the mapping only after the test by
+inspecting `.mt` and the `anon-model-a`/`anon-model-b` → real-model mapping in
+your LiteLLM config; delete `.mt` to re-roll a project's assignment. Run only one
+`claude-anou` session at a time — `~/.claude-code-router/.session-model` is a
+single global signal, so two concurrent sessions would cross-route each other and
+invalidate the test. See SKILL.md ("Anonymous Blind Model Test") for full details.
 
 ## Persistent CCR Service
 
@@ -222,6 +260,7 @@ claude-code-huawei-maas/
 ├── agents/
 │   └── openai.yaml
 ├── assets/
+│   ├── claude-anou           # archived claude-anou wrapper (anonymous blind A/B model test)
 │   └── ccr/                  # verified production CCR config + custom router + transformer plugins
 │       ├── config.json
 │       ├── custom-router.js
@@ -232,6 +271,7 @@ claude-code-huawei-maas/
 ├── scripts/
 │   ├── claude-glm-recover.sh
 │   ├── configure-ccr-search.py
+│   ├── configure-claude-anou.sh
 │   ├── configure-claude-glm.sh
 │   ├── configure-zai-search-mcp.sh
 │   ├── install-anthropic-adapter.sh
