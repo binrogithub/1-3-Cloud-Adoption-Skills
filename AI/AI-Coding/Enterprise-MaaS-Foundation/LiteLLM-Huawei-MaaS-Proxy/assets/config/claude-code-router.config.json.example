@@ -7,7 +7,7 @@
   "Providers": [
     {
       "name": "litellm",
-      "api_base_url": "http://@@ECS_PUBLIC_IP@@:4000/v1/chat/completions",
+      "api_base_url": "http://@@LITELLM_HOST@@:4000/v1/chat/completions",
       "api_key": "$LITELLM_VIRTUAL_KEY",
       "models": ["huawei-glm-5.1"],
       "transformer": {

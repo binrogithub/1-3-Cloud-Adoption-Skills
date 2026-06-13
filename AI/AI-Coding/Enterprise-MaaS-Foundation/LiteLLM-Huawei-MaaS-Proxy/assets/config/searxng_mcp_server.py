@@ -55,7 +55,12 @@ async def fetch_url(url: str, max_chars: int = 6000) -> str:
 
 
 if __name__ == "__main__":
-    if TOKEN:
-        from fastmcp.server.auth import StaticTokenVerifier
-        mcp.auth = StaticTokenVerifier(tokens={TOKEN: {"client_id": "claude-glm"}})
+    if not TOKEN:
+        raise SystemExit(
+            "MCP_TOKEN is required: refusing to start an unauthenticated MCP. "
+            "Set MCP_TOKEN in .env (e.g. openssl rand -hex 16) before "
+            "`docker compose --profile search up -d`."
+        )
+    from fastmcp.server.auth import StaticTokenVerifier
+    mcp.auth = StaticTokenVerifier(tokens={TOKEN: {"client_id": "claude-glm"}})
     mcp.run(transport="http", host="0.0.0.0", port=PORT)

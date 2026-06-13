@@ -1,2 +1,7 @@
 .env
 assets/config/litellm_config.yaml
+assets/config/searxng/settings.yml
+assets/config/searxng/*.toml
+assets/config/searxng/uwsgi.ini
+__pycache__/
+*.pyc

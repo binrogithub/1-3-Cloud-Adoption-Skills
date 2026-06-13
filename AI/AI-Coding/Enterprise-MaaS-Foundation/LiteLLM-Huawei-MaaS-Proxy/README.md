@@ -103,7 +103,12 @@ See [SKILL.md](./SKILL.md) **Verification Exit Criteria** — 12-item checklist 
 | `scripts/init_env.sh` | Interactive .env setup (manual, agent-guided, or CI) |
 | `scripts/generate_config.sh` | Generates litellm_config.yaml from .env and template |
 | `scripts/validate_e2e.sh` | 12-step end-to-end validation |
-| `references/` | Architecture, metrics, operations, and troubleshooting deep-dives |
+| `scripts/bootstrap_finops_team.py` | Create a LiteLLM team + scoped virtual key in one shot (FinOps onboarding) |
+| `assets/config/searxng_mcp_server.py` | FastMCP HTTP server wrapping SearXNG as `web_search`/`fetch_url` tools (optional `search` profile) |
+| `assets/config/searxng/settings.yml.example` | SearXNG settings template (JSON format enabled; secret placeholder) |
+| `assets/config/claude-code-router.config.json.example` | ccr provider config pointing at this proxy (for `claude-glm` clients) |
+| `assets/config/claude-glm-wrapper.sh.example` | `claude-glm` wrapper with `CLAUDE_CONFIG_DIR` isolation and GLM-5.1 context headroom |
+| `references/` | Architecture, metrics, operations, troubleshooting, and claude-glm/search onboarding deep-dives |
 
 ## KPIs
 
@@ -244,3 +249,46 @@ The dashboard includes a "Deployment Load Balancing" row with 5 panels:
 - Responses API function tool shapes are repaired before deployment calls so LiteLLM can bridge CCR `/v1/responses` traffic to OpenAI-compatible chat models.
 
 For `claude-glm`, pair this LiteLLM proxy with `claude-code-huawei-maas/scripts/configure-ccr-search.py`. CCR should strip local Claude Code `WebSearch`/`WebFetch` tools for search-intent prompts, while LiteLLM performs the actual Exa prefetch.
+
+## Optional: Self-Hosted SearXNG Search MCP And claude-glm Client
+
+Two opt-in capabilities are bundled for teams that want a **self-hosted search
+backend** (instead of the Exa API) and a ready-made **Claude Code client**
+routed through this proxy. Both are optional — skip them if you only need the
+OpenAI-compatible proxy and observability. Full walkthrough:
+[references/claude-glm-and-search-onboarding.md](references/claude-glm-and-search-onboarding.md).
+
+### Self-hosted SearXNG search MCP (alternative to Exa)
+
+The `search` Docker Compose profile adds two containers: `searxng` (private
+meta-search, internal only) and `searxng-mcp` (a bearer-authenticated FastMCP
+HTTP server on `:8788` exposing `web_search` and `fetch_url`). This is a
+self-hosted alternative to the LiteLLM-side Exa injection — useful when you
+cannot or do not want to send queries to an external search API.
+
+```bash
+# Render the SearXNG settings (generated file is gitignored):
+sed "s/@@SEARXNG_SECRET@@/$(openssl rand -hex 32)/" \
+  assets/config/searxng/settings.yml.example > assets/config/searxng/settings.yml
+# Add a bearer token for the MCP:
+echo "MCP_TOKEN=$(openssl rand -hex 16)" >> .env
+# Start the optional profile alongside the core stack:
+docker compose --profile search up -d
+```
+
+The default `docker compose up -d` does **not** start these — they only run
+under `--profile search`.
+
+| Service | URL | Auth |
+|---|---|---|
+| SearXNG MCP | `http://<host>:8788/mcp` | `Authorization: Bearer $MCP_TOKEN` |
+| SearXNG (internal) | `searxng:8080` (compose network only) | none |
+
+### claude-glm client onboarding
+
+`claude-code-router` (ccr) routes Claude Code through this proxy so spend,
+rate limits, and audit stay centralized, while `CLAUDE_CONFIG_DIR` isolation
+keeps the user's plain `claude` on Anthropic untouched. The SearXNG MCP is
+registered into the isolated `claude-glm` client only. Use
+`scripts/bootstrap_finops_team.py` to mint a per-client virtual key, then follow
+the onboarding reference for ccr config, wrapper install, and MCP registration.
