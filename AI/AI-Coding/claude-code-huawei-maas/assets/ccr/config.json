@@ -69,7 +69,6 @@
     "background": "LiteLLM Anthropic Adapter,claude-opus-4-6",
     "longContext": "LiteLLM Anthropic Adapter,claude-opus-4-6",
     "longContextThreshold": 120000,
-    "webSearch": "LiteLLM Provider,glm-5.1",
     "image": "litellm-chat,glm-5.1"
   },
   "transformers": [

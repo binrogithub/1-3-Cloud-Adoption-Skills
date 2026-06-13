@@ -66,6 +66,7 @@ The side-by-side script configures:
 
 - `~/.claude-code-router/config.json`
 - `~/.config/claude-glm/env`
+- `~/.config/claude-glm/settings.json` (denies native `WebSearch`/`WebFetch`, injected via `--settings`)
 - `~/.local/bin/claude-glm`
 - `~/.local/bin/Claude-glm`
 - `~/.local/bin/claude-glm-recover`

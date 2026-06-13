@@ -88,6 +88,17 @@ cat > "$CONFIG" <<EOF
 }
 EOF
 
+# glm-5.1 cannot invoke Claude's native WebSearch/WebFetch tools; deny them by
+# default in a settings file the wrapper injects via --settings.
+SETTINGS_FILE="$CLAUDE_CONFIG_DIR/claude-glm-settings.json"
+cat > "$SETTINGS_FILE" <<'EOF'
+{
+  "permissions": {
+    "deny": ["WebSearch", "WebFetch"]
+  }
+}
+EOF
+
 REAL_CLAUDE="${CLAUDE_BIN}.real"
 if [ -f "$CLAUDE_BIN" ] && grep -q "claude-huawei-maas wrapper" "$CLAUDE_BIN"; then
   :
@@ -170,7 +181,25 @@ check_router_token() {
 
 check_router_token
 
-exec "$REAL_CLAUDE" "\$@"
+# Deny WebSearch/WebFetch by default (no native glm equivalent); the user can
+# override with their own --settings. Management subcommands take no flags.
+CLAUDE_GLM_SETTINGS="\${CLAUDE_GLM_SETTINGS:-$SETTINGS_FILE}"
+is_mgmt=0
+case "\${1:-}" in
+  agents|auth|auto-mode|doctor|install|mcp|plugin|plugins|project|setup-token|ultrareview|update|upgrade)
+    is_mgmt=1
+    ;;
+esac
+user_settings=0
+for arg in "\$@"; do
+  case "\$arg" in --settings|--settings=*) user_settings=1 ;; esac
+done
+settings_args=()
+if [[ "\$is_mgmt" == "0" && "\$user_settings" == "0" && -f "\$CLAUDE_GLM_SETTINGS" ]]; then
+  settings_args+=(--settings "\$CLAUDE_GLM_SETTINGS")
+fi
+
+exec "$REAL_CLAUDE" \${settings_args[@]+"\${settings_args[@]}"} "\$@"
 EOF
 chmod 755 "$CLAUDE_BIN"
 

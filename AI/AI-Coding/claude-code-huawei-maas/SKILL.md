@@ -86,6 +86,7 @@ Add the CCR bridge for LiteLLM-backed search:
 - Adds the CCR `reasoning` transformer before `enhancetool` so GLM `reasoning_content` is converted into Claude-visible thinking deltas.
 - Creates `~/.local/bin/claude-glm` and a compatibility symlink `~/.local/bin/Claude-glm`.
 - Installs `~/.local/bin/claude-glm-recover` for post-overflow recovery into a fresh session.
+- Writes `~/.config/claude-glm/settings.json` denying `WebSearch`/`WebFetch` and injects it with `--settings`, because glm-5.1 has no native Anthropic server-side search/fetch. This keeps the plain `claude` command and `~/.claude` untouched. Users can re-enable by passing their own `--settings`.
 - Creates `~/.local/bin/claude-glm-ccr-run` and `~/.local/bin/claude-glm-ccr-health` when systemd user services are available.
 - Installs `~/.config/systemd/user/claude-glm-ccr.service`, `claude-glm-ccr-health.service`, and `claude-glm-ccr-health.timer` by default when `systemctl --user` works.
 - Leaves the existing `claude` command untouched.
@@ -285,6 +286,26 @@ if ! ccr_healthy; then
 fi
 exec claude --model "$ANTHROPIC_MODEL" "$@"
 ```
+
+## Native WebSearch/WebFetch Disabled By Default
+
+`claude-glm` denies Claude Code's native `WebSearch` and `WebFetch` tools by default,
+because glm-5.1 cannot invoke Anthropic's server-side search/fetch — left enabled, the
+model either emits unreliable tool calls or gets silently bridged elsewhere, misleading
+the user into thinking native search ran. The wrapper enforces this with a
+claude-glm-only settings file (`~/.config/claude-glm/settings.json`,
+`permissions.deny: ["WebSearch", "WebFetch"]`) injected via `--settings`, so the plain
+`claude` command on Anthropic is unaffected.
+
+Verify: `web_search_requests` stays 0 and the model reports it cannot search.
+
+```bash
+claude-glm --print --output-format json '搜索今天的新闻。如果无法联网搜索，只回复 NO-WEB。'
+```
+
+To re-enable native search for a single run, pass your own `--settings` file without the
+deny entries. The two opt-in alternatives below (LiteLLM Exa bridge, Z.ai MCP) provide
+real search through explicit, separately configured paths rather than the native tools.
 
 ## CCR Bridge For LiteLLM Search
 

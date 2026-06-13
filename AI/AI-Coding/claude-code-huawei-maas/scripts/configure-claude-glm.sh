@@ -110,6 +110,19 @@ export CLAUDE_GLM_ROUTER_KEY="$(json_escape "$CLAUDE_GLM_ROUTER_KEY")"
 EOF
 chmod 600 "$ENV_FILE"
 
+# glm-5.1 cannot invoke Claude's native server-side WebSearch/WebFetch tools, so
+# deny them by default in a claude-glm-only settings file. The wrapper injects
+# this via --settings, keeping the plain `claude` command (and ~/.claude) clean.
+SETTINGS_FILE="$CLAUDE_GLM_CONFIG_DIR/settings.json"
+cat > "$SETTINGS_FILE" <<'EOF'
+{
+  "permissions": {
+    "deny": ["WebSearch", "WebFetch"]
+  }
+}
+EOF
+chmod 600 "$SETTINGS_FILE"
+
 CLAUDE_GLM_BIN="$CLAUDE_GLM_BIN_DIR/claude-glm"
 RECOVER_SCRIPT_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/claude-glm-recover.sh"
 cat > "$CLAUDE_GLM_BIN" <<EOF
@@ -136,6 +149,9 @@ export API_TIMEOUT_MS="\${API_TIMEOUT_MS:-600000}"
 # auto-compact trigger window so long sessions compact before the MaaS hard
 # input limit instead of overflowing.
 export CLAUDE_CODE_AUTO_COMPACT_WINDOW="\${CLAUDE_GLM_AUTO_COMPACT_WINDOW:-$MAAS_AUTO_COMPACT_WINDOW}"
+# WebSearch/WebFetch are denied by default (glm-5.1 has no native equivalent);
+# override by passing your own --settings.
+CLAUDE_GLM_SETTINGS="\${CLAUDE_GLM_SETTINGS:-\$HOME/.config/claude-glm/settings.json}"
 export ANTHROPIC_MODEL="\${ANTHROPIC_MODEL:-$MAAS_MODEL}"
 export ANTHROPIC_CUSTOM_MODEL_OPTION="\${ANTHROPIC_CUSTOM_MODEL_OPTION:-$MAAS_MODEL}"
 export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="\${ANTHROPIC_CUSTOM_MODEL_OPTION_NAME:-$MAAS_MODEL}"
@@ -214,28 +230,34 @@ check_router_token() {
 
 check_router_token
 
-inject_model=1
+# Management subcommands take no runtime flags; skip all injection for them.
+is_mgmt=0
 case "\${1:-}" in
-  --model|--model=*)
-    inject_model=0
-    ;;
   agents|auth|auto-mode|doctor|install|mcp|plugin|plugins|project|setup-token|ultrareview|update|upgrade)
-    inject_model=0
+    is_mgmt=1
     ;;
 esac
 
+user_model=0
+user_settings=0
 for arg in "\$@"; do
-  if [[ "\$arg" == "--model" || "\$arg" == --model=* ]]; then
-    inject_model=0
-    break
-  fi
+  case "\$arg" in
+    --model|--model=*) user_model=1 ;;
+    --settings|--settings=*) user_settings=1 ;;
+  esac
 done
 
-if [[ "\$inject_model" == "1" ]]; then
-  exec claude --model "\$ANTHROPIC_MODEL" "\$@"
+extra_args=()
+if [[ "\$is_mgmt" == "0" ]]; then
+  if [[ "\$user_model" == "0" ]]; then
+    extra_args+=(--model "\$ANTHROPIC_MODEL")
+  fi
+  if [[ "\$user_settings" == "0" && -f "\$CLAUDE_GLM_SETTINGS" ]]; then
+    extra_args+=(--settings "\$CLAUDE_GLM_SETTINGS")
+  fi
 fi
 
-exec claude "\$@"
+exec claude \${extra_args[@]+"\${extra_args[@]}"} "\$@"
 EOF
 chmod 700 "$CLAUDE_GLM_BIN"
 ln -sfn "$CLAUDE_GLM_BIN" "$CLAUDE_GLM_BIN_DIR/Claude-glm"
