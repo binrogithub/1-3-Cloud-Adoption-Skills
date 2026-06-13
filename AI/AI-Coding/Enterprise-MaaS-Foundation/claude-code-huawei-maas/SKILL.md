@@ -1,6 +1,6 @@
 ---
 name: claude-code-huawei-maas
-description: Configure Claude Code to use Huawei Cloud MaaS or ModelArts MaaS through claude-code-router and a LiteLLM Anthropic adapter, optionally add a CCR bridge for LiteLLM-backed search or Z.ai web-search-prime MCP search. Use when Codex needs to add a side-by-side claude-glm command that routes to Huawei MaaS glm-5.1 while preserving the original claude command on Anthropic, install or configure claude-code-router, deploy the production CCR config/custom-router/adapter, adjust context length, verify that Claude Code is actually backed by MaaS, route Claude Code WebSearch/current-news/latest prompts through a LiteLLM Exa search injection path, or configure Z.ai MCP search with Z_API_KEY.
+description: Configure Claude Code to use Huawei Cloud MaaS or ModelArts MaaS through claude-code-router and a LiteLLM Anthropic adapter, optionally add a CCR bridge for LiteLLM-backed search or Z.ai web-search-prime MCP search, or add a claude-anou anonymous blind model-test command. Use when Codex needs to add a side-by-side claude-glm command that routes to Huawei MaaS glm-5.1 while preserving the original claude command on Anthropic, install or configure claude-code-router, deploy the production CCR config/custom-router/adapter, adjust context length, verify that Claude Code is actually backed by MaaS, route Claude Code WebSearch/current-news/latest prompts through a LiteLLM Exa search injection path, configure Z.ai MCP search with Z_API_KEY, or add an optional claude-anou command that runs Claude Code as "Anonymous-Model" and binds each project to a hidden anon-model-a/anon-model-b backend for blind A/B model comparison.
 ---
 
 # Claude Code Huawei MaaS
@@ -33,6 +33,7 @@ Use this skill to route Claude Code through `claude-code-router` (`ccr`) and a L
    - run `scripts/configure-ccr-search.py --dry-run`, then `--apply`
    - CCR removes local search/fetch tools for search-intent prompts; LiteLLM performs the actual Exa prefetch and injection
 7. If the user also wants Z.ai search MCP, confirm they have a Z.ai account and API key, export it as `Z_API_KEY`, then run `scripts/configure-zai-search-mcp.sh`.
+8. If the user wants to blind-test two models against each other inside Claude Code, run `scripts/configure-claude-anou.sh` (after claude-glm is configured) to add the optional `claude-anou` command. It launches Claude Code as `Anonymous-Model` and binds each project directory to a hidden `anon-model-a`/`anon-model-b` backend. Requires the LiteLLM stack to expose the `anon-model-a` and `anon-model-b` model groups.
 
 Example:
 
@@ -371,6 +372,76 @@ The helper produces this HTTP header when Claude Code starts the MCP connection:
 Authorization: Bearer <Z_API_KEY>
 ```
 
+## Anonymous Blind Model Test (claude-anou)
+
+Use this optional command when the user wants to evaluate two models against each
+other inside Claude Code **without knowing which model is answering** — a blind
+A/B comparison. `claude-anou` launches Claude Code displaying only the model name
+`Anonymous-Model` and routes each project directory consistently to one of two
+hidden backends, `anon-model-a` or `anon-model-b`.
+
+It is purely additive and opt-in: it leaves the plain `claude`, the `claude-glm`
+command, and `~/.claude` untouched. It reuses the claude-glm router env, the CCR
+custom router (`assets/ccr/custom-router.js`, which already contains the
+`Anonymous-Model` branch), and the `anon-model-a`/`anon-model-b` providers in
+`assets/ccr/config.json`.
+
+How the routing works:
+
+- `claude-anou` exports `ANTHROPIC_MODEL=Anonymous-Model` (and the matching
+  `ANTHROPIC_CUSTOM_MODEL_OPTION*`) so the Claude Code header and `--model` never
+  reveal the real model.
+- The first time it runs in a project directory it writes a random assignment to
+  `<project>/.mt` (`a` or `b`) and keeps it stable for that project on later runs.
+- On every run it copies `<project>/.mt` to
+  `~/.claude-code-router/.session-model`, the live signal the CCR custom router
+  reads. The router maps `Anonymous-Model` to `LiteLLM Provider,anon-model-a`
+  when the assignment is `a`, otherwise `LiteLLM Provider,anon-model-b` (and
+  falls back to `anon-model-b` if the file is unreadable).
+- It runs the same `ccr` health-check / restart bootstrap as `claude-glm`, and
+  injects `--model Anonymous-Model` unless the user passed their own `--model` or
+  invoked a Claude Code management subcommand.
+
+Prerequisites:
+
+- `claude-glm` is already configured (`scripts/configure-claude-glm.sh`), so
+  `~/.config/claude-glm/env`, `ccr`, the archived CCR config, and the custom
+  router are in place.
+- The LiteLLM stack (port 4000) exposes the `anon-model-a` and `anon-model-b`
+  model groups. This skill does not provision LiteLLM or decide which real models
+  map to a/b — define that in your LiteLLM config (see the separate
+  `LiteLLM-Huawei-MaaS-Proxy` project).
+
+Install:
+
+```bash
+/root/.codex/skills/claude-code-huawei-maas/scripts/configure-claude-anou.sh
+```
+
+Use (always run from inside the project directory you want to test):
+
+```bash
+cd <project-dir>
+claude-anou
+```
+
+Reveal the mapping only after the blind test is finished: inspect
+`<project-dir>/.mt` (`a`/`b`) and the `anon-model-a`/`anon-model-b` → real-model
+mapping in your LiteLLM config. To re-roll a project's assignment, delete its
+`.mt` file before the next run.
+
+Verify the routing without revealing the model in the answer:
+
+```bash
+cat <project-dir>/.mt                       # a or b
+cat ~/.claude-code-router/.session-model    # matches .mt after a run
+claude-anou --print --output-format json 'Reply with OK only'
+```
+
+The JSON `modelUsage` reports the real backend model id, so run that check only
+when you intentionally want to break blindness (for example, to confirm the
+wiring). For a genuine blind test, judge the answers, not the usage metadata.
+
 ## Verification
 
 Prefer a non-interactive JSON check because it reports actual `modelUsage`:
@@ -436,6 +507,8 @@ With `EXA_API_KEY` available to LiteLLM, successful output should return current
 - `scripts/configure-claude-glm.sh`: side-by-side installer that preserves `claude` and adds `claude-glm`/`Claude-glm`, deploying the production CCR config/custom-router/plugins and the local Anthropic adapter.
 - `scripts/configure-ccr-search.py`: install the CCR bridge that strips local search/fetch tools and routes search-intent prompts toward LiteLLM-side Exa injection.
 - `scripts/configure-zai-search-mcp.sh`: add and verify Z.ai `web-search-prime` MCP search using `Z_API_KEY`.
+- `scripts/configure-claude-anou.sh`: opt-in installer for the `claude-anou` anonymous blind model-test command; writes the `assets/claude-anou` wrapper, seeds `~/.claude-code-router/.session-model`, and reuses the claude-glm env and CCR custom router. Requires claude-glm configured and LiteLLM `anon-model-a`/`anon-model-b` model groups.
+- `assets/claude-anou`: archived `claude-anou` wrapper — shows `Anonymous-Model`, binds each project (`.mt`) to `anon-model-a`/`anon-model-b` via `~/.claude-code-router/.session-model`, and runs the same ccr bootstrap as claude-glm.
 - `scripts/install-anthropic-adapter.sh`: idempotently install the LiteLLM Anthropic adapter (`adapter/`) that bridges CCR to LiteLLM `/v1/chat/completions` on port 4010 and carries streaming usage (`stream_options.include_usage`).
 - `scripts/restore-ccr-config.sh`: restore the verified 3-provider CCR config, custom router, and transformer plugins from `assets/ccr/`, reinstall the adapter, and restart ccr with the env vars its placeholders need.
 - `adapter/`: archived LiteLLM Anthropic adapter (server.js/start.sh/stop.sh) used by the deployed claude-glm chain; without it, usage reporting and auto-compact degrade.
