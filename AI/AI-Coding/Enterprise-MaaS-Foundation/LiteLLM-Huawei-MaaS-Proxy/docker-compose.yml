@@ -94,6 +94,50 @@ services:
       retries: 3
       start_period: 15s
 
+  # ───────── Optional: self-hosted SearXNG search MCP ─────────
+  # Opt-in alternative to Exa. Start with: docker compose --profile search up -d
+  # Generate the settings file first (see README "Self-hosted SearXNG search MCP").
+  searxng:
+    <<: *default
+    image: searxng/searxng:latest
+    container_name: litellm_searxng
+    profiles: ["search"]
+    expose:
+      - "8080"
+    volumes:
+      - ./assets/config/searxng:/etc/searxng:rw
+    environment:
+      SEARXNG_BASE_URL: "http://localhost:8080/"
+      INSTANCE_NAME: "litellm-searxng"
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+
+  searxng-mcp:
+    <<: *default
+    image: python:3.12-slim
+    container_name: litellm_searxng_mcp
+    profiles: ["search"]
+    ports:
+      - "8788:8788"
+    volumes:
+      - ./assets/config/searxng_mcp_server.py:/app/server.py:ro
+    environment:
+      SEARXNG_URL: "http://searxng:8080"
+      # Required when the search profile is used. Left soft here so the core
+      # stack still parses without it; the MCP server refuses to start if empty.
+      MCP_TOKEN: ${MCP_TOKEN:-}
+      MCP_PORT: "8788"
+    command:
+      - "sh"
+      - "-c"
+      - "pip install --no-cache-dir 'fastmcp>=2,<3' httpx && python /app/server.py"
+    depends_on:
+      - searxng
+
 volumes:
   postgres_data:
     name: litellm_postgres_data

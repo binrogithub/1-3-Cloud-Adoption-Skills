@@ -1,6 +1,6 @@
 ---
 name: LiteLLM-Huawei-MaaS-Proxy
-description: Deploy, configure, validate, troubleshoot, or extend an OpenAI-compatible API proxy backed by PostgreSQL, Prometheus, and Grafana, routing through Huawei ModelArts MaaS (ap-southeast-1) with multi-key load balancing. TRIGGER when the task involves LiteLLM proxy deployment, Docker Compose stack with litellm_config.yaml, Huawei MaaS model routing, virtual key or budget management, Prometheus/Grafana observability for LLM traffic, custom_callbacks.py TTFT/TPOT/ITL metrics, multi-key load balancing, or any reference to `LITELLM_MASTER_KEY`, `HUAWEI_MAAS_API_KEY`, or `docker compose` with this stack.
+description: Deploy, configure, validate, troubleshoot, or extend an OpenAI-compatible API proxy backed by PostgreSQL, Prometheus, and Grafana, routing through Huawei ModelArts MaaS (ap-southeast-1) with multi-key load balancing. TRIGGER when the task involves LiteLLM proxy deployment, Docker Compose stack with litellm_config.yaml, Huawei MaaS model routing, virtual key or budget management, Prometheus/Grafana observability for LLM traffic, custom_callbacks.py TTFT/TPOT/ITL metrics, multi-key load balancing, an optional self-hosted SearXNG search MCP (`web_search`/`fetch_url`) as an alternative to Exa, wiring a `claude-glm` (claude-code-router) client through the proxy, or any reference to `LITELLM_MASTER_KEY`, `HUAWEI_MAAS_API_KEY`, `MCP_TOKEN`, or `docker compose` with this stack.
 ---
 
 # LiteLLM Huawei MaaS Proxy
@@ -20,6 +20,7 @@ This repo ships runtime stack files for deterministic clone-and-run deployment. 
 | Manage virtual keys, budgets, or teams | Follow **Virtual key management** |
 | Extend observability (custom metrics, dashboards) | Read **Metrics** and **Grafana Dashboard** sections |
 | Backup, restore, or reset data | Follow **Operations** |
+| Add self-hosted search, or wire a `claude-glm` client | Follow **Optional: SearXNG Search MCP and claude-glm Client** |
 
 **When NOT to use:**
 - Direct MaaS API calls without proxy (no spend tracking, no rate limiting)
@@ -1204,15 +1205,59 @@ providers:
 
 The pre-built `litellm_overview.json` dashboard is at `assets/config/grafana/provisioning/dashboards/litellm_overview.json`.
 
+## Optional: SearXNG Search MCP and claude-glm Client
+
+Two opt-in capabilities are bundled (folded in from the former single-ECS
+gateway skill). Both are optional — the core proxy does not require them.
+
+**Self-hosted SearXNG search MCP** (alternative to Exa injection). The `search`
+Docker Compose profile adds `searxng` (private meta-search, internal only) and
+`searxng-mcp` (bearer-authenticated FastMCP HTTP server on `:8788`, tools
+`web_search` and `fetch_url`).
+
+```bash
+sed "s/@@SEARXNG_SECRET@@/$(openssl rand -hex 32)/" \
+  assets/config/searxng/settings.yml.example > assets/config/searxng/settings.yml
+echo "MCP_TOKEN=$(openssl rand -hex 16)" >> .env
+docker compose --profile search up -d      # core `up -d` does NOT start these
+```
+
+Rules:
+- **SearXNG is internal-only** (`expose: 8080`); the bearer-auth MCP on `:8788`
+  is the public face. For a remote host, CIDR-lock `:8788` (and `:4000`) to
+  client `/32`s — never `0.0.0.0/0`.
+- **`search.formats` must include `json`** in `settings.yml` or the MCP gets
+  HTML and tool calls fail.
+- **`MCP_TOKEN` is required** when the `search` profile is used. The compose file
+  keeps it soft (`${MCP_TOKEN:-}`) so the core stack still parses without it, but
+  the MCP server refuses to start unauthenticated — if `MCP_TOKEN` is empty the
+  `searxng-mcp` container exits immediately (check `docker compose logs searxng-mcp`).
+
+**claude-glm client wiring.** Route Claude Code through `claude-code-router`
+(ccr) to this proxy with `CLAUDE_CONFIG_DIR` isolation so the user's plain
+`claude` stays on Anthropic. Mint a per-client virtual key with
+`scripts/bootstrap_finops_team.py`, then follow
+[references/claude-glm-and-search-onboarding.md](references/claude-glm-and-search-onboarding.md)
+for ccr config, wrapper install, and registering the SearXNG MCP into the
+isolated client only. Pre-deploy assets:
+`assets/config/claude-code-router.config.json.example` and
+`assets/config/claude-glm-wrapper.sh.example`.
+
 ## Bundled Resources
 
 - [references/architecture.md](references/architecture.md) — topology, services, volumes
 - [references/metrics-and-dashboards.md](references/metrics-and-dashboards.md) — PromQL, custom metrics, Grafana
 - [references/operations.md](references/operations.md) — health checks, backup, restart, usage
 - [references/troubleshooting.md](references/troubleshooting.md) — repair playbook, failure modes
+- [references/claude-glm-and-search-onboarding.md](references/claude-glm-and-search-onboarding.md) — optional SearXNG search MCP + claude-glm client onboarding
 - [scripts/init_env.sh](scripts/init_env.sh) — interactive .env setup (manual, agent-guided, or CI)
 - [scripts/generate_config.sh](scripts/generate_config.sh) — generates litellm_config.yaml from .env
 - [scripts/validate_e2e.sh](scripts/validate_e2e.sh) — 12-step end-to-end validation
+- [scripts/bootstrap_finops_team.py](scripts/bootstrap_finops_team.py) — create a LiteLLM team + scoped virtual key (FinOps onboarding)
+- [assets/config/searxng_mcp_server.py](assets/config/searxng_mcp_server.py) — FastMCP HTTP server wrapping SearXNG (optional `search` profile)
+- [assets/config/searxng/settings.yml.example](assets/config/searxng/settings.yml.example) — SearXNG settings template (JSON enabled)
+- [assets/config/claude-code-router.config.json.example](assets/config/claude-code-router.config.json.example) — ccr provider config for `claude-glm`
+- [assets/config/claude-glm-wrapper.sh.example](assets/config/claude-glm-wrapper.sh.example) — `claude-glm` wrapper with isolation + context headroom
 
 ## Output Expectations
 
