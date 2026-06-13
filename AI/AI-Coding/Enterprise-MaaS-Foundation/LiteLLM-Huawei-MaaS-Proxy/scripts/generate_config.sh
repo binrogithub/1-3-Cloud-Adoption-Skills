@@ -152,6 +152,16 @@ fi
   done
 
   echo ""
+  # ── Optional Exa search tool (only emitted when EXA_API_KEY is set) ──
+  if [ -n "${EXA_API_KEY:-}" ]; then
+    echo "search_tools:"
+    echo "  - search_tool_name: exa-search"
+    echo "    litellm_params:"
+    echo "      search_provider: exa_ai"
+    echo "      api_key: os.environ/EXA_API_KEY"
+    echo ""
+  fi
+
   echo "litellm_settings:"
   echo "  num_retries: 3 # retry call 3 times within same deployment"
   echo "  request_timeout: 600 # raise TimeoutError if full request takes longer than 600s (default)"
@@ -161,10 +171,26 @@ fi
   echo "  callbacks:"
   echo "    - \"prometheus\""
   echo "    - custom_callbacks.my_prometheus_logger"
+  # Three-tier rolling-window budget (BUDGET_TIER_* env). Effectively unlimited
+  # unless those vars are set; safe to always register.
+  echo "    - rolling_budget_hook.proxy_handler_instance"
+  if [ -n "${EXA_API_KEY:-}" ]; then
+    echo "    - \"websearch_interception\""
+  fi
   echo "  ui_theme_config:"
   echo "    logo_url: \"https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Huawei_Standard_logo.svg/3840px-Huawei_Standard_logo.svg.png\""
   echo "    favicon_url: \"https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Huawei_Standard_logo.svg/3840px-Huawei_Standard_logo.svg.png\""
+  if [ -n "${EXA_API_KEY:-}" ]; then
+    echo "  websearch_interception_params:"
+    echo "    enabled_providers: [\"openai\"]"
+    echo "    search_tool_name: \"exa-search\""
+  fi
   echo ""
+  # ── Optional BR fintech DLP guardrails (external risk-control project) ──
+  # Not emitted here: the br_dlp_guardrail module must be mounted into the
+  # container first (see references/operations.md "BR DLP guardrails" and the
+  # commented mounts in docker-compose.yml). Add the guardrails: block manually
+  # — or via your own overlay — once that module is present.
   echo "router_settings:"
   echo "  routing_strategy: $ROUTING_STRATEGY"
   echo "  num_retries: 3"
@@ -174,6 +200,9 @@ fi
   echo "general_settings:"
   echo "  database_connection_pool_limit: 10"
   echo "  database_connection_timeout: 60"
+  # Flush spend logs quickly so the rolling-budget hook sees near-real-time spend
+  # (default is 10s). Hour/day-scale production windows tolerate raising this back.
+  echo "  proxy_batch_write_at: 1"
 
 } > "$CONFIG_FILE"
 

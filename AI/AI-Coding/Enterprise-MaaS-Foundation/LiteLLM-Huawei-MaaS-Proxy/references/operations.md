@@ -283,3 +283,72 @@ docker volume ls | grep litellm
 
 docker compose exec litellm env | grep -E '^(LITELLM|DB_|HUAWEI|STORE_)'
 ```
+
+## Rolling-window budgets
+
+`assets/config/rolling_budget_hook.py` enforces three independent tiers from
+`LiteLLM_SpendLogs`: it sums spend over a sliding window and rejects with 429
+when the tier limit is exceeded. There is no fixed-time reset — quota recovers
+as old spend slides out of the window.
+
+```bash
+# Set tiers in .env, format "<n><s|m|h|d>:<usd>" (empty = unlimited):
+BUDGET_TIER_KEY=5h:12     # per virtual key
+BUDGET_TIER_USER=7d:30    # per user
+BUDGET_TIER_TEAM=30d:60   # per team
+
+docker compose up -d litellm   # picks up the new env
+
+# Audit that limits are computed from real billing rows:
+docker compose exec db psql -U llmproxy -d litellm -c \
+  "SELECT api_key, ROUND(SUM(spend)::numeric,4) AS spent_usd
+   FROM \"LiteLLM_SpendLogs\"
+   WHERE \"startTime\" > NOW() - interval '5 hours' GROUP BY api_key;"
+```
+
+Production: index `LiteLLM_SpendLogs` on `(api_key,"startTime")`,
+`("user","startTime")`, `(team_id,"startTime")`; the generator already sets
+`proxy_batch_write_at: 1` so the hook sees spend within ~1s. See `demo/` for a
+scaled-down live walkthrough.
+
+## Anthropic-format adapter (optional)
+
+`adapter/` exposes an Anthropic Messages-style endpoint that forwards to
+LiteLLM `/v1/chat/completions`, for Claude-format clients.
+
+```bash
+# In .env:
+LITELLM_ANTHROPIC_KEY="sk-..."          # virtual key the adapter presents upstream
+ADAPTER_DEFAULT_MODEL="claude-opus-4-6"  # used when a request omits a model
+
+docker compose --profile adapter up -d   # listens on :4010
+curl -s http://localhost:4010/health
+```
+
+Outside Docker you can also run it directly with `adapter/start.sh` /
+`adapter/stop.sh` (set `ENV_FILE`, `LITELLM_CHAT_URL` as needed).
+
+## Source patches (Responses-API streaming)
+
+`patches/proxy_server.py` and `patches/utils.py` are mounted read-only over the
+pinned image to adapt the Responses-API streaming path for Huawei MaaS /
+Anthropic-style clients. They must be re-derived when bumping the image tag —
+full instructions and the expected diff are in `patches/README.md`.
+
+## BR DLP guardrails
+
+The production stack layers fintech DLP guardrails — a built-in secrets filter
+(L1), a Brazilian-entity DLP guardrail (L2, input + output), and Presidio PII
+masking (L2, `pt` NLP). They live in the **separate `risk-control` project**
+and are therefore *referenced, not bundled* here. To enable:
+
+1. Obtain `br_dlp_guardrail.py` + `br_dlp_policy.yaml` (and, for `br-pii-presidio`,
+   run the Presidio analyzer/anonymizer services).
+2. Uncomment the BR DLP mounts and `BR_DLP_POLICY_PATH` in `docker-compose.yml`
+   (point them at your copies), and set `PRESIDIO_*_API_BASE` in `.env`.
+3. Uncomment the `guardrails:` block in `litellm_config.yaml` (see the reference
+   block in `litellm_config.yaml.example`). Register `br-dlp-output` **last** so
+   its post-call privacy banner is not re-masked by Presidio.
+
+All guardrails use `default_on: false` — they fire only when a request carries
+`guardrails: [...]`, so the core stack is unaffected if you skip them.

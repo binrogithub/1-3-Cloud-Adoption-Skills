@@ -10,6 +10,17 @@
 #   2. Run scripts/generate_config.sh to generate the actual config
 #
 # Generated config will use: os.environ/HUAWEI_MAAS_API_KEY_0, _1, _2, etc.
+#
+# The generator also emits, to match the production deployment:
+#   • rolling_budget_hook.proxy_handler_instance — three-tier rolling-window
+#     budget (BUDGET_TIER_* env; effectively unlimited until those are set).
+#   • search_tools (exa-search) + the websearch_interception callback —
+#     ONLY when EXA_API_KEY is set (shown commented below).
+#   • proxy_batch_write_at: 1 — near-real-time spend so the budget hook is timely.
+#
+# The optional BR fintech DLP guardrails are NOT generated (they require the
+# external risk-control module to be mounted first) — see the commented
+# "guardrails:" reference block near the end and references/operations.md.
 # ─────────────────────────────────────────────────────────────────────────────
 
 model_list:
@@ -46,13 +57,13 @@ model_list:
       input_cost_per_token: 0.000015
       output_cost_per_token: 0.000075
 
-  # ───────── Huawei MaaS Models ───────────
+  # ───────── Huawei MaaS Models (1 deployment(s) per model, 7 total) ───────────
 
   - model_name: glm-5.1
     litellm_params:
       model: openai/glm-5.1
       api_base: os.environ/HUAWEI_MAAS_API_BASE
-      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 500000
       rpm: 30
     model_info:
@@ -66,7 +77,7 @@ model_list:
     litellm_params:
       model: openai/glm-5.1
       api_base: os.environ/HUAWEI_MAAS_API_BASE
-      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 500000
       rpm: 30
     model_info:
@@ -80,7 +91,7 @@ model_list:
     litellm_params:
       model: openai/glm-5.1
       api_base: os.environ/HUAWEI_MAAS_API_BASE
-      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 500000
       rpm: 30
     model_info:
@@ -94,7 +105,7 @@ model_list:
     litellm_params:
       model: openai/glm-5
       api_base: os.environ/HUAWEI_MAAS_API_BASE
-      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 500000
       rpm: 30
     model_info:
@@ -108,7 +119,7 @@ model_list:
     litellm_params:
       model: openai/deepseek-v4-pro
       api_base: os.environ/HUAWEI_MAAS_API_BASE
-      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 30000
       rpm: 3
     model_info:
@@ -122,9 +133,9 @@ model_list:
     litellm_params:
       model: openai/deepseek-v4-flash
       api_base: os.environ/HUAWEI_MAAS_API_BASE
-      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 30000
-      rpm: 3  
+      rpm: 3
     model_info:
       max_tokens: 1000000
       max_input_tokens: 1000000
@@ -136,7 +147,7 @@ model_list:
     litellm_params:
       model: openai/deepseek-v3.2
       api_base: os.environ/HUAWEI_MAAS_API_BASE
-      api_key: os.environ/HUAWEI_MAAS_API_KEY
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 500000
       rpm: 700
     model_info:
@@ -146,6 +157,12 @@ model_list:
       input_cost_per_token: 0.00000027
       output_cost_per_token: 0.000000404
 
+# ── Optional: Exa search tool (emitted by the generator only when EXA_API_KEY set) ──
+# search_tools:
+#   - search_tool_name: exa-search
+#     litellm_params:
+#       search_provider: exa_ai
+#       api_key: os.environ/EXA_API_KEY
 
 litellm_settings:
   num_retries: 3 # retry call 3 times within same deployment
@@ -156,16 +173,61 @@ litellm_settings:
   callbacks:
     - "prometheus"
     - custom_callbacks.my_prometheus_logger
+    - rolling_budget_hook.proxy_handler_instance
+    # Added by the generator only when EXA_API_KEY is set:
+    # - "websearch_interception"
   ui_theme_config:
     logo_url: "https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Huawei_Standard_logo.svg/3840px-Huawei_Standard_logo.svg.png"
     favicon_url: "https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Huawei_Standard_logo.svg/3840px-Huawei_Standard_logo.svg.png"
+  # Added by the generator only when EXA_API_KEY is set:
+  # websearch_interception_params:
+  #   enabled_providers: ["openai"]
+  #   search_tool_name: "exa-search"
+
+# ── Optional: BR fintech DLP guardrails (external risk-control project) ──────────
+# Reference of the production layering. NOT enabled by default: the
+# br_dlp_guardrail module + presidio service must be mounted/running first
+# (see docker-compose.yml commented mounts and references/operations.md).
+# All guardrails use default_on: false → they fire only when a request carries
+# `guardrails: [...]`, so the core stack is unaffected if you leave this out.
+#
+# guardrails:
+#   - guardrail_name: secrets-filter        # L1: built-in content filter (API keys/JWT/private keys)
+#     litellm_params:
+#       guardrail: litellm_content_filter
+#       mode: pre_call
+#       default_on: false
+#       patterns:
+#         - {pattern_type: prebuilt, pattern_name: generic_api_key, action: BLOCK}
+#         - {pattern_type: prebuilt, pattern_name: github_token, action: BLOCK}
+#   - guardrail_name: br-dlp-input           # L2: Brazilian entity DLP (input)
+#     litellm_params:
+#       guardrail: br_dlp_guardrail.BrazilDLPGuardrail
+#       mode: pre_call
+#       default_on: false
+#   - guardrail_name: br-pii-presidio        # L2: Presidio + pt NLP (PERSON/LOCATION)
+#     litellm_params:
+#       guardrail: presidio
+#       mode: pre_call
+#       default_on: false
+#       presidio_language: pt
+#       pii_entities_config: {PERSON: MASK, LOCATION: MASK}
+#       presidio_score_thresholds: {PERSON: 0.80, LOCATION: 0.80}
+#   - guardrail_name: br-dlp-output          # must register LAST (appends privacy banner)
+#     litellm_params:
+#       guardrail: br_dlp_guardrail.BrazilDLPGuardrail
+#       mode: post_call
+#       default_on: false
 
 router_settings:
   routing_strategy: simple-shuffle
-  num_retries: 3 # retry across deployments
+  num_retries: 3
   cooldown_time: 30 # seconds to cool down a failed deployment
   allowed_fails: 3 # failures before cooldown kicks in
 
 general_settings:
   database_connection_pool_limit: 10
   database_connection_timeout: 60
+  # Flush spend logs quickly so the rolling-budget hook sees near-real-time spend
+  # (default is 10s). Hour/day-scale production windows tolerate raising this back.
+  proxy_batch_write_at: 1

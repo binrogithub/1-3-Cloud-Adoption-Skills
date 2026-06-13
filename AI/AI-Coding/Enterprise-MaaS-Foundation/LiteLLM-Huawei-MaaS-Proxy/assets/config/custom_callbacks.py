@@ -11,10 +11,9 @@ ITL   = (end_time - completion_start_time) / max(output_tokens - 1, 1)  (streami
 
 import os
 import re
-
+from datetime import datetime
 from litellm.integrations.custom_logger import CustomLogger
 from prometheus_client import Histogram
-
 
 IMAGE_ROUTER_MODEL = "vision-openrouter"
 
@@ -25,7 +24,7 @@ _SEARCH_RE = re.compile(
 
 
 def _latest_user_text(data: dict) -> str:
-    # Responses API uses "input"; chat completions uses "messages".
+    # responses API uses "input"; chat completions uses "messages"
     for key in ("messages", "input"):
         msgs = data.get(key) or []
         for msg in reversed(msgs):
@@ -36,12 +35,9 @@ def _latest_user_text(data: dict) -> str:
                 return content
             if isinstance(content, list):
                 return " ".join(
-                    block.get("text", "")
-                    for block in content
-                    if isinstance(block, dict)
-                    and block.get("type") in ("text", "input_text")
-                    and block.get("text")
-                    and "<system-reminder>" not in block.get("text", "")
+                    b.get("text", "") for b in content
+                    if isinstance(b, dict) and b.get("type") in ("text", "input_text")
+                    and b.get("text") and "<system-reminder>" not in b.get("text", "")
                 )
     return ""
 
@@ -53,7 +49,6 @@ def _is_search_intent(data: dict) -> bool:
 async def _fetch_exa(query: str, api_key: str, num_results: int = 5) -> str:
     try:
         import httpx
-
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(
                 "https://api.exa.ai/search",
@@ -85,7 +80,7 @@ def _inject_search_results(data: dict, results: str) -> None:
         "Include source URLs from those results. "
         "Do not call any search, fetch, or shell tools."
     )
-
+    # Append results to the last user message (works for both "messages" and "input")
     for key in ("messages", "input"):
         msgs = data.get(key)
         if not isinstance(msgs, list):
@@ -100,12 +95,15 @@ def _inject_search_results(data: dict, results: str) -> None:
             elif isinstance(content, list):
                 msgs[i] = {**msg, "content": content + [{"type": "text", "text": f"\n\n{results}"}]}
             break
-        break
+        break  # only mutate the first key that has content
 
+    # Inject system instruction — "system" for Anthropic/chat, "instructions" for responses API
     if "input" in data and "messages" not in data:
+        # OpenAI responses API format
         existing = data.get("instructions") or ""
         data["instructions"] = (existing + "\n\n" + instruction).lstrip()
     else:
+        # Anthropic / chat completions format
         system = data.get("system")
         if isinstance(system, str):
             data["system"] = system + "\n\n" + instruction
@@ -116,7 +114,7 @@ def _inject_search_results(data: dict, results: str) -> None:
 
 
 def _has_image_content(messages) -> bool:
-    """Return True if any message contains OpenAI or Anthropic image blocks."""
+    """Return True if any message contains image_url or image content blocks."""
     if not messages or not isinstance(messages, list):
         return False
     for message in messages:
@@ -126,7 +124,12 @@ def _has_image_content(messages) -> bool:
         for block in content:
             if not isinstance(block, dict):
                 continue
-            if block.get("type") in ("image_url", "image"):
+            block_type = block.get("type")
+            # OpenAI-style: {"type": "image_url", "image_url": {...}}
+            if block_type == "image_url":
+                return True
+            # Anthropic-style: {"type": "image", "source": {...}}
+            if block_type == "image":
                 return True
     return False
 
@@ -143,7 +146,7 @@ def _to_timestamp(val):
 
 
 class PrometheusTTFTTPOTITL(CustomLogger):
-    """Custom callback that emits metrics and mutates requests before dispatch."""
+    """Custom callback that emits TTFT, TPOT, and ITL as Prometheus histograms."""
 
     def __init__(self):
         super().__init__()
@@ -175,6 +178,7 @@ class PrometheusTTFTTPOTITL(CustomLogger):
             completion_start_time = kwargs.get("completion_start_time")
             api_call_start_time = kwargs.get("api_call_start_time")
 
+            # Model info from standard_logging_object or kwargs
             slo = kwargs.get("standard_logging_object") or {}
             model = slo.get("model") or kwargs.get("model", "unknown")
             model_group = slo.get("model_group") or model
@@ -182,6 +186,7 @@ class PrometheusTTFTTPOTITL(CustomLogger):
 
             labels = {"model": model, "model_group": model_group, "api_provider": api_provider}
 
+            # Output tokens from response_obj
             output_tokens = 0
             if response_obj is not None:
                 usage = None
@@ -195,24 +200,32 @@ class PrometheusTTFTTPOTITL(CustomLogger):
                     elif hasattr(usage, "completion_tokens"):
                         output_tokens = usage.completion_tokens or 0
 
+            # Convert timestamps
             start_ts = _to_timestamp(start_time)
             end_ts = _to_timestamp(end_time)
             api_start_ts = _to_timestamp(api_call_start_time)
             comp_start_ts = _to_timestamp(completion_start_time)
 
+            # --- TTFT (streaming only) ---
             if stream and api_start_ts and comp_start_ts:
                 ttft_seconds = comp_start_ts - api_start_ts
                 if ttft_seconds > 0:
                     self.ttft.labels(**labels).observe(ttft_seconds)
 
+            # --- TPOT & ITL ---
             if output_tokens > 0 and start_ts and end_ts:
                 total_latency = end_ts - start_ts
-                self.tpot.labels(**labels).observe(total_latency / output_tokens)
 
+                # TPOT = total_latency / output_tokens
+                tpot_seconds = total_latency / output_tokens
+                self.tpot.labels(**labels).observe(tpot_seconds)
+
+                # ITL (streaming only) = streaming_duration / (output_tokens - 1)
                 if stream and comp_start_ts:
                     streaming_duration = end_ts - comp_start_ts
                     if streaming_duration > 0 and output_tokens > 1:
-                        self.itl.labels(**labels).observe(streaming_duration / (output_tokens - 1))
+                        itl_seconds = streaming_duration / (output_tokens - 1)
+                        self.itl.labels(**labels).observe(itl_seconds)
 
         except Exception as e:
             print(f"[PrometheusTTFTTPOTITL] Error: {e}")
@@ -224,7 +237,7 @@ class PrometheusTTFTTPOTITL(CustomLogger):
         if _has_image_content(messages):
             original_model = data.get("model", "unknown")
             data["model"] = IMAGE_ROUTER_MODEL
-            print(f"[ImageRouter] image detected, {original_model!r} -> {IMAGE_ROUTER_MODEL!r}")
+            print(f"[ImageRouter] image detected, {original_model!r} → {IMAGE_ROUTER_MODEL!r}")
             return data
 
         if _is_search_intent(data):
@@ -243,6 +256,14 @@ class PrometheusTTFTTPOTITL(CustomLogger):
         return data
 
     async def async_pre_call_deployment_hook(self, kwargs, call_type):
+        _VALID_REASONING_EFFORT = {"xhigh", "high", "medium", "low", "minimal", "none"}
+        reasoning_effort = kwargs.get("reasoning_effort")
+        if reasoning_effort is not None and (
+            not isinstance(reasoning_effort, str) or reasoning_effort not in _VALID_REASONING_EFFORT
+        ):
+            kwargs.pop("reasoning_effort", None)
+            print(f"[ReasoningEffortFilter] stripped invalid reasoning_effort={reasoning_effort!r}")
+
         try:
             call_type_value = getattr(call_type, "value", str(call_type))
             tools = kwargs.get("tools") or []
