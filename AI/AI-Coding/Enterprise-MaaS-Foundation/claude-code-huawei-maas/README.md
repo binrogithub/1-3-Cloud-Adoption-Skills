@@ -147,8 +147,10 @@ The first run in a project writes a random `a`/`b` assignment to
 `~/.claude-code-router/.session-model`, which the CCR custom router reads to pick
 `anon-model-a` or `anon-model-b`. Reveal the mapping only after the test by
 inspecting `.mt` and the `anon-model-a`/`anon-model-b` → real-model mapping in
-your LiteLLM config; delete `.mt` to re-roll a project's assignment. See SKILL.md
-("Anonymous Blind Model Test") for full details.
+your LiteLLM config; delete `.mt` to re-roll a project's assignment. Run only one
+`claude-anou` session at a time — `~/.claude-code-router/.session-model` is a
+single global signal, so two concurrent sessions would cross-route each other and
+invalidate the test. See SKILL.md ("Anonymous Blind Model Test") for full details.
 
 ## Persistent CCR Service
 

@@ -430,6 +430,12 @@ Reveal the mapping only after the blind test is finished: inspect
 mapping in your LiteLLM config. To re-roll a project's assignment, delete its
 `.mt` file before the next run.
 
+Run only one `claude-anou` session at a time. `~/.claude-code-router/.session-model`
+is a single global signal that each run overwrites from the current project's
+`.mt`; two concurrent `claude-anou` sessions in different projects would
+cross-route each other's in-flight requests and invalidate the blind test. The
+per-project `.mt` assignment is still stable across non-overlapping runs.
+
 Verify the routing without revealing the model in the answer:
 
 ```bash
