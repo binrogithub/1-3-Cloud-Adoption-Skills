@@ -1,4 +1,0 @@
-interface:
-  display_name: "OpenShift + Huawei Cloud MaaS"
-  short_description: "Integrate Dev Spaces, Cline, and MaaS"
-  default_prompt: "Use $Openshift+Huawei-Cloud-MaaS-Skill to configure browser-based Dev Spaces or Che with Cline and Huawei Cloud MaaS."
