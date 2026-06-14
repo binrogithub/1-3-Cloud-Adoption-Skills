@@ -1,6 +1,6 @@
 ---
 name: claude-code-huawei-maas
-description: Configure Claude Code to use Huawei Cloud MaaS or ModelArts MaaS through claude-code-router and a LiteLLM Anthropic adapter, optionally add a CCR bridge for LiteLLM-backed search or Z.ai web-search-prime MCP search, or add a claude-anou anonymous blind model-test command. Use when Codex needs to add a side-by-side claude-glm command that routes to Huawei MaaS glm-5.1 while preserving the original claude command on Anthropic, install or configure claude-code-router, deploy the production CCR config/custom-router/adapter, adjust context length, verify that Claude Code is actually backed by MaaS, route Claude Code WebSearch/current-news/latest prompts through a LiteLLM Exa search injection path, configure Z.ai MCP search with Z_API_KEY, or add an optional claude-anou command that runs Claude Code as "Anonymous-Model" and binds each project to a hidden anon-model-a/anon-model-b backend for blind A/B model comparison.
+description: Configure Claude Code to use Huawei Cloud MaaS or ModelArts MaaS through claude-code-router and a LiteLLM Anthropic adapter, optionally add a CCR bridge for LiteLLM-backed search or Z.ai web-search-prime MCP search, add a claude-anou anonymous blind model-test command, or configure the Claude Agent SDK (and Claude Code) against a standalone local Anthropic Messages API proxy backed directly by the MaaS OpenAI-compatible endpoint. Use when Codex needs to add a side-by-side claude-glm command that routes to Huawei MaaS glm-5.1 while preserving the original claude command on Anthropic, install or configure claude-code-router, deploy the production CCR config/custom-router/adapter, adjust context length, verify that Claude Code is actually backed by MaaS, route Claude Code WebSearch/current-news/latest prompts through a LiteLLM Exa search injection path, configure Z.ai MCP search with Z_API_KEY, add an optional claude-anou command that runs Claude Code as "Anonymous-Model" and binds each project to a hidden anon-model-a/anon-model-b backend for blind A/B model comparison, or wire the TypeScript Claude Agent SDK query() and Claude Code to a simpler 127.0.0.1:3000 Anthropic-to-MaaS proxy (including tool-call/streaming compatibility, rate limiting, metrics, and metadata-only logging).
 ---
 
 # Claude Code Huawei MaaS
@@ -448,6 +448,175 @@ The JSON `modelUsage` reports the real backend model id, so run that check only
 when you intentionally want to break blindness (for example, to confirm the
 wiring). For a genuine blind test, judge the answers, not the usage metadata.
 
+## Optional: Claude Agent SDK Via Standalone Anthropic Proxy
+
+Use this optional path when the user wants to drive the **Claude Agent SDK**
+(`@anthropic-ai/claude-agent-sdk`) or Claude Code programmatically against Huawei
+MaaS without the full `claude-code-router` + LiteLLM chain. Instead of CCR, this
+path uses a single standalone local proxy that speaks the Anthropic Messages API
+and translates directly to the MaaS OpenAI-compatible endpoint:
+
+```text
+Claude Code / Claude Agent SDK
+  -> Anthropic Messages API /v1/messages
+  -> local proxy on http://127.0.0.1:3000
+  -> Huawei Cloud MaaS OpenAI-compatible /chat/completions
+  -> glm-5.1
+```
+
+This is a lighter-weight alternative to the primary `claude-glm` chain above.
+Prefer the `claude-glm` CCR path for interactive Claude Code on this host; use
+this standalone-proxy path for SDK automation, embedding, or environments where
+CCR/LiteLLM is not deployed. The shared facts from this skill still apply: the
+default MaaS base URL is
+`https://api-ap-southeast-1.modelarts-maas.com/openai/v1`, the default model is
+`glm-5.1`, and the security rules in "Security Rules (standalone proxy)" below
+are mandatory. See `references/adapter-checklist.md` for the full adapter
+conformance checklist.
+
+### Claude Code Settings (standalone proxy)
+
+```json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:3000",
+    "ANTHROPIC_AUTH_TOKEN": "maas-local-proxy",
+    "API_TIMEOUT_MS": "3000000",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-5.1",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "glm-5.1",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "glm-5.1"
+  }
+}
+```
+
+Typical user settings path: `~/.claude/settings.json`.
+
+### Proxy Environment
+
+Keep the proxy env file outside source control, usually
+`/etc/claude-code-proxy/maas.env`:
+
+```bash
+CLAUDE_CODE_PROXY_API_KEY=replace-with-your-maas-api-key
+ANTHROPIC_PROXY_BASE_URL=https://api-ap-southeast-1.modelarts-maas.com/openai/v1
+REASONING_MODEL=glm-5.1
+COMPLETION_MODEL=glm-5.1
+REASONING_MAX_TOKENS=4096
+COMPLETION_MAX_TOKENS=2048
+DEBUG=false
+REQUEST_MIN_INTERVAL_MS=1200
+UPSTREAM_TIMEOUT_MS=180000
+UPSTREAM_MAX_RETRIES=3
+UPSTREAM_RETRY_BASE_DELAY_MS=1500
+MAX_QUEUE_DEPTH=20
+ACCESS_LOG_PATH=/var/lib/claude-code-maas-proxy/access.jsonl
+```
+
+```bash
+chown root:claude-proxy /etc/claude-code-proxy/maas.env
+chmod 0640 /etc/claude-code-proxy/maas.env
+```
+
+### Agent SDK Usage Pattern
+
+Drive the TypeScript Agent SDK with explicit env values pointing at the proxy:
+
+```js
+import { query } from '@anthropic-ai/claude-agent-sdk';
+
+const maasEnv = {
+  ...process.env,
+  ANTHROPIC_BASE_URL: 'http://127.0.0.1:3000',
+  ANTHROPIC_AUTH_TOKEN: 'maas-local-proxy',
+  ANTHROPIC_DEFAULT_HAIKU_MODEL: 'glm-5.1',
+  ANTHROPIC_DEFAULT_SONNET_MODEL: 'glm-5.1',
+  ANTHROPIC_DEFAULT_OPUS_MODEL: 'glm-5.1',
+  API_TIMEOUT_MS: '3000000'
+};
+
+for await (const message of query({
+  prompt: 'Reply with OK only.',
+  options: {
+    cwd: process.cwd(),
+    model: 'sonnet',
+    persistSession: false,
+    maxTurns: 1,
+    tools: [],
+    env: maasEnv
+  }
+})) {
+  if (message.type === 'result') {
+    console.log(message.result);
+  }
+}
+```
+
+### Validation Workflow (standalone proxy)
+
+Run checks in this order:
+
+1. Proxy health: `curl http://127.0.0.1:3000/`
+2. Proxy metrics: `curl http://127.0.0.1:3000/metrics`
+3. Claude Code CLI:
+   `claude -p 'Reply with OK only.' --output-format json --no-session-persistence --model sonnet`
+4. Agent SDK no-tool `query()`.
+5. Agent SDK tool query with a restricted tool set (e.g. `Read`, `Bash`, `Edit`).
+6. Agent SDK subagent query with `Agent`.
+7. Concurrency test with several parallel `query()` calls, then re-check
+   `curl http://127.0.0.1:3000/metrics`.
+
+Expected healthy metrics: `failed_total` stays `0`, `upstream_429_total` stays
+`0` under normal load, `queue_depth` returns to `0`, and `last_error` is `null`.
+
+### Known Adaptation Issues (standalone proxy)
+
+- **Streaming tool arguments**: OpenAI-compatible streaming tool-call arguments
+  arrive as incremental fragments. The proxy must concatenate fragments (by
+  `tool_calls[].index`) before emitting Anthropic `input_json_delta`, or tool
+  inputs arrive as `{}`. If `Read`/`Edit`/`Bash` inputs are empty, inspect the
+  streaming conversion first.
+- **GLM-5.1 path guessing**: GLM-5.1 can invent fake home paths
+  (`/home/user/...`, `/Users/claudedev/...`, `/Users/zhujinhao/...`). Inject path
+  guidance into the system prompt, add the cwd to file-tool descriptions, and if a
+  fake home path is detected and `Bash` is available, rewrite the attempted file
+  tool call to `{"name":"Bash","input":{"command":"pwd && ls","description":"Check current directory and list files"}}`, then let the next turn use the real cwd.
+- **Claude Code default tool count**: Claude Code can send 20+ default tools; this
+  is normal. Access logs should distinguish `tools_original_count`,
+  `tools_forwarded_count`, `tools_filtered_count`, and `tools_profile`
+  (`none` / `restricted` / `claude_code_default`).
+- **MaaS rate limit**: On 429, use a queue and a minimum interval
+  (`REQUEST_MIN_INTERVAL_MS=1200`, `UPSTREAM_MAX_RETRIES=3`,
+  `UPSTREAM_RETRY_BASE_DELAY_MS=1500`, `MAX_QUEUE_DEPTH=20`). For a strict 1 QPS
+  MaaS quota, do not run many Agent SDK subagents in parallel without queueing.
+- **JSON Schema output**: Do not assume `outputFormat: { type: 'json_schema' }`
+  is reliable through this model/proxy chain unless tested in the target
+  environment. Prefer plain text plus application-side JSON validation with repair.
+
+### Production Service Shape (standalone proxy)
+
+Preferred runtime: a Node.js HTTP service, systemd-managed, bound only to
+`127.0.0.1`, running as a non-root user (e.g. `claude-proxy`), with a read-only
+install dir, a writable state dir only, and a metadata-only access log.
+
+```bash
+/opt/claude-code-maas-proxy/
+/etc/claude-code-proxy/maas.env
+/etc/systemd/system/claude-code-maas-proxy.service
+/var/lib/claude-code-maas-proxy/access.jsonl
+/etc/logrotate.d/claude-code-maas-proxy
+```
+
+### Security Rules (standalone proxy)
+
+- Never print, persist in docs, commit, or package a real API key. Document key
+  configuration with placeholders such as `replace-with-your-maas-api-key`.
+- Store the real key only in an env file or secret manager, never in README
+  files, tarballs, screenshots, logs, or committed config.
+- Keep the local proxy bound to `127.0.0.1` unless there is a clear reason to
+  expose it.
+- The access log must be metadata-only: do not log prompts, messages, tool
+  outputs, or `Authorization` headers.
+
 ## Verification
 
 Prefer a non-interactive JSON check because it reports actual `modelUsage`:
@@ -520,3 +689,4 @@ With `EXA_API_KEY` available to LiteLLM, successful output should return current
 - `adapter/`: archived LiteLLM Anthropic adapter (server.js/start.sh/stop.sh) used by the deployed claude-glm chain; without it, usage reporting and auto-compact degrade.
 - `assets/ccr/`: archived production CCR `config.json` (3 providers, `CUSTOM_ROUTER_PATH`, `APIKEY`), `custom-router.js` (unknown-model rejection, provider-existence guard), and `plugins/` (the transformer plugins `config.json` loads).
 - `tests/`: production test plan matrix, concurrent Top-30 runner, fix plan, and test reports.
+- `references/adapter-checklist.md`: adapter conformance checklist for the optional standalone Anthropic→MaaS proxy (required interfaces, streaming tool-call assembly, GLM-5.1 path guard, rate-limit handling, metadata-only logs/metrics, and end-to-end tests for the Claude Agent SDK path).

@@ -59,7 +59,21 @@ Claude Code image prompt
   -> OpenRouter vision model answers
 ```
 
-For Claude Agent SDK or custom proxy patterns, use the separate `Claude-Code-SDK-Agent-MaaS-Skill`.
+Optional standalone Anthropic-proxy / Claude Agent SDK scope:
+
+```text
+Claude Code / Claude Agent SDK (@anthropic-ai/claude-agent-sdk)
+  -> Anthropic Messages API /v1/messages
+  -> standalone local proxy on http://127.0.0.1:3000
+  -> Huawei Cloud MaaS OpenAI-compatible /chat/completions
+  -> glm-5.1
+```
+
+For driving the Claude Agent SDK `query()` programmatically, or for environments
+without the CCR/LiteLLM chain, use the lighter standalone Anthropic→MaaS proxy
+path documented in SKILL.md ("Optional: Claude Agent SDK Via Standalone Anthropic
+Proxy") and the adapter conformance checklist in
+`references/adapter-checklist.md`.
 
 ## Quick Start
 
@@ -151,6 +165,41 @@ your LiteLLM config; delete `.mt` to re-roll a project's assignment. Run only on
 `claude-anou` session at a time — `~/.claude-code-router/.session-model` is a
 single global signal, so two concurrent sessions would cross-route each other and
 invalidate the test. See SKILL.md ("Anonymous Blind Model Test") for full details.
+
+## Optional: Claude Agent SDK Via Standalone Anthropic Proxy
+
+For driving the TypeScript Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`)
+programmatically — or for hosts where the CCR + LiteLLM chain is not deployed —
+this skill also documents a lighter standalone path: a single local proxy on
+`http://127.0.0.1:3000` that speaks the Anthropic Messages API and translates
+directly to the MaaS OpenAI-compatible endpoint.
+
+```js
+import { query } from '@anthropic-ai/claude-agent-sdk';
+
+const maasEnv = {
+  ...process.env,
+  ANTHROPIC_BASE_URL: 'http://127.0.0.1:3000',
+  ANTHROPIC_AUTH_TOKEN: 'maas-local-proxy',
+  ANTHROPIC_DEFAULT_SONNET_MODEL: 'glm-5.1',
+  API_TIMEOUT_MS: '3000000'
+};
+
+for await (const message of query({
+  prompt: 'Reply with OK only.',
+  options: { model: 'sonnet', persistSession: false, maxTurns: 1, tools: [], env: maasEnv }
+})) {
+  if (message.type === 'result') console.log(message.result);
+}
+```
+
+Prefer the `claude-glm` CCR path for interactive Claude Code on this host; use the
+standalone proxy for SDK automation or CCR-less environments. Full Claude Code
+settings, proxy env, validation workflow, known adaptation issues (streaming
+tool-call assembly, GLM-5.1 path guessing, rate limiting), and production service
+shape are in SKILL.md ("Optional: Claude Agent SDK Via Standalone Anthropic
+Proxy"); the adapter conformance checklist is in
+`references/adapter-checklist.md`.
 
 ## Persistent CCR Service
 
@@ -268,6 +317,8 @@ claude-code-huawei-maas/
 │           ├── claude-thinking-filter.js
 │           ├── claude-websearch-to-responses.js
 │           └── reasoning-effort-filter.js
+├── references/
+│   └── adapter-checklist.md   # conformance checklist for the optional standalone Anthropic→MaaS proxy
 ├── scripts/
 │   ├── claude-glm-recover.sh
 │   ├── configure-ccr-search.py
