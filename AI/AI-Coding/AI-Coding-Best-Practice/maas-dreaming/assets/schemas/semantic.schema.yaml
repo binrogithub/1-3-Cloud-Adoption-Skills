@@ -1,0 +1,10 @@
+# L3 approved-knowledge frontmatter (PRD-design §5.2.4 + §8.2). Validation only;
+# the records themselves live in the native store / Mem0 (no new runtime).
+required: [id, type, title, scope, owner, approval_state, source, retention, inject_policy, last_verified_at]
+optional: [approved_by, tags]
+enums:
+  type: [adr, runbook, policy, rule]
+  scope: [personal, repo, module, application, team, organization]   # default: repo
+  approval_state: [candidate, approved, superseded, rejected]
+  inject_policy: [always, on_relevant_task_only, manual_only, disabled]
+  retention: [short_term, long_term]

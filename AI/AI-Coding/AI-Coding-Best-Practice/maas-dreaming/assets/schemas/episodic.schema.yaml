@@ -1,0 +1,5 @@
+# L2 episodic record frontmatter (PRD-design §5.2.3). Append-only; never L3.
+required: [type, date, task, source, promotion_state, owner]
+optional: [decisions, files_touched, validation, tags]
+enums:
+  promotion_state: [candidate, promoted, superseded]
