@@ -1,0 +1,71 @@
+# mem0.config.yaml — Mem0 backbone wired to Huawei MaaS (prd.md §3.1)
+#
+# L2/L3 memory engine config for the vendored Mem0 (Apache-2.0). LLM + embeddings
+# are routed OpenAI-compatible through CCR / LiteLLM -> Huawei MaaS /openai/v1 ->
+# glm-5.1. Vector store is local Qdrant (self-hosted, air-gap friendly, prd.md §8).
+#
+# SECURITY: contains NO real secrets. Replace placeholders before use. Prefer
+# sourcing api_key from an env var; never commit a real key.
+#
+# Consumed via:  from mem0 import Memory; Memory.from_config(<this yaml>)
+
+version: "v1.1"
+
+# --- LLM: extract->update write path, runs on glm-5.1 via OpenAI-compatible API ---
+llm:
+  provider: openai
+  config:
+    model: glm-5.1
+    # CCR / LiteLLM gateway fronting Huawei MaaS. Keep the /openai/v1 suffix.
+    openai_base_url: https://your-ccr-gateway.example.com/openai/v1
+    api_key: replace-with-your-maas-api-key   # or env: ${MAAS_API_KEY}
+    temperature: 0.1
+    max_tokens: 2000
+
+# --- Embedder: self-hostable; OpenAI-compatible through the same gateway ---
+# Swap to a local fastembed/ollama model for fully air-gapped deployments.
+embedder:
+  provider: openai
+  config:
+    model: replace-with-your-embedding-model    # e.g. an OpenAI-compatible embed model on MaaS
+    openai_base_url: https://your-ccr-gateway.example.com/openai/v1
+    api_key: replace-with-your-maas-api-key     # or env: ${MAAS_API_KEY}
+    embedding_dims: 1536
+
+# --- Vector store: Qdrant local by default (self-hosted) ---
+vector_store:
+  provider: qdrant
+  config:
+    collection_name: ece_memory
+    host: localhost
+    port: 6333
+    embedding_model_dims: 1536
+    # on_disk: true   # enable for large air-gapped corpora
+
+# --- Optional graph store for entity relationships (prd.md §3.1). Disabled by ---
+# default; uncomment and point at a local instance to enable GraphRAG signals.
+# graph_store:
+#   provider: neo4j
+#   config:
+#     url: bolt://localhost:7687
+#     username: replace-with-your-graph-user
+#     password: replace-with-your-graph-password
+
+# --- Enterprise isolation scopes (prd.md §3.1, §4.14). Passed per add()/search() ---
+# call as org_id/app_id/user_id/run_id; no cross-tenant retrieval. Values below are
+# defaults/placeholders documenting the contract, not credentials.
+scopes:
+  org_id: replace-with-tenant-id     # tenant
+  app_id: replace-with-project-id    # project / repo
+  user_id: replace-with-developer-id # developer
+  run_id: replace-with-session-id    # session
+
+# --- Retrieval: multi-signal, budget-bounded top-k (prd.md §4.13, §8) ---
+retrieval:
+  top_k: 8
+  signals: [semantic, bm25, entity]   # parallel-scored, merged
+  token_budget: 6900                  # keep injected context frugal vs the 190k glm-5.1 window
+
+# --- Custom prompts (optional). Leave null to use Mem0 defaults. ---
+custom_fact_extraction_prompt: null
+custom_update_memory_prompt: null

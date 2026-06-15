@@ -1,0 +1,5 @@
+# Procedural SOP candidate frontmatter (PRD-design §5.4.2). Review-required.
+required: [type, title, source_episodes, promotion_state, owner]
+optional: [trigger, steps, upgrade_path]
+enums:
+  promotion_state: [candidate, promoted, rejected]

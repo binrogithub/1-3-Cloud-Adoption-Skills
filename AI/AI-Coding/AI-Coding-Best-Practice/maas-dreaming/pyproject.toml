@@ -1,0 +1,14 @@
+[project]
+name = "maas-dreaming"
+version = "0.1.0"
+description = "Governed cross-tool coding memory: Mem0 backbone + MiMo-Code dream/distill, assembled with <10% first-party glue."
+requires-python = ">=3.10"
+# Backbone is the vendored Mem0 (install editable: pip install -e vendor/mem0).
+# pyyaml is the only direct first-party dependency (config + schema loading).
+dependencies = ["pyyaml>=6"]
+
+[project.scripts]
+mce = "mce.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["mce*"]
