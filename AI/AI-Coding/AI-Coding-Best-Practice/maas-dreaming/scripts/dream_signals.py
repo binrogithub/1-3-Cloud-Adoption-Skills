@@ -14,6 +14,11 @@ import re
 from dataclasses import dataclass
 from typing import Iterable
 
+# Only records with these roles are scanned for signals. System and attachment
+# records (including SKILL.md content loaded as context) are excluded so they
+# cannot generate self-referential false positives.
+SCANNABLE_ROLES: frozenset[str] = frozenset({"human", "user", "assistant"})
+
 # Ordered highest-priority first. Corrections outrank everything because a user
 # correction is the strongest durable signal; recurring pain is weakest.
 SIGNAL_PATTERNS: dict[str, list[re.Pattern[str]]] = {
@@ -22,7 +27,9 @@ SIGNAL_PATTERNS: dict[str, list[re.Pattern[str]]] = {
         for p in (
             r"\bactually\b",
             r"\bno,",
-            r"\bwrong\b",
+            r"\bthat(?:'s| is| was) wrong\b",
+            r"\byou(?:'re| are| were) wrong\b",
+            r"\bwrong (?:approach|answer|solution|output|result)\b",
             r"\bincorrect\b",
             r"\bnot right\b",
             r"\bthat'?s not\b",
@@ -104,15 +111,26 @@ def primary_class(text: str) -> str | None:
     return matches[0] if matches else None
 
 
-def scan_records(records: Iterable, limit: int = 20) -> list[SignalHit]:
+def scan_records(
+    records: Iterable,
+    limit: int = 20,
+    *,
+    require_role: frozenset[str] = SCANNABLE_ROLES,
+) -> list[SignalHit]:
     """Classify bounded evidence ``records`` into prioritized signal hits.
 
     ``records`` are duck-typed ``EvidenceRecord``-like objects exposing
-    ``evidence_id``, ``role``, ``timestamp`` and ``preview``. Hits are returned
+    ``evidence_id``, ``role``, ``timestamp`` and ``preview``. Records whose
+    ``role`` is not in ``require_role`` are skipped entirely; this prevents
+    system prompts and attachment records (e.g. SKILL.md content) from
+    generating self-referential false positives. Hits are returned
     highest-priority class first, capped at ``limit``.
     """
     hits: list[SignalHit] = []
     for record in records:
+        role = getattr(record, "role", "") or ""
+        if role not in require_role:
+            continue
         cls = primary_class(getattr(record, "preview", "") or "")
         if cls is None:
             continue

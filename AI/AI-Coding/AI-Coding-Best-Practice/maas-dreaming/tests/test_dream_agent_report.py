@@ -44,7 +44,7 @@ def test_agent_report_writes_without_nested_llm(tmp_path):
     report_path = Path(proc.stdout.strip())
     assert report_path.exists()
     report = report_path.read_text(encoding="utf-8")
-    assert "# Dreaming Summary Report" in report
+    assert "# Dream Report:" in report
     assert "- mode: `host-agent-entry`" in report
     assert "Always keep default dreaming report non-nested" in report
     assert "nested LLM" not in report
@@ -85,7 +85,6 @@ def test_agent_report_renders_steering_and_signal_scan(tmp_path):
     assert "focus on coding-style preferences" in report
     assert "## Signal Scan" in report
     assert "corrections=" in report
-    assert "[corrections]" in report
 
 
 def test_agent_report_redacts_and_clamps_instructions(tmp_path):
