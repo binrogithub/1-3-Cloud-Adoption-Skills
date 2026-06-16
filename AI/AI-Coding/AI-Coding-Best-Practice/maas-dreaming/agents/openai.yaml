@@ -1,4 +1,0 @@
-interface:
-  display_name: "MaaS Dreaming"
-  short_description: "Summarize, verify, and clean AI coding memory"
-  default_prompt: "Use $maas-dreaming to produce a host-agent-entry dreaming summary report for this project. Do not spawn a nested LLM from the default path. Only run memory clear/reset when explicitly requested."
