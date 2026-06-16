@@ -5,7 +5,8 @@ description: Nightly (or on-demand) memory hygiene for AI coding agents — the 
 
 # maas-dreaming
 
-Memory **dreaming and garbage-collection** for AI coding agents. Native
+Memory **dreaming and garbage-collection** for AI coding agents, plus a
+**project knowledge engine** that indexes source code and git history. Native
 auto-memory only ever *grows*; this skill periodically summarizes, consolidates,
 and cleans. Invoke it as a skill on demand, or run it every night (see
 Scheduling).
@@ -45,8 +46,29 @@ agent must apply when deciding what to merge, drop, or surface.
 The report also includes a deterministic `## Signal Scan` section: a cheap,
 bounded classification of the trajectory evidence into **corrections**
 (highest priority), **preferences**, **decisions**, and **recurring** pain.
+Signal Scan supports `human`, `user`, and `assistant` roles for cross-platform
+trajectory compatibility (Claude Code uses `user`, the original design used
+`human`).
 Treat it as review-only evidence (no memory is written) that tells you where the
 durable signals are — start there before scanning the raw preview.
+
+**Auto-index on first run:** When no code-index database exists but source files
+are present, the report auto-triggers `code_index.py` to build the initial
+index before generating the report. This ensures even a brand-new session gets
+useful project structure data.
+
+**Code-index enhanced report sections:** When a code-index database exists
+(`.maas-dreaming/code-index.db`), the dream report includes these additional
+sections:
+
+| Section | Source | Content |
+|---------|--------|---------|
+| Project Overview | `CodeQueries.overview()` | File count, language breakdown, symbol count, commit count, last indexed |
+| Key Symbols | `edges` table | Top 15 symbols by caller+callee count (requires edges > 0) |
+| Frequently Co-Changed Files | `CodeQueries.coupling()` | File pairs with Jaccard similarity >= 0.4 from git co-change history |
+| Recent Activity | `CodeQueries.changes_since()` | Commits and file changes in the last 7 days |
+
+Use `--db PATH` to override the default code-index DB location.
 
 Use the user's current project directory or explicit target directory as
 `REPO`. Do not replace it with `git rev-parse --show-toplevel` in multi-project
@@ -57,6 +79,77 @@ transcript `.jsonl` files.
 
 Only invoke `scripts/reset_memory.py` when the user explicitly asks for
 `/maas-dreaming clear`, reset, or memory deletion.
+
+## Cold Start (first run on a new project)
+
+When no trajectory evidence AND no code-index database exist, the dream report
+returns a Cold Start guidance document instead of a normal report:
+
+- **Status**: "No trajectory evidence and no code-index database were found"
+- **Steering Instructions**: (only if `--instructions` provided)
+- **How to Get Started**: instructions to index the project or start a session
+- **Next Steps**: concrete commands to run
+
+If source files exist but no DB, the report auto-triggers `code_index.py` to
+build the initial index before generating the report.
+
+## Code Index & Queries
+
+### Building the Index
+
+```bash
+python3 scripts/code_index.py --repo-root . --db .maas-dreaming/code-index.db
+```
+
+First run: full tree-sitter parse + git log. Subsequent runs: incremental
+(only changed files re-parsed). Typical: 500 files in 2-5s first run, <200ms
+incremental.
+
+**Supported languages:** Python, JavaScript, TypeScript (P0, bundled grammars).
+Go, Rust, Java, C, C++ (P1, install additional grammars).
+Graceful degradation: missing grammar -> file indexed as text-only (path +
+size + hash, no symbols/edges).
+
+**Edge extraction:** Tree-sitter extracts symbols (functions, classes, methods)
+and relationships: `calls`, `imports`, `extends`, `implements`, `references`.
+The `callers()`/`callees()` API and Key Symbols report section require edges.
+Python and JavaScript/TypeScript edge extraction is implemented.
+
+### Querying the Index (Python API)
+
+```python
+from scripts.code_queries import CodeQueries
+
+with CodeQueries(".maas-dreaming/code-index.db") as cq:
+    cq.overview()          # project metrics (files, symbols, languages, commits)
+    cq.search("dream")     # FTS5 symbol search
+    cq.file_symbols(path)  # all symbols in a file
+    cq.callers("func")     # who calls this function
+    cq.callees("func")     # what this function calls
+    cq.coupling(path)      # frequently co-changed files (Jaccard)
+    cq.changes_since(date) # recent commit activity
+```
+
+### Git History Adapter
+
+```bash
+python3 scripts/git_adapter.py --repo-root . --db .maas-dreaming/code-index.db
+```
+
+Parses `git log --numstat` into commits + commit_files tables, computes
+file-coupling Jaccard scores. When no session trajectory exists, git history
+serves as a fallback evidence source for the dream report.
+
+### Team Sharing (artifact export/import)
+
+```bash
+# Export compressed snapshot
+python3 -m mce.cli artifact export --db .maas-dreaming/code-index.db
+# Commit .maas-dreaming/code-index.db.zst + artifact.json
+
+# On new clone, import snapshot
+python3 -m mce.cli artifact import --input code-index.db.zst
+```
 
 ## What deterministic maintenance does (`scripts/dream.py`)
 1. **Dedup** near-identical episodes (task + decisions signature).            [5.4]
@@ -85,7 +178,11 @@ L2 memory/index artifacts.
 ## Operations (agent-invokable)
 | Op | Command |
 |----|---------|
-| **dream-report** (default `/maas-dreaming`) | `python3 BASE/scripts/dream_agent_report.py --repo-root REPO [--memory-dir DIR] [--trajectory PATH] [--instructions TEXT] [--output-mode native\|project-root] [--out-dir DIR] [--keep N]` |
+| **dream-report** (default `/maas-dreaming`) | `python3 BASE/scripts/dream_agent_report.py --repo-root REPO [--memory-dir DIR] [--trajectory PATH] [--instructions TEXT] [--output-mode native\|project-root] [--out-dir DIR] [--keep N] [--db PATH]` |
+| **code-index** (build/update) | `python3 BASE/scripts/code_index.py --repo-root REPO [--db PATH] [--languages PY,JS,...] [--max-files N]` |
+| **git-history** (parse & store) | `python3 BASE/scripts/git_adapter.py --repo-root REPO [--db PATH] [--max-commits N] [--since DATE]` |
+| **artifact export** | `python3 -m mce.cli artifact export [--db PATH] [--output PATH.zst]` |
+| **artifact import** | `python3 -m mce.cli artifact import [--input PATH.zst] [--db PATH]` |
 | dream-maintenance (deterministic cleanup) | `python3 scripts/dream.py --memory-dir DIR --repo-root REPO [--apply] [--verify-symbols] [--scope-filter auto|on|off]` |
 | clear/reset current memory | `python3 scripts/reset_memory.py --repo-root REPO [--memory-dir DIR] [--apply] [--allow-parent]` |
 | scan-dir (make dream source) | `python3 scripts/scan_to_dream.py DIR --output OUT.md` |
@@ -233,8 +330,13 @@ to native Claude Code** and intentionally not part of this skill. See
 `../prd-remove.md`.
 
 ## Files
+`scripts/code_index.py` (tree-sitter indexer + SQLite graph) ·
+`scripts/git_adapter.py` (git history adapter) ·
+`scripts/code_queries.py` (query API over code-index.db) ·
+`scripts/dream_agent_report.py` (enhanced dream report) ·
 `scripts/dream.py` (5.3+5.4 merged) · `scripts/reset_memory.py` ·
 `scripts/distill.py` · `mce/` glue (backbone/retrieve/cli) ·
+`assets/tree-sitter/` grammar installer ·
 `upstream/maas-code/` renamed MiMo mirror · `prompts/` fallback prompt copies ·
 `assets/` mem0 config + schemas · `vendor/` upstreams · `demo/` runnable demo ·
 `runbook.md`.

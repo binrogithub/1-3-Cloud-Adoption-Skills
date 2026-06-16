@@ -23,6 +23,11 @@ DEFAULT_PREVIEW_CHARS = 600
 DEFAULT_MAX_BYTES = 200_000
 DEFAULT_MAX_RECORDS = 200
 
+# Sentinel returned by discover_source() when no file-based source exists but
+# the directory is a git repository.  load_trajectory() recognises this value
+# and calls read_git_history() to produce a TrajectoryResult.
+_GIT_SENTINEL = Path("<git>")
+
 
 @dataclass(frozen=True)
 class EvidenceRecord:
@@ -145,12 +150,24 @@ def read_jsonl(path: Path, repo_root: Path | None, max_records: int, max_bytes: 
             except (UnicodeDecodeError, json.JSONDecodeError):
                 continue
             preview = _json_get(obj, "text", "content", "message", "input", "output") or obj
+            # Extract role: Claude Code JSONL nests role inside message object
+            # (e.g. type=assistant → message.role=assistant, type=user → no top-level role)
+            role = _json_get(obj, "role", "actor")
+            if not role:
+                msg = _json_get(obj, "message")
+                if isinstance(msg, dict):
+                    role = _json_get(msg, "role")
+            if not role:
+                # type=user/user entries carry role in the type field
+                obj_type = _json_get(obj, "type")
+                if obj_type in ("user", "assistant"):
+                    role = obj_type
             records.append(
                 _record(
                     path,
                     _json_get(obj, "id", "message_id", "session_id") or idx,
                     _json_get(obj, "time", "timestamp", "time_created", "created_at"),
-                    _json_get(obj, "role", "actor"),
+                    role,
                     _json_get(obj, "tool", "name"),
                     preview,
                     repo_root,
@@ -260,6 +277,21 @@ def _latest_first(paths: Iterable[Path]) -> list[Path]:
     return sorted(existing, key=key)
 
 
+def _is_git_repo(path: Path) -> bool:
+    """Return True if *path* is inside a git working tree."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "--is-inside-work-tree"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return result.returncode == 0 and result.stdout.strip() == "true"
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return False
+
+
 def discover_source(memory_dir: Path | None, repo_root: Path | None) -> Path | None:
     candidates: list[Path] = []
     if memory_dir:
@@ -280,7 +312,13 @@ def discover_source(memory_dir: Path | None, repo_root: Path | None) -> Path | N
             project_dir / "transcript.jsonl",
         ])
         candidates.extend(_latest_first(project_dir.glob("*.jsonl")))
-    return next((p for p in candidates if p.exists()), None)
+    found = next((p for p in candidates if p.exists()), None)
+    if found:
+        return found
+    # Git fallback: when no file-based source exists, use git history if available.
+    if repo_root and _is_git_repo(repo_root):
+        return _GIT_SENTINEL
+    return None
 
 
 def load_trajectory(
@@ -296,6 +334,27 @@ def load_trajectory(
     source = Path(trajectory).expanduser().resolve() if trajectory else discover_source(memory_path, repo_path)
     if not source:
         return TrajectoryResult("none", "", [], True, "no supported trajectory source found")
+    # Handle git sentinel: produce TrajectoryResult from git log.
+    if source is _GIT_SENTINEL:
+        try:
+            from scripts.git_adapter import read_git_history
+        except ModuleNotFoundError:
+            from git_adapter import read_git_history
+        git_root = repo_path or Path(".")
+        raw_records = read_git_history(git_root, max_commits=max_records)
+        records: list[EvidenceRecord] = [
+            EvidenceRecord(
+                evidence_id=r["evidence_id"],
+                timestamp=r["timestamp"],
+                role=r["role"],
+                tool=r["tool"],
+                preview=bounded_preview(r["preview"], preview_chars),
+                source_path=str(git_root),
+                project_match=r["project_match"],
+            )
+            for r in raw_records
+        ]
+        return TrajectoryResult("git", str(git_root), records)
     if not source.exists():
         return TrajectoryResult("none", str(source), [], True, "trajectory source is missing")
     if source.is_dir():

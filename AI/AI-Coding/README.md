@@ -31,6 +31,7 @@ Connectivity and tool configuration: deploy a proxy/gateway, or point a coding t
 - [CSS Code Search MCP](./Enterprise-MaaS-Foundation/CSS-Code-Search-MCP/README.md): Deploy a Huawei Cloud CSS/OpenSearch code-search MCP server so `claude-glm` can search a repository's code and docs as native MCP tools.
 - [claude-code-huawei-maas](./Enterprise-MaaS-Foundation/claude-code-huawei-maas/README.md): Configure the Claude Code CLI command to use Huawei Cloud MaaS through `claude-code-router`, including `glm-5.1`, `$API_KEY` authentication, context length, wrapper setup, and verification. Also covers an optional Claude Agent SDK / standalone Anthropic Messages API proxy path backed directly by the MaaS OpenAI-compatible endpoint.
 - [codex-huawei-maas](./Enterprise-MaaS-Foundation/codex-huawei-maas/README.md): Configure a side-by-side `codex-glm` command that routes Codex CLI to Huawei Cloud MaaS `glm-5.1` through an isolated CCR `/v1/responses` shim, with optional LiteLLM search and vision routing.
+- [enterprise-context-engineering](./Enterprise-MaaS-Foundation/enterprise-context-engineering/README.md): Deploy a self-hosted context-engineering memory service so MaaS-backed coding agents (`claude-glm` / `codex-glm` / `opencode` / MiMo) remember, compact, and never lose context across sessions inside the `glm-5.1` window — Mem0 backbone, layered CLAUDE.md/AGENTS.md, proactive compaction, and a `claude-glm-recover` → episodic-memory bridge.
 
 ## AI Coding Best Practice
 
