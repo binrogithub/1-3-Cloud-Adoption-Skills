@@ -37,26 +37,9 @@ Connectivity and tool configuration: deploy a proxy/gateway, or point a coding t
 
 Engineering workflows and discipline that assume connectivity already exists and focus on *what good engineering looks like*.
 
-### Engineering Capability Skills
-
-These skills use MaaS-backed AI coding agents as enterprise engineering tools, not just personal productivity aids. Each skill enforces verification gates, anti-rationalization discipline, and cross-skill references. They drive continuous MaaS token consumption across daily engineering work.
-
-- [maas-ai-coding-quality-skill](./AI-Coding-Best-Practice/maas-ai-coding-quality-skill/README.md): Enforce AI coding quality gates (lint, test, coverage, security) before code reaches review or production.
-- [maas-code-review-and-security-skill](./AI-Coding-Best-Practice/maas-code-review-and-security-skill/README.md): Run structured code review and security audit with evidence-based findings and OWASP classification.
-- [maas-spec-plan-build-test-skill](./AI-Coding-Best-Practice/maas-spec-plan-build-test-skill/README.md): Execute the Spec to Plan to Build to Test engineering workflow with gated phase transitions.
-- [maas-legacy-code-migration-skill](./AI-Coding-Best-Practice/maas-legacy-code-migration-skill/README.md): Understand, refactor, and migrate legacy code (Java/COBOL/.NET) with reviewable batch transforms.
-
-### Shared Resources
-
-- [shared/](./AI-Coding-Best-Practice/shared/): Cross-cutting checklists (security, testing, performance, anti-rationalization), agent persona definitions (code-reviewer, security-auditor, test-engineer, migration-specialist), and MaaS integration patterns used by all engineering capability skills.
-
-## Source Skill Repositories
-
-The engineering capability skills are derived from patterns and practices in these open-source skill repositories. Some of the workflow skills above are directly imported and adapted from these upstream sources; others remain reference sources for future extensions.
-
-| Repository | Key Contributions | When to Search |
-|------------|-------------------|----------------|
-| [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | Anti-rationalization tables, verification exit criteria, gated workflows (Define→Plan→Build→Verify→Review→Ship), agent personas (code-reviewer, security-auditor, test-engineer), reference checklists | Need more lifecycle skills (e.g., CI/CD, shipping, deprecation), deeper review checklists, or additional agent personas |
-| [mattpocock/skills](https://github.com/mattpocock/skills) | Domain-awareness (CONTEXT.md, ADRs), vertical slicing, grilling pattern for spec validation, deep modules philosophy, TDD with tracer bullets | Need domain-model integration, spec grilling discipline, or architecture improvement patterns |
-| [andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills) | Behavioral constraints: Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution | Need stronger behavioral guardrails for AI agents, or anti-patterns for over-engineering |
-| [ComposioHQ/awesome-codex-skills](https://github.com/ComposioHQ/awesome-codex-skills) | Reviewable batch pattern for migrations, scripts as black boxes, 3-level progressive disclosure, degrees-of-freedom matching | Need migration patterns beyond Java/COBOL/.NET, action-execution skills (Composio CLI), or skill authoring tooling |
+> The earlier MaaS engineering-capability skills (`maas-ai-coding-quality-skill`,
+> `maas-code-review-and-security-skill`, `maas-spec-plan-build-test-skill`,
+> `maas-legacy-code-migration-skill`) and their `shared/` resources have been removed:
+> their LLM orchestration was a thin per-file curl wrapper superseded by native
+> multi-agent review/workflow tooling, and the durable engineering discipline they
+> documented is better expressed as deterministic CI gates rather than prose skills.
