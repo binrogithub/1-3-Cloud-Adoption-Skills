@@ -2,12 +2,16 @@ import requests
 import time
 import json
 import sys
+import os
 import concurrent.futures
+from dotenv import load_dotenv
 
-URL = "https://api-ap-southeast-1.modelarts-maas.com/v1/chat/completions"
+load_dotenv()
+
+URL = os.getenv("OPENAI_BASE_URL", "https://api-ap-southeast-1.modelarts-maas.com/openai").rstrip("/") + "/v1/chat/completions"
 HEADERS = {
     "Content-Type": "application/json",
-    "Authorization": "Bearer 6ZsPL_3gnDHLi179RsR3tIzRh0Ml8uXme7mfsqp7KYl0o_Z13_PYwD2K0Gu7-6LhVDv6BlzQVlnhjIWwsTPnzA"
+    "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}"
 }
 MODELS = [
     "deepseek-v4-flash",

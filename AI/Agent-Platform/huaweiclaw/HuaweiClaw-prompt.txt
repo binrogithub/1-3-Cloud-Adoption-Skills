@@ -52,11 +52,11 @@ Stack
 
 Fundación
 
-Todas las claves añadelas en un .env
-	•	TELEGRAM_BOT_TOKEN="8750414128:AAHO5SmsQyD_IGJdwaNvZfe3Q7OSBkqP1_U"
-	•	TELEGRAM_ALLOWED_USER_IDS="7013124602"
+Todas las claves añadelas en un .env (ver .env.example para la lista completa)
+	•	TELEGRAM_BOT_TOKEN="<tu-token-de-telegram>"
+	•	TELEGRAM_ALLOWED_USER_IDS="<tu-user-id>"
 	•	OPENAI_BASE_URL="https://api-ap-southeast-1.modelarts-maas.com/openai"
-	•	OPENAI_API_KEY="6ZsPL_3gnDHLi179RsR3tIzRh0Ml8uXme7mfsqp7KYl0o_Z13_PYwD2K0Gu7-6LhVDv6BlzQVlnhjIWwsTPnzA
+	•	OPENAI_API_KEY="<tu-api-key>"
 	•	DEFAULT_LLM_MODEL="deepseek-v3.2"
 	•	HUAWEI_LLM_MODEL="glm5.1"
 	•	CODE_LLM_MODEL="deepseek-v4-flash"
@@ -64,13 +64,13 @@ Todas las claves añadelas en un .env
 	•	MAX_ITERATIONS="10"
 	•	TIMEOUT_MS="30000"
 	•	LOG_LEVEL="info"
-	•	DEEPGRAM_API_KEY="5beacded65b60fc84c62aa480c5778fa52fbaed1"
+	•	DEEPGRAM_API_KEY="<tu-deepgram-api-key>"
 	•	DEEPGRAM_TTS_MODEL="aura-asteria-es"
 	•	DEEPGRAM_STT_MODEL="nova-2"
 	•	MCP_WEB_PORT=3001
 	•	MCP_PORT=3000
-	•	HUAWEI_ACCESS_KEY="IH093VXMHKQIJQZ8VWST"
-	•	HUAWEI_SECRET_KEY="RGZUsapjLBqqKB1aqKUPTqgfBmklMJdlskWDnegC"
+	•	HUAWEI_ACCESS_KEY="<tu-huawei-access-key>"
+	•	HUAWEI_SECRET_KEY="<tu-huawei-secret-key>"
 
 Genera un proyecto completo funcional que incluya:
 	•	Bot de Telegram operativo
