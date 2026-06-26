@@ -4,7 +4,7 @@ This repository defines a practical skill framework for Huawei Cloud adoption wo
 
 An AI skill in this repository is not just a prompt. It is a reusable capability unit built around a cloud scenario, where AI helps with understanding, design, migration, operations, development, analysis, or optimization.
 
-Recent updates added the codex-huawei-maas skill (side-by-side `codex-glm` command that routes Codex CLI to Huawei MaaS through an isolated CCR `/v1/responses` shim), the LiteLLM Huawei MaaS Proxy skill, the Huawei Cloud SEC EDGAR big-data monitoring PoC skill, and the Huawei ECS HTTP proxy SSH skill, while also refreshing the Claude Code Huawei MaaS workflow and consolidating the former single-ECS SearXNG gateway (self-hosted search MCP + claude-glm client) into the LiteLLM Huawei MaaS Proxy skill as an optional `search` profile.
+Recent updates added the Copilot Huawei MaaS skill for VS Code GitHub Copilot Chat through OAI Compatible Copilot, the CodeArts Huawei MaaS skill for a `codearts-litellm` wrapper, the codex-huawei-maas skill for a side-by-side `codex-glm` command through an isolated CCR `/v1/responses` shim, and the LiteLLM Huawei MaaS Proxy skill with an optional self-hosted SearXNG search MCP profile.
 
 Each skill should include:
 
@@ -18,7 +18,7 @@ Each skill should include:
 
 Use this index when Codex, Claude Code, or another AI agent needs to locate the right reusable skill quickly. Start from the business scenario, then open the linked skill folder. The child skill `README.md` gives the repository-facing summary, while `SKILL.md` contains the agent-facing workflow and trigger rules when present.
 
-For the latest additions, check the `AI / AI-Coding`, `Big Data`, and `Cloud Foundation` entries near the end of the index, including the codex-huawei-maas, LiteLLM Huawei MaaS Proxy, SEC EDGAR monitoring, and HTTP proxy SSH skills.
+For the latest additions, check the `AI / AI-Coding`, `Big Data`, and `Cloud Foundation` entries near the end of the index, including Copilot Huawei MaaS, CodeArts Huawei MaaS, codex-huawei-maas, LiteLLM Huawei MaaS Proxy, SEC EDGAR monitoring, and HTTP proxy SSH skills.
 
 | # | Domain | Use Case | Skill | Use When |
 | --- | --- | --- | --- | --- |
@@ -55,6 +55,8 @@ For the latest additions, check the `AI / AI-Coding`, `Big Data`, and `Cloud Fou
 | 31 | Cloud Foundation | Cross-Cloud and Hybrid Network | [Huawei ECS HTTP Proxy SSH Skill](./Cloud-Foundation/Cross-Cloud-and-Hybrid-Network/Huawei-ECS-HTTP-Proxy-SSH-Skill/README.md) | Run SSH commands on Huawei Cloud ECS through a corporate HTTP or HTTPS proxy when direct SSH is blocked, while avoiding persisted SSH passphrases, proxy passwords, private keys, and tokens. |
 | 32 | AI | AI Coding | [LiteLLM Huawei MaaS Proxy](./AI/AI-Coding/Enterprise-MaaS-Foundation/LiteLLM-Huawei-MaaS-Proxy/README.md) | Deploy a single-host Docker Compose LiteLLM proxy for Huawei Cloud MaaS with PostgreSQL persistence, Prometheus metrics, Grafana dashboards, virtual key management, and custom TTFT/TPOT/ITL observability. Optional `search` profile adds a self-hosted SearXNG search MCP (`web_search`/`fetch_url`) and a claude-glm (claude-code-router) client wiring. |
 | 33 | AI | AI Coding | [codex-huawei-maas](./AI/AI-Coding/Enterprise-MaaS-Foundation/codex-huawei-maas/README.md) | Configure a side-by-side `codex-glm` command that routes Codex CLI to Huawei Cloud MaaS `glm-5.1` through an isolated CCR `/v1/responses` shim, with optional LiteLLM search and vision routing. |
+| 34 | AI | AI Coding | [codearts-huawei-maas](./AI/AI-Coding/Enterprise-MaaS-Foundation/codearts-huawei-maas/README.md) | Deploy the Huawei CodeArts CLI on macOS arm64 and add a `codearts-litellm` wrapper that routes CodeArts through an OpenAI-compatible LiteLLM gateway. |
+| 35 | AI | AI Coding | [Copilot Huawei MaaS](./AI/AI-Coding/Enterprise-MaaS-Foundation/copilot-huawei-maas/SKILL.md) | Install, verify, diagnose, and harden GitHub Copilot Chat in VS Code when Huawei Cloud MaaS GLM or another Huawei MaaS OpenAI-compatible model is used through OAI Compatible Copilot. |
 
 ## How To Navigate This Repository
 
