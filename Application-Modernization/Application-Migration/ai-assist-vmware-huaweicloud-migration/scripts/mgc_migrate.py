@@ -3566,16 +3566,16 @@ def load_config() -> Config:
         ak=env_required("HC_AK"),
         sk=env_required("HC_SK"),
         source_server_id=env_required("SOURCE_SERVER_ID"),
-        source_region=env_default("SOURCE_REGION", "la-north-2"),
-        target_region=env_default("TARGET_REGION", "la-south-2"),
-        target_region_name=env_default("TARGET_REGION_NAME", "LA-Santiago"),
+        source_region=env_required("SOURCE_REGION"),
+        target_region=env_required("TARGET_REGION"),
+        target_region_name=env_default("TARGET_REGION_NAME", ""),
         target_vpc_name=env_default("TARGET_VPC_NAME", "vpc-migration"),
         target_vpc_cidr=env_default("TARGET_VPC_CIDR", "10.250.0.0/16"),
         target_subnet_cidr=env_default("TARGET_SUBNET_CIDR", "10.250.1.0/24"),
         target_image_id=env_required("TARGET_IMAGE_ID"),
-        target_server_name=env_default("TARGET_SERVER_NAME", "mx2-to-santiago-migrated"),
+        target_server_name=env_default("TARGET_SERVER_NAME", "vm-migrated"),
         target_flavor_id=env_default("TARGET_FLAVOR_ID", ""),
-        target_admin_password=env_default("TARGET_ADMIN_PASSWORD", "MgcMigr@te2026!"),
+        target_admin_password=env_required("TARGET_ADMIN_PASSWORD"),
         eip_bandwidth_mbps=int(env_default("EIP_BANDWIDTH_MBPS", "5")),
         root_volume_type=env_default("ROOT_VOLUME_TYPE", "SSD"),
         data_volume_type=env_default("DATA_VOLUME_TYPE", "SSD"),
@@ -3584,8 +3584,8 @@ def load_config() -> Config:
         enable_rsync_fallback=env_default_bool("ENABLE_RSYNC_FALLBACK", True),
         source_private_ip=env_default("SOURCE_PRIVATE_IP", ""),
         extra_peer_ips=env_csv_list("EXTRA_PEER_IPS", []),
-        rsync_source_host=env_default("RSYNC_SOURCE_HOST", "10.8.0.2"),
-        rsync_source_port=env_default_int("RSYNC_SOURCE_PORT", 2222),
+        rsync_source_host=env_default("RSYNC_SOURCE_HOST", ""),
+        rsync_source_port=env_default_int("RSYNC_SOURCE_PORT", 22),
         rsync_source_user=env_default("RSYNC_SOURCE_USER", "root"),
         rsync_source_password=env_default("RSYNC_SOURCE_PASSWORD", ""),
         rsync_target_host=env_default("RSYNC_TARGET_HOST", ""),
@@ -3622,7 +3622,7 @@ def load_config() -> Config:
         enable_target_vpn_client=env_default_bool("ENABLE_TARGET_VPN_CLIENT", True),
         vpn_server_public_ip=env_default("VPN_SERVER_PUBLIC_IP", ""),
         vpn_server_port=env_default_int("VPN_SERVER_PORT", 1194),
-        vpn_client_common_name=env_default("VPN_CLIENT_COMMON_NAME", "site-mx2-target"),
+        vpn_client_common_name=env_default("VPN_CLIENT_COMMON_NAME", "vm-migration-target"),
         vpn_client_static_ip=env_default("VPN_CLIENT_STATIC_IP", "10.8.0.10"),
         result_path=env_default("RESULT_PATH", "./out/migration_result.json"),
     )
@@ -3635,6 +3635,9 @@ def main() -> int:
     print_step("Resolving project IDs by region")
     source_project_id, source_project_name = get_region_project(client, cfg.source_region)
     target_project_id, target_project_name = get_region_project(client, cfg.target_region)
+    if not cfg.target_region_name:
+        cfg = cfg._replace(target_region_name=target_project_name)
+        print_step(f"TARGET_REGION_NAME not set, using '{target_project_name}'")
 
     source_ecs = get_source_ecs_detail(client, cfg.source_region, source_project_id, cfg.source_server_id)
     source_ecs_name = str((source_ecs or {}).get("name") or "")
