@@ -1,0 +1,34 @@
+{
+  "oaicopilot.baseUrl": "https://YOUR-ENDPOINT/openai/v1",
+  "oaicopilot.models": [
+    {
+      "id": "glm-5.1",
+      "displayName": "glm-5.1",
+      "owned_by": "maas",
+      "apiMode": "openai",
+      "context_length": 128000,
+      "max_completion_tokens": 16000,
+      "max_tokens": 16000,
+      "temperature": 0,
+      "vision": false,
+      "include_reasoning_in_request": false
+    }
+  ],
+  "oaicopilot.logLevel": "debug",
+  "oaicopilot.agentReadFileLine": 200,
+  "oaicopilot.glmToolCallCompat": true,
+  "github.copilot.chat.customOAIModels": {
+    "glm-5.1": {
+      "name": "glm-5.1",
+      "url": "https://YOUR-ENDPOINT/openai/v1",
+      "maxInputTokens": 128000,
+      "maxOutputTokens": 16000,
+      "toolCalling": true,
+      "vision": false,
+      "streaming": true
+    }
+  },
+  "github.copilot.chat.askAgent.model": "glm-5.1",
+  "github.copilot.chat.implementAgent.model": "glm-5.1",
+  "github.copilot.chat.exploreAgent.model": "glm-5.1"
+}
