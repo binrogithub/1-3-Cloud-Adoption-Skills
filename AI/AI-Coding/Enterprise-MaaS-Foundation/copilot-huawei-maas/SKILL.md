@@ -1,11 +1,11 @@
 ---
-name: copilot-glm-kit
-description: Install, verify, diagnose, and harden GitHub Copilot Chat in VS Code when GLM or another OpenAI-compatible BYOK model is used through OAI Compatible Copilot. Use when Copilot stalls, emits malformed or truncated tool calls, writes partial files, shows path drift, needs GLM model settings, needs the patched OAI Compatible Copilot VSIX installed, or needs a portable debug bundle.
+name: copilot-huawei-maas
+description: Install, verify, diagnose, and harden GitHub Copilot Chat in VS Code when Huawei Cloud MaaS GLM or another Huawei MaaS OpenAI-compatible model is used through OAI Compatible Copilot. Use when Copilot stalls, emits malformed or truncated tool calls, writes partial files, shows path drift, needs Huawei MaaS model settings, needs the patched OAI Compatible Copilot VSIX installed, or needs a portable debug bundle.
 ---
 
-# Copilot GLM Kit
+# Copilot Huawei MaaS
 
-Use this skill when a user runs GitHub Copilot Chat Agent in VS Code with GLM through OAI Compatible Copilot and file edits or tool calls are slow, malformed, truncated, or not applied.
+Use this skill when a user runs GitHub Copilot Chat Agent in VS Code with Huawei Cloud MaaS through OAI Compatible Copilot and file edits or tool calls are slow, malformed, truncated, or not applied.
 
 ## Triage
 
@@ -13,10 +13,10 @@ First separate these cases:
 
 - **Setup problem**: OAI Compatible Copilot is not installed, the patched VSIX is not installed, `oaicopilot.models` is missing, or VS Code has not been reloaded.
 - **Workspace problem**: Copilot is opened outside the real project folder, workspace trust is missing, edits are pending `Keep`/`Undo`, or the model uses absolute paths outside the workspace.
-- **GLM tool-call problem**: OAI logs show very large streamed `tool_calls[].function.arguments`, `invalid_json_arguments`, completion near `4096`/`4097` tokens, or a long `create_file` that only finishes after minutes.
+- **Huawei MaaS tool-call problem**: OAI logs show very large streamed `tool_calls[].function.arguments`, `invalid_json_arguments`, completion near `4096`/`4097` tokens, or a long `create_file` that only finishes after minutes.
 - **Provider-to-Copilot apply problem**: provider logs contain `glm.toolCall.emit`, but chat editing state has no file operations and target files do not change.
 
-Do not assume GPT is selected just because helper log entries mention `gpt-*`; Copilot may use GPT helpers for chat titles or progress while the selected model is GLM.
+Do not assume GPT is selected just because helper log entries mention `gpt-*`; Copilot may use GPT helpers for chat titles or progress while the selected model is Huawei MaaS GLM.
 
 ## Install Or Repair
 
@@ -25,7 +25,7 @@ Use the bundled patched extension only when the user wants the kit-installed OAI
 macOS:
 
 ```bash
-cd ~/.codex/skills/copilot-glm-kit
+cd ~/.codex/skills/copilot-huawei-maas
 chmod +x scripts/install-macos.sh
 ./scripts/install-macos.sh --base-url "https://YOUR-ENDPOINT/openai/v1" --model "glm-5.1"
 ```
@@ -33,7 +33,7 @@ chmod +x scripts/install-macos.sh
 Windows PowerShell:
 
 ```powershell
-cd "$env:USERPROFILE\.codex\skills\copilot-glm-kit"
+cd "$env:USERPROFILE\.codex\skills\copilot-huawei-maas"
 .\scripts\install-windows.ps1 -BaseUrl "https://YOUR-ENDPOINT/openai/v1" -ModelId "glm-5.1"
 ```
 
@@ -46,20 +46,20 @@ If the user does not want the installer to edit settings, omit the base URL and 
 Run:
 
 ```bash
-node ~/.codex/skills/copilot-glm-kit/scripts/check-install.mjs
+node ~/.codex/skills/copilot-huawei-maas/scripts/check-install.mjs
 ```
 
 Expected signs:
 
 - `johnny-zhao.oai-compatible-copilot@0.4.3`
 - `oaicopilot.glmToolCallCompat: true`
-- `oaicopilot.models` includes the GLM model id
+- `oaicopilot.models` includes the Huawei MaaS model id
 - OAI logs exist under `~/.copilot/oaicopilot/logs`
 
 On Windows, use:
 
 ```powershell
-node "$env:USERPROFILE\.codex\skills\copilot-glm-kit\scripts\check-install.mjs"
+node "$env:USERPROFILE\.codex\skills\copilot-huawei-maas\scripts\check-install.mjs"
 ```
 
 ## Diagnose Logs
@@ -67,7 +67,7 @@ node "$env:USERPROFILE\.codex\skills\copilot-glm-kit\scripts\check-install.mjs"
 Summarize the latest OAI Compatible logs:
 
 ```bash
-node ~/.codex/skills/copilot-glm-kit/scripts/glm_toolcall_log_summary.mjs --latest
+node ~/.codex/skills/copilot-huawei-maas/scripts/glm_toolcall_log_summary.mjs --latest
 ```
 
 Use these signals:
@@ -80,7 +80,7 @@ Use these signals:
 If the user needs a sharable report:
 
 ```bash
-node ~/.codex/skills/copilot-glm-kit/scripts/collect_copilot_debug_bundle.mjs --workspace /path/to/workspace --out /path/to/bundle-dir
+node ~/.codex/skills/copilot-huawei-maas/scripts/collect_copilot_debug_bundle.mjs --workspace /path/to/workspace --out /path/to/bundle-dir
 ```
 
 Warn that logs can contain prompts, local paths, endpoint URLs, and tool-call payloads.
@@ -93,7 +93,7 @@ Core patch rule: for GLM model ids, buffer streamed tool-call chunks until `fini
 
 ## Safer Copilot Prompt
 
-For GLM agent tasks, include:
+For Huawei MaaS agent tasks, include:
 
 ```text
 Only modify files inside the current VS Code workspace. Use relative paths only. Do not create absolute paths. Work in small steps: first inspect files, then update one file or one function at a time. Do not rewrite the whole app.py unless I explicitly ask.
