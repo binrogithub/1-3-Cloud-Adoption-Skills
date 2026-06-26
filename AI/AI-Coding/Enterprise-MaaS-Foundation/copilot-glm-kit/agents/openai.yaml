@@ -1,0 +1,4 @@
+interface:
+  display_name: "Copilot GLM Kit"
+  short_description: "Install and debug Copilot GLM tool use."
+  default_prompt: "Use $copilot-glm-kit to diagnose GitHub Copilot Chat GLM/OAI Compatible tool-use failures and recommend safe fixes."
