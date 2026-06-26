@@ -1,0 +1,69 @@
+{
+  "mode": "resume_noagent_recreate_targets_by_sms_source_id",
+  "checkpoint": "out/resume_checkpoint_latest.json",
+  "generated_at_epoch": 1781204416,
+  "generated_at_local": "2026-06-12 03:00:16",
+  "target_image_id": "f9c27c19-22de-431c-9de4-89f39be90fee",
+  "target_region": "ap-southeast-3",
+  "results": [
+    {
+      "index": 1,
+      "source_sms_server_id": "8c6bf8d0-933f-4620-8407-bcc3b181d94f",
+      "source_vm_id": "b48b532f-a165-4ee1-9a49-28a0b688998d",
+      "status": "SKIPPED_ALREADY_DONE"
+    },
+    {
+      "index": 2,
+      "source_sms_server_id": "54e6b10c-9dac-4eb2-bd4b-deca4dd5e915",
+      "source_vm_id": "dec12878-2fd9-4704-b608-b511bb8feb23",
+      "source_name": "ecs-25e7-d5e3",
+      "target_name": "ecs-25e7-d5e3",
+      "result_path": "out/resume_noagent_54e6b10c-9dac-4eb2-bd4b-deca4dd5e915_20260612-030016.json",
+      "elapsed_sec": 69,
+      "exit_code": 0,
+      "status": "OK",
+      "log_tail": "[MGC-MIGRATE] Resolving project IDs by region\n[MGC-MIGRATE] Accepting SMS privacy agreements\n[MGC-MIGRATE] Querying source server from SMS\n[MGC-MIGRATE] Prechecking and cleaning historical source-bound SMS tasks\n[MGC-MIGRATE] Finding target VPC/subnet\n[MGC-MIGRATE] Creating target ECS in target region with EIP\n[MGC-MIGRATE] Source is not an ECS flavor-based source, selected target flavor 'ac7.xlarge.4' by source CPU/RAM (4 vCPU/15831 MB)\n[MGC-MIGRATE] Creating target ECS with flavor 'ac7.xlarge.4' and EIP pool '5_bgp'\n[MGC-MIGRATE] Ensuring security groups allow source/target connectivity\n[MGC-MIGRATE] Source ECS has no security group IDs in detail response, skipped source SG updates\n[MGC-MIGRATE] Creating SMS migration project\n[MGC-MIGRATE] Creating SMS migration task\n[MGC-MIGRATE] CreateTask request names: task_name='filetask54e6b10capso', target_server_name='ecs25e7d5e381204480', type=MIGRATE_FILE, use_public_ip=true, include_disks=true, migration_ip=114.119.183.77\n[MGC-MIGRATE] Starting SMS migration task\n[MGC-MIGRATE] Completed. Result written to out/resume_noagent_54e6b10c-9dac-4eb2-bd4b-deca4dd5e915_20260612-030016.json",
+      "new_task_id": "4d0adc1d-afeb-4a8f-84e3-bf03e5065de5",
+      "new_task_state": "RUNNING",
+      "new_target_vm_id": "d17e887d-3956-4a6d-a76f-a37201a9cc5a",
+      "new_target_fixed_ip": "192.168.0.236",
+      "new_target_floating_ip": "114.119.183.77"
+    },
+    {
+      "index": 3,
+      "source_sms_server_id": "1ec925f3-5c74-47d4-88f7-532daa4d7fa2",
+      "source_vm_id": "7fdf29e6-74d1-4a26-8014-ef404fd013fe",
+      "source_name": "ecs-25e7-f467-155c",
+      "target_name": "ecs-25e7-f467-155c",
+      "result_path": "out/resume_noagent_1ec925f3-5c74-47d4-88f7-532daa4d7fa2_20260612-030016.json",
+      "elapsed_sec": 61,
+      "exit_code": 0,
+      "status": "OK",
+      "log_tail": "[MGC-MIGRATE] Resolving project IDs by region\n[MGC-MIGRATE] Accepting SMS privacy agreements\n[MGC-MIGRATE] Querying source server from SMS\n[MGC-MIGRATE] Prechecking and cleaning historical source-bound SMS tasks\n[MGC-MIGRATE] Finding target VPC/subnet\n[MGC-MIGRATE] Creating target ECS in target region with EIP\n[MGC-MIGRATE] Source is not an ECS flavor-based source, selected target flavor 'ac7.xlarge.4' by source CPU/RAM (4 vCPU/15831 MB)\n[MGC-MIGRATE] Creating target ECS with flavor 'ac7.xlarge.4' and EIP pool '5_bgp'\n[MGC-MIGRATE] Ensuring security groups allow source/target connectivity\n[MGC-MIGRATE] Source ECS has no security group IDs in detail response, skipped source SG updates\n[MGC-MIGRATE] Creating SMS migration project\n[MGC-MIGRATE] Creating SMS migration task\n[MGC-MIGRATE] CreateTask request names: task_name='filetask1ec925f3apso', target_server_name='ecs25e7f467181204542', type=MIGRATE_FILE, use_public_ip=true, include_disks=true, migration_ip=101.46.11.91\n[MGC-MIGRATE] Starting SMS migration task\n[MGC-MIGRATE] Completed. Result written to out/resume_noagent_1ec925f3-5c74-47d4-88f7-532daa4d7fa2_20260612-030016.json",
+      "new_task_id": "ee790ca5-1613-4b99-ad99-30af92517aa8",
+      "new_task_state": "RUNNING",
+      "new_target_vm_id": "6c7d7f65-5a1a-4368-afff-db9e9ad40e94",
+      "new_target_fixed_ip": "192.168.0.229",
+      "new_target_floating_ip": "101.46.11.91"
+    },
+    {
+      "index": 4,
+      "source_sms_server_id": "74eb341a-d867-4b53-890d-ffd9cfdab0b1",
+      "source_vm_id": "a3126272-54f4-4890-a800-ba8b0269c4b6",
+      "source_name": "ecs-25e7-f467",
+      "target_name": "ecs-25e7-f467",
+      "result_path": "out/resume_noagent_74eb341a-d867-4b53-890d-ffd9cfdab0b1_20260612-030016.json",
+      "elapsed_sec": 57,
+      "exit_code": 0,
+      "status": "OK",
+      "log_tail": "[MGC-MIGRATE] Resolving project IDs by region\n[MGC-MIGRATE] Accepting SMS privacy agreements\n[MGC-MIGRATE] Querying source server from SMS\n[MGC-MIGRATE] Prechecking and cleaning historical source-bound SMS tasks\n[MGC-MIGRATE] Finding target VPC/subnet\n[MGC-MIGRATE] Creating target ECS in target region with EIP\n[MGC-MIGRATE] Source is not an ECS flavor-based source, selected target flavor 'ac7.xlarge.4' by source CPU/RAM (4 vCPU/15831 MB)\n[MGC-MIGRATE] Creating target ECS with flavor 'ac7.xlarge.4' and EIP pool '5_bgp'\n[MGC-MIGRATE] Ensuring security groups allow source/target connectivity\n[MGC-MIGRATE] Source ECS has no security group IDs in detail response, skipped source SG updates\n[MGC-MIGRATE] Creating SMS migration project\n[MGC-MIGRATE] Creating SMS migration task\n[MGC-MIGRATE] CreateTask request names: task_name='filetask74eb341aapso', target_server_name='ecs25e7f46781204599', type=MIGRATE_FILE, use_public_ip=true, include_disks=true, migration_ip=190.92.198.34\n[MGC-MIGRATE] Starting SMS migration task\n[MGC-MIGRATE] Completed. Result written to out/resume_noagent_74eb341a-d867-4b53-890d-ffd9cfdab0b1_20260612-030016.json",
+      "new_task_id": "61fdfdd8-30e8-4259-b328-018b514b1db0",
+      "new_task_state": "RUNNING",
+      "new_target_vm_id": "7530cc3a-5de7-481b-9abe-bac491990af2",
+      "new_target_fixed_ip": "192.168.0.126",
+      "new_target_floating_ip": "190.92.198.34"
+    }
+  ],
+  "ok_count": 3,
+  "failed_count": 0
+}
