@@ -1,0 +1,4 @@
+interface:
+  display_name: "Copilot Huawei MaaS"
+  short_description: "Install and debug Copilot Huawei MaaS tool use."
+  default_prompt: "Use $copilot-huawei-maas to diagnose GitHub Copilot Chat Huawei MaaS/OAI Compatible tool-use failures and recommend safe fixes."
