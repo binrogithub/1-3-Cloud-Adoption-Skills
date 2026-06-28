@@ -1,0 +1,65 @@
+{
+  "generated_at": 1781193978,
+  "region": "ap-southeast-3",
+  "project_id": "019ea86dd8c67de085c50084b7b903d0",
+  "items": [
+    {
+      "server_id": "22d9cf22-e2fb-4513-961e-764b23e1e213",
+      "server_name": "ecs-25e7-f467-155c-9872",
+      "before_server_status": "SHUTOFF",
+      "before_boot_volume_id": "cbf3fdb3-dd93-42f9-a116-c301a23528e1",
+      "original_volume_id": "cbf3fdb3-dd93-42f9-a116-c301a23528e1",
+      "actions": [
+        "start_server"
+      ],
+      "after_server_status": "ACTIVE",
+      "after_boot_volume_id": "cbf3fdb3-dd93-42f9-a116-c301a23528e1",
+      "after_original_volume_status": "in-use"
+    },
+    {
+      "server_id": "9e51ea5f-8e47-4596-8a3a-acde83675c37",
+      "server_name": "ecs-25e7-d5e3",
+      "before_server_status": "ACTIVE",
+      "before_boot_volume_id": "ccccf19c-58e7-4257-a35a-28cc8d5e1c39",
+      "original_volume_id": "ccccf19c-58e7-4257-a35a-28cc8d5e1c39",
+      "actions": [],
+      "after_server_status": "ACTIVE",
+      "after_boot_volume_id": "ccccf19c-58e7-4257-a35a-28cc8d5e1c39",
+      "after_original_volume_status": "in-use"
+    },
+    {
+      "server_id": "8735b422-358a-42bb-961f-142035b000b5",
+      "server_name": "ecs-25e7-f467-155c",
+      "before_server_status": "ACTIVE",
+      "before_boot_volume_id": "8789cb73-2f09-4ba7-b537-acc3ea852b3e",
+      "original_volume_id": "3ae76803-b629-4081-9f85-6186013022b9",
+      "actions": [
+        "stop_server",
+        "detach_temp_boot_volume:8789cb73-2f09-4ba7-b537-acc3ea852b3e",
+        "attach_original_boot_volume:3ae76803-b629-4081-9f85-6186013022b9",
+        "start_server"
+      ],
+      "after_server_status": "ACTIVE",
+      "after_boot_volume_id": "3ae76803-b629-4081-9f85-6186013022b9",
+      "after_original_volume_status": "in-use",
+      "after_old_boot_volume_status": "available"
+    },
+    {
+      "server_id": "8bc932e2-0ce2-4ea0-b20a-98f5bb7c9081",
+      "server_name": "ecs-25e7-f467",
+      "before_server_status": "ACTIVE",
+      "before_boot_volume_id": "b9f11297-d810-48fd-8481-0675019130f0",
+      "original_volume_id": "08744555-588c-4090-929e-84927b6ca486",
+      "actions": [
+        "stop_server",
+        "detach_temp_boot_volume:b9f11297-d810-48fd-8481-0675019130f0",
+        "attach_original_boot_volume:08744555-588c-4090-929e-84927b6ca486",
+        "start_server"
+      ],
+      "after_server_status": "ACTIVE",
+      "after_boot_volume_id": "08744555-588c-4090-929e-84927b6ca486",
+      "after_original_volume_status": "in-use",
+      "after_old_boot_volume_status": "available"
+    }
+  ]
+}

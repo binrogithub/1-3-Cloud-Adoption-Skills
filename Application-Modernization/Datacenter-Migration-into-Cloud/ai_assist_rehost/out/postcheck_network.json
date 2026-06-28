@@ -1,0 +1,13 @@
+{
+  "generated_at_epoch": 1782610592,
+  "generated_at_local": "2026-06-28 09:36:32 +0800",
+  "task_id": "7bcc6370-b6ce-4d1e-9495-fb36e35dfcd5",
+  "task_state": "MIGRATE_SUCCESS",
+  "target_server_id": "679f64ef-0c4a-4f11-8a7b-059d841c9f4e",
+  "target_server_name": "aws-ohio-migrated-stance-2-1782607796",
+  "target_server_status": "ACTIVE",
+  "target_fixed_ip": "10.250.1.242",
+  "target_floating_ip": "110.238.84.80",
+  "direct_to_target_eip_22": "closed_or_error",
+  "direct_to_target_eip_22_detail": "connect_ex=11"
+}

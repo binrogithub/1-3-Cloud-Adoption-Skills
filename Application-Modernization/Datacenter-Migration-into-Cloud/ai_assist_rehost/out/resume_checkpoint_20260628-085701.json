@@ -1,0 +1,65 @@
+{
+  "checkpoint_version": 2,
+  "created_at_utc": "2026-06-28T00:57:01Z",
+  "created_at_local": "2026-06-28 08:57:01 +0800",
+  "status": "running",
+  "resume_intent": "sms_task_continue_or_retry",
+  "terraform": {
+    "working_directory": "/root/ai_assit_migration/ai_assist_vm_migration",
+    "command": "terraform apply -auto-approve",
+    "resource_address": "terraform_data.sms_existing_target_batch",
+    "last_exit_code": 0,
+    "note": "terraform apply succeeded and started/continued SMS task via scripts/run_migration.sh"
+  },
+  "migration_context": {
+    "source_server_id_input": "instance-20260627-200301",
+    "source_sms_server_id": "815e8300-29ab-4099-986f-8e32d445aebe",
+    "source_fixed_ip": "10.128.0.2",
+    "source_floating_ip": "",
+    "destination_region": "la-north-2",
+    "destination_project_id": "3b1dbd8270424257930b2e95bc150916",
+    "target_server_id": "679f64ef-0c4a-4f11-8a7b-059d841c9f4e",
+    "target_fixed_ip": "10.250.1.242",
+    "target_floating_ip": "110.238.84.80",
+    "target_security_group_ids": [
+      "74593d3e-d063-4bad-9e50-34db9f92b85c"
+    ],
+    "migration_method": "sms",
+    "task_id": "7bcc6370-b6ce-4d1e-9495-fb36e35dfcd5",
+    "task_name": "filetaskinstancelano",
+    "task_type": "MIGRATE_FILE",
+    "task_state": "RUNNING",
+    "task_progress": null,
+    "task_subtask_info": "FORMAT_DISK_LINUX_FILE-10",
+    "task_start_date_epoch_ms": 1782607833000,
+    "task_start_date_local": "2026-06-28 08:50:33 +0800",
+    "task_complete_date_epoch_ms": null,
+    "task_complete_date_local": "",
+    "source_connected": true,
+    "source_state": "initialize"
+  },
+  "network_context": {
+    "target_peer_ips_configured": [
+      "10.128.0.2",
+      "10.8.0.2"
+    ],
+    "manual_rule_added_at_target": [],
+    "latest_connectivity_probe": {
+      "source_to_target_eip_22": "not_checked_in_this_checkpoint",
+      "source_to_target_eip_8900": "not_checked_in_this_checkpoint",
+      "probe_note": "checkpoint focuses on task progression; run dedicated postcheck after terminal state"
+    }
+  },
+  "artifacts": {
+    "result_file": "out/migration_result.json",
+    "precheck_source_checks_file": "out/precheck_source_checks.json",
+    "precheck_task_cleanup_file": "out/precheck_task_cleanup.json",
+    "task_poll_file": "out/task_poll_latest.json"
+  },
+  "resume_commands": [
+    "cd /root/ai_assit_migration/ai_assist_vm_migration",
+    "terraform apply -auto-approve",
+    "python3 - <<'PY' # query task detail\nfrom scripts.mgc_migrate import HcApiClient\nPY"
+  ],
+  "next_step": "if task remains RUNNING keep polling; if task enters MIGRATE_FAIL, capture error_code/error_msg and retry from this checkpoint"
+}

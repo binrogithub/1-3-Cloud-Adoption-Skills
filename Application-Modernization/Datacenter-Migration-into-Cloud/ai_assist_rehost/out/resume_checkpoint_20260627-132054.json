@@ -1,0 +1,42 @@
+{
+  "checkpoint_version": 1,
+  "created_at_utc": "2026-06-27T05:20:54Z",
+  "created_at_local": "2026-06-27T13:20:54+0800",
+  "status": "failed",
+  "resume_intent": "terraform_apply_resume",
+  "terraform": {
+    "working_directory": "/root/ai_assit_migration/ai_assist_vm_migration",
+    "command": "terraform apply -auto-approve",
+    "resource_address": "terraform_data.sms_existing_target_batch",
+    "last_session_id": 89432,
+    "last_exit_code": 1
+  },
+  "migration_context": {
+    "source_server_id_input": "i-0d31fa15334e0b294",
+    "source_sms_server_id": "37d61e01-3694-429d-9af1-b6e2e457715f",
+    "destination_region": "la-north-2",
+    "destination_project_id": "3b1dbd8270424257930b2e95bc150916",
+    "last_reused_target_server_id": "6f8ee21f-2d44-49df-bbec-62e7f956e932",
+    "last_selected_flavor": "s6.large.2",
+    "last_selected_image_id": "def7f676-e1e3-43c3-9098-e41f3324d566"
+  },
+  "last_error": {
+    "code": "Ecs.0005",
+    "message": "root volume size is [8], must over image mindisk [40]",
+    "api": "POST /v1.1/{project_id}/cloudservers"
+  },
+  "artifacts": {
+    "precheck_source_checks_file": "out/precheck_source_checks.json",
+    "precheck_task_cleanup_file": "out/precheck_task_cleanup.json",
+    "result_file": "out/migration_result.json",
+    "rsync_result_file": "out/rsync_execution.json"
+  },
+  "resume_commands": [
+    "cd /root/ai_assit_migration/ai_assist_vm_migration",
+    "terraform apply -auto-approve"
+  ],
+  "notes": [
+    "checkpoint captured after local-exec failure",
+    "keep terraform.tfvars unchanged for deterministic retry"
+  ]
+}

@@ -1,0 +1,13 @@
+迁移监控恢复说明
+
+保存时间: 2026-06-28 09:36:42 +0800
+UTC时间: 2026-06-28T01:36:42Z
+最新检查点: out/monitor_checkpoint_latest.json
+归档检查点: out/monitor_checkpoint_20260628-093642.json
+任务数量: 1
+全部终态: True
+
+当前任务快照:
+- source_sms_server_id=815e8300-29ab-4099-986f-8e32d445aebe source_vm_id=instance-20260627-200301 task_id=7bcc6370-b6ce-4d1e-9495-fb36e35dfcd5 state=MIGRATE_SUCCESS subtask=DETTACH_AGENT_IMAGE-100 target_vm_id=679f64ef-0c4a-4f11-8a7b-059d841c9f4e target_ip=awsohiomigra82607830
+
+后续建议: 任务已终态，可直接执行网络/SSH可达性与应用层验收。

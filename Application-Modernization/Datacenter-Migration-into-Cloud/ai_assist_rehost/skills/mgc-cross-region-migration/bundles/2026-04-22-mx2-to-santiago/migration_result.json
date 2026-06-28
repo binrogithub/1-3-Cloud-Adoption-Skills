@@ -1,0 +1,29 @@
+{
+  "source_region": "la-north-2",
+  "target_region": "la-south-2",
+  "source_project_id": "3b1dbd8270424257930b2e95bc150916",
+  "source_project_name": "la-north-2",
+  "target_project_id": "3d1cb6563809482b9002a5ecf9e62567",
+  "target_project_name": "la-south-2",
+  "input_source_server_id": "4fb3d857-aa08-4b79-8810-760cab680418",
+  "source_sms_server_id": "dceb9146-c28f-4596-8c42-a55b068c31d5",
+  "target_server_id": "7f110bb2-3332-4ef8-a19b-9013746b76a8",
+  "migproject_id": "7a545883-187a-458d-aea0-6e665d295e2e",
+  "task_id": "5f044a0b-cf65-44b0-a816-9914c2b30c96",
+  "task_state": "RUNNING",
+  "vpc_id": "8c31defc-3fd2-4c1d-9fa0-04f807e26689",
+  "subnet_id": "20db50f6-2131-43fb-a243-b7500dc7abc4",
+  "source_fixed_ip": "192.168.0.170",
+  "source_floating_ip": "149.232.128.58",
+  "target_fixed_ip": "10.250.1.37",
+  "target_floating_ip": "119.8.149.199",
+  "source_security_group_ids": [
+    "74593d3e-d063-4bad-9e50-34db9f92b85c"
+  ],
+  "target_security_group_ids": [
+    "620c0923-3211-42aa-b2b7-c4b66e914006"
+  ],
+  "target_vpc_default_security_group_id": "620c0923-3211-42aa-b2b7-c4b66e914006",
+  "source_security_group_rules_created": 4,
+  "target_security_group_rules_created": 0
+}

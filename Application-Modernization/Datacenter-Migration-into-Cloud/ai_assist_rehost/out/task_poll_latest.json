@@ -1,0 +1,25 @@
+{
+  "generated_at_epoch": 1782610559,
+  "generated_at_local": "2026-06-28 09:35:59 +0800",
+  "endpoint": "https://sms.ap-southeast-3.myhuaweicloud.com",
+  "task_count": 1,
+  "all_terminal": true,
+  "tasks": [
+    {
+      "source_vm_id": "instance-20260627-200301",
+      "source_name": "instance-20260627-200301",
+      "source_sms_server_id": "815e8300-29ab-4099-986f-8e32d445aebe",
+      "target_vm_id": "679f64ef-0c4a-4f11-8a7b-059d841c9f4e",
+      "target_name": "awsohiomigra82607830",
+      "task_id": "7bcc6370-b6ce-4d1e-9495-fb36e35dfcd5",
+      "task_state": "MIGRATE_SUCCESS",
+      "task_type": "MIGRATE_FILE",
+      "subtask_name": "DETTACH_AGENT_IMAGE-100",
+      "progress": null,
+      "create_date": "1782607832000",
+      "complete_date": "",
+      "error_code": null,
+      "error_msg": null
+    }
+  ]
+}

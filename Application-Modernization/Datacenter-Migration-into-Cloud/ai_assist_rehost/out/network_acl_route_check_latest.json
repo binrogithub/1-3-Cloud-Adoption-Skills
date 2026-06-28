@@ -1,0 +1,76 @@
+{
+  "generated_at_epoch": 1782610965,
+  "generated_at_local": "2026-06-28 09:42:45 +0800",
+  "ports": [
+    {
+      "id": "0c502016-c122-46c2-a582-84791bc54187",
+      "name": "",
+      "status": "ACTIVE",
+      "admin_state_up": true,
+      "fixed_ips": [
+        {
+          "subnet_id": "ea7d6e54-cf88-40c3-95af-fd576bb2184d",
+          "ip_address": "10.250.1.242"
+        }
+      ],
+      "mac_address": "fa:16:3e:5c:63:54",
+      "network_id": "437dadfe-c1d6-43c2-bc21-6dd5aabef079",
+      "tenant_id": "3b1dbd8270424257930b2e95bc150916",
+      "device_id": "679f64ef-0c4a-4f11-8a7b-059d841c9f4e",
+      "device_owner": "compute:la-north-2a",
+      "security_groups": [
+        "74593d3e-d063-4bad-9e50-34db9f92b85c"
+      ],
+      "extra_dhcp_opts": [],
+      "allowed_address_pairs": [],
+      "binding:vnic_type": "normal",
+      "binding:vif_details": {
+        "vhostuser_mode": "client",
+        "enable_acceleration": true,
+        "enable_dpdk": true,
+        "segmentation_id": 632140,
+        "vhostuser_dpdk_plug": true,
+        "vhostuser_socket": "/var/run/vhost-user/tap0c502016-c1",
+        "bridge_name": "br-int",
+        "physical_network": null,
+        "port_filter": true,
+        "router_id": "52e6bbac-6ff9-4c90-ba95-4ff6f9660b62",
+        "network_type": "vxlan",
+        "ovs_hybrid_plug": true,
+        "primary_interface": true
+      },
+      "binding:profile": {},
+      "port_security_enabled": true,
+      "instance_type": "",
+      "instance_id": "",
+      "zone_id": "",
+      "enable_efi": false
+    }
+  ],
+  "subnet_ids": [
+    "ea7d6e54-cf88-40c3-95af-fd576bb2184d"
+  ],
+  "subnets": [
+    {
+      "id": "ea7d6e54-cf88-40c3-95af-fd576bb2184d",
+      "error": "HTTP 404 GET https://vpc.la-north-2.myhuaweicloud.com/v1/3b1dbd8270424257930b2e95bc150916/subnets/ea7d6e54-cf88-40c3-95af-fd576bb2184d: {\"code\":\"VPC.0216\",\"message\":\"{\\\"error_msg\\\":\\\"The resource could not be found...\\\",\\\"error_code\\\":\\\"SYS.0404\\\",\\\"request_id\\\":\\\"d3a2cbba5cb4b61bb44b8b77865a1fa7\\\"}\"}"
+    }
+  ],
+  "acl_attempts": [
+    {
+      "url": "https://vpc.la-north-2.myhuaweicloud.com/v1/3b1dbd8270424257930b2e95bc150916/acls",
+      "ok": false,
+      "error": "HTTP 404 GET https://vpc.la-north-2.myhuaweicloud.com/v1/3b1dbd8270424257930b2e95bc150916/acls: {\"error_code\":\"APIGW.0101\",\"request_id\":\"6d1ce35b396314d619824232dd87c7f2\",\"error_msg\":\"The API does not exist or has not be"
+    },
+    {
+      "url": "https://vpc.la-north-2.myhuaweicloud.com/v2.0/network_acls",
+      "ok": false,
+      "error": "HTTP 404 GET https://vpc.la-north-2.myhuaweicloud.com/v2.0/network_acls: {\"error_code\":\"APIGW.0101\",\"request_id\":\"2e934fbeb8c4692f01ea9babebe25b4e\",\"error_msg\":\"The API does not exist or has not been published in the env"
+    },
+    {
+      "url": "https://vpc.la-north-2.myhuaweicloud.com/v1/3b1dbd8270424257930b2e95bc150916/network-acls",
+      "ok": false,
+      "error": "HTTP 404 GET https://vpc.la-north-2.myhuaweicloud.com/v1/3b1dbd8270424257930b2e95bc150916/network-acls: {\"error_code\":\"APIGW.0101\",\"error_msg\":\"The API does not exist or has not been published in the environment\",\"reques"
+    }
+  ]
+}

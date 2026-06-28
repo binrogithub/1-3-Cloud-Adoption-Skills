@@ -1,0 +1,128 @@
+{
+  "task_id": "5f044a0b-cf65-44b0-a816-9914c2b30c96",
+  "final_state": "MIGRATE_SUCCESS",
+  "history_tail": [
+    {
+      "ts_cn": "2026-04-22 07:21:43 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:22:04 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:22:25 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:22:46 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:23:07 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:23:28 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:23:48 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:24:09 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:24:30 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:24:51 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:25:12 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:25:33 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:25:54 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:26:15 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:26:36 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:26:57 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:27:18 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:27:39 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:28:00 +0800",
+      "state": "RUNNING",
+      "phase": "",
+      "progress": null
+    },
+    {
+      "ts_cn": "2026-04-22 07:28:21 +0800",
+      "state": "MIGRATE_SUCCESS",
+      "phase": "",
+      "progress": null
+    }
+  ],
+  "terminal": true,
+  "timeout": false
+}

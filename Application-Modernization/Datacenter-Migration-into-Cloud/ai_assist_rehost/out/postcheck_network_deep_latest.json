@@ -1,0 +1,870 @@
+{
+  "generated_at_epoch": 1782610868,
+  "generated_at_local": "2026-06-28 09:41:08 +0800",
+  "region": "la-north-2",
+  "project_id": "3b1dbd8270424257930b2e95bc150916",
+  "target_server_id": "679f64ef-0c4a-4f11-8a7b-059d841c9f4e",
+  "server_status": "ACTIVE",
+  "addresses": {
+    "52e6bbac-6ff9-4c90-ba95-4ff6f9660b62": [
+      {
+        "version": "4",
+        "addr": "10.250.1.242",
+        "primary": true,
+        "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:5c:63:54",
+        "OS-EXT-IPS:type": "fixed",
+        "OS-EXT-IPS:port_id": "0c502016-c122-46c2-a582-84791bc54187"
+      },
+      {
+        "version": "4",
+        "addr": "110.238.84.80",
+        "primary": true,
+        "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:5c:63:54",
+        "OS-EXT-IPS:type": "floating",
+        "OS-EXT-IPS:port_id": "0c502016-c122-46c2-a582-84791bc54187"
+      }
+    ]
+  },
+  "ports": [
+    {
+      "id": "0c502016-c122-46c2-a582-84791bc54187",
+      "name": "",
+      "status": "ACTIVE",
+      "admin_state_up": true,
+      "fixed_ips": [
+        {
+          "subnet_id": "ea7d6e54-cf88-40c3-95af-fd576bb2184d",
+          "ip_address": "10.250.1.242"
+        }
+      ],
+      "mac_address": "fa:16:3e:5c:63:54",
+      "network_id": "437dadfe-c1d6-43c2-bc21-6dd5aabef079",
+      "tenant_id": "3b1dbd8270424257930b2e95bc150916",
+      "device_id": "679f64ef-0c4a-4f11-8a7b-059d841c9f4e",
+      "device_owner": "compute:la-north-2a",
+      "security_groups": [
+        "74593d3e-d063-4bad-9e50-34db9f92b85c"
+      ],
+      "extra_dhcp_opts": [],
+      "allowed_address_pairs": [],
+      "binding:vnic_type": "normal",
+      "binding:vif_details": {
+        "vhostuser_mode": "client",
+        "enable_acceleration": true,
+        "enable_dpdk": true,
+        "segmentation_id": 632140,
+        "vhostuser_dpdk_plug": true,
+        "vhostuser_socket": "/var/run/vhost-user/tap0c502016-c1",
+        "bridge_name": "br-int",
+        "physical_network": null,
+        "port_filter": true,
+        "router_id": "52e6bbac-6ff9-4c90-ba95-4ff6f9660b62",
+        "network_type": "vxlan",
+        "ovs_hybrid_plug": true,
+        "primary_interface": true
+      },
+      "binding:profile": {},
+      "port_security_enabled": true,
+      "instance_type": "",
+      "instance_id": "",
+      "zone_id": "",
+      "enable_efi": false
+    }
+  ],
+  "security_group_ids": [
+    "74593d3e-d063-4bad-9e50-34db9f92b85c"
+  ],
+  "security_groups": [
+    {
+      "id": "74593d3e-d063-4bad-9e50-34db9f92b85c",
+      "name": "Sys-default",
+      "rules": [
+        {
+          "id": "c087a8e7-9a78-4f6b-b717-6b4a0bc86782",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": "tcp",
+          "port_range_min": 22,
+          "port_range_max": 22,
+          "remote_ip_prefix": "149.232.136.255/32",
+          "remote_group_id": null,
+          "description": ""
+        },
+        {
+          "id": "3fb7e48b-491b-4f67-a22a-ef712c9e417d",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": "tcp",
+          "port_range_min": 22,
+          "port_range_max": 22,
+          "remote_ip_prefix": "104.198.60.131/32",
+          "remote_group_id": null,
+          "description": "auto-copied from source security group policy"
+        },
+        {
+          "id": "2f07dfa9-ba18-4431-ae45-1965e6b02725",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": "tcp",
+          "port_range_min": 22,
+          "port_range_max": 22,
+          "remote_ip_prefix": "104.198.60.131/32",
+          "remote_group_id": null,
+          "description": "auto-copied from source security group policy"
+        },
+        {
+          "id": "97ca1d0c-cab1-4394-8143-f96cdc5b523d",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.128.0.2/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "e5eb2b90-85b2-46e4-87ec-959ea494871c",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.128.0.2/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "a56ec8a7-6171-4d64-a6f8-86eb82560811",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "172.31.33.113/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "6e2b10c7-d98a-4c3a-b77d-37c35dfba149",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "172.31.33.113/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "91cd0ac1-b6e1-49e9-8e2a-9ce2d1cc248f",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": "tcp",
+          "port_range_min": 80,
+          "port_range_max": 80,
+          "remote_ip_prefix": "0.0.0.0/0",
+          "remote_group_id": null,
+          "description": "auto-copied from source security group policy"
+        },
+        {
+          "id": "bcc5fee8-a1dd-4b33-a284-55e77f81d377",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": "tcp",
+          "port_range_min": 22,
+          "port_range_max": 22,
+          "remote_ip_prefix": "100.66.0.0/16",
+          "remote_group_id": null,
+          "description": "auto-copied from source security group policy"
+        },
+        {
+          "id": "46a1674d-48aa-4e02-91bf-a7522dd0ded2",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "18.191.159.217/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "0f75aed4-cc4d-4805-bd69-ceabe65f9d41",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.35/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "d006f1df-c670-443d-96cc-95ce90fb5e85",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "18.191.159.217/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "6a354c4d-c437-4696-b8dc-50a67c48e94a",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.35/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "88287bbc-c42c-46cf-9fcf-e09aa341b2e0",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": "tcp",
+          "port_range_min": 22,
+          "port_range_max": 22,
+          "remote_ip_prefix": "0.0.0.0/0",
+          "remote_group_id": null,
+          "description": "explicit ssh post-migration check"
+        },
+        {
+          "id": "33e15c31-9aba-4cdc-ae73-bfb97d577ab8",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": "tcp",
+          "port_range_min": 22,
+          "port_range_max": 22,
+          "remote_ip_prefix": "16.59.16.255/32",
+          "remote_group_id": null,
+          "description": "explicit ssh post-migration check"
+        },
+        {
+          "id": "1d904dca-bab1-4b66-abd6-5157eeffe507",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "16.59.16.255/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "3149b582-76df-454e-9cf1-90c74f8c5a91",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.0.1.131/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "701c61ca-a5a1-46bb-b09c-9d8e3c791d17",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "16.59.16.255/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "858a91c5-1985-43dd-b818-33b0c14a1b8d",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.0.1.131/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "11bd6520-dddd-4fab-ab59-280ad345d712",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.22/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "5ae71512-c333-4cc3-be3f-89387d6c14b3",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.22/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "70642da7-b761-4663-89f6-4d43e05b3504",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "119.8.153.90/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "e3aafaa0-fae5-4448-93d9-38b4cd0cd013",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.44/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "a376a210-e2d0-4db6-90b0-375855085cc9",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.44/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "c5334f5f-3d02-499c-8853-d4cb39d9aea0",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "119.8.153.90/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "d647c966-33b5-40af-be05-3726f2286e34",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "119.8.147.218/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "41cb99d7-302c-4985-a5d4-35e0c3430231",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.42/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "0077df0a-93fc-428a-acbd-1fb7ccabb35e",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.42/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "b883ade3-b1c0-413f-ac3d-a41c05f06716",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "119.8.147.218/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "d1c8ecc9-5cdd-402c-aeeb-9abb7c348d59",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "0.0.0.0/0",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "1b235674-7c22-4a87-b1e0-a73ed2bb196c",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.8.0.2/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "e9d5ac32-c321-4365-aa03-b80c3368748b",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.8.0.2/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "06afb22f-5019-4b07-baba-38a684248b4c",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "192.168.229.128/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "79344535-d155-450c-9ad3-1596c0039d1b",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "192.168.229.128/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "3d3ebbf2-ec70-4a1a-b53a-74cf1bf7cd7d",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "192.168.137.100/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "ec7d3981-4818-463b-abba-75f0ed8d7ec3",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "192.168.137.100/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "91384923-cec9-4b65-8144-1076030efe29",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.120/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "2aca0ab9-ae3d-46aa-8f0b-afb0f69be82d",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "110.238.69.253/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "542343b4-50bb-4424-a89b-9912162f6e86",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "119.8.149.199/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "5cdc8b35-e64f-4d92-b0e9-aa9d82d3cf0e",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.209/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "85a0366d-1a33-4215-b94d-e3f973bb2f1b",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.117/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "8705c94e-5f51-44f4-96e0-09bd40338f7a",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "110.238.66.204/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "b20ba1d3-4c63-433f-8b7a-5fb10751ccb6",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "101.44.12.71/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "b69765f0-970e-4ef2-a28f-82667cebe973",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.37/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "9d9e6c0c-3418-4245-9f49-b0e52e96fa9a",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.97/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "e7e75cb7-4a95-4b84-ab71-a63902f0b139",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "101.44.2.231/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "16d05bba-0479-4f08-bcbb-175ff1086b05",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "119.8.149.199/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "ed402e4a-dc83-4fba-8d77-50bf6e79e2dd",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.37/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "7a926d50-7dc9-468d-9ab4-5a774ab4a489",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.120/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "a34420b7-51be-4379-95d4-14cd6af6dd0e",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "110.238.66.204/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "94d65bf9-eb0b-4e7c-957a-8218d3dd5c3b",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.209/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "eff1e000-6089-40c4-96d8-46149f4f1802",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "110.238.69.253/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "f5d57674-156f-42fe-91b4-c5f4be86798c",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.97/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "ca5a8423-6a2b-4c9d-b43b-174e5561da0c",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "101.44.12.71/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "87b6c4c8-fdd0-4054-9c4c-db360592fcb9",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.117/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "e1bf6e3f-bc73-4540-a2ad-24fbcc81cda2",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "101.44.2.231/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "c090044b-038c-49e1-8f3c-22b8d4140e92",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.248/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "adf8825b-c4fe-47a4-8395-c1d0f0eb02bc",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.248/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "324c72e0-edc9-472a-bb61-3c346f606c16",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.250/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "83deed32-5ac7-46ac-9e09-d8651a376767",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.250/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "9f0f7275-4e3f-4887-b5f1-63536f9e3242",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.222/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "756c3fd8-c88e-41f3-9a2d-d698f9f8279e",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "10.250.1.222/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "38cbdd08-3a20-4d7d-9a69-b05679b24db6",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "176.52.142.236/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "e8a3b9fd-6372-4e43-949c-55021429ab8f",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "176.52.142.236/32",
+          "remote_group_id": null,
+          "description": "auto-added by mgc cross-region migration"
+        },
+        {
+          "id": "fd3e3ea0-e84c-4f88-b99e-c500333b6f7b",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": "0.0.0.0/0",
+          "remote_group_id": null,
+          "description": ""
+        },
+        {
+          "id": "c9330ae9-4f2f-45a1-8b48-00010e676601",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": "tcp",
+          "port_range_min": 3389,
+          "port_range_max": 3389,
+          "remote_ip_prefix": "11.245.35.73/32",
+          "remote_group_id": null,
+          "description": ""
+        },
+        {
+          "id": "3e7c5fba-b8ff-4966-9538-d051a3ec9d12",
+          "direction": "ingress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": null,
+          "remote_group_id": "74593d3e-d063-4bad-9e50-34db9f92b85c",
+          "description": null
+        },
+        {
+          "id": "efb46745-85cd-45f0-aa0e-5bd949b1f197",
+          "direction": "ingress",
+          "ethertype": "IPv6",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": null,
+          "remote_group_id": "74593d3e-d063-4bad-9e50-34db9f92b85c",
+          "description": null
+        },
+        {
+          "id": "8a271911-01fa-480c-a14d-9e32ea518b74",
+          "direction": "egress",
+          "ethertype": "IPv6",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": null,
+          "remote_group_id": null,
+          "description": null
+        },
+        {
+          "id": "ce2bd2f6-fa0f-4215-bf57-6607f32fbd71",
+          "direction": "egress",
+          "ethertype": "IPv4",
+          "protocol": null,
+          "port_range_min": null,
+          "port_range_max": null,
+          "remote_ip_prefix": null,
+          "remote_group_id": null,
+          "description": null
+        }
+      ]
+    }
+  ],
+  "public_ips": [
+    "110.238.84.80"
+  ],
+  "eips": [
+    {
+      "id": "b5b528f8-d2c5-42ca-b3e1-ee8475e40889",
+      "public_ip_address": "110.238.84.80",
+      "status": "ACTIVE",
+      "port_id": "0c502016-c122-46c2-a582-84791bc54187",
+      "bandwidth_id": "7a9d544f-5aa0-485d-9fa3-7a44d0021a0e",
+      "type": "5_bgp",
+      "tenant_id": "3b1dbd8270424257930b2e95bc150916"
+    }
+  ],
+  "has_ingress_tcp_22_rule": true
+}

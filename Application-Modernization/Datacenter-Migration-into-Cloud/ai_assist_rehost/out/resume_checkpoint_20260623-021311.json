@@ -1,0 +1,289 @@
+{
+  "saved_at_epoch": 1782151991,
+  "saved_at_local": "2026-06-23 02:13:11",
+  "purpose": "resume_migration_after_pause",
+  "summary": {
+    "mode": "sms_existing_target_batch",
+    "source_project_id": "e84695c2e5a546d6b45fc405416e47f6",
+    "source_region": "na-mexico-1",
+    "destination_project_id": "019ea55049357658b4a43d77ec94d728",
+    "resolved_target_region": "na-mexico-1",
+    "resolved_target_project_id": "019ea55049357658b4a43d77ec94d728",
+    "sms_endpoint": "https://sms.ap-southeast-3.myhuaweicloud.com",
+    "sms_endpoint_probe": {
+      "selected": "https://sms.ap-southeast-3.myhuaweicloud.com",
+      "candidates": [
+        "https://sms.na-mexico-1.myhuaweicloud.com",
+        "https://sms.ap-southeast-3.myhuaweicloud.com",
+        "https://sms.ap-southeast-1.myhuaweicloud.com"
+      ],
+      "errors": {
+        "https://sms.na-mexico-1.myhuaweicloud.com": "<urlopen error [Errno -2] Name or service not known>"
+      }
+    },
+    "security_group_rule_description": "虚拟机迁移",
+    "note": "checkpoint for NA-Mexico-1 existing-target migration"
+  },
+  "results": [
+    {
+      "source_vm_id": "ae0004e6-824c-40c1-b1c8-2fb616d4aff8",
+      "source_name": "ecs-27d4",
+      "source_region": "na-mexico-1",
+      "source_project_id": "e84695c2e5a546d6b45fc405416e47f6",
+      "source_fixed_ip": "192.168.0.143",
+      "source_floating_ip": "94.74.71.254",
+      "source_sms_server_id": "91a04488-79e1-4b88-888f-0e49cd6510d2",
+      "target_vm_id": "fda361f0-4ef3-4c4a-aefd-481d494a0287",
+      "target_name": "ecs-27d4",
+      "target_region": "na-mexico-1",
+      "target_project_id": "019ea55049357658b4a43d77ec94d728",
+      "target_fixed_ip": "192.168.0.143",
+      "target_floating_ip": "119.8.11.205",
+      "target_security_group_ids": [
+        "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+        "11b2eb99-f0f1-4027-9b52-e45f76e5842a",
+        "2bfb2d6f-457f-4da3-a028-05fb7947af92",
+        "3688ae6f-c348-4ef8-b3c6-e5058df0ceeb",
+        "378895bd-898f-4a30-8027-4bc57440495b",
+        "4b3fab62-393f-459b-8b4c-655d1ef3360e",
+        "5451a040-1950-4c01-bed0-37ef81fef6ad",
+        "5531d440-8844-4b3f-a888-d541af8bfb56",
+        "6159c5ba-9999-49cd-87c3-ee8bdc5314ac",
+        "63c4398a-7840-4255-a07f-6a4ed1d1d8e0",
+        "653df9df-3215-4037-9b42-837cd2d6a2c6",
+        "7ae9706b-85c4-4ae0-8bd4-7d776487b11b",
+        "883bbeba-dc88-444a-9c83-25ad26a33b41",
+        "99d876ac-68cb-4956-9623-c4c43680ed57",
+        "9ec80abc-56c8-40e1-a12a-33a7f6d1996e",
+        "ad8a9db3-bc8e-44f4-8a06-c9e0038c1c53",
+        "dac939f4-63c8-475d-90e6-1ae2edac8b36",
+        "e3ba50b0-628a-48a7-bb31-c658e7b66769"
+      ],
+      "source_status_snapshot": {
+        "name": "ecs-27d4",
+        "state": "unavailable",
+        "connected": false,
+        "status": "",
+        "migration_cycle": "checking",
+        "os_type": "LINUX",
+        "os_version": "CentOS 8.0 64bit",
+        "check_error_count": 0,
+        "check_errors": [],
+        "query_error": ""
+      },
+      "target_status_snapshot": {
+        "exists": true,
+        "server_status": "ACTIVE",
+        "attached_disk_count": 2,
+        "attached_boot_disk_id": ""
+      },
+      "latest_task": {
+        "task_id": "",
+        "state": "NONE",
+        "type": "",
+        "subtask_info": "",
+        "error_json": "",
+        "create_date": ""
+      },
+      "resume_checks": {
+        "source_registered": true,
+        "source_connected": false,
+        "source_available": false,
+        "source_precheck_passed": true,
+        "target_exists": true,
+        "target_has_eip": true,
+        "no_active_task": true
+      },
+      "resume_ready": false
+    },
+    {
+      "source_vm_id": "f4697fd4-cd7b-4d8b-896a-2963f4416c60",
+      "source_name": "ecs-2115-dd4c",
+      "source_region": "na-mexico-1",
+      "source_project_id": "e84695c2e5a546d6b45fc405416e47f6",
+      "source_fixed_ip": "192.168.0.82",
+      "source_floating_ip": "94.74.66.203",
+      "source_sms_server_id": "d5ae6234-f893-4c79-93be-cb502f1d4240",
+      "target_vm_id": "e165bc10-14a5-48a1-9159-a1aec966471a",
+      "target_name": "ecs-2115-dd4c",
+      "target_region": "na-mexico-1",
+      "target_project_id": "019ea55049357658b4a43d77ec94d728",
+      "target_fixed_ip": "192.168.0.82",
+      "target_floating_ip": "94.74.67.25",
+      "target_security_group_ids": [
+        "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+        "11b2eb99-f0f1-4027-9b52-e45f76e5842a",
+        "5451a040-1950-4c01-bed0-37ef81fef6ad",
+        "ff1616b0-184e-42a9-b4b0-ecb110912474"
+      ],
+      "source_status_snapshot": {
+        "name": "ecs-2115-dd4c",
+        "state": "unavailable",
+        "connected": false,
+        "status": "",
+        "migration_cycle": "checking",
+        "os_type": "LINUX",
+        "os_version": "CentOS 7.9 64bit",
+        "check_error_count": 0,
+        "check_errors": [],
+        "query_error": ""
+      },
+      "target_status_snapshot": {
+        "exists": true,
+        "server_status": "ACTIVE",
+        "attached_disk_count": 1,
+        "attached_boot_disk_id": ""
+      },
+      "latest_task": {
+        "task_id": "",
+        "state": "NONE",
+        "type": "",
+        "subtask_info": "",
+        "error_json": "",
+        "create_date": ""
+      },
+      "resume_checks": {
+        "source_registered": true,
+        "source_connected": false,
+        "source_available": false,
+        "source_precheck_passed": true,
+        "target_exists": true,
+        "target_has_eip": true,
+        "no_active_task": true
+      },
+      "resume_ready": false
+    },
+    {
+      "source_vm_id": "2bc672dc-1352-4986-a2ef-f47f8a1517ef",
+      "source_name": "ecs-e970-0002",
+      "source_region": "na-mexico-1",
+      "source_project_id": "e84695c2e5a546d6b45fc405416e47f6",
+      "source_fixed_ip": "192.168.0.35",
+      "source_floating_ip": "94.74.77.162",
+      "source_sms_server_id": "d350ad77-8dcb-496d-9cc1-5bf237c10237",
+      "target_vm_id": "8868d3bd-bc8e-40e0-86de-f12f685ebdd4",
+      "target_name": "ecs-e970-0002",
+      "target_region": "na-mexico-1",
+      "target_project_id": "019ea55049357658b4a43d77ec94d728",
+      "target_fixed_ip": "192.168.0.35",
+      "target_floating_ip": "94.74.70.112",
+      "target_security_group_ids": [
+        "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+        "2bfb2d6f-457f-4da3-a028-05fb7947af92",
+        "3688ae6f-c348-4ef8-b3c6-e5058df0ceeb",
+        "4b3fab62-393f-459b-8b4c-655d1ef3360e",
+        "5451a040-1950-4c01-bed0-37ef81fef6ad",
+        "7ae9706b-85c4-4ae0-8bd4-7d776487b11b",
+        "883bbeba-dc88-444a-9c83-25ad26a33b41",
+        "99d876ac-68cb-4956-9623-c4c43680ed57",
+        "9ec80abc-56c8-40e1-a12a-33a7f6d1996e",
+        "e3ba50b0-628a-48a7-bb31-c658e7b66769"
+      ],
+      "source_status_snapshot": {
+        "name": "ecs-e970-0002",
+        "state": "unavailable",
+        "connected": false,
+        "status": "",
+        "migration_cycle": "checking",
+        "os_type": "LINUX",
+        "os_version": "Other Linux(64 bit)",
+        "check_error_count": 0,
+        "check_errors": [],
+        "query_error": ""
+      },
+      "target_status_snapshot": {
+        "exists": true,
+        "server_status": "ACTIVE",
+        "attached_disk_count": 2,
+        "attached_boot_disk_id": ""
+      },
+      "latest_task": {
+        "task_id": "",
+        "state": "NONE",
+        "type": "",
+        "subtask_info": "",
+        "error_json": "",
+        "create_date": ""
+      },
+      "resume_checks": {
+        "source_registered": true,
+        "source_connected": false,
+        "source_available": false,
+        "source_precheck_passed": true,
+        "target_exists": true,
+        "target_has_eip": true,
+        "no_active_task": true
+      },
+      "resume_ready": false
+    },
+    {
+      "source_vm_id": "d34a208b-d413-441b-994c-6ef3d4341790",
+      "source_name": "ecs-e970-0001",
+      "source_region": "na-mexico-1",
+      "source_project_id": "e84695c2e5a546d6b45fc405416e47f6",
+      "source_fixed_ip": "192.168.0.200",
+      "source_floating_ip": "94.74.66.4",
+      "source_sms_server_id": "ba006494-ac0d-4af1-b1a6-fe7707895be6",
+      "target_vm_id": "38d024c5-f7ae-4d02-8711-c64e385fa73a",
+      "target_name": "ecs-e970-0001",
+      "target_region": "na-mexico-1",
+      "target_project_id": "019ea55049357658b4a43d77ec94d728",
+      "target_fixed_ip": "192.168.0.200",
+      "target_floating_ip": "94.74.76.132",
+      "target_security_group_ids": [
+        "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+        "2bfb2d6f-457f-4da3-a028-05fb7947af92",
+        "3688ae6f-c348-4ef8-b3c6-e5058df0ceeb",
+        "4b3fab62-393f-459b-8b4c-655d1ef3360e",
+        "5451a040-1950-4c01-bed0-37ef81fef6ad",
+        "7ae9706b-85c4-4ae0-8bd4-7d776487b11b",
+        "883bbeba-dc88-444a-9c83-25ad26a33b41",
+        "99d876ac-68cb-4956-9623-c4c43680ed57",
+        "9ec80abc-56c8-40e1-a12a-33a7f6d1996e",
+        "e3ba50b0-628a-48a7-bb31-c658e7b66769"
+      ],
+      "source_status_snapshot": {
+        "name": "ecs-e970-0001",
+        "state": "unavailable",
+        "connected": false,
+        "status": "",
+        "migration_cycle": "checking",
+        "os_type": "LINUX",
+        "os_version": "Other Linux(64 bit)",
+        "check_error_count": 0,
+        "check_errors": [],
+        "query_error": ""
+      },
+      "target_status_snapshot": {
+        "exists": true,
+        "server_status": "ACTIVE",
+        "attached_disk_count": 2,
+        "attached_boot_disk_id": ""
+      },
+      "latest_task": {
+        "task_id": "",
+        "state": "NONE",
+        "type": "",
+        "subtask_info": "",
+        "error_json": "",
+        "create_date": ""
+      },
+      "resume_checks": {
+        "source_registered": true,
+        "source_connected": false,
+        "source_available": false,
+        "source_precheck_passed": true,
+        "target_exists": true,
+        "target_has_eip": true,
+        "no_active_task": true
+      },
+      "resume_ready": false
+    }
+  ],
+  "resume_hint": {
+    "next_step": "Register/recover SMS source to available, then create/start SMS task by source_sms_server_id -> target_vm_id.",
+    "checkpoint_files": {
+      "latest": "out/resume_checkpoint_latest.json"
+    }
+  }
+}

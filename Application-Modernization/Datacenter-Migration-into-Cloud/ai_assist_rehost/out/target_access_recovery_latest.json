@@ -1,0 +1,19 @@
+{
+  "generated_at_epoch": 1782610914,
+  "generated_at_local": "2026-06-28 09:41:54 +0800",
+  "target_server_id": "679f64ef-0c4a-4f11-8a7b-059d841c9f4e",
+  "reset_password_response": {},
+  "reboot_response": {
+    "job_id": "8ab99a9b9f07ec20019f0be3f1e568e9"
+  },
+  "wait_history": [
+    {
+      "t": 1782610916,
+      "status": "ACTIVE",
+      "vm_state": "active",
+      "task_state": null
+    }
+  ],
+  "final_status": "ACTIVE",
+  "console_tail": "yU= root@aws-ohio-migrated-stance-2-1782607796\nssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPb6rt3HUf7vVH21vI68ZKKidgUcBJQ+ryxfLfbP+N1Y root@aws-ohio-migrated-stance-2-1782607796\nssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQClTkfLnZnTIq562rUqtrsSe6pKZu+bsTzJw8Qd/Dwi6ebfOKHrQrd8qJvAGyr3zc8QO8ZI3RgirKQb748iOdtJ9EJZaQbSd7gHqtW68vCuTWkfuUU7702x/Sw8Q+RzD4xImY0amyj7aa45DDfiReO6Ep2J4oZmZs25wpOXwu4Fh/8nbd+xEBhzGuUfVu8IqVYa5IkBQuRkxXnhAOKDPQ09o9A1fOFjY0al3cqOeGQyA3KPdffUUK/B/g/xUdxjMR/dE4eixWLrbKibHFUOWalbrXODPT17kzj5LDl1kbbBoua3tazCF8Sh7S/7uo6gND3MKGdI5GLaiqNtYg8GEHFsNpOoqxO/wjPBJ4f6Cn0QjvCoiHZogIhbWFe6ATVF41y0uaLid7F+xUIVEHNcajo96IouGLbgarRcrNmLtdkhDZ5L9NgQasWbfy8oifj8PIGHhSnDt1I9J4Go/g01wJuuNnE4cN+9o9YMUu8ga6wNwVLAHDHrGhvw0izqAbYOEws= root@aws-ohio-migrated-stance-2-1782607796\n-----END SSH HOST KEY KEYS-----\n[   47.454282] cloud-init[4997]: Cloud-init v. 19.1 finished at Sun, 28 Jun 2026 00:51:16 +0000. Datasource DataSourceOpenStack [net,ver=2].  Up 47.45 seconds\n[[0;32m  OK  [0m] Finished [0;1;39mcloud-final.service[0m - Execute cloud user/final scripts.\n[[0;32m  OK  [0m] Reached target [0;1;39mcloud-init.target[0m - Cloud-init target.\n\nUbuntu 24.04.4 LTS aws-ohio-migrated-stance-2-1782607796 ttyS0\n\n"
+}

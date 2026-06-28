@@ -1,0 +1,38 @@
+{
+  "checkpoint_version": 1,
+  "created_at_utc": "2026-06-27T05:20:40Z",
+  "created_at_local": "2026-06-27T13:20:40+0800",
+  "status": "in_progress",
+  "resume_intent": "terraform_apply_resume",
+  "terraform": {
+    "working_directory": "/root/ai_assit_migration/ai_assist_vm_migration",
+    "command": "terraform apply -auto-approve",
+    "session_id": 89432,
+    "resource_address": "terraform_data.sms_existing_target_batch",
+    "latest_observation": "still creating at 2m20s",
+    "state_list_at_checkpoint": []
+  },
+  "migration_context": {
+    "source_server_id_input": "i-0d31fa15334e0b294",
+    "source_sms_server_id": "37d61e01-3694-429d-9af1-b6e2e457715f",
+    "destination_region": "la-north-2",
+    "destination_project_id": "3b1dbd8270424257930b2e95bc150916",
+    "preferred_migration_method": "sms",
+    "effective_fallback": "rsync",
+    "sms_incompatible_reason": "OS_VERSION:SMS.6504"
+  },
+  "artifacts": {
+    "precheck_source_checks_file": "out/precheck_source_checks.json",
+    "precheck_task_cleanup_file": "out/precheck_task_cleanup.json",
+    "result_file": "out/migration_result.json",
+    "rsync_result_file": "out/rsync_execution.json"
+  },
+  "resume_commands": [
+    "cd /root/ai_assit_migration/ai_assist_vm_migration",
+    "terraform apply -auto-approve"
+  ],
+  "notes": [
+    "checkpoint captured while terraform local-exec was still running",
+    "if previous apply exits with failure, rerun terraform apply using same workspace and tfvars"
+  ]
+}

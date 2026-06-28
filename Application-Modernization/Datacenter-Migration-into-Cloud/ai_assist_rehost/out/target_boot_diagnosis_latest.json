@@ -1,0 +1,130 @@
+{
+  "generated_at_epoch": 1782610827,
+  "generated_at_local": "2026-06-28 09:40:27 +0800",
+  "region": "la-north-2",
+  "project_id": "3b1dbd8270424257930b2e95bc150916",
+  "target_server_id": "679f64ef-0c4a-4f11-8a7b-059d841c9f4e",
+  "server_summary": {
+    "id": "679f64ef-0c4a-4f11-8a7b-059d841c9f4e",
+    "name": "aws-ohio-migrated-stance-2-1782607796",
+    "status": "ACTIVE",
+    "host_status": "UP",
+    "OS-EXT-STS:vm_state": "active",
+    "OS-EXT-STS:task_state": null,
+    "OS-EXT-STS:power_state": 1,
+    "OS-EXT-AZ:availability_zone": "la-north-2a",
+    "created": "2026-06-28T00:49:59Z",
+    "updated": "2026-06-28T01:39:00Z"
+  },
+  "addresses": {
+    "52e6bbac-6ff9-4c90-ba95-4ff6f9660b62": [
+      {
+        "version": "4",
+        "addr": "10.250.1.242",
+        "primary": true,
+        "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:5c:63:54",
+        "OS-EXT-IPS:type": "fixed",
+        "OS-EXT-IPS:port_id": "0c502016-c122-46c2-a582-84791bc54187"
+      },
+      {
+        "version": "4",
+        "addr": "110.238.84.80",
+        "primary": true,
+        "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:5c:63:54",
+        "OS-EXT-IPS:type": "floating",
+        "OS-EXT-IPS:port_id": "0c502016-c122-46c2-a582-84791bc54187"
+      }
+    ]
+  },
+  "volumes_attached": [
+    {
+      "id": "6634ab9d-9028-48be-9323-87bb51f7898d",
+      "delete_on_termination": "true",
+      "device": "/dev/vda",
+      "bootIndex": "0"
+    }
+  ],
+  "volume_details": [
+    {
+      "id": "6634ab9d-9028-48be-9323-87bb51f7898d",
+      "status": "in-use",
+      "bootable": "true",
+      "size": 10,
+      "volume_type": "SSD",
+      "multiattach": false,
+      "attachments": [
+        {
+          "attachment_id": "c46358a8-a2cf-4d95-9a97-6900b6236b92",
+          "volume_id": "6634ab9d-9028-48be-9323-87bb51f7898d",
+          "device": "/dev/vda",
+          "server_id": "679f64ef-0c4a-4f11-8a7b-059d841c9f4e",
+          "host_name": null,
+          "attached_at": "2026-06-28T01:05:27.868321",
+          "id": "6634ab9d-9028-48be-9323-87bb51f7898d"
+        }
+      ],
+      "metadata": {
+        "readonly": "False",
+        "attached_mode": "rw"
+      },
+      "volume_image_metadata": {
+        "__os_bit": "64",
+        "__os_version": "Ubuntu 24.04 server 64bit",
+        "__isregistered": "true",
+        "__platform": "Ubuntu",
+        "__os_type": "Linux",
+        "virtual_env_type": "FusionCompute",
+        "__image_source_type": "uds",
+        "__imagetype": "gold",
+        "__productcode": "",
+        "__image_size": "2402480128",
+        "__account_code": "",
+        "__lazyloading": "true",
+        "__data_origin": "",
+        "__support_amd_turin": "true",
+        "hw_vif_multiqueue_enabled": "true",
+        "image_location_backup": "",
+        "__support_kvm": "true",
+        "__originalimagename": "b1eecdf6-a943-43f3-9d47-a538231d1442",
+        "__support_agent_list": "hss,ces",
+        "__support_kvm_hi1822_hiovs": "true",
+        "__support_amd": "true",
+        "__backup_id": "",
+        "__os_feature_list": "{\"nic_hotplug\":\"true\", \"disk_hotplug\": \"true\", \"user_data\": \"true\", \"ssh_key\":\"true\", \"hostname_inject\": \"true\", \"onekey_resetpasswd\": \"true\"}",
+        "active_at": "2025-03-06T06:30:19Z",
+        "__description": "Register zvhd2 private image by OpsImageMgmt",
+        "image_id": "b1eecdf6-a943-43f3-9d47-a538231d1442",
+        "image_name": "Ubuntu 24.04 server 64bit",
+        "checksum": "99914b932bd37a50b983c5e7c90ae93b",
+        "container_format": "bare",
+        "disk_format": "zvhd2",
+        "min_disk": "10",
+        "min_ram": "0",
+        "size": "2"
+      },
+      "created_at": "2026-06-28T00:50:01.803268",
+      "updated_at": "2026-06-28T01:05:27.875700"
+    }
+  ],
+  "console_attempts": [
+    {
+      "method": "POST",
+      "url": "https://ecs.la-north-2.myhuaweicloud.com/v2.1/3b1dbd8270424257930b2e95bc150916/servers/679f64ef-0c4a-4f11-8a7b-059d841c9f4e/action",
+      "ok": true,
+      "output_len": 17414
+    },
+    {
+      "method": "POST",
+      "url": "https://ecs.la-north-2.myhuaweicloud.com/v2.1/3b1dbd8270424257930b2e95bc150916/servers/679f64ef-0c4a-4f11-8a7b-059d841c9f4e/action",
+      "ok": true,
+      "output_len": 95146
+    },
+    {
+      "method": "GET",
+      "url": "https://ecs.la-north-2.myhuaweicloud.com/v2.1/3b1dbd8270424257930b2e95bc150916/servers/679f64ef-0c4a-4f11-8a7b-059d841c9f4e/os-console-output",
+      "ok": false,
+      "error": "HTTP 404 GET https://ecs.la-north-2.myhuaweicloud.com/v2.1/3b1dbd8270424257930b2e95bc150916/servers/679f64ef-0c4a-4f11-8a7b-059d841c9f4e/os-console-output: {\"error_code\":\"APIGW.0101\",\"error_msg\":\"The API does not exist or has not been published in the environment\",\"request_id\":\"20bee9a9952310014ff8ebe8ff904535\"}\n"
+    }
+  ],
+  "console_output_preview": "XuaSe8UdGN2ig root@aws-ohio-migrated-stance-2-1782607796 (DSA)\n<14>Jun 28 08:51:16 ec2: 256 SHA256:n2Vqh20DfWeLioSlTc14pzvTxf/5MuUn5ziflxep6ZY root@aws-ohio-migrated-stance-2-1782607796 (ECDSA)\n<14>Jun 28 08:51:16 ec2: 256 SHA256:poRy/dhA5sTm+qiGinZ8QtiiOstSnTY5pW0JGXOkelQ root@aws-ohio-migrated-stance-2-1782607796 (ED25519)\n<14>Jun 28 08:51:16 ec2: 3072 SHA256:BVW4ZYjHeEJ6n6C+W0URVqxBR/Yx5RQiSrh7UNGpPXA root@aws-ohio-migrated-stance-2-1782607796 (RSA)\n<14>Jun 28 08:51:16 ec2: -----END SSH HOST KEY FINGERPRINTS-----\n<14>Jun 28 08:51:16 ec2: #############################################################\n-----BEGIN SSH HOST KEY KEYS-----\necdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBKzU+8veh1Spe5PBrIvBNJHqit8SkKrQ01NpweMW1r1d66gepNmjtfiyMZc6FUYUnldAF6sTIkl0l+dzJzazlyU= root@aws-ohio-migrated-stance-2-1782607796\nssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPb6rt3HUf7vVH21vI68ZKKidgUcBJQ+ryxfLfbP+N1Y root@aws-ohio-migrated-stance-2-1782607796\nssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQClTkfLnZnTIq562rUqtrsSe6pKZu+bsTzJw8Qd/Dwi6ebfOKHrQrd8qJvAGyr3zc8QO8ZI3RgirKQb748iOdtJ9EJZaQbSd7gHqtW68vCuTWkfuUU7702x/Sw8Q+RzD4xImY0amyj7aa45DDfiReO6Ep2J4oZmZs25wpOXwu4Fh/8nbd+xEBhzGuUfVu8IqVYa5IkBQuRkxXnhAOKDPQ09o9A1fOFjY0al3cqOeGQyA3KPdffUUK/B/g/xUdxjMR/dE4eixWLrbKibHFUOWalbrXODPT17kzj5LDl1kbbBoua3tazCF8Sh7S/7uo6gND3MKGdI5GLaiqNtYg8GEHFsNpOoqxO/wjPBJ4f6Cn0QjvCoiHZogIhbWFe6ATVF41y0uaLid7F+xUIVEHNcajo96IouGLbgarRcrNmLtdkhDZ5L9NgQasWbfy8oifj8PIGHhSnDt1I9J4Go/g01wJuuNnE4cN+9o9YMUu8ga6wNwVLAHDHrGhvw0izqAbYOEws= root@aws-ohio-migrated-stance-2-1782607796\n-----END SSH HOST KEY KEYS-----\n[   47.454282] cloud-init[4997]: Cloud-init v. 19.1 finished at Sun, 28 Jun 2026 00:51:16 +0000. Datasource DataSourceOpenStack [net,ver=2].  Up 47.45 seconds\n[[0;32m  OK  [0m] Finished [0;1;39mcloud-final.service[0m - Execute cloud user/final scripts.\n[[0;32m  OK  [0m] Reached target [0;1;39mcloud-init.target[0m - Cloud-init target.\n\nUbuntu 24.04.4 LTS aws-ohio-migrated-stance-2-1782607796 ttyS0\n\n"
+}

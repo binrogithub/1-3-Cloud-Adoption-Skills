@@ -1,0 +1,65 @@
+{
+  "checkpoint_version": 2,
+  "created_at_utc": "2026-06-28T00:15:53Z",
+  "created_at_local": "2026-06-28 08:15:53 +0800",
+  "status": "running",
+  "resume_intent": "sms_task_continue_or_retry",
+  "terraform": {
+    "working_directory": "/root/ai_assit_migration/ai_assist_vm_migration",
+    "command": "terraform apply -auto-approve",
+    "resource_address": "terraform_data.sms_existing_target_batch",
+    "last_exit_code": 1,
+    "note": "terraform apply failed before manual script retry; migration task is now active via scripts/run_migration.sh"
+  },
+  "migration_context": {
+    "source_server_id_input": "instance-20260627-200301",
+    "source_sms_server_id": "56966be1-0724-4397-8115-148ce5c1a0d6",
+    "source_fixed_ip": "10.128.0.2",
+    "source_floating_ip": "",
+    "destination_region": "la-north-2",
+    "destination_project_id": "3b1dbd8270424257930b2e95bc150916",
+    "target_server_id": "f49f8c62-5589-4d87-823b-c2195f39e0d6",
+    "target_fixed_ip": "10.250.1.113",
+    "target_floating_ip": "110.238.84.80",
+    "target_security_group_ids": [
+      "74593d3e-d063-4bad-9e50-34db9f92b85c"
+    ],
+    "migration_method": "sms",
+    "task_id": "efa4407d-1812-4b95-9441-903d55b89f4f",
+    "task_name": "filetaskinstancelano",
+    "task_type": "MIGRATE_FILE",
+    "task_state": "RUNNING",
+    "task_progress": null,
+    "task_start_date_epoch_ms": 1782605032000,
+    "task_start_date_local": "2026-06-28 08:03:52 +0800",
+    "task_complete_date_epoch_ms": null,
+    "task_complete_date_local": ""
+  },
+  "network_context": {
+    "target_peer_ips_configured": [
+      "10.128.0.2",
+      "10.8.0.2"
+    ],
+    "manual_rule_added_at_target": [
+      "ingress tcp/22 from 104.198.60.131/32",
+      "egress tcp/22 to 104.198.60.131/32"
+    ],
+    "latest_connectivity_probe": {
+      "source_to_target_eip_22": "closed_or_timeout",
+      "source_to_target_eip_8900": "closed_or_timeout",
+      "probe_note": "likely guest service not listening during in-flight migration; continue monitoring task state"
+    }
+  },
+  "artifacts": {
+    "result_file": "out/migration_result.json",
+    "precheck_source_checks_file": "out/precheck_source_checks.json",
+    "precheck_task_cleanup_file": "out/precheck_task_cleanup.json",
+    "task_poll_file": "out/task_poll_latest.json"
+  },
+  "resume_commands": [
+    "cd /root/ai_assit_migration/ai_assist_vm_migration",
+    "python3 scripts/mgc_migrate.py   # with same env as scripts/run_migration.sh",
+    "terraform apply -auto-approve    # optional, may recreate local-exec context"
+  ],
+  "next_step": "if task remains RUNNING keep polling; if task enters MIGRATE_FAIL, collect error_code and rerun from this checkpoint"
+}

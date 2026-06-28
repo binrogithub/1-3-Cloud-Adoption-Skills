@@ -1,0 +1,225 @@
+{
+  "saved_at_epoch": 1781198299,
+  "saved_at_local": "2026-06-12 01:18:19 ",
+  "purpose": "resume_migration_after_pause",
+  "summary": {
+    "mode": "sms_existing_target_batch",
+    "migration_project_id": "f9e15e43-af33-4718-ba10-3a2506c8d832",
+    "resolved_target_region": "ap-southeast-3",
+    "resolved_target_project_id": "019ea86dd8c67de085c50084b7b903d0",
+    "sms_endpoint": "https://sms.ap-southeast-3.myhuaweicloud.com",
+    "note": "Paused for 3-4 hours before resume"
+  },
+  "results": [
+    {
+      "source_vm_id": "b48b532f-a165-4ee1-9a49-28a0b688998d",
+      "source_name": "ecs-25e7-f467-155c-9872",
+      "source_region": "ap-southeast-3",
+      "source_project_id": "68d2206877dd4fbd9c403c6435a58924",
+      "source_fixed_ip": "192.168.0.119",
+      "source_floating_ip": "190.92.216.233",
+      "source_sms_server_id": "8c6bf8d0-933f-4620-8407-bcc3b181d94f",
+      "target_vm_id": "22d9cf22-e2fb-4513-961e-764b23e1e213",
+      "target_name": "ecs-25e7-f467-155c-9872",
+      "target_region": "ap-southeast-3",
+      "target_project_id": "019ea86dd8c67de085c50084b7b903d0",
+      "target_fixed_ip": "192.168.0.119",
+      "target_floating_ip": "114.119.183.77",
+      "resume_ready": false,
+      "source_status_snapshot": {
+        "name": "ecs-25e7-f467-155c-9872",
+        "state": "waiting",
+        "connected": true,
+        "status": "",
+        "migration_cycle": "checking",
+        "os_type": "LINUX",
+        "os_version": "CENTOS_7_9_64BIT",
+        "check_error_count": 0
+      },
+      "target_status_snapshot": {
+        "exists": true,
+        "server_status": "DELETED",
+        "attached_disk_count": 0,
+        "attached_boot_disk_id": ""
+      },
+      "target_orig_disk_snapshot": {
+        "orig_disk_id": "cbf3fdb3-dd93-42f9-a116-c301a23528e1",
+        "query_error": "HTTP 404 GET https://evs.ap-southeast-3.myhuaweicloud.com/v2/019ea86dd8c67de085c50084b7b903d0/volumes/cbf3fdb3-dd93-42f9-a116-c301a23528e1: {\n  \"itemNotFound\" : {\n    \"code\" : 404,\n    \"message\" : \"Volume cbf3fdb3-dd93-42f9-a116-c301a23528e1 could not be found.\"\n  }\n}"
+      },
+      "latest_task": {
+        "task_id": "",
+        "state": "NONE",
+        "type": "",
+        "subtask_info": "",
+        "error_json": "",
+        "create_date": ""
+      },
+      "resume_checks": {
+        "source_connected": true,
+        "target_shutoff": false,
+        "target_no_attached_disks": true,
+        "orig_disk_available": false,
+        "no_active_task": true
+      }
+    },
+    {
+      "source_vm_id": "dec12878-2fd9-4704-b608-b511bb8feb23",
+      "source_name": "ecs-25e7-d5e3",
+      "source_region": "ap-southeast-3",
+      "source_project_id": "68d2206877dd4fbd9c403c6435a58924",
+      "source_fixed_ip": "192.168.0.155",
+      "source_floating_ip": "114.119.191.58",
+      "source_sms_server_id": "54e6b10c-9dac-4eb2-bd4b-deca4dd5e915",
+      "target_vm_id": "9e51ea5f-8e47-4596-8a3a-acde83675c37",
+      "target_name": "ecs-25e7-d5e3",
+      "target_region": "ap-southeast-3",
+      "target_project_id": "019ea86dd8c67de085c50084b7b903d0",
+      "target_fixed_ip": "192.168.0.155",
+      "target_floating_ip": "190.92.198.34",
+      "resume_ready": false,
+      "source_status_snapshot": {
+        "name": "ecs-25e7-d5e3",
+        "state": "waiting",
+        "connected": true,
+        "status": "",
+        "migration_cycle": "checking",
+        "os_type": "LINUX",
+        "os_version": "CENTOS_8_5_64BIT",
+        "check_error_count": 0
+      },
+      "target_status_snapshot": {
+        "exists": true,
+        "server_status": "DELETED",
+        "attached_disk_count": 0,
+        "attached_boot_disk_id": ""
+      },
+      "target_orig_disk_snapshot": {
+        "orig_disk_id": "ccccf19c-58e7-4257-a35a-28cc8d5e1c39",
+        "query_error": "HTTP 404 GET https://evs.ap-southeast-3.myhuaweicloud.com/v2/019ea86dd8c67de085c50084b7b903d0/volumes/ccccf19c-58e7-4257-a35a-28cc8d5e1c39: {\n  \"itemNotFound\" : {\n    \"code\" : 404,\n    \"message\" : \"Volume ccccf19c-58e7-4257-a35a-28cc8d5e1c39 could not be found.\"\n  }\n}"
+      },
+      "latest_task": {
+        "task_id": "",
+        "state": "NONE",
+        "type": "",
+        "subtask_info": "",
+        "error_json": "",
+        "create_date": ""
+      },
+      "resume_checks": {
+        "source_connected": true,
+        "target_shutoff": false,
+        "target_no_attached_disks": true,
+        "orig_disk_available": false,
+        "no_active_task": true
+      }
+    },
+    {
+      "source_vm_id": "7fdf29e6-74d1-4a26-8014-ef404fd013fe",
+      "source_name": "ecs-25e7-f467-155c",
+      "source_region": "ap-southeast-3",
+      "source_project_id": "68d2206877dd4fbd9c403c6435a58924",
+      "source_fixed_ip": "192.168.0.194",
+      "source_floating_ip": "119.8.184.255",
+      "source_sms_server_id": "1ec925f3-5c74-47d4-88f7-532daa4d7fa2",
+      "target_vm_id": "8735b422-358a-42bb-961f-142035b000b5",
+      "target_name": "ecs-25e7-f467-155c",
+      "target_region": "ap-southeast-3",
+      "target_project_id": "019ea86dd8c67de085c50084b7b903d0",
+      "target_fixed_ip": "192.168.0.194",
+      "target_floating_ip": "101.46.11.91",
+      "resume_ready": false,
+      "source_status_snapshot": {
+        "name": "ecs-25e7-f467-155c",
+        "state": "waiting",
+        "connected": true,
+        "status": "",
+        "migration_cycle": "checking",
+        "os_type": "LINUX",
+        "os_version": "CENTOS_8_5_64BIT",
+        "check_error_count": 0
+      },
+      "target_status_snapshot": {
+        "exists": true,
+        "server_status": "DELETED",
+        "attached_disk_count": 0,
+        "attached_boot_disk_id": ""
+      },
+      "target_orig_disk_snapshot": {
+        "orig_disk_id": "3ae76803-b629-4081-9f85-6186013022b9",
+        "query_error": "HTTP 404 GET https://evs.ap-southeast-3.myhuaweicloud.com/v2/019ea86dd8c67de085c50084b7b903d0/volumes/3ae76803-b629-4081-9f85-6186013022b9: {\n  \"itemNotFound\" : {\n    \"code\" : 404,\n    \"message\" : \"Volume 3ae76803-b629-4081-9f85-6186013022b9 could not be found.\"\n  }\n}"
+      },
+      "latest_task": {
+        "task_id": "",
+        "state": "NONE",
+        "type": "",
+        "subtask_info": "",
+        "error_json": "",
+        "create_date": ""
+      },
+      "resume_checks": {
+        "source_connected": true,
+        "target_shutoff": false,
+        "target_no_attached_disks": true,
+        "orig_disk_available": false,
+        "no_active_task": true
+      }
+    },
+    {
+      "source_vm_id": "a3126272-54f4-4890-a800-ba8b0269c4b6",
+      "source_name": "ecs-25e7-f467",
+      "source_region": "ap-southeast-3",
+      "source_project_id": "68d2206877dd4fbd9c403c6435a58924",
+      "source_fixed_ip": "192.168.0.144",
+      "source_floating_ip": "190.92.220.6",
+      "source_sms_server_id": "74eb341a-d867-4b53-890d-ffd9cfdab0b1",
+      "target_vm_id": "8bc932e2-0ce2-4ea0-b20a-98f5bb7c9081",
+      "target_name": "ecs-25e7-f467",
+      "target_region": "ap-southeast-3",
+      "target_project_id": "019ea86dd8c67de085c50084b7b903d0",
+      "target_fixed_ip": "192.168.0.144",
+      "target_floating_ip": "124.243.137.56",
+      "resume_ready": false,
+      "source_status_snapshot": {
+        "name": "ecs-25e7-f467",
+        "state": "waiting",
+        "connected": true,
+        "status": "",
+        "migration_cycle": "checking",
+        "os_type": "LINUX",
+        "os_version": "CENTOS_8_5_64BIT",
+        "check_error_count": 0
+      },
+      "target_status_snapshot": {
+        "exists": true,
+        "server_status": "DELETED",
+        "attached_disk_count": 0,
+        "attached_boot_disk_id": ""
+      },
+      "target_orig_disk_snapshot": {
+        "orig_disk_id": "08744555-588c-4090-929e-84927b6ca486",
+        "query_error": "HTTP 404 GET https://evs.ap-southeast-3.myhuaweicloud.com/v2/019ea86dd8c67de085c50084b7b903d0/volumes/08744555-588c-4090-929e-84927b6ca486: {\n  \"itemNotFound\" : {\n    \"code\" : 404,\n    \"message\" : \"Volume 08744555-588c-4090-929e-84927b6ca486 could not be found.\"\n  }\n}"
+      },
+      "latest_task": {
+        "task_id": "",
+        "state": "NONE",
+        "type": "",
+        "subtask_info": "",
+        "error_json": "",
+        "create_date": ""
+      },
+      "resume_checks": {
+        "source_connected": true,
+        "target_shutoff": false,
+        "target_no_attached_disks": true,
+        "orig_disk_available": false,
+        "no_active_task": true
+      }
+    }
+  ],
+  "resume_hint": {
+    "next_step": "Restart source SMS-Agent on all source servers, then recreate/start tasks.",
+    "checkpoint_files": {
+      "latest": "out/resume_checkpoint_latest.json"
+    }
+  }
+}
