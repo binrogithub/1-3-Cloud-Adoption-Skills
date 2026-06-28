@@ -122,6 +122,20 @@ Use this file to summarize migration incidents in a stable structure:
   - after SMS success, treat login readiness as a separate postcheck from task state and ECS `ACTIVE`.
   - once EIP and expected peer SG rules are present, inspect console output before repeatedly adding network rules.
 
+### `status=203/EXEC` / `Python venv not found` after migration
+
+- Symptom: target `canteen-ordering.service` fails with `Control process exited ... status=203/EXEC`, and restart script reports `Python venv not found: /opt/canteen-ordering/venv/bin/python`.
+- Root cause: source app directory already had incomplete venv layout before migration (only `venv/lib/pythonX/site-packages`, missing `venv/bin/*` and `pyvenv.cfg`). SMS `MIGRATE_FILE` copied this drift as-is, so target booted with the same broken runtime path.
+- Corrective action:
+  - rebuild source venv to standard layout (`python3 -m venv /opt/canteen-ordering/venv` + `pip install -r requirements.txt`);
+  - resync/re-migrate runtime files (or copy fixed venv to target);
+  - restart target service and verify both `http://127.0.0.1:8000/health` and `http://127.0.0.1/health`.
+- Prevention:
+  - before creating SMS/rsync task, run source-side runtime artifact precheck for required files:
+    - `/opt/canteen-ordering/venv/bin/python`
+    - `/opt/canteen-ordering/venv/pyvenv.cfg`
+  - if precheck fails, repair source artifacts first; do not rely on migration stage to recreate app runtime.
+
 ### Kernel panic `root=/dev/vdb1` after SMS success
 
 - Symptom: SMS task is already `MIGRATE_SUCCESS` and ECS is `ACTIVE`, but SSH is still unavailable; console shows `Cannot open root device "/dev/vdb1"` and `Kernel panic - not syncing`.
@@ -352,6 +366,23 @@ Use this file to summarize migration incidents in a stable structure:
 - Prevention:
   - do not close migration on task success alone.
   - if SG/EIP are already present but SSH still fails, prioritize console root-device diagnosis (`/dev/vdb1` vs `/dev/vda`) before further network tuning.
+
+## Confirmed Field Case (2026-06-28, App Runtime Artifact Drift)
+
+- Scenario: after target boot/SSH recovery, app service still failed although migration task had already reached `MIGRATE_SUCCESS`.
+- Target failure evidence:
+  - `canteen-ordering.service` repeated `status=203/EXEC`.
+  - restart script reported missing `/opt/canteen-ordering/venv/bin/python`.
+- Source-side evidence:
+  - source `/opt/canteen-ordering/venv` contained only `lib/python3.12/site-packages`.
+  - source `venv/bin/python` and `venv/pyvenv.cfg` were both missing before migration.
+- Root cause:
+  - migration was `SMS MIGRATE_FILE` and copied source app files exactly as-is.
+  - this was source artifact drift, not target-only environment-variable issue.
+- Corrective action performed:
+  - rebuilt source venv to standard layout and reinstalled requirements;
+  - synced repaired venv to target;
+  - target `canteen-ordering.service` became `active` and both local health endpoints returned `status=ok`.
 
 ## Reusable Postmortem Template
 

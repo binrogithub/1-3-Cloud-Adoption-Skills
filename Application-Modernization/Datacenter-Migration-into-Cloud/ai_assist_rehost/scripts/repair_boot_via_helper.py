@@ -131,6 +131,25 @@ def batch_start_server(client: HcApiClient, region: str, project_id: str, server
     )
 
 
+def batch_delete_server(
+    client: HcApiClient,
+    region: str,
+    project_id: str,
+    server_id: str,
+    delete_publicip: bool = True,
+    delete_volume: bool = True,
+) -> dict:
+    return client.request_json(
+        "POST",
+        "https://ecs.%s.myhuaweicloud.com/v1/%s/cloudservers/delete" % (region, project_id),
+        body={
+            "servers": [{"id": server_id}],
+            "delete_publicip": bool(delete_publicip),
+            "delete_volume": bool(delete_volume),
+        },
+    )
+
+
 def detach_volume(client: HcApiClient, region: str, project_id: str, server_id: str, volume_id: str) -> dict:
     return client.request_json(
         "DELETE",
@@ -173,7 +192,10 @@ def get_novnc_url(client: HcApiClient, region: str, project_id: str, server_id: 
     return str(((rsp.get("console") or {}).get("url") or "")).strip()
 
 
-def create_helper_user_data() -> str:
+def create_helper_user_data(target_root_password: str) -> str:
+    pwd = str(target_root_password or "").strip()
+    # Keep shell-quoted single-quoted string safe.
+    pwd_escaped = pwd.replace("'", "'\"'\"'")
     script = r"""#!/bin/bash
 set -euxo pipefail
 exec > >(tee -a /var/log/boot-repair.log /dev/ttyS0) 2>&1
@@ -290,7 +312,7 @@ for d in dev proc sys run; do
   mount --bind /$d /mnt/target/$d
 done
 
-chroot /mnt/target /usr/bin/env ROOT_UUID="${ROOT_UUID}" TARGET_DISK="${TARGET_DISK}" /bin/bash -c "set -eux; for f in /etc/default/grub /etc/default/grub.d/*.cfg; do [ -f \"$f\" ] || continue; sed -ri 's#/dev/vdb#/dev/vda#g' \"$f\" || true; if [ -n \"${ROOT_UUID:-}\" ]; then sed -ri \"s#root=[^ \\\"']+#root=UUID=${ROOT_UUID}#g\" \"$f\" || true; fi; done; if [ -d /boot/efi ] && [ -n \"$(ls -A /boot/efi 2>/dev/null || true)\" ]; then grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ubuntu --recheck || true; grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ubuntu --removable --recheck || true; fi; grub-install --target=i386-pc ${TARGET_DISK} || grub-install --target=i386-pc --force ${TARGET_DISK} || true; update-initramfs -u || true; grub-mkconfig -o /boot/grub/grub.cfg || update-grub || true; systemctl enable ssh || true; systemctl enable sshd || true"
+chroot /mnt/target /usr/bin/env TARGET_DISK="${TARGET_DISK}" /bin/bash -c "set -eux; mkdir -p /etc/default/grub.d; printf 'GRUB_DISABLE_LINUX_UUID=true\nGRUB_DISABLE_LINUX_PARTUUID=true\n' > /etc/default/grub.d/99-force-rootdev.cfg; mkdir -p /etc/ssh/sshd_config.d; printf 'PermitRootLogin yes\nPasswordAuthentication yes\nKbdInteractiveAuthentication yes\nChallengeResponseAuthentication no\nUsePAM yes\n' > /etc/ssh/sshd_config.d/99-codex-password-login.conf; for f in /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf; do [ -f \"\$f\" ] || continue; sed -ri 's/^#?PasswordAuthentication[[:space:]]+.*/PasswordAuthentication yes/g; s/^#?PermitRootLogin[[:space:]]+.*/PermitRootLogin yes/g; s/^#?KbdInteractiveAuthentication[[:space:]]+.*/KbdInteractiveAuthentication yes/g; s/^#?ChallengeResponseAuthentication[[:space:]]+.*/ChallengeResponseAuthentication no/g' \"\$f\" || true; done; if [ -f /etc/cloud/cloud.cfg ]; then sed -ri 's/^[[:space:]]*disable_root:[[:space:]]*.*/disable_root: false/g; s/^[[:space:]]*ssh_pwauth:[[:space:]]*.*/ssh_pwauth: true/g' /etc/cloud/cloud.cfg || true; grep -Eq '^[[:space:]]*disable_root:[[:space:]]*false[[:space:]]*$' /etc/cloud/cloud.cfg || echo 'disable_root: false' >> /etc/cloud/cloud.cfg; grep -Eq '^[[:space:]]*ssh_pwauth:[[:space:]]*true[[:space:]]*$' /etc/cloud/cloud.cfg || echo 'ssh_pwauth: true' >> /etc/cloud/cloud.cfg; fi; echo 'root:__TARGET_ROOT_PASSWORD__' | chpasswd || true; passwd -u root || true; for f in /etc/default/grub /etc/default/grub.d/*.cfg /boot/grub/grub.cfg /boot/efi/EFI/*/grub.cfg; do [ -f \"\$f\" ] || continue; sed -ri 's#/dev/vdb#/dev/vda#g; s#root=[^ ]+#root=/dev/vda1#g' \"\$f\" || true; done; if [ -d /boot/efi ] && [ -n \"\$(ls -A /boot/efi 2>/dev/null || true)\" ]; then grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ubuntu --recheck || true; grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ubuntu --removable --recheck || true; fi; grub-install --target=i386-pc ${TARGET_DISK} || grub-install --target=i386-pc --force ${TARGET_DISK} || true; update-initramfs -u || true; grub-mkconfig -o /boot/grub/grub.cfg || update-grub || true; for f in /boot/grub/grub.cfg /boot/efi/EFI/*/grub.cfg; do [ -f \"\$f\" ] || continue; sed -ri 's#root=[^ ]+#root=/dev/vda1#g' \"\$f\" || true; done; systemctl enable ssh || true; systemctl enable sshd || true"
 sync
 touch /mnt/target/root/BOOT_REPAIR_DONE
 echo "[BOOT-REPAIR] COMPLETE"
@@ -303,6 +325,7 @@ umount -lf /mnt/target/boot || true
 umount -lf /mnt/target || true
 poweroff -f
 """
+    script = script.replace("__TARGET_ROOT_PASSWORD__", pwd_escaped)
     return base64.b64encode(script.encode("utf-8")).decode("ascii")
 
 
@@ -319,6 +342,7 @@ def create_helper_server(
     subnet_id: str,
     security_group_id: str,
     root_volume_type: str,
+    target_root_password: str,
 ) -> str:
     body = {
         "server": {
@@ -331,7 +355,7 @@ def create_helper_server(
             "nics": [{"subnet_id": subnet_id}],
             "root_volume": {"volumetype": root_volume_type, "size": 10},
             "security_groups": [{"id": security_group_id}],
-            "user_data": create_helper_user_data(),
+            "user_data": create_helper_user_data(target_root_password),
             "extendparam": {"chargingMode": "postPaid"},
             "metadata": {"repair": "boot-grub"},
         }
@@ -359,12 +383,69 @@ def wait_job_and_get_id(job_rsp: dict) -> str:
     return str(job_rsp.get("job_id") or "").strip()
 
 
+def list_boot_repair_servers(client: HcApiClient, region: str, project_id: str) -> list:
+    rsp = client.request_json(
+        "GET",
+        "https://ecs.%s.myhuaweicloud.com/v1/%s/cloudservers/detail" % (region, project_id),
+        params={"limit": "200"},
+    )
+    out = []
+    for s in rsp.get("servers", []) or []:
+        name = str(s.get("name") or "")
+        if not name.startswith("boot-repair-"):
+            continue
+        out.append(s)
+    return out
+
+
+def cleanup_boot_repair_helpers(
+    client: HcApiClient,
+    region: str,
+    project_id: str,
+    keep_ids: list,
+) -> dict:
+    keep = set([str(x).strip() for x in keep_ids if str(x).strip()])
+    deleted = []
+    skipped = []
+    for s in list_boot_repair_servers(client, region, project_id):
+        sid = str(s.get("id") or "").strip()
+        name = str(s.get("name") or "").strip()
+        status = str(s.get("status") or "").upper()
+        vols = [str(v.get("id") or "").strip() for v in (s.get("os-extended-volumes:volumes_attached") or []) if str(v.get("id") or "").strip()]
+
+        if not sid:
+            continue
+        if sid in keep:
+            skipped.append({"id": sid, "name": name, "reason": "protected"})
+            continue
+        # Safety: only clear SHUTOFF helpers that look detached from target disk.
+        if status != "SHUTOFF":
+            skipped.append({"id": sid, "name": name, "reason": "status_%s" % status.lower()})
+            continue
+        if len(vols) > 1:
+            skipped.append({"id": sid, "name": name, "reason": "multi_volume_attached", "volumes": vols})
+            continue
+
+        try:
+            delete_rsp = batch_delete_server(client, region, project_id, sid, delete_publicip=True, delete_volume=True)
+            delete_job = wait_job_and_get_id(delete_rsp)
+            if delete_job:
+                wait_ecs_job_success(client, region, project_id, delete_job)
+            deleted.append({"id": sid, "name": name, "job_id": delete_job})
+        except Exception as exc:
+            skipped.append({"id": sid, "name": name, "reason": "delete_failed", "error": str(exc)})
+
+    return {"deleted": deleted, "skipped": skipped}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Repair target ECS boot disk via helper ECS.")
     parser.add_argument("--target-server-id", default="", help="Target ECS ID to repair.")
     parser.add_argument("--helper-password", default="MgcHelp@2026!Vm", help="Temporary helper admin password.")
     parser.add_argument("--target-reset-password", default="MgcTemp@2026!Vm", help="Password reset for target after repair.")
     parser.add_argument("--wait-repair-seconds", type=int, default=1800, help="Max wait seconds for helper auto repair.")
+    parser.add_argument("--keep-helper", action="store_true", help="Keep helper ECS after repair for manual inspection.")
+    parser.add_argument("--skip-cleanup-old-helpers", action="store_true", help="Skip cleaning old SHUTOFF boot-repair helpers.")
     args = parser.parse_args()
 
     workdir = Path(__file__).resolve().parent.parent
@@ -393,6 +474,15 @@ def main() -> None:
         "target_server_id": target_server_id,
         "steps": [],
     }
+
+    if not args.skip_cleanup_old_helpers:
+        cleanup_before = cleanup_boot_repair_helpers(
+            client=client,
+            region=region,
+            project_id=project_id,
+            keep_ids=[target_server_id],
+        )
+        artifact["steps"].append({"cleanup_old_helpers_before": cleanup_before})
 
     target_v1 = ecs_get_server(client, region, project_id, target_server_id)
     target_v21 = ecs_get_server_detail_v21(client, region, project_id, target_server_id)
@@ -444,6 +534,7 @@ def main() -> None:
         subnet_id=subnet_id,
         security_group_id=sg_id,
         root_volume_type=root_volume_type,
+        target_root_password=args.target_reset_password,
     )
     artifact["helper_server_id"] = helper_id
     artifact["helper_server_name"] = helper_name
@@ -539,6 +630,31 @@ def main() -> None:
         body={"reset-password": {"new_password": args.target_reset_password}},
     )
     artifact["steps"].append({"target_reset_password": reset_rsp})
+
+    if args.keep_helper:
+        artifact["steps"].append({"cleanup_current_helper": {"kept": True, "helper_id": helper_id}})
+    else:
+        delete_rsp = batch_delete_server(
+            client=client,
+            region=region,
+            project_id=project_id,
+            server_id=helper_id,
+            delete_publicip=True,
+            delete_volume=True,
+        )
+        delete_job = wait_job_and_get_id(delete_rsp)
+        if delete_job:
+            wait_ecs_job_success(client, region, project_id, delete_job)
+        artifact["steps"].append({"cleanup_current_helper": {"deleted": True, "helper_id": helper_id, "job_id": delete_job}})
+
+    if not args.skip_cleanup_old_helpers:
+        cleanup_after = cleanup_boot_repair_helpers(
+            client=client,
+            region=region,
+            project_id=project_id,
+            keep_ids=[target_server_id],
+        )
+        artifact["steps"].append({"cleanup_old_helpers_after": cleanup_after})
 
     novnc = get_novnc_url(client, region, project_id, target_server_id)
     target_console = get_console_output(client, region, project_id, target_server_id, length=4000)

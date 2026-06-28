@@ -143,6 +143,10 @@ Apply existing built-in fallbacks before manual changes:
 - If task is `RUNNING` but `progress` is null, keep polling by task `state` and verify target ECS status in parallel.
 - If task is `RUNNING` with progress over 100 in `MIGRATE_LINUX_FILE-*`, keep polling until terminal state; do not mark success before `all_terminal=true`.
 - If task is `MIGRATE_SUCCESS` and target ECS is `ACTIVE` but SSH/TCP-22 is `closed_or_timeout`, inspect `out/postcheck_network.json` and ECS console output before adding more SG rules.
+- If target ECS has boot panic (`VFS: Cannot open root device "/dev/vdb1"`/`unknown-block(0,0)`) or SSH auth regression after migration, use one deterministic repair path:
+  - `PYTHONPATH=. python3 scripts/repair_boot_via_helper.py --target-server-id <target_id> --target-reset-password '<StrongPassword>'`
+  - This script now includes fixed root-device rewrite (`root=/dev/vda1`), SSH password-login hardening (`PermitRootLogin yes`, `PasswordAuthentication yes`, `ssh_pwauth: true`), and offline root password write (`chpasswd`).
+  - The script now also auto-cleans stale `boot-repair-*` helpers before/after run, and auto-deletes the current helper after success (use `--keep-helper` only when explicitly needed).
 - If console output contains cloud-init `Failed loading yaml blob` or `unknown escape character 's'` near `PasswordAuthentication\s`, treat target user-data bootstrap as invalid; fix `build_linux_ssh_user_data_b64`/target creation user-data quoting, recreate or repair the target, then rerun postcheck.
 - If console output shows only `Starting OpenSSH server daemon...` without a clear started service and `ci-info: no authorized ssh keys fingerprints found`, validate sshd/firewall/root auth from VNC/serial console or rebuild with valid cloud-init.
 

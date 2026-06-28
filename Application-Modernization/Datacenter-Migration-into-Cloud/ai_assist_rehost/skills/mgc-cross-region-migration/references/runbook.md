@@ -8,12 +8,13 @@
 4. Confirm target-region VPC quota has free slot if target VPC may be auto-created.
 5. Check and clean obsolete source-bound SMS tasks before starting a new migration.
 6. Confirm rsync SSH parameters are present in `terraform.tfvars` for fallback (`rsync_source_host/port/user/password`).
-7. When source can only reach Codex VPN, prefer bridge mode (`enable_vpn_bridge=true`). Keep target VPN client bootstrap (`enable_target_vpn_client`) only as an optional fallback mode.
-8. Confirm target ECS overwrite risk is accepted.
-9. Run Terraform and verify `out/migration_result.json`.
-10. For rsync runs, validate target boot/SSH health after sync; if SSH fails, inspect ECS console output before changing network policies.
-11. For SMS runs, still validate SSH/TCP-22 and target console output; SMS `MIGRATE_SUCCESS` does not guarantee login readiness.
-12. If execution was interrupted, resume from the latest checkpoint JSONs before starting a fresh run.
+7. If post-migration app readiness is required, precheck source app runtime artifacts (example: `/opt/canteen-ordering/venv/bin/python` and `venv/pyvenv.cfg`) before starting migration.
+8. When source can only reach Codex VPN, prefer bridge mode (`enable_vpn_bridge=true`). Keep target VPN client bootstrap (`enable_target_vpn_client`) only as an optional fallback mode.
+9. Confirm target ECS overwrite risk is accepted.
+10. Run Terraform and verify `out/migration_result.json`.
+11. For rsync runs, validate target boot/SSH health after sync; if SSH fails, inspect ECS console output before changing network policies.
+12. For SMS runs, still validate SSH/TCP-22 and target console output; SMS `MIGRATE_SUCCESS` does not guarantee login readiness.
+13. If execution was interrupted, resume from the latest checkpoint JSONs before starting a fresh run.
 
 ## Canonical Commands
 
@@ -118,6 +119,13 @@ For single-source migration or rsync fallback, `scripts/mgc_migrate.py` can stil
   - Action: check `out/postcheck_network.json` for EIP/SG/peer evidence, then inspect `out/target_console_output*.txt`.
   - If console output contains cloud-init `Failed loading yaml blob` or `unknown escape character 's'` near `PasswordAuthentication\s`, fix target user-data generation (`build_linux_ssh_user_data_b64`) or repair sshd/firewall/root auth from console, then recreate/reboot and retest.
   - Prevention: validate generated cloud-init YAML before target ECS creation, and archive console output whenever TCP/22 postcheck fails.
+
+- `status=203/EXEC` or `Python venv not found` after migration
+  - Meaning: application runtime path exists in unit/script, but executable artifact is missing on target.
+  - Typical evidence: `systemd` shows `canteen-ordering.service ... status=203/EXEC` or restart script reports `Python venv not found: /opt/canteen-ordering/venv/bin/python`.
+  - Root cause pattern: source app directory already had incomplete venv (for example only `venv/lib/pythonX/site-packages` without `venv/bin` and `pyvenv.cfg`), and file migration copied this drift as-is.
+  - Action: rebuild source venv to standard layout (`python3 -m venv ...` + `pip install -r requirements.txt`), then resync/re-migrate and restart target service.
+  - Prevention: add source-side precheck for required runtime files before creating SMS/rsync task.
 
 ## If Terraform Apply Fails
 
