@@ -1,0 +1,17 @@
+[Unit]
+Description=Canteen Ordering Web Service
+After=network.target
+
+[Service]
+User=gcpapp
+Group=gcpapp
+WorkingDirectory=/opt/canteen-ordering
+EnvironmentFile=/etc/canteen-ordering.env
+Environment=PYTHONUNBUFFERED=1
+ExecStartPre=/opt/canteen-ordering/venv/bin/python /opt/canteen-ordering/scripts_init_db.py
+ExecStart=/opt/canteen-ordering/venv/bin/gunicorn -w 2 -b 127.0.0.1:8000 app:app
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

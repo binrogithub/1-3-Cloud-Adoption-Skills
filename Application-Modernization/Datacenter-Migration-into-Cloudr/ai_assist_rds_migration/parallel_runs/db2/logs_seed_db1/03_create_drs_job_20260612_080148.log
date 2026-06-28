@@ -1,0 +1,3 @@
+[2026-06-12 08:01:48] [INFO] [03_create_drs_job] Creating DRS migration job (dry_run=False)
+[2026-06-12 08:01:48] [INFO] [03_create_drs_job] Loaded DRS payload for job: task-migration-mysql_20260612_080123
+[2026-06-12 08:01:54] [ERROR] [03_create_drs_job] Failed to create DRS job: ClientRequestException - {status_code:400,request_id:2772401ea70d703dde90851bdc35f319,error_code:DRS.10020002,error_msg:The parameter source_endpoint.endpoint_name has an invalid value.,encoded_authorization_message:None }

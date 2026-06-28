@@ -1,0 +1,20 @@
+{
+  "report_name": "env_check",
+  "timestamp": "2026-06-11T23:59:03Z",
+  "dry_run": true,
+  "stage": "env_check",
+  "status": "SUCCESS",
+  "details": {
+    "env_vars": {
+      "HW_ACCESS_KEY": "SET","HW_SECRET_KEY": "SET","HW_PROJECT_ID": "SET","HW_REGION": "SET","SRC_DB_HOST": "SET","SRC_DB_PORT": "SET","SRC_DB_USER": "SET","SRC_DB_PASSWORD": "SET","TGT_DB_HOST": "SET","TGT_DB_PORT": "SET","TGT_DB_USER": "SET","TGT_DB_PASSWORD": "SET","DRY_RUN": "SET","SKIP_DB_TCP_CHECK": "SET"
+    },
+    "network": {
+      "source_reachable": false,
+      "target_reachable": false,
+      "source_port_open": false,
+      "target_port_open": false
+    }
+  },
+  "errors": [],
+  "warnings": []
+}

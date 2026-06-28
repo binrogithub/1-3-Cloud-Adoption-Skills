@@ -1,0 +1,2 @@
+[2026-06-12 07:59:04] [ERROR] [db_client] Failed to connect to source database: (2003, "Can't connect to MySQL server on '119.8.0.182' ([Errno 1] Operation not permitted)")
+[2026-06-12 07:59:04] [ERROR] [db_client] Failed to connect to target database: (2003, "Can't connect to MySQL server on '94.74.76.132' ([Errno 1] Operation not permitted)")

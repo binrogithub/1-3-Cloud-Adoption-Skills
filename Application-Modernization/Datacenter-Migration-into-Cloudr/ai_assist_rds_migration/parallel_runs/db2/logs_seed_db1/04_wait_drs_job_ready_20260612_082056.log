@@ -1,0 +1,20 @@
+[2026-06-12 08:20:56] [INFO] [04_wait_drs_job_ready] Waiting for DRS job to become ready (dry_run=False)
+[2026-06-12 08:20:56] [INFO] [04_wait_drs_job_ready] Parameters: initial_wait=0s, poll_interval=10s, max_wait=1200s
+[2026-06-12 08:20:56] [INFO] [04_wait_drs_job_ready] Job ID: aafd3500-2144-4855-bb53-6bc5932jb101
+[2026-06-12 08:20:56] [INFO] [04_wait_drs_job_ready] Initial wait: 0 seconds...
+[2026-06-12 08:20:58] [INFO] [04_wait_drs_job_ready] Job status: CREATING (elapsed: 0s)
+[2026-06-12 08:21:08] [INFO] [04_wait_drs_job_ready] Job status: CREATING (elapsed: 10s)
+[2026-06-12 08:21:19] [INFO] [04_wait_drs_job_ready] Job status: CREATING (elapsed: 20s)
+[2026-06-12 08:21:30] [INFO] [04_wait_drs_job_ready] Job status: CREATING (elapsed: 30s)
+[2026-06-12 08:21:42] [INFO] [04_wait_drs_job_ready] Job status: CREATING (elapsed: 40s)
+[2026-06-12 08:21:52] [INFO] [04_wait_drs_job_ready] Job status: CREATING (elapsed: 50s)
+[2026-06-12 08:22:04] [INFO] [04_wait_drs_job_ready] Job status: CREATING (elapsed: 60s)
+[2026-06-12 08:22:15] [INFO] [04_wait_drs_job_ready] Job status: CREATING (elapsed: 70s)
+[2026-06-12 08:22:26] [INFO] [04_wait_drs_job_ready] Job status: CREATING (elapsed: 80s)
+[2026-06-12 08:22:37] [INFO] [04_wait_drs_job_ready] Job status: CREATING (elapsed: 90s)
+[2026-06-12 08:22:47] [INFO] [04_wait_drs_job_ready] Job status: CREATING (elapsed: 100s)
+[2026-06-12 08:22:58] [INFO] [04_wait_drs_job_ready] Job status: CREATING (elapsed: 110s)
+[2026-06-12 08:23:09] [INFO] [04_wait_drs_job_ready] Job status: CREATING (elapsed: 120s)
+[2026-06-12 08:23:20] [INFO] [04_wait_drs_job_ready] Job status: CREATING (elapsed: 130s)
+[2026-06-12 08:23:30] [INFO] [04_wait_drs_job_ready] Job status: CONFIGURATION (elapsed: 140s)
+[2026-06-12 08:23:30] [INFO] [04_wait_drs_job_ready] DRS job is ready! Status: CONFIGURATION

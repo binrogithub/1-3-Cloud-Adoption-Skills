@@ -1,0 +1,11 @@
+[2026-06-12 12:01:24] [INFO] [06_run_precheck] Running DRS precheck (dry_run=False)
+[2026-06-12 12:01:24] [INFO] [06_run_precheck] Job ID: aafd3500-2144-4855-bb53-6bc5932jb101
+[2026-06-12 12:01:24] [INFO] [06_run_precheck] Triggering DRS precheck...
+[2026-06-12 12:01:28] [INFO] [06_run_precheck] Precheck triggered successfully
+[2026-06-12 12:01:28] [INFO] [06_run_precheck] Polling for precheck results (interval=10s, max=1800s)...
+[2026-06-12 12:01:39] [INFO] [06_run_precheck] Precheck in progress... status=RUNNING (elapsed=10s)
+[2026-06-12 12:01:49] [INFO] [06_run_precheck] Precheck in progress... status=RUNNING (elapsed=20s)
+[2026-06-12 12:02:00] [INFO] [06_run_precheck] Precheck in progress... status=RUNNING (elapsed=30s)
+[2026-06-12 12:02:10] [INFO] [06_run_precheck] Precheck in progress... status=RUNNING (elapsed=40s)
+[2026-06-12 12:02:21] [INFO] [06_run_precheck] Precheck completed, analyzing results...
+[2026-06-12 12:02:21] [ERROR] [06_run_precheck] DRS precheck FAILED

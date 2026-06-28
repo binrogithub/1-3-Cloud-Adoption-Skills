@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>订单管理 - 食堂订餐系统</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <div>
+        <h1>订单管理</h1>
+        <p>最近 100 条订单</p>
+      </div>
+      <a class="admin-link" href="/">返回点餐页面</a>
+    </header>
+
+    <main class="panel admin-panel">
+      <table>
+        <thead>
+          <tr>
+            <th>订单号</th>
+            <th>下单时间</th>
+            <th>姓名</th>
+            <th>手机号</th>
+            <th>取餐时间</th>
+            <th>菜品明细</th>
+            <th>总金额</th>
+            <th>状态</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in orders %}
+            <tr>
+              <td>#{{ order.id }}</td>
+              <td>{{ order.created_at }}</td>
+              <td>{{ order.customer_name }}</td>
+              <td>{{ order.customer_phone }}</td>
+              <td>{{ order.pickup_time or '-' }}</td>
+              <td>
+                {% if order['items'] %}
+                  {% for item in order['items'] %}
+                    <div>{{ item.menu_name }} x {{ item.quantity }} (¥{{ item.line_total }})</div>
+                  {% endfor %}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>¥{{ order.total_amount }}</td>
+              <td>{{ order.status }}</td>
+              <td>{{ order.notes or '-' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

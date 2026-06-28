@@ -1,0 +1,114 @@
+project_name: prod-rds-mysql-a-to-b
+environment: production
+region: na-mexico-1
+job_type: migration
+engine_type: mysql-to-mysql
+job_direction: up
+task_type: FULL_INCR_TRANS
+net_type: eip
+charging_mode: on_demand
+specification: high
+job_name_prefix: task-migration-mysql
+job_description: DRS deployed in target account B. Migrate source account A RDS MySQL
+  to existing target account B RDS MySQL through EIP.
+drs_deploy_account: target_account_b
+drs_create_task_in_account: target_account_b
+accounts:
+  source_account_a:
+    project_id: e84695c2e5a546d6b45fc405416e47f6
+    enterprise_project_id: ''
+  target_account_b:
+    project_id: 019ea55049357658b4a43d77ec94d728
+    enterprise_project_id: ''
+drs_instance:
+  subnet_id: 385f6a84-92ff-460f-a450-503c9284f5ff
+  security_group_id: 6159c5ba-9999-49cd-87c3-ee8bdc5314ac
+  public_ip_id: ''
+  public_ip: ''
+  az:
+    primary: na-mexico-1a
+    standby: na-mexico-1a
+initial_wait: 600
+poll_interval: 30
+max_wait: 1200
+precheck_poll_interval: 10
+precheck_max_wait: 600
+incr_delay_threshold: 5
+sample_tables: []
+migration_scope:
+  migrate_type: database_level
+  include_databases:
+  - migration_test
+  - test_write_db
+  exclude_system_databases: true
+synchronization_policy:
+  conflict_policy: overwrite
+  filter_drop_database: true
+  sync_dml:
+  - insert
+  - update
+  - delete
+  sync_incremental_ddl: true
+flow_control:
+  enabled: true
+  limit_mb_per_second: 50
+source:
+  endpoint_type: offline
+  endpoint_name: mysql
+  instance_id: e327af04e9204e1e867179f9df2057d7in01
+  instance_name: rds-7067
+  server_ip: 119.8.0.182
+  port: 3306
+  instance_type: rds_ha
+  mysql_version: '8.0'
+  architecture: primary_standby
+  charset: utf8mb4
+  time_zone: UTC-06:00
+  lower_case_table_names: '1'
+  vpc_id: e1c3eeea-214f-4028-8c96-bae266bd7114
+  subnet_id: 665c39c8-4049-4ba9-83de-b8a34ffc275b
+  security_group_id: 74cabd8e-bf73-4ec4-a631-644cf1896fe5
+  ssl_enabled: false
+target:
+  endpoint_type: cloud
+  endpoint_name: cloud_mysql
+  instance_id: 0f07fd696084478cb58752582bf3e802in01
+  instance_name: rds-7067
+  server_ip: 94.74.76.132
+  port: 3306
+  instance_type: rds_ha
+  mysql_version: '8.0'
+  architecture: primary_standby
+  charset: utf8mb4
+  time_zone: UTC-06:00
+  lower_case_table_names: '1'
+  vpc_id: 0aa90f9e-85f8-43bb-aff7-64c5e209f496
+  subnet_id: 385f6a84-92ff-460f-a450-503c9284f5ff
+  security_group_id: 0c2164fe-cc7c-4e24-ba94-54027f724f80
+  ssl_enabled: false
+  remark: Target RDS has been manually created. AI must NOT create, delete, rebuild,
+    or modify the target RDS instance.
+network:
+  type: eip
+  connectivity_confirmed: true
+  security_group_already_opened: true
+  remark: 'Use EIP interconnection for DRS migration. Security group rules must be
+    explicitly approved and annotated as: for rds migration.'
+cutover:
+  max_allowed_incremental_delay_seconds: 5
+  application_switch:
+    target_db_host: 94.74.76.132
+    target_db_port: 3306
+  rollback:
+    enabled: true
+    strategy: before_new_writes_switch_back_to_source
+    warning: If the target DB has new writes, you cannot simply switch back. You must
+      perform data compensation or reverse sync evaluation first.
+post_migration:
+  observation_hours: 24
+  cleanup:
+    auto_cleanup_security_group: false
+    auto_cleanup_network: false
+    auto_delete_target_rds: false
+    generate_manual_cleanup_checklist: true
+    archive_drs_report: true

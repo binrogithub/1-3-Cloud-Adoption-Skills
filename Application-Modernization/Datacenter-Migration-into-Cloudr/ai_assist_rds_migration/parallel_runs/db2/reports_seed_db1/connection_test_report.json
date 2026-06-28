@@ -1,0 +1,36 @@
+{
+  "report_name": "connection_test_report",
+  "timestamp": "2026-06-12T08:39:55.095637",
+  "dry_run": false,
+  "stage": "test_connection",
+  "status": "SUCCESS",
+  "details": {
+    "job_id": "aafd3500-2144-4855-bb53-6bc5932jb101",
+    "source_connection": {
+      "status": "SUCCESS",
+      "query_id": "547a8014-eb78-421d-80de-f0156001eecc",
+      "network_result": {
+        "ip": "119.8.0.182",
+        "success": true,
+        "result": null,
+        "status": "success",
+        "error_code": null,
+        "error_msg": null
+      }
+    },
+    "target_connection": {
+      "status": "SUCCESS",
+      "query_id": "88dab3b0-2383-4ad7-8a70-5ab75fc9cf0e",
+      "network_result": {
+        "ip": "192.168.0.183",
+        "success": true,
+        "result": null,
+        "status": "success",
+        "error_code": null,
+        "error_msg": null
+      }
+    }
+  },
+  "errors": [],
+  "warnings": []
+}

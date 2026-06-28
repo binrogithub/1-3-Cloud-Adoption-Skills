@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-06-12T00:27:33Z",
+  "action": "add_source_whitelist_for_drs",
+  "security_group_id": "3994e159-9592-4aa2-892b-79439f0e20e3",
+  "rules_added": [
+    {
+      "cidr": "101.46.208.128/32",
+      "port": "3306",
+      "protocol": "tcp",
+      "description": "for rds migration",
+      "rule_id": "418f12f8-ecd5-4a5d-8cc9-11f226468d07"
+    },
+    {
+      "cidr": "192.168.0.49/32",
+      "port": "3306",
+      "protocol": "tcp",
+      "description": "for rds migration",
+      "rule_id": "2e784089-0167-476f-9e23-bf7ae60c4ef6"
+    }
+  ]
+}

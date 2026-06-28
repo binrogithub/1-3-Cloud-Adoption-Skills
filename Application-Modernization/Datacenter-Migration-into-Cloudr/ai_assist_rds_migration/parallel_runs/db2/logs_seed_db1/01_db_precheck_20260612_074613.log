@@ -1,0 +1,7 @@
+[2026-06-12 07:46:13] [INFO] [01_db_precheck] Database pre-migration check starting (dry_run=True)
+[2026-06-12 07:46:13] [INFO] [01_db_precheck] Checking source database...
+[2026-06-12 07:47:23] [INFO] [01_db_precheck] Source database checks: 7 items
+[2026-06-12 07:47:23] [INFO] [01_db_precheck] Checking target database...
+[2026-06-12 07:48:03] [INFO] [01_db_precheck] Target database checks: 4 items
+[2026-06-12 07:48:03] [INFO] [01_db_precheck] Report saved to: /root/ai_assit_migration/ai_assist_rds_migration/reports/db_precheck.json
+[2026-06-12 07:48:03] [ERROR] [01_db_precheck] Database pre-migration check FAILED

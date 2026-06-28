@@ -1,0 +1,21 @@
+{
+  "report_name": "drs_job_create_report",
+  "timestamp": "2026-06-12T08:19:28.386472",
+  "dry_run": false,
+  "stage": "create_drs_job",
+  "status": "SUCCESS",
+  "details": {
+    "job_id": "aafd3500-2144-4855-bb53-6bc5932jb101",
+    "job_name": "task-migration-mysql_20260612_081921",
+    "status": "CREATED",
+    "api_result": {
+      "id": "aafd3500-2144-4855-bb53-6bc5932jb101",
+      "name": "task-migration-mysql_20260612_081921",
+      "status": "CREATING",
+      "create_time": "2026-06-12T00:19:28Z",
+      "is_clone_job": "false"
+    }
+  },
+  "errors": [],
+  "warnings": []
+}

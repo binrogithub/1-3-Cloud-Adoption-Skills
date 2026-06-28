@@ -1,0 +1,6 @@
+[2026-06-12 08:39:32] [INFO] [05_test_connection] Testing DRS database connections (dry_run=False)
+[2026-06-12 08:39:32] [INFO] [05_test_connection] Job ID: aafd3500-2144-4855-bb53-6bc5932jb101
+[2026-06-12 08:39:32] [INFO] [05_test_connection] Testing source database connection...
+[2026-06-12 08:39:43] [INFO] [05_test_connection] Source database connection: SUCCESS
+[2026-06-12 08:39:43] [INFO] [05_test_connection] Testing target database connection...
+[2026-06-12 08:39:55] [INFO] [05_test_connection] Target database connection: SUCCESS

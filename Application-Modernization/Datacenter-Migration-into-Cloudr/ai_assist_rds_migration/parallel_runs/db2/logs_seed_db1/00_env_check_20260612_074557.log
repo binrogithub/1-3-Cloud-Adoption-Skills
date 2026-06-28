@@ -1,0 +1,21 @@
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Checking required environment variables...
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Environment variable HW_ACCESS_KEY is set
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Environment variable HW_SECRET_KEY is set
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Environment variable HW_PROJECT_ID is set
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Environment variable HW_REGION is set
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Environment variable SRC_DB_HOST is set
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Environment variable SRC_DB_PORT is set
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Environment variable SRC_DB_USER is set
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Environment variable SRC_DB_PASSWORD is set
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Environment variable TGT_DB_HOST is set
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Environment variable TGT_DB_PORT is set
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Environment variable TGT_DB_USER is set
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Environment variable TGT_DB_PASSWORD is set
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] DRY_RUN=true
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Checking network connectivity...
+[2026-06-11T23:45:57Z] [INFO] [00_env_check] Testing source database connectivity: 119.8.0.182:3306
+[2026-06-11T23:46:02Z] [ERROR] [00_env_check] NETWORK_UNREACHABLE: Cannot connect to source database 119.8.0.182:3306
+[2026-06-11T23:46:02Z] [INFO] [00_env_check] Testing target database connectivity: 94.74.76.132:3306
+[2026-06-11T23:46:07Z] [ERROR] [00_env_check] NETWORK_UNREACHABLE: Cannot connect to target database 94.74.76.132:3306
+[2026-06-11T23:46:07Z] [ERROR] [00_env_check] Environment check FAILED
+[2026-06-11T23:46:07Z] [INFO] [00_env_check] Report saved to: /root/ai_assit_migration/ai_assist_rds_migration/reports/env_check_report.json

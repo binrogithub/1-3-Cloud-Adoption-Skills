@@ -1,0 +1,1 @@
+Docker 镜像迁移技能，用于华为云。适用于：(1) 将 Docker 镜像从其他平台迁移到华为云 SWR，(2) 打包和传输容器镜像，(3) 在华为云重新部署镜像，(4) 排查镜像迁移问题。 Docker image migration skill for Huawei Cloud. Use when (1) Migrating Docker images from other platforms to Huawei Cloud SWR, (2) Packaging and transferring container images, (3) Redeploying images on Huawei Cloud, (4) Troubleshooting image migration issues.

@@ -1,0 +1,184 @@
+project:
+  name: prod-rds-postgresql-a-to-b
+  environment: production
+  region: na-mexico-1
+  require_manual_approval: true
+
+accounts:
+  source_account_a:
+    project_id: e84695c2e5a546d6b45fc405416e47f6
+    domain_id: <A_ACCOUNT_DOMAIN_ID>
+    enterprise_project_id: ''
+  target_account_b:
+    project_id: 019ea55049357658b4a43d77ec94d728
+    domain_id: <B_ACCOUNT_DOMAIN_ID>
+    enterprise_project_id: ''
+
+source_rds:
+  instance_id: d13d0765b5894d5f9cb9252be9427084in03
+  instance_name: rds-4941
+  engine: PostgreSQL
+  engine_version: '10'
+  architecture: primary_standby
+  eip: 119.8.9.130
+  port: 3433
+  vpc_id: e1c3eeea-214f-4028-8c96-bae266bd7114
+  subnet_id: 665c39c8-4049-4ba9-83de-b8a34ffc275b
+  security_group_id: 74cabd8e-bf73-4ec4-a631-644cf1896fe5
+  database_names: []
+  exclude_databases:
+    - postgres
+    - template0
+    - template1
+    - rdsadmin
+  time_zone: UTC+08:00
+  lower_case_table_names: ''
+
+source_db_account:
+  username: sms_sync
+  password_env: SOURCE_DRS_DB_PASSWORD
+  create_user_by_ai: false
+  grant_sql_manual_confirm_required: true
+
+target_rds:
+  create_by_terraform: false
+  instance_id: e02a439657a24cd6a71f8dece8c569cdin03
+  instance_name: rds-4941
+  engine: PostgreSQL
+  engine_version: '13'
+  architecture: primary_standby
+  eip: ''
+  port: 3433
+  vpc_id: 0aa90f9e-85f8-43bb-aff7-64c5e209f496
+  subnet_id: 385f6a84-92ff-460f-a450-503c9284f5ff
+  security_group_id: 0c2164fe-cc7c-4e24-ba94-54027f724f80
+  time_zone: UTC+08:00
+  lower_case_table_names: ''
+  remark: >-
+    Target RDS has been manually created. AI must NOT create, delete, rebuild,
+    or modify the target RDS instance.
+
+target_db_account:
+  username: root
+  password_env: TARGET_DRS_DB_PASSWORD
+  create_user_by_ai: false
+  grant_sql_manual_confirm_required: true
+
+network:
+  type: eip
+  connectivity_confirmed: true
+  remark: >-
+    Use EIP interconnection for migration. Security group ingress rules for tcp/3433
+    must be explicitly approved and annotated with description: for rds migration，DRS实例部署到目的端.
+
+drs:
+  deploy_account: target_account_b
+  create_task_in_account: target_account_b
+  task_name: task-migration-postgresql
+  source_db_engine: PostgreSQL
+  destination_db_engine: PostgreSQL
+  network_type: eip
+  underlay_network: ''
+  job_type: migration
+  job_direction: up
+  task_type: FULL_INCR_TRANS
+  synchronization_mode: FULL_INCR_TRANS
+  destination_database_access: read_only
+  charging_mode: on_demand
+  specification: high
+  az:
+    - na-mexico-1a
+  source_endpoint:
+    endpoint_type: offline
+    endpoint_name: postgresql
+    host: 119.8.9.130
+    port: 3433
+    username: sms_sync
+    password_env: SOURCE_DRS_DB_PASSWORD
+    ssl_enabled: true
+  target_endpoint:
+    endpoint_type: cloud
+    endpoint_name: cloud_postgresql
+    host: 192.168.0.52
+    port: 3433
+    username: root
+    password_env: TARGET_DRS_DB_PASSWORD
+    ssl_enabled: true
+  object_scope:
+    migrate_type: database_level
+    include_databases: []
+    exclude_system_databases: true
+  synchronization_policy:
+    conflict_policy: overwrite
+    filter_drop_database: true
+    sync_dml:
+      - insert
+      - update
+      - delete
+    sync_incremental_ddl: true
+  flow_control:
+    enabled: true
+    limit_mb_per_second: 50
+  wait_for_instance_ready:
+    enabled: true
+    timeout_minutes: 20
+    poll_interval_seconds: 30
+    expected_status:
+      - ready
+      - available
+  start_policy:
+    mode: manual
+
+operation_control:
+  require_manual_approval: true
+  approval_steps:
+    - validate_config
+    - network_connectivity_check
+    - db_precheck
+    - create_drs_task_in_target_account
+    - wait_drs_instance_ready
+    - test_drs_connection
+    - run_drs_precheck
+    - start_drs_task
+    - cutover
+    - generate_cleanup_report
+  forbidden_auto_actions:
+    - delete_source_rds
+    - delete_target_rds
+    - create_target_rds
+    - modify_source_rds_parameters
+    - modify_target_rds_parameters
+    - open_0_0_0_0_to_rds
+    - bind_eip_to_source_rds
+    - bind_eip_to_target_rds
+    - modify_vpc_peering
+    - modify_route_table
+    - modify_security_group_without_approval
+    - start_cutover_without_approval
+    - drop_database
+    - truncate_table
+
+cutover:
+  planned_window: <YYYY-MM-DD HH:MM-HH:MM>
+  business_freeze_mode: read_only_or_stop_write
+  max_allowed_incremental_delay_seconds: 5
+  application_switch:
+    target_db_host: 192.168.0.52
+    target_db_port: 3433
+  rollback:
+    enabled: true
+    strategy: before_new_writes_switch_back_to_source
+    warning: >-
+      If the target DB has new writes, you cannot simply switch back. You must
+      perform data compensation or reverse sync evaluation first.
+
+post_migration:
+  observation_hours: 24
+  cleanup:
+    auto_cleanup_security_group: false
+    auto_cleanup_network: false
+    auto_delete_target_rds: false
+    generate_manual_cleanup_checklist: true
+    revoke_source_drs_user: false
+    revoke_target_drs_user: false
+    archive_drs_report: true

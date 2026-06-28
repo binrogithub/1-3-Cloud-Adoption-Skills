@@ -1,0 +1,4 @@
+[2026-06-12 08:02:25] [INFO] [03_create_drs_job] Creating DRS migration job (dry_run=False)
+[2026-06-12 08:02:25] [INFO] [03_create_drs_job] Loaded DRS payload for job: task-migration-mysql_20260612_080219
+[2026-06-12 08:02:27] [INFO] [03_create_drs_job] DRS job created successfully: job_id=ab704a6a-9586-4ffb-8390-f5e910cjb101
+[2026-06-12 08:02:27] [INFO] [03_create_drs_job] Report saved to: /root/ai_assit_migration/ai_assist_rds_migration/reports/drs_job_create_report.json

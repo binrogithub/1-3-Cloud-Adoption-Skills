@@ -1,0 +1,24 @@
+{
+  "action": "create_security_group_rule",
+  "region": "na-mexico-1",
+  "project_id": "e84695c2e5a546d6b45fc405416e47f6",
+  "security_group_id": "3994e159-9592-4aa2-892b-79439f0e20e3",
+  "rule_spec": {
+    "direction": "ingress",
+    "ethertype": "IPv4",
+    "protocol": "tcp",
+    "port_range_min": 3306,
+    "port_range_max": 3306,
+    "remote_ip_prefix": "94.74.76.132/32",
+    "description": "for rds migration"
+  },
+  "status": "CREATED",
+  "rule_id": "ac5b6c98-f05f-4b98-9376-4616810d208a",
+  "validate_matches": [
+    {
+      "id": "ac5b6c98-f05f-4b98-9376-4616810d208a",
+      "description": "for rds migration",
+      "created_at": null
+    }
+  ]
+}

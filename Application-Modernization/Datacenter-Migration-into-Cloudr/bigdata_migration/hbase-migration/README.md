@@ -1,0 +1,1 @@
+HBase 数据迁移技能，用于华为云。适用于：(1) 将 HBase 数据迁移到华为云表格存储服务，(2) 配置 HBase 集群间的数据同步，(3) 验证迁移完整性和数据一致性，(4) 排查 HBase 迁移问题。 HBase data migration skill for Huawei Cloud. Use when (1) Migrating HBase data to Huawei Cloud Table Store service, (2) Configuring data sync between HBase clusters, (3) Verifying migration completeness and data consistency, (4) Troubleshooting HBase migration issues.

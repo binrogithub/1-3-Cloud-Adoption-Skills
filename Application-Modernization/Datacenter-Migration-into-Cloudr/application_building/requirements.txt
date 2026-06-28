@@ -1,0 +1,4 @@
+Flask==3.0.3
+PyMySQL==1.1.1
+gunicorn==22.0.0
+cryptography==43.0.1

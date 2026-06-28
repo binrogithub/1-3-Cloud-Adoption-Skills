@@ -1,0 +1,2 @@
+[2026-06-12 07:48:52] [DEBUG] [drs_client] API Call: https://drs.na-mexico-1.myhuaweicloud.com/v3/019ea55049357658b4a43d77ec94d728/jobs/non-existent-job-id
+[2026-06-12 07:48:52] [DEBUG] [drs_client]   Response: {"status_code": 404}

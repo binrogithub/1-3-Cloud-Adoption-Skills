@@ -1,0 +1,1 @@
+NAS（网络附加存储）数据迁移技能，用于华为云。适用于：(1) 从本地 NAS 迁移到华为云 NAS，(2) 不同 NAS 存储类型间迁移，(3) 配置数据同步，(4) 验证迁移完整性和数据完整性。NAS (Network Attached Storage) data migration skill for Huawei Cloud. Use when (1) Migrating from on-premise NAS to Huawei Cloud NAS, (2) Migrating between NAS storage types, (3) Configuring data synchronization, (4) Verifying migration completeness and data integrity
