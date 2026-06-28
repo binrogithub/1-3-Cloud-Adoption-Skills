@@ -46,8 +46,8 @@ log "LiteLLM OK — '$EXEC_MODEL' serves requests"
 # === 2. verify OAuth creds ===================================================
 CREDS="$HOME/.claude/.credentials.json"
 [[ -f "$CREDS" ]] || die "OAuth credentials missing at $CREDS. Run 'claude /login' first."
-jq -e '.accessToken // .access_token // .oauthAccount.accessToken' "$CREDS" >/dev/null 2>&1 \
-  || die "$CREDS exists but has no access token. Re-run 'claude /login'."
+jq -e '.claudeAiOauth.accessToken // .accessToken // .access_token // .oauthAccount.accessToken' "$CREDS" >/dev/null 2>&1 \
+  || die "$CREDS exists but has no OAuth token. Re-run 'claude /login'. (Expected .claudeAiOauth.accessToken)"
 log "OAuth credentials present"
 
 # === 3. port conflict check ==================================================

@@ -162,6 +162,35 @@ docker exec litellm_pg_db psql -U llmproxy -d litellm -t -A -F'|' \
 - **Long sessions overflow at ~196k tokens**: `CLAUDE_CODE_AUTO_COMPACT_WINDOW=180000` must be in env. `bash -lic 'echo $CLAUDE_CODE_AUTO_COMPACT_WINDOW'` should print `180000`. If 0/empty, re-run `configure-forky.sh`.
 - **Upstream `git pull` lost vision routing**: you switched to `main` and pulled without re-merging. Run `cd ~/dev/forky && git checkout forky-vision-routing && git rebase main` to restore the patch on top of latest.
 - **`claude-glm` (the other skill) broke after this install**: it shouldn't — they don't share ports (3458 vs 3456) or wrappers. If `claude-glm` now behaves like forky, something else set `ANTHROPIC_BASE_URL` globally to forky's port; check the script's `.bashrc` block didn't break the `claude-glm` wrapper's own export.
+- **OAuth creds structure**: `~/.claude/.credentials.json` uses `.claudeAiOauth.accessToken` (not `.accessToken` at top level). The configure script checks this. If you see "no OAuth token", run `claude /login` and verify with `jq '.claudeAiOauth.accessToken' ~/.claude/.credentials.json`.
+- **`.env` overrides `-e` in Docker**: forky's systemd unit uses `EnvironmentFile=.env`, which takes precedence over `docker run -e`. To change the port in a container, edit `.env` directly (or rebuild the image with a different `forky.env`), don't rely on `-e PORT=...`.
+- **Vision patch not on upstream `main`**: as of 2026-06, upstream may not have the `hasImageContent()` / `vision` routing branch. `install-forky.sh` detects this and applies the patch automatically via `apply-vision-patch.py`. If it fails, apply the changes from `assets/route-vision.patch` by hand.
+
+## Running in Docker
+
+For a self-contained test environment with both `claude` and forky under systemd in a single container:
+
+```bash
+# Build (Dockerfile needs: debian + systemd + bun + node + claude CLI + forky)
+docker build -t forky-systemd .
+
+# Run (host network so container can reach LiteLLM on :4000)
+docker run -d --name forky-systemd \
+  --privileged --cgroupns=host --network host \
+  -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+  -v ~/.claude/.credentials.json:/root/.claude/.credentials.json:ro \
+  -e EXEC_API_KEY="$LITELLM_KEY" \
+  forky-systemd
+
+# Use claude inside the container (login shell loads .bashrc → forky env)
+docker exec -it forky-systemd bash -lic 'claude'
+```
+
+Notes:
+- Use `--privileged` + `--cgroupns=host` for systemd to work as PID 1.
+- Mount OAuth creds read-only — forky reads them directly.
+- The `.env` baked into the image may need `EXEC_API_KEY` and `PORT` overrides after first boot (see troubleshooting above).
+- Pick a port that doesn't clash with any host forky (e.g. 3461).
 
 ## Coexistence with `claude-code-huawei-maas`
 
