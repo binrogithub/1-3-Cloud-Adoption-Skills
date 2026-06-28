@@ -1,0 +1,77 @@
+# Vision-routing patch for forky's src/route.ts
+
+This patch adds image-aware routing: any request carrying an image block
+(including images nested inside `tool_result.content`) is routed to a
+vision-capable model over OAuth instead of the execution backend (GLM-5.2),
+which has no vision capability.
+
+As of 2026-06, this code is already merged into forky's `main` branch at
+the box this skill was built on. This file exists so a fresh clone that
+lacks the patch (upstream reverted, or a fork) can be brought up to par.
+
+The install-forky.sh script checks for the `vision` reason string in
+src/route.ts and only applies this patch if it's missing.
+
+## How to apply manually
+
+Open `src/route.ts` and make these changes:
+
+### 1. Add `"vision"` to the RoutingDecision reason union
+
+```diff
+-  reason: "sentinel" | "opus" | "execution" | "classifier";
++  reason: "sentinel" | "opus" | "execution" | "classifier" | "vision";
+```
+
+### 2. Add the VISION_MODEL constant near the other model constants
+
+```typescript
+// The execution backend (e.g. GLM-5.2) has no vision capability, so any request
+// carrying an image must be handled by a vision-capable model over OAuth.
+const VISION_MODEL = process.env.FORKY_VISION_MODEL ?? "claude-opus-4-7";
+```
+
+### 3. Add the helper types and hasImageContent() function
+
+```typescript
+type MessageContentBlock = { type?: string; content?: unknown };
+type RoutableBody = {
+  tools?: ReadonlyArray<{ name?: string }>;
+  messages?: ReadonlyArray<{ content?: unknown }>;
+};
+
+// True if any message (or any tool_result nested inside one) carries an image
+// block. Claude Code delivers screenshots as `type: "image"` blocks, including
+// inside `tool_result` content arrays, so we scan one level deep.
+function hasImageContent(body: RoutableBody): boolean {
+  const blockHasImage = (block: MessageContentBlock): boolean => {
+    if (block?.type === "image") return true;
+    return Array.isArray(block?.content)
+      && block.content.some((b) => typeof b === "object" && b !== null && (b as MessageContentBlock).type === "image");
+  };
+  return (body.messages ?? []).some((m) =>
+    Array.isArray(m.content)
+    && m.content.some((b) => typeof b === "object" && b !== null && blockHasImage(b as MessageContentBlock)),
+  );
+}
+```
+
+### 4. Add the vision branch in decideRoute(), before the final execution return
+
+```typescript
+  if (hasImageContent(body)) {
+    return { provider: "anthropic-oauth", rewriteModel: VISION_MODEL, reason: "vision" };
+  }
+```
+
+### 5. Update decideRoute's signature to accept RoutableBody
+
+```diff
+-export function decideRoute(model: string, body: { tools?: ReadonlyArray<unknown> } = {}): RoutingDecision {
++export function decideRoute(model: string, body: RoutableBody = {}): RoutingDecision {
+```
+
+## Override
+
+Set `FORKY_VISION_MODEL` in `~/dev/forky/.env` to use a different vision model
+(defaults to `claude-opus-4-7`).
