@@ -1,0 +1,874 @@
+{
+  "region": "na-mexico-1",
+  "source": {
+    "account": "source_account_a",
+    "project_id": "e84695c2e5a546d6b45fc405416e47f6",
+    "instance": {
+      "id": "e327af04e9204e1e867179f9df2057d7in01",
+      "status": "ACTIVE",
+      "enable_ssl": false,
+      "private_ips": [
+        "192.168.0.183"
+      ],
+      "private_dns_names": [
+        "e327af04e9204e1e867179f9df2057d7in01.internal.na-mexico-1.mysql.rds.myhuaweicloud.com"
+      ],
+      "public_dns_names": [],
+      "public_ips": [
+        "119.8.0.182"
+      ],
+      "type": "Ha",
+      "created": "2025-03-05T03:40:13+0000",
+      "updated": "2026-06-11T13:20:06+0000",
+      "db_user_name": "root",
+      "switch_strategy": "reliability",
+      "read_only_by_user": false,
+      "maintenance_window": "18:00-22:00",
+      "nodes": [
+        {
+          "id": "99215434933640fca2017572f91d1b8bno01",
+          "name": "rds-7067_node0",
+          "role": "slave",
+          "status": "ACTIVE",
+          "availability_zone": "na-mexico-1a"
+        },
+        {
+          "id": "ce16890d159b4f44b962edeb0ca23584no01",
+          "name": "rds-7067_node1",
+          "role": "master",
+          "status": "ACTIVE",
+          "availability_zone": "na-mexico-1a"
+        }
+      ],
+      "related_instance": [],
+      "name": "rds-7067",
+      "datastore": {
+        "type": "MySQL",
+        "version": "5.7",
+        "complete_version": "5.7.44.241207"
+      },
+      "ha": {
+        "replication_mode": "semisync"
+      },
+      "port": 3306,
+      "backup_strategy": {
+        "start_time": "19:00-20:00",
+        "keep_days": 7
+      },
+      "enterprise_project_id": "0",
+      "disk_encryption_id": "",
+      "flavor_ref": "rds.mysql.n1.large.2.ha",
+      "cpu": "2",
+      "mem": "4",
+      "volume": {
+        "type": "CLOUDSSD",
+        "size": 800
+      },
+      "region": "na-mexico-1",
+      "vpc_id": "e1c3eeea-214f-4028-8c96-bae266bd7114",
+      "subnet_id": "665c39c8-4049-4ba9-83de-b8a34ffc275b",
+      "security_group_id": "74cabd8e-bf73-4ec4-a631-644cf1896fe5,3994e159-9592-4aa2-892b-79439f0e20e3",
+      "charge_info": {
+        "charge_mode": "postPaid"
+      },
+      "time_zone": "UTC+08:00",
+      "tags": [],
+      "backup_used_space": 669.1385719077662,
+      "storage_used_space": null,
+      "order_id": "",
+      "associated_with_ddm": false,
+      "alias": "",
+      "max_iops": null,
+      "expiration_time": null,
+      "serverless_info": null,
+      "security_group_id_parsed": [
+        "74cabd8e-bf73-4ec4-a631-644cf1896fe5",
+        "3994e159-9592-4aa2-892b-79439f0e20e3"
+      ]
+    },
+    "vpc": {
+      "id": "e1c3eeea-214f-4028-8c96-bae266bd7114",
+      "name": "vpc-default",
+      "cidr": "192.168.0.0/16",
+      "description": "vpc-default",
+      "routes": [],
+      "status": "OK",
+      "enterprise_project_id": "0",
+      "tenant_id": "e84695c2e5a546d6b45fc405416e47f6",
+      "created_at": "2023-06-01 06:32:10+00:00",
+      "updated_at": "2023-06-01 06:32:10+00:00",
+      "block_service_endpoint_states": null,
+      "enable_network_address_usage_metrics": null
+    },
+    "subnet": {
+      "id": "665c39c8-4049-4ba9-83de-b8a34ffc275b",
+      "name": "subnet-default",
+      "description": "subnet-default",
+      "cidr": "192.168.0.0/24",
+      "gateway_ip": "192.168.0.1",
+      "ipv6_enable": false,
+      "cidr_v6": null,
+      "gateway_ip_v6": null,
+      "dhcp_enable": true,
+      "primary_dns": "100.125.1.22",
+      "secondary_dns": "100.125.1.90",
+      "dns_list": [
+        "100.125.1.22",
+        "100.125.1.90"
+      ],
+      "availability_zone": "na-mexico-1a",
+      "vpc_id": "e1c3eeea-214f-4028-8c96-bae266bd7114",
+      "status": "ACTIVE",
+      "neutron_network_id": "665c39c8-4049-4ba9-83de-b8a34ffc275b",
+      "neutron_subnet_id": "629641b6-8c3b-4067-90b9-8727340256b5",
+      "neutron_subnet_id_v6": null,
+      "extra_dhcp_opts": [],
+      "scope": "center",
+      "tenant_id": "e84695c2e5a546d6b45fc405416e47f6",
+      "created_at": "2023-06-01 06:32:11+00:00",
+      "updated_at": "2023-06-01 06:32:11+00:00",
+      "enable_network_address_usage_metrics": null,
+      "available_ip_address_count": 241
+    },
+    "security_groups": {
+      "74cabd8e-bf73-4ec4-a631-644cf1896fe5": {
+        "name": "default",
+        "description": "default",
+        "id": "74cabd8e-bf73-4ec4-a631-644cf1896fe5",
+        "vpc_id": "default",
+        "enterprise_project_id": "0",
+        "security_group_rules": [
+          {
+            "id": "73b5ca18-f97c-4473-82a6-3afbce9d64f6",
+            "description": "办公区测试",
+            "security_group_id": "74cabd8e-bf73-4ec4-a631-644cf1896fe5",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": "119.123.206.40/32",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          },
+          {
+            "id": "1986f1c5-3689-4ccd-a787-2677ccc01e0e",
+            "description": "办公区测试",
+            "security_group_id": "74cabd8e-bf73-4ec4-a631-644cf1896fe5",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": "113.89.8.20/32",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          },
+          {
+            "id": "bc996bd4-f9a7-40ab-9d93-3ed520b6f3b7",
+            "description": "录音下载",
+            "security_group_id": "74cabd8e-bf73-4ec4-a631-644cf1896fe5",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": "tcp",
+            "port_range_min": 18005,
+            "port_range_max": 18005,
+            "remote_ip_prefix": "0.0.0.0/0",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          },
+          {
+            "id": "b1d68843-5157-4a86-bf93-08d6c11f833b",
+            "description": "Permit default Linux SSH port.",
+            "security_group_id": "74cabd8e-bf73-4ec4-a631-644cf1896fe5",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": "icmp",
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": "0.0.0.0/0",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          },
+          {
+            "id": "fbdc8726-8689-4b82-9b35-85cf20ed1e67",
+            "description": "Permit default Linux SSH port.",
+            "security_group_id": "74cabd8e-bf73-4ec4-a631-644cf1896fe5",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": "tcp",
+            "port_range_min": 22,
+            "port_range_max": 22,
+            "remote_ip_prefix": "0.0.0.0/0",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          },
+          {
+            "id": "3f19a9c4-a25b-4844-ac4e-60cdadf4e0d7",
+            "description": "Permit default Linux SSH port.",
+            "security_group_id": "74cabd8e-bf73-4ec4-a631-644cf1896fe5",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": "tcp",
+            "port_range_min": 16325,
+            "port_range_max": 16325,
+            "remote_ip_prefix": "0.0.0.0/0",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          },
+          {
+            "id": "5abaf453-44c8-4015-ac6d-4b3d9ca009b0",
+            "description": null,
+            "security_group_id": "74cabd8e-bf73-4ec4-a631-644cf1896fe5",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": null,
+            "remote_group_id": "74cabd8e-bf73-4ec4-a631-644cf1896fe5",
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          },
+          {
+            "id": "ba0857c4-dc3b-456c-882b-80204e2ac721",
+            "description": null,
+            "security_group_id": "74cabd8e-bf73-4ec4-a631-644cf1896fe5",
+            "direction": "egress",
+            "ethertype": "IPv4",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": null,
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          },
+          {
+            "id": "21e73196-171f-4960-a9bf-1dddbfc37f9c",
+            "description": null,
+            "security_group_id": "74cabd8e-bf73-4ec4-a631-644cf1896fe5",
+            "direction": "egress",
+            "ethertype": "IPv6",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": null,
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          },
+          {
+            "id": "e8e12116-9e9f-48e3-a9dd-0f8861c88824",
+            "description": null,
+            "security_group_id": "74cabd8e-bf73-4ec4-a631-644cf1896fe5",
+            "direction": "ingress",
+            "ethertype": "IPv6",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": null,
+            "remote_group_id": "74cabd8e-bf73-4ec4-a631-644cf1896fe5",
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          }
+        ]
+      },
+      "3994e159-9592-4aa2-892b-79439f0e20e3": {
+        "name": "sg-cc9e",
+        "description": "数据库安全组",
+        "id": "3994e159-9592-4aa2-892b-79439f0e20e3",
+        "vpc_id": null,
+        "enterprise_project_id": "0",
+        "security_group_rules": [
+          {
+            "id": "6be6055f-6254-45aa-9013-812bff7d6a19",
+            "description": "",
+            "security_group_id": "3994e159-9592-4aa2-892b-79439f0e20e3",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": "tcp",
+            "port_range_min": 3306,
+            "port_range_max": 3306,
+            "remote_ip_prefix": "8.219.161.249/32",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          },
+          {
+            "id": "4201097a-8e0a-4c08-87c2-51720b7070e1",
+            "description": "",
+            "security_group_id": "3994e159-9592-4aa2-892b-79439f0e20e3",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": "tcp",
+            "port_range_min": 3306,
+            "port_range_max": 3306,
+            "remote_ip_prefix": "147.139.161.240/32",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          },
+          {
+            "id": "1f874ea9-98a0-42f9-83d4-9a32d9b1d939",
+            "description": "允许所有流量从安全组内实例流出，用于访问外部。",
+            "security_group_id": "3994e159-9592-4aa2-892b-79439f0e20e3",
+            "direction": "egress",
+            "ethertype": "IPv6",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": "::/0",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          },
+          {
+            "id": "2ecc4d5d-9808-4e44-9193-d8cf06857e2a",
+            "description": "允许安全组内实例通过内网网络相互通信。",
+            "security_group_id": "3994e159-9592-4aa2-892b-79439f0e20e3",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": null,
+            "remote_group_id": "3994e159-9592-4aa2-892b-79439f0e20e3",
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          },
+          {
+            "id": "9f32e406-d5ed-44a6-ab30-7ab1adf82941",
+            "description": "允许所有流量从安全组内实例流出，用于访问外部。",
+            "security_group_id": "3994e159-9592-4aa2-892b-79439f0e20e3",
+            "direction": "egress",
+            "ethertype": "IPv4",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": "0.0.0.0/0",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          },
+          {
+            "id": "aa946a97-3758-4744-8bb8-0a4ea4107d02",
+            "description": "允许安全组内实例通过内网网络相互通信。",
+            "security_group_id": "3994e159-9592-4aa2-892b-79439f0e20e3",
+            "direction": "ingress",
+            "ethertype": "IPv6",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": null,
+            "remote_group_id": "3994e159-9592-4aa2-892b-79439f0e20e3",
+            "remote_address_group_id": null,
+            "tenant_id": "e84695c2e5a546d6b45fc405416e47f6"
+          }
+        ]
+      }
+    },
+    "eips": [
+      {
+        "bandwidth_id": "97dc35d2-87e7-40e6-b641-3c611e152ade",
+        "bandwidth_name": "bandwidth-5f3a",
+        "bandwidth_share_type": "PER",
+        "bandwidth_size": 50,
+        "create_time": "2025-03-06 02:22:31",
+        "enterprise_project_id": "0",
+        "id": "8df270e8-7764-4610-ac94-2b2c5fb12bc6",
+        "port_id": "56f8fcba-86b8-4aa9-b22e-d8313be6fb06",
+        "private_ip_address": "192.168.0.183",
+        "profile": {
+          "order_id": null,
+          "product_id": null,
+          "region_id": null,
+          "user_id": null
+        },
+        "public_ip_address": "119.8.0.182",
+        "tags": [],
+        "status": "ACTIVE",
+        "tenant_id": "e84695c2e5a546d6b45fc405416e47f6",
+        "type": "5_bgp",
+        "public_ipv6_address": null,
+        "ip_version": 4,
+        "public_border_group": "center",
+        "allow_share_bandwidth_types": [
+          "share"
+        ],
+        "alias": null
+      }
+    ]
+  },
+  "target": {
+    "account": "target_account_b",
+    "project_id": "019ea55049357658b4a43d77ec94d728",
+    "instance": {
+      "id": "0f07fd696084478cb58752582bf3e802in01",
+      "status": "ACTIVE",
+      "enable_ssl": false,
+      "private_ips": [
+        "192.168.0.183"
+      ],
+      "private_dns_names": [],
+      "public_dns_names": [],
+      "public_ips": [
+        "94.74.76.132"
+      ],
+      "type": "Ha",
+      "created": "2026-06-08T20:51:15+0000",
+      "updated": "2026-06-11T13:20:06+0000",
+      "db_user_name": "root",
+      "switch_strategy": "reliability",
+      "read_only_by_user": false,
+      "maintenance_window": "18:00-22:00",
+      "nodes": [
+        {
+          "id": "7a630f4aaed1433181ec3a50cb9aec52no01",
+          "name": "rds-7067_node1",
+          "role": "slave",
+          "status": "ACTIVE",
+          "availability_zone": "na-mexico-1a"
+        },
+        {
+          "id": "bbacf03350734db58c46785875b4bcd4no01",
+          "name": "rds-7067_node0",
+          "role": "master",
+          "status": "ACTIVE",
+          "availability_zone": "na-mexico-1a"
+        }
+      ],
+      "related_instance": [],
+      "name": "rds-7067",
+      "datastore": {
+        "type": "MySQL",
+        "version": "5.7",
+        "complete_version": "5.7.44.241207"
+      },
+      "ha": {
+        "replication_mode": "semisync"
+      },
+      "port": 3306,
+      "backup_strategy": {
+        "start_time": "19:00-20:00",
+        "keep_days": 7
+      },
+      "enterprise_project_id": "0",
+      "disk_encryption_id": "",
+      "flavor_ref": "rds.mysql.n1.large.2.ha",
+      "cpu": "2",
+      "mem": "4",
+      "volume": {
+        "type": "CLOUDSSD",
+        "size": 800
+      },
+      "region": "na-mexico-1",
+      "vpc_id": "0aa90f9e-85f8-43bb-aff7-64c5e209f496",
+      "subnet_id": "385f6a84-92ff-460f-a450-503c9284f5ff",
+      "security_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80,6159c5ba-9999-49cd-87c3-ee8bdc5314ac",
+      "charge_info": {
+        "charge_mode": "postPaid"
+      },
+      "time_zone": "UTC+08:00",
+      "tags": [],
+      "backup_used_space": 0.01373229268938303,
+      "storage_used_space": null,
+      "order_id": "",
+      "associated_with_ddm": false,
+      "alias": "",
+      "max_iops": null,
+      "expiration_time": null,
+      "serverless_info": null,
+      "security_group_id_parsed": [
+        "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+        "6159c5ba-9999-49cd-87c3-ee8bdc5314ac"
+      ]
+    },
+    "vpc": {
+      "id": "0aa90f9e-85f8-43bb-aff7-64c5e209f496",
+      "name": "vpc-default",
+      "cidr": "192.168.0.0/16",
+      "description": "vpc-default",
+      "routes": [],
+      "status": "OK",
+      "enterprise_project_id": "0",
+      "tenant_id": "019ea55049357658b4a43d77ec94d728",
+      "created_at": "2026-06-08 20:15:27+00:00",
+      "updated_at": "2026-06-08 20:15:28+00:00",
+      "block_service_endpoint_states": null,
+      "enable_network_address_usage_metrics": null
+    },
+    "subnet": {
+      "id": "385f6a84-92ff-460f-a450-503c9284f5ff",
+      "name": "subnet-default",
+      "description": "subnet-default",
+      "cidr": "192.168.0.0/24",
+      "gateway_ip": "192.168.0.1",
+      "ipv6_enable": false,
+      "cidr_v6": null,
+      "gateway_ip_v6": null,
+      "dhcp_enable": true,
+      "primary_dns": "100.125.1.22",
+      "secondary_dns": "100.125.1.90",
+      "dns_list": [
+        "100.125.1.22",
+        "100.125.1.90"
+      ],
+      "availability_zone": "na-mexico-1a",
+      "vpc_id": "0aa90f9e-85f8-43bb-aff7-64c5e209f496",
+      "status": "ACTIVE",
+      "neutron_network_id": "385f6a84-92ff-460f-a450-503c9284f5ff",
+      "neutron_subnet_id": "2fff1c64-8a4f-4974-8df5-0fe12e411db9",
+      "neutron_subnet_id_v6": null,
+      "extra_dhcp_opts": [
+        {
+          "opt_name": "addresstime",
+          "opt_value": "87600h"
+        }
+      ],
+      "scope": "center",
+      "tenant_id": "019ea55049357658b4a43d77ec94d728",
+      "created_at": "2026-06-08 20:15:30+00:00",
+      "updated_at": "2026-06-08 20:15:30+00:00",
+      "enable_network_address_usage_metrics": null,
+      "available_ip_address_count": 241
+    },
+    "security_groups": {
+      "0c2164fe-cc7c-4e24-ba94-54027f724f80": {
+        "name": "default",
+        "description": "default",
+        "id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+        "vpc_id": "default",
+        "enterprise_project_id": "0",
+        "security_group_rules": [
+          {
+            "id": "3006e882-1e48-4bad-adef-07f2091fbc31",
+            "description": "",
+            "security_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+            "direction": "egress",
+            "ethertype": "IPv4",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": "0.0.0.0/0",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "7575ca02-1799-4f96-bef0-8bd235755b47",
+            "description": "Permit default Linux SSH port.",
+            "security_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": "tcp",
+            "port_range_min": 22,
+            "port_range_max": 22,
+            "remote_ip_prefix": "0.0.0.0/0",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "b2c50e3c-1c66-4e26-ab91-d4de02dfc25e",
+            "description": "录音下载",
+            "security_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": "tcp",
+            "port_range_min": 18005,
+            "port_range_max": 18005,
+            "remote_ip_prefix": "0.0.0.0/0",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "dba98ef2-bb47-42ba-9c5c-a8da2b5cadbd",
+            "description": "Permit default Linux SSH port.",
+            "security_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": "icmp",
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": "0.0.0.0/0",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "5fc3d6f6-7412-4efd-9169-44f6ab5e7d72",
+            "description": "Permit default Linux SSH port.",
+            "security_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": "tcp",
+            "port_range_min": 16325,
+            "port_range_max": 16325,
+            "remote_ip_prefix": "0.0.0.0/0",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "3bc75b31-acf7-4ef2-8f6e-f3c0468c445b",
+            "description": "办公区测试",
+            "security_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": "113.89.8.20/32",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "b58d1258-15de-4e97-9a04-9e8fed9f37fa",
+            "description": "",
+            "security_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+            "direction": "egress",
+            "ethertype": "IPv6",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": "::/0",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "585f3987-44ee-4582-87e3-26f1d57dc9d8",
+            "description": "办公区测试",
+            "security_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": "119.123.206.40/32",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "52aac552-882b-49c7-8bde-ee4e54affd3e",
+            "description": null,
+            "security_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+            "direction": "ingress",
+            "ethertype": "IPv6",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": null,
+            "remote_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "63b9594d-f187-426a-9e03-94cefd8460ef",
+            "description": null,
+            "security_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": null,
+            "remote_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "7daa74e5-c12a-4490-9fb2-c34a80d62ae6",
+            "description": null,
+            "security_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+            "direction": "egress",
+            "ethertype": "IPv4",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": null,
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "3cfb780c-50d4-4947-8541-f6f761b1c452",
+            "description": null,
+            "security_group_id": "0c2164fe-cc7c-4e24-ba94-54027f724f80",
+            "direction": "egress",
+            "ethertype": "IPv6",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": null,
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          }
+        ]
+      },
+      "6159c5ba-9999-49cd-87c3-ee8bdc5314ac": {
+        "name": "sg-cc9e",
+        "description": "0aa90f9e-85f8-43bb-aff7-64c5e209f496",
+        "id": "6159c5ba-9999-49cd-87c3-ee8bdc5314ac",
+        "vpc_id": "0aa90f9e-85f8-43bb-aff7-64c5e209f496",
+        "enterprise_project_id": "0",
+        "security_group_rules": [
+          {
+            "id": "d5af1cf6-51de-4dea-91bf-958a9e876714",
+            "description": "",
+            "security_group_id": "6159c5ba-9999-49cd-87c3-ee8bdc5314ac",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": "tcp",
+            "port_range_min": 3306,
+            "port_range_max": 3306,
+            "remote_ip_prefix": "147.139.161.240/32",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "33fafddb-3f24-4eb7-8397-c9bbfd1cf8f8",
+            "description": "",
+            "security_group_id": "6159c5ba-9999-49cd-87c3-ee8bdc5314ac",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": "tcp",
+            "port_range_min": 3306,
+            "port_range_max": 3306,
+            "remote_ip_prefix": "8.219.161.249/32",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "727b19b6-7c1c-45b3-9fb2-df1194717be3",
+            "description": "允许所有流量从安全组内实例流出，用于访问外部。",
+            "security_group_id": "6159c5ba-9999-49cd-87c3-ee8bdc5314ac",
+            "direction": "egress",
+            "ethertype": "IPv4",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": "0.0.0.0/0",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "a165aa40-f8ff-4a98-b4a7-26d83fa9d913",
+            "description": "允许所有流量从安全组内实例流出，用于访问外部。",
+            "security_group_id": "6159c5ba-9999-49cd-87c3-ee8bdc5314ac",
+            "direction": "egress",
+            "ethertype": "IPv6",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": "::/0",
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "675be017-592b-4568-8717-93b6252fec2d",
+            "description": "",
+            "security_group_id": "6159c5ba-9999-49cd-87c3-ee8bdc5314ac",
+            "direction": "ingress",
+            "ethertype": "IPv6",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": null,
+            "remote_group_id": "6159c5ba-9999-49cd-87c3-ee8bdc5314ac",
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "a47fc0c8-68ea-4736-8cac-6717fa4e331b",
+            "description": "",
+            "security_group_id": "6159c5ba-9999-49cd-87c3-ee8bdc5314ac",
+            "direction": "ingress",
+            "ethertype": "IPv4",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": null,
+            "remote_group_id": "6159c5ba-9999-49cd-87c3-ee8bdc5314ac",
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "0704553c-0bad-4114-845b-1190ee086827",
+            "description": null,
+            "security_group_id": "6159c5ba-9999-49cd-87c3-ee8bdc5314ac",
+            "direction": "egress",
+            "ethertype": "IPv4",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": null,
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          },
+          {
+            "id": "4f297222-a0a0-453f-94f8-8945efcc6a31",
+            "description": null,
+            "security_group_id": "6159c5ba-9999-49cd-87c3-ee8bdc5314ac",
+            "direction": "egress",
+            "ethertype": "IPv6",
+            "protocol": null,
+            "port_range_min": null,
+            "port_range_max": null,
+            "remote_ip_prefix": null,
+            "remote_group_id": null,
+            "remote_address_group_id": null,
+            "tenant_id": "019ea55049357658b4a43d77ec94d728"
+          }
+        ]
+      }
+    },
+    "eips": [
+      {
+        "bandwidth_id": "858a4e41-2ff9-4d96-b64d-c02e12086c38",
+        "bandwidth_name": "bandwidth-34b5",
+        "bandwidth_share_type": "PER",
+        "bandwidth_size": 100,
+        "create_time": "2026-06-11 22:36:40",
+        "enterprise_project_id": "0",
+        "id": "91068dd4-a1a7-4889-bdc8-2f4c118118dd",
+        "port_id": "8a6b9403-7982-4fb3-947c-3a43e47c8a32",
+        "private_ip_address": "192.168.0.183",
+        "profile": {
+          "order_id": null,
+          "product_id": null,
+          "region_id": null,
+          "user_id": null
+        },
+        "public_ip_address": "94.74.76.132",
+        "tags": [],
+        "status": "ACTIVE",
+        "tenant_id": "019ea55049357658b4a43d77ec94d728",
+        "type": "5_bgp",
+        "public_ipv6_address": null,
+        "ip_version": 4,
+        "public_border_group": "center",
+        "allow_share_bandwidth_types": [
+          "share"
+        ],
+        "alias": null
+      }
+    ]
+  }
+}

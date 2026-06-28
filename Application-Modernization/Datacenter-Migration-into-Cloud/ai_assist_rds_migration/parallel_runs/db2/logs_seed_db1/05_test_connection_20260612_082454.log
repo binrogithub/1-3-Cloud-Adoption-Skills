@@ -1,0 +1,6 @@
+[2026-06-12 08:24:54] [INFO] [05_test_connection] Testing DRS database connections (dry_run=False)
+[2026-06-12 08:24:54] [INFO] [05_test_connection] Job ID: aafd3500-2144-4855-bb53-6bc5932jb101
+[2026-06-12 08:24:54] [INFO] [05_test_connection] Testing source database connection...
+[2026-06-12 08:25:13] [ERROR] [05_test_connection] Source database connection FAILED: {'status': 'FAILED', 'query_id': 'a4251fa4-3a4a-44c8-b34c-f32ff72c05a3', 'network_result': {'ip': '119.8.0.182', 'success': False, 'result': 'The network connection between the replication instance and the database is faulty. For a cross-VPC task, the network between different VPCs may be disconnected. For details about how to create a VPC peering connection, see the VPC documentation.', 'status': 'failed', 'error_code': 'DRS.20010015', 'error_msg': 'The network connection between the replication instance and the database is faulty. For a cross-VPC task, the network between different VPCs may be disconnected. For details about how to create a VPC peering connection, see the VPC documentation.'}}
+[2026-06-12 08:25:13] [INFO] [05_test_connection] Testing target database connection...
+[2026-06-12 08:25:26] [INFO] [05_test_connection] Target database connection: SUCCESS

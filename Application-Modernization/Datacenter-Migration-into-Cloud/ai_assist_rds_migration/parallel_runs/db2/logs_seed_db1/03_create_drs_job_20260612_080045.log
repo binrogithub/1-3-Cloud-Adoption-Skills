@@ -1,0 +1,3 @@
+[2026-06-12 08:00:45] [INFO] [03_create_drs_job] Creating DRS migration job (dry_run=False)
+[2026-06-12 08:00:45] [INFO] [03_create_drs_job] Loaded DRS payload for job: task-migration-mysql_20260612_075904
+[2026-06-12 08:00:54] [ERROR] [03_create_drs_job] Failed to create DRS job: ClientRequestException - {status_code:400,request_id:4aba7052fa15ea826a8312f7836aeb6e,error_code:DRS.10020000,error_msg:Incorrect parameter engine_type not support.,encoded_authorization_message:None }

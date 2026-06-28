@@ -1,0 +1,1468 @@
+{
+  "report_name": "precheck_report",
+  "timestamp": "2026-06-12T12:08:38.494851",
+  "dry_run": false,
+  "stage": "precheck",
+  "status": "FAILED",
+  "details": {
+    "job_id": "aafd3500-2144-4855-bb53-6bc5932jb101",
+    "checks": [
+      {
+        "item": "dstDbDiskSize",
+        "status": "WARN",
+        "message": "DST_DB_DISK_SIZE_UP_ALARM"
+      },
+      {
+        "item": "srcDbBinlogIsOff",
+        "status": "FAIL",
+        "message": "MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE"
+      },
+      {
+        "item": "srcGtidStatusCheck",
+        "status": "FAIL",
+        "message": "MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE"
+      },
+      {
+        "item": "isUserRequireSslLink",
+        "status": "WARN",
+        "message": "UNAVAILABLE_TO_QUERY_SSL_INFO"
+      },
+      {
+        "item": "MysqlForeignKeyReferentialActionCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "MysqlSourceMaxAllowedPacketActionChecker",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "checkEmptyDstDb",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "checkIncreSrcDbExistedInDstDb",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "checkJobDbObjectInfo",
+        "status": "PASS",
+        "message": "FILL_DB_OBJECT_ERROR"
+      },
+      {
+        "item": "checkRecycleBinConsistent",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "dbCharacterSetConsistency",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "dbClockConsistency",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "dbCollationServerConsistency",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "dbGroupConcatMaxLenConsistency",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "dbIsolationLevelConsistency",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "dbParamConsistency",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "dbServerUuidConsistency",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "dbTimeZoneConsistency",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "dstMaxAllowedPacketCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "gtidFormatCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "hasForeignKeyOnUnselectedTable",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "innodbStrictModeConsistency",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "mappedNameCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "mysqlBlockEncryptionModeInconsistency",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "sourceCheckDynamicMasking",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "sourceEncryptTableActionChecker",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "sqlModeConsistency",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "sqlModeNoEngine",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcBinlogFormatCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcBinlogRowImageCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcDbBinlogExpireLogsDays",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcDbExistUnsupportEngineTable",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcDbIndexKeyLength",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcDbIsStandbyTaurus",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcDbNameContainsUnsupportedSymbols",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcDbServerIdCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcDstTableNameCaseSensitiveCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcHasNoPkTableWhenTgtHasInvisiblePk",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcIdentifierWithBreakCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcRoutinesWithoutPrivilegeCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcTableNameContainsNonAscii",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcTriggerAndEventCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcViewNameContainsNonAscii",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srclogSlaveUpdatesCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "tenantDbActionCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "userSelectObjectsCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "dstStatusCheck",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcDbPrivilegesIsEnoughForIncre",
+        "status": "FAIL",
+        "message": "MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE"
+      },
+      {
+        "item": "dstDbPrivilegesIsEnough",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "dbVersionMeetRequirement",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "dstDbVersionSupport",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcDbVersionSupport",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "dstDbConnection",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "srcDbConnection",
+        "status": "PASS",
+        "message": ""
+      },
+      {
+        "item": "userHaveV3Agency",
+        "status": "PASS",
+        "message": ""
+      }
+    ],
+    "precheck_raw": {
+      "status": "COMPLETE",
+      "precheck_status": "COMPLETE",
+      "results": [
+        {
+          "name": "dstDbDiskSize",
+          "status": "ALARM",
+          "message": "DST_DB_DISK_SIZE_UP_ALARM"
+        },
+        {
+          "name": "srcDbBinlogIsOff",
+          "status": "FAIL",
+          "message": "MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE"
+        },
+        {
+          "name": "srcGtidStatusCheck",
+          "status": "FAIL",
+          "message": "MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE"
+        },
+        {
+          "name": "isUserRequireSslLink",
+          "status": "ALARM",
+          "message": "UNAVAILABLE_TO_QUERY_SSL_INFO"
+        },
+        {
+          "name": "MysqlForeignKeyReferentialActionCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "MysqlSourceMaxAllowedPacketActionChecker",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "checkEmptyDstDb",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "checkIncreSrcDbExistedInDstDb",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "checkJobDbObjectInfo",
+          "status": "PASS",
+          "message": "FILL_DB_OBJECT_ERROR"
+        },
+        {
+          "name": "checkRecycleBinConsistent",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbCharacterSetConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbClockConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbCollationServerConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbGroupConcatMaxLenConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbIsolationLevelConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbParamConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbServerUuidConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbTimeZoneConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dstMaxAllowedPacketCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "gtidFormatCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "hasForeignKeyOnUnselectedTable",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "innodbStrictModeConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "mappedNameCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "mysqlBlockEncryptionModeInconsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "sourceCheckDynamicMasking",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "sourceEncryptTableActionChecker",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "sqlModeConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "sqlModeNoEngine",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcBinlogFormatCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcBinlogRowImageCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbBinlogExpireLogsDays",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbExistUnsupportEngineTable",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbIndexKeyLength",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbIsStandbyTaurus",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbNameContainsUnsupportedSymbols",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbServerIdCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDstTableNameCaseSensitiveCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcHasNoPkTableWhenTgtHasInvisiblePk",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcIdentifierWithBreakCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcRoutinesWithoutPrivilegeCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcTableNameContainsNonAscii",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcTriggerAndEventCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcViewNameContainsNonAscii",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srclogSlaveUpdatesCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "tenantDbActionCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "userSelectObjectsCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dstStatusCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbPrivilegesIsEnoughForIncre",
+          "status": "FAIL",
+          "message": "MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE"
+        },
+        {
+          "name": "dstDbPrivilegesIsEnough",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbVersionMeetRequirement",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dstDbVersionSupport",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbVersionSupport",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dstDbConnection",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbConnection",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "userHaveV3Agency",
+          "status": "PASS",
+          "message": ""
+        }
+      ],
+      "precheck_results": [
+        {
+          "name": "dstDbDiskSize",
+          "status": "ALARM",
+          "message": "DST_DB_DISK_SIZE_UP_ALARM"
+        },
+        {
+          "name": "srcDbBinlogIsOff",
+          "status": "FAIL",
+          "message": "MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE"
+        },
+        {
+          "name": "srcGtidStatusCheck",
+          "status": "FAIL",
+          "message": "MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE"
+        },
+        {
+          "name": "isUserRequireSslLink",
+          "status": "ALARM",
+          "message": "UNAVAILABLE_TO_QUERY_SSL_INFO"
+        },
+        {
+          "name": "MysqlForeignKeyReferentialActionCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "MysqlSourceMaxAllowedPacketActionChecker",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "checkEmptyDstDb",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "checkIncreSrcDbExistedInDstDb",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "checkJobDbObjectInfo",
+          "status": "PASS",
+          "message": "FILL_DB_OBJECT_ERROR"
+        },
+        {
+          "name": "checkRecycleBinConsistent",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbCharacterSetConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbClockConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbCollationServerConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbGroupConcatMaxLenConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbIsolationLevelConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbParamConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbServerUuidConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbTimeZoneConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dstMaxAllowedPacketCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "gtidFormatCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "hasForeignKeyOnUnselectedTable",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "innodbStrictModeConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "mappedNameCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "mysqlBlockEncryptionModeInconsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "sourceCheckDynamicMasking",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "sourceEncryptTableActionChecker",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "sqlModeConsistency",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "sqlModeNoEngine",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcBinlogFormatCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcBinlogRowImageCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbBinlogExpireLogsDays",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbExistUnsupportEngineTable",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbIndexKeyLength",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbIsStandbyTaurus",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbNameContainsUnsupportedSymbols",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbServerIdCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDstTableNameCaseSensitiveCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcHasNoPkTableWhenTgtHasInvisiblePk",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcIdentifierWithBreakCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcRoutinesWithoutPrivilegeCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcTableNameContainsNonAscii",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcTriggerAndEventCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcViewNameContainsNonAscii",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srclogSlaveUpdatesCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "tenantDbActionCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "userSelectObjectsCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dstStatusCheck",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbPrivilegesIsEnoughForIncre",
+          "status": "FAIL",
+          "message": "MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE"
+        },
+        {
+          "name": "dstDbPrivilegesIsEnough",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dbVersionMeetRequirement",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dstDbVersionSupport",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbVersionSupport",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "dstDbConnection",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "srcDbConnection",
+          "status": "PASS",
+          "message": ""
+        },
+        {
+          "name": "userHaveV3Agency",
+          "status": "PASS",
+          "message": ""
+        }
+      ],
+      "raw": {
+        "result": false,
+        "process": "100%",
+        "total_passed_rate": "95%",
+        "rds_instance_id": "0f07fd696084478cb58752582bf3e802in01",
+        "job_direction": "up",
+        "precheck_results": [
+          {
+            "item": "dstDbDiskSize",
+            "result": "ALARM",
+            "failed_reason": "DST_DB_DISK_SIZE_UP_ALARM",
+            "data": "{\"srcDbSize\":\"230505988096\",\"dstVolumeSize\":\"797610000000\",\"srcIndexSize\":0,\"srcIndexAmount\":0,\"diskSizeNeed\":\"430505988096\"}",
+            "raw_error_msg": null,
+            "group": "db_disk_size",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcDbBinlogIsOff",
+            "result": "FAILED",
+            "failed_reason": "MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE",
+            "data": "{\"src_db_without_enough_privilege\":[{\"missPrivileges\":\"REPLICATION CLIENT\",\"db\":\"*\"}]}",
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcGtidStatusCheck",
+            "result": "FAILED",
+            "failed_reason": "MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE",
+            "data": "{\"src_db_without_enough_privilege\":[{\"missPrivileges\":\"REPLICATION CLIENT\",\"db\":\"*\"}]}",
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": true,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "isUserRequireSslLink",
+            "result": "ALARM",
+            "failed_reason": "UNAVAILABLE_TO_QUERY_SSL_INFO",
+            "data": null,
+            "raw_error_msg": "SELECT command denied to user 'sms_sync'@'*.*.*.128' for table 'user'",
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "MysqlForeignKeyReferentialActionCheck",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": true,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "MysqlSourceMaxAllowedPacketActionChecker",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": true,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "checkEmptyDstDb",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": true,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "checkIncreSrcDbExistedInDstDb",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": true,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "checkJobDbObjectInfo",
+            "result": "PASSED",
+            "failed_reason": "FILL_DB_OBJECT_ERROR",
+            "data": "",
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "checkRecycleBinConsistent",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": true,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "dbCharacterSetConsistency",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": true,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "dbClockConsistency",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "dbCollationServerConsistency",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": true,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "dbGroupConcatMaxLenConsistency",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "dbIsolationLevelConsistency",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "dbParamConsistency",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "dbServerUuidConsistency",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "dbTimeZoneConsistency",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "dstMaxAllowedPacketCheck",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "gtidFormatCheck",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "hasForeignKeyOnUnselectedTable",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "innodbStrictModeConsistency",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": true,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "mappedNameCheck",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "mysqlBlockEncryptionModeInconsistency",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": true,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "sourceCheckDynamicMasking",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "sourceEncryptTableActionChecker",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": true,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "sqlModeConsistency",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "sqlModeNoEngine",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcBinlogFormatCheck",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcBinlogRowImageCheck",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcDbBinlogExpireLogsDays",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcDbExistUnsupportEngineTable",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcDbIndexKeyLength",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcDbIsStandbyTaurus",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcDbNameContainsUnsupportedSymbols",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcDbServerIdCheck",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcDstTableNameCaseSensitiveCheck",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcHasNoPkTableWhenTgtHasInvisiblePk",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcIdentifierWithBreakCheck",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcRoutinesWithoutPrivilegeCheck",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcTableNameContainsNonAscii",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcTriggerAndEventCheck",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcViewNameContainsNonAscii",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srclogSlaveUpdatesCheck",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "tenantDbActionCheck",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "userSelectObjectsCheck",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_params",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "dstStatusCheck",
+            "result": "PASSED",
+            "failed_reason": "",
+            "data": "",
+            "raw_error_msg": null,
+            "group": "db_target_status",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcDbPrivilegesIsEnoughForIncre",
+            "result": "FAILED",
+            "failed_reason": "MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE",
+            "data": "{\"src_db_without_enough_privilege\":[{\"missPrivileges\":\"REPLICATION CLIENT,REPLICATION SLAVE\",\"db\":\"*\"}]}",
+            "raw_error_msg": null,
+            "group": "db_user_privilege",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "dstDbPrivilegesIsEnough",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_user_privilege",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "dbVersionMeetRequirement",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_version",
+            "is_support_skip": true,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "dstDbVersionSupport",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_version",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcDbVersionSupport",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "db_version",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "dstDbConnection",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "network",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "srcDbConnection",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "network",
+            "is_support_skip": false,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          },
+          {
+            "item": "userHaveV3Agency",
+            "result": "PASSED",
+            "failed_reason": null,
+            "data": null,
+            "raw_error_msg": null,
+            "group": "user_params",
+            "is_support_skip": true,
+            "is_skipped": null,
+            "failed_sub_jobs": null
+          }
+        ]
+      }
+    }
+  },
+  "errors": [
+    "srcDbBinlogIsOff: MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE",
+    "srcGtidStatusCheck: MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE",
+    "srcDbPrivilegesIsEnoughForIncre: MYSQL_SOURCE_DB_PRIVILEGES_IS_NOT_ENOUGH_FOR_INCRE"
+  ],
+  "warnings": [
+    "dstDbDiskSize: DST_DB_DISK_SIZE_UP_ALARM",
+    "isUserRequireSslLink: UNAVAILABLE_TO_QUERY_SSL_INFO"
+  ]
+}

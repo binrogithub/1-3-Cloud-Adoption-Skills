@@ -1,0 +1,198 @@
+{
+  "report_name": "migration_report",
+  "timestamp": "2026-06-12T07:48:03.514693",
+  "dry_run": true,
+  "source": {
+    "host": "149.232.136.255",
+    "port": 3306,
+    "version": "8.0",
+    "instance_type": "rds_ha"
+  },
+  "target": {
+    "host": "***",
+    "port": "***",
+    "version": "8.0"
+  },
+  "stages": [
+    {
+      "stage": "db_precheck",
+      "status": "FAILED",
+      "timestamp": "2026-06-12T07:48:03.514707",
+      "duration_seconds": 110
+    },
+    {
+      "stage": "db_precheck",
+      "status": "WARNING",
+      "timestamp": "2026-06-12T07:59:04.058396",
+      "duration_seconds": 0
+    },
+    {
+      "stage": "generate_payload",
+      "status": "SUCCESS",
+      "timestamp": "2026-06-12T07:59:04.143199",
+      "duration_seconds": 0
+    },
+    {
+      "stage": "create_drs_job",
+      "status": "FAILED",
+      "timestamp": "2026-06-12T08:00:36.474981",
+      "details": {
+        "error": "HostUnreachableException - <urllib3.connection.HTTPSConnection object at 0x7f0c67172208>: Failed to establish a new connection: [Errno -2] Name or service not known"
+      }
+    },
+    {
+      "stage": "create_drs_job",
+      "status": "FAILED",
+      "timestamp": "2026-06-12T08:00:54.874452",
+      "details": {
+        "error": "ClientRequestException - {status_code:400,request_id:4aba7052fa15ea826a8312f7836aeb6e,error_code:DRS.10020000,error_msg:Incorrect parameter engine_type not support.,encoded_authorization_message:None }"
+      }
+    },
+    {
+      "stage": "generate_payload",
+      "status": "SUCCESS",
+      "timestamp": "2026-06-12T08:01:23.450603",
+      "duration_seconds": 0
+    },
+    {
+      "stage": "create_drs_job",
+      "status": "FAILED",
+      "timestamp": "2026-06-12T08:01:54.159689",
+      "details": {
+        "error": "ClientRequestException - {status_code:400,request_id:2772401ea70d703dde90851bdc35f319,error_code:DRS.10020002,error_msg:The parameter source_endpoint.endpoint_name has an invalid value.,encoded_authorization_message:None }"
+      }
+    },
+    {
+      "stage": "generate_payload",
+      "status": "SUCCESS",
+      "timestamp": "2026-06-12T08:02:19.045209",
+      "duration_seconds": 0
+    },
+    {
+      "stage": "create_drs_job",
+      "status": "SUCCESS",
+      "timestamp": "2026-06-12T08:02:27.578434",
+      "details": {
+        "job_id": "ab704a6a-9586-4ffb-8390-f5e910cjb101"
+      }
+    },
+    {
+      "stage": "create_drs_job",
+      "status": "SUCCESS",
+      "timestamp": "2026-06-12T08:02:27.579242",
+      "duration_seconds": 1
+    },
+    {
+      "stage": "wait_drs_job_ready",
+      "status": "FAILED",
+      "timestamp": "2026-06-12T08:13:36.908713",
+      "details": {
+        "timeout": true
+      }
+    },
+    {
+      "stage": "generate_payload",
+      "status": "SUCCESS",
+      "timestamp": "2026-06-12T08:18:36.266433",
+      "duration_seconds": 0
+    },
+    {
+      "stage": "create_drs_job",
+      "status": "FAILED",
+      "timestamp": "2026-06-12T08:19:02.631918",
+      "details": {
+        "error": "ClientRequestException - {status_code:400,request_id:cc69129f80a21ca1248f8b623ef2e864,error_code:DRS.10020002,error_msg:The parameter node_info.base_info.instance_type has an invalid value.,encoded_authorization_message:None }"
+      }
+    },
+    {
+      "stage": "generate_payload",
+      "status": "SUCCESS",
+      "timestamp": "2026-06-12T08:19:21.296798",
+      "duration_seconds": 0
+    },
+    {
+      "stage": "create_drs_job",
+      "status": "SUCCESS",
+      "timestamp": "2026-06-12T08:19:28.387247",
+      "details": {
+        "job_id": "aafd3500-2144-4855-bb53-6bc5932jb101"
+      }
+    },
+    {
+      "stage": "create_drs_job",
+      "status": "SUCCESS",
+      "timestamp": "2026-06-12T08:19:28.388016",
+      "duration_seconds": 0
+    },
+    {
+      "stage": "wait_drs_job_ready",
+      "status": "SUCCESS",
+      "timestamp": "2026-06-12T08:23:30.872559",
+      "duration_seconds": 154
+    },
+    {
+      "stage": "test_connection",
+      "status": "FAILED",
+      "timestamp": "2026-06-12T08:25:26.467910",
+      "duration_seconds": 32
+    },
+    {
+      "stage": "test_connection",
+      "status": "FAILED",
+      "timestamp": "2026-06-12T08:27:56.057645",
+      "duration_seconds": 16
+    },
+    {
+      "stage": "wait_drs_job_ready",
+      "status": "FAILED",
+      "timestamp": "2026-06-12T08:35:16.680360",
+      "details": {
+        "timeout": true
+      }
+    },
+    {
+      "stage": "test_connection",
+      "status": "SUCCESS",
+      "timestamp": "2026-06-12T08:39:55.096060",
+      "duration_seconds": 22
+    },
+    {
+      "stage": "precheck",
+      "status": "FAILED",
+      "timestamp": "2026-06-12T08:52:46.603279",
+      "details": {
+        "timeout": true
+      }
+    },
+    {
+      "stage": "precheck",
+      "status": "FAILED",
+      "timestamp": "2026-06-12T09:13:27.356069",
+      "duration_seconds": 53
+    },
+    {
+      "stage": "precheck",
+      "status": "FAILED",
+      "timestamp": "2026-06-12T12:01:16.333873",
+      "details": {
+        "error": "HostUnreachableException - <urllib3.connection.HTTPSConnection object at 0x7f2406757358>: Failed to establish a new connection: [Errno -2] Name or service not known"
+      }
+    },
+    {
+      "stage": "precheck",
+      "status": "FAILED",
+      "timestamp": "2026-06-12T12:02:21.975265",
+      "duration_seconds": 57
+    },
+    {
+      "stage": "precheck",
+      "status": "FAILED",
+      "timestamp": "2026-06-12T12:08:38.497643",
+      "duration_seconds": 57
+    }
+  ],
+  "overall_status": "FAILED",
+  "job_id": "aafd3500-2144-4855-bb53-6bc5932jb101",
+  "errors": [],
+  "warnings": []
+}

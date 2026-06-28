@@ -1,0 +1,17 @@
+{
+  "report_name": "drs_job_status_report",
+  "timestamp": "2026-06-12T08:35:16.679916",
+  "dry_run": false,
+  "stage": "wait_drs_job_ready",
+  "status": "FAILED",
+  "details": {
+    "job_id": "ab704a6a-9586-4ffb-8390-f5e910cjb101",
+    "status": "TIMEOUT",
+    "last_status": null,
+    "elapsed_seconds": 1800
+  },
+  "errors": [
+    "Timeout after 1800s, last status: None"
+  ],
+  "warnings": []
+}

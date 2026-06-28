@@ -1,0 +1,9 @@
+# Ignore .env file (contains secrets)
+.env
+
+# Ignore logs and reports (generated at runtime)
+logs/
+reports/
+
+# Ignore approval files (operational artifacts)
+approvals/APPROVED_*

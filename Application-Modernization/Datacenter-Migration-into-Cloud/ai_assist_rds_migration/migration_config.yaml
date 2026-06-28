@@ -1,0 +1,187 @@
+project:
+  name: prod-rds-mysql-a-to-b
+  environment: production
+  region: na-mexico-1
+  require_manual_approval: true
+
+accounts:
+  source_account_a:
+    project_id: e84695c2e5a546d6b45fc405416e47f6
+    domain_id: <A_ACCOUNT_DOMAIN_ID>
+    enterprise_project_id: ''
+  target_account_b:
+    project_id: 019ea55049357658b4a43d77ec94d728
+    domain_id: <B_ACCOUNT_DOMAIN_ID>
+    enterprise_project_id: ''
+
+source_rds:
+  instance_id: e327af04e9204e1e867179f9df2057d7in01
+  instance_name: rds-7067
+  engine: MySQL
+  engine_version: '8.0'
+  architecture: primary_standby
+  eip: 119.8.0.182
+  port: 3306
+  vpc_id: e1c3eeea-214f-4028-8c96-bae266bd7114
+  subnet_id: 665c39c8-4049-4ba9-83de-b8a34ffc275b
+  security_group_id:
+    - 74cabd8e-bf73-4ec4-a631-644cf1896fe5
+    - 3994e159-9592-4aa2-892b-79439f0e20e3
+  database_names:
+    - migration_test
+    - test_write_db
+  exclude_databases:
+    - mysql
+    - information_schema
+    - performance_schema
+    - sys
+  time_zone: UTC-06:00
+  lower_case_table_names: '1'
+
+source_db_account:
+  username: sms_sync
+  password_env: SOURCE_DRS_DB_PASSWORD
+  create_user_by_ai: false
+  grant_sql_manual_confirm_required: true
+
+target_rds:
+  create_by_terraform: false
+  instance_id: 0f07fd696084478cb58752582bf3e802in01
+  instance_name: rds-7067
+  engine: MySQL
+  engine_version: '8.0'
+  architecture: primary_standby
+  eip: 94.74.76.132
+  port: 3306
+  vpc_id: 0aa90f9e-85f8-43bb-aff7-64c5e209f496
+  subnet_id: 385f6a84-92ff-460f-a450-503c9284f5ff
+  security_group_id:
+    - 0c2164fe-cc7c-4e24-ba94-54027f724f80
+    - 6159c5ba-9999-49cd-87c3-ee8bdc5314ac
+  lower_case_table_names: '1'
+  remark: >-
+    Target RDS has been manually created. AI must NOT create, delete, rebuild,
+    or modify the target RDS instance.
+
+target_db_account:
+  username: root
+  password_env: TARGET_DRS_DB_PASSWORD
+  create_user_by_ai: false
+  grant_sql_manual_confirm_required: true
+
+network:
+  type: eip
+  connectivity_confirmed: true
+
+drs:
+  deploy_account: target_account_b
+  create_task_in_account: target_account_b
+  task_name: task-migration-mysql
+  source_db_engine: MySQL
+  destination_db_engine: MySQL
+  network_type: eip
+  underlay_network: ''
+  job_type: migration
+  job_direction: up
+  task_type: dual_az
+  synchronization_mode: FULL_INCR_TRANS
+  destination_database_access: read_only
+  charging_mode: on_demand
+  specification: high
+  az: []
+  source_endpoint:
+    endpoint_type: offline
+    endpoint_name: mysql
+    host: 119.8.0.182
+    port: 3306
+    username: sms_sync
+    password_env: SOURCE_DRS_DB_PASSWORD
+    ssl_enabled: false
+  target_endpoint:
+    endpoint_type: cloud
+    endpoint_name: cloud_mysql
+    host: 94.74.76.132
+    port: 3306
+    username: root
+    password_env: TARGET_DRS_DB_PASSWORD
+    ssl_enabled: false
+  object_scope:
+    migrate_type: database_level
+    include_databases:
+      - migration_test
+      - test_write_db
+    exclude_system_databases: true
+  synchronization_policy:
+    conflict_policy: overwrite
+    filter_drop_database: true
+    sync_dml:
+      - insert
+      - update
+      - delete
+    sync_incremental_ddl: true
+  flow_control:
+    enabled: true
+    limit_mb_per_second: 50
+  wait_for_instance_ready:
+    enabled: true
+    timeout_minutes: 20
+    poll_interval_seconds: 30
+    expected_status:
+      - ready
+      - available
+  start_policy:
+    mode: manual
+
+operation_control:
+  require_manual_approval: true
+  approval_steps:
+    - validate_config
+    - network_connectivity_check
+    - db_precheck
+    - create_drs_task_in_target_account
+    - wait_drs_instance_ready
+    - test_drs_connection
+    - run_drs_precheck
+    - start_drs_task
+    - cutover
+    - generate_cleanup_report
+  forbidden_auto_actions:
+    - delete_source_rds
+    - delete_target_rds
+    - create_target_rds
+    - modify_source_rds_parameters
+    - modify_target_rds_parameters
+    - open_0_0_0_0_to_rds
+    - bind_eip_to_source_rds
+    - bind_eip_to_target_rds
+    - modify_vpc_peering
+    - modify_route_table
+    - modify_security_group_without_approval
+    - start_cutover_without_approval
+    - drop_database
+    - truncate_table
+
+cutover:
+  planned_window: <YYYY-MM-DD HH:MM-HH:MM>
+  business_freeze_mode: read_only_or_stop_write
+  max_allowed_incremental_delay_seconds: 5
+  application_switch:
+    target_db_host: 94.74.76.132
+    target_db_port: 3306
+  rollback:
+    enabled: true
+    strategy: before_new_writes_switch_back_to_source
+    warning: >-
+      If the target DB has new writes, you cannot simply switch back. You must
+      perform data compensation or reverse sync evaluation first.
+
+post_migration:
+  observation_hours: 24
+  cleanup:
+    auto_cleanup_security_group: false
+    auto_cleanup_network: false
+    auto_delete_target_rds: false
+    generate_manual_cleanup_checklist: true
+    revoke_source_drs_user: false
+    revoke_target_drs_user: false
+    archive_drs_report: true

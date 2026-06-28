@@ -1,0 +1,36 @@
+{
+  "report_name": "db_precheck",
+  "timestamp": "2026-06-12T07:59:04.057916",
+  "dry_run": true,
+  "stage": "db_precheck",
+  "status": "WARNING",
+  "details": {
+    "mode": "drs_only_precheck",
+    "source": {
+      "connectivity": "UNAVAILABLE",
+      "checks": [
+        {
+          "item": "connectivity",
+          "status": "WARN",
+          "message": "source direct DB connectivity unavailable: (2003, \"Can't connect to MySQL server on '119.8.0.182' ([Errno 1] Operation not permitted)\")"
+        }
+      ]
+    },
+    "target": {
+      "connectivity": "UNAVAILABLE",
+      "checks": [
+        {
+          "item": "connectivity",
+          "status": "WARN",
+          "message": "target direct DB connectivity unavailable: (2003, \"Can't connect to MySQL server on '94.74.76.132' ([Errno 1] Operation not permitted)\")"
+        }
+      ]
+    },
+    "next_gate": "Use DRS connection test and DRS precheck results as hard gate."
+  },
+  "errors": [],
+  "warnings": [
+    "source direct DB connectivity unavailable: (2003, \"Can't connect to MySQL server on '119.8.0.182' ([Errno 1] Operation not permitted)\")",
+    "target direct DB connectivity unavailable: (2003, \"Can't connect to MySQL server on '94.74.76.132' ([Errno 1] Operation not permitted)\")"
+  ]
+}

@@ -1,0 +1,6 @@
+[2026-06-12 08:27:39] [INFO] [05_test_connection] Testing DRS database connections (dry_run=False)
+[2026-06-12 08:27:39] [INFO] [05_test_connection] Job ID: aafd3500-2144-4855-bb53-6bc5932jb101
+[2026-06-12 08:27:39] [INFO] [05_test_connection] Testing source database connection...
+[2026-06-12 08:27:48] [ERROR] [05_test_connection] Source database connection FAILED: {'status': 'FAILED', 'query_id': '5863b102-e9d1-48d2-a77f-919200850e92', 'network_result': {'ip': '119.8.0.182', 'success': False, 'result': 'Incorrect username or password.', 'status': 'failed', 'error_code': 'DRS.20010002', 'error_msg': 'Incorrect username or password.'}}
+[2026-06-12 08:27:48] [INFO] [05_test_connection] Testing target database connection...
+[2026-06-12 08:27:56] [INFO] [05_test_connection] Target database connection: SUCCESS
