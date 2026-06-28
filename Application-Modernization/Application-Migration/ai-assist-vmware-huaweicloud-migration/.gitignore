@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# Local outputs
+out/*
+!out/.gitkeep
+
+# Local env config with credentials
+config/vm_migrate.env
+
+# Legacy terraform/local state files
+*.tfstate
+*.tfstate.*
+.terraform/
