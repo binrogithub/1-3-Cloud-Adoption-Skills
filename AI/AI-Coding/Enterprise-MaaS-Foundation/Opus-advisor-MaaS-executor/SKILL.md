@@ -177,6 +177,56 @@ docker exec litellm_pg_db psql -U llmproxy -d litellm -t -A -F'|' \
 
 Both can be installed side by side. They don't interfere because `claude-glm` sets its own `ANTHROPIC_BASE_URL` inside the wrapper, overriding the global one this skill sets.
 
+## Example: multi-agent workflow with forky → GLM-5.2
+
+A Claude Code workflow can dispatch work to GLM-5.2 via forky instead of using Claude for every step. The orchestrator agents run on Claude, but each agent calls forky's API with `curl`, and forky routes the request to GLM-5.2 for execution.
+
+### Architecture
+
+```
+Workflow orchestrator (Claude)
+  ├── agent-a (quicksort)      ──curl──► forky :3458 ──► GLM-5.2
+  ├── agent-b (binary search)  ──curl──► forky :3458 ──► GLM-5.2
+  ├── agent-c (BFS)            ──curl──► forky :3458 ──► GLM-5.2
+  └── synthesizer              ──curl──► forky :3458 ──► GLM-5.2
+```
+
+### How each agent calls forky
+
+```bash
+curl -s http://127.0.0.1:3458/v1/messages \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: forky-local" \
+  -H "anthropic-version: 2023-06-01" \
+  -d '{
+    "model": "claude-sonnet-4-6",
+    "max_tokens": 512,
+    "tools": [{"name":"Bash","description":"run bash","input_schema":{"type":"object","properties":{"command":{"type":"string"}},"required":["command"]}}],
+    "messages": [{"role":"user","content":"Write a Python quicksort function. Return only the code."}]
+  }'
+```
+
+Forky sees `claude-sonnet-4-6` + tools → routes to `execution → aistack → GLM-5.2`. The agent gets back a normal Anthropic Messages response and never knows it wasn't Claude.
+
+### Real run result (2026-06-30)
+
+4 agents (3 fan-out + 1 synthesizer), 380s duration:
+
+| Agent | Task | Code generated |
+|---|---|---|
+| agent-a | quicksort | 287 chars — `def quicksort(arr): if len(arr) <= 1: return arr...` |
+| agent-b | binary search | 303 chars — `def binary_search(arr, target): low = 0; high = len(arr) - 1...` |
+| agent-c | BFS | 399 chars — `from collections import deque; def bfs(adj, start): visited = set(...)` |
+| synthesizer | combine all 3 + tests | 3776 chars — combined module |
+
+**161 forky requests, all routed `execution → aistack` (GLM-5.2). Zero execution calls to Claude/Opus.** LiteLLM DB confirmed `openai/glm-5.2` served all work (863K input + 9.5K output tokens).
+
+The `classifier → anthropic-oauth` calls (tool-less pings) are forky's built-in safety heuristic — they go to OAuth Sonnet. To avoid them, always include a `tools` array in the request so forky routes to execution.
+
+### Key takeaway
+
+The workflow orchestrator (Claude) plans and dispatches; GLM-5.2 does all the code generation. Forky is the transparent bridge — same Anthropic Messages API format, different backend. This lets you run multi-agent workflows with cheap execution while reserving Claude/Opus for orchestration and review.
+
 ## Resources
 
 - `scripts/install-forky.sh` — clones forky, applies vision-routing branch.
