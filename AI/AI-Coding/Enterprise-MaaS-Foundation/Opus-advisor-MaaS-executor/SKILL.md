@@ -162,6 +162,8 @@ docker exec litellm_pg_db psql -U llmproxy -d litellm -t -A -F'|' \
 - **Long sessions overflow at ~196k tokens**: `CLAUDE_CODE_AUTO_COMPACT_WINDOW=180000` must be in env. `bash -lic 'echo $CLAUDE_CODE_AUTO_COMPACT_WINDOW'` should print `180000`. If 0/empty, re-run `configure-forky.sh`.
 - **Upstream `git pull` lost vision routing**: you switched to `main` and pulled without re-merging. Run `cd ~/dev/forky && git checkout forky-vision-routing && git rebase main` to restore the patch on top of latest.
 - **`claude-glm` (the other skill) broke after this install**: it shouldn't — they don't share ports (3458 vs 3456) or wrappers. If `claude-glm` now behaves like forky, something else set `ANTHROPIC_BASE_URL` globally to forky's port; check the script's `.bashrc` block didn't break the `claude-glm` wrapper's own export.
+- **OAuth creds structure**: `~/.claude/.credentials.json` uses `.claudeAiOauth.accessToken` (not `.accessToken` at top level). The configure script checks this. If you see "no OAuth token", run `claude /login` and verify with `jq '.claudeAiOauth.accessToken' ~/.claude/.credentials.json`.
+- **Vision patch not on upstream `main`**: as of 2026-06, upstream may not have the `hasImageContent()` / `vision` routing branch. `install-forky.sh` detects this and applies the patch automatically via `apply-vision-patch.py`. If it fails, apply the changes from `assets/route-vision.patch` by hand.
 
 ## Coexistence with `claude-code-huawei-maas`
 

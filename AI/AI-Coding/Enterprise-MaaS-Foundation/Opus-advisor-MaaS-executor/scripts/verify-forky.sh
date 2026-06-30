@@ -49,6 +49,13 @@ text_resp="$(curl -fsS -H "Content-Type: application/json" \
 check_text() { echo "$text_resp" | grep -qi "pong" || echo "$text_resp" | grep -q '"content"'; }
 check check_text "text+tools request returns a response"
 
+# verify it actually routed to execution (not classifier/oauth)
+check_text_route() {
+  docker logs forky-systemd 2>&1 | tail -5 | grep '"event":"request"' | tail -1 | grep -q '"routedVia":"execution"' 2>/dev/null \
+    || tail -5 "$HOME/.forky/forky.log" 2>/dev/null | grep '"event":"request"' | tail -1 | grep -q '"routedVia":"execution"' 2>/dev/null
+}
+check check_text_route "text+tools routed to execution (not classifier)"
+
 # --- 4. image → vision (Opus) ------------------------------------------------
 # generate a real 8×8 green PNG (1×1 is rejected by Anthropic)
 PNG_FILE="$(mktemp /tmp/forky-verify-XXXXXX.png)"

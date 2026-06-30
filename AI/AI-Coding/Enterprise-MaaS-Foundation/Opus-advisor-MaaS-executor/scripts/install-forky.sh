@@ -7,6 +7,7 @@ FORKY_REPO="${FORKY_REPO:-https://github.com/vladharl/forky.git}"
 FORKY_DIR="${FORKY_DIR:-$HOME/dev/forky}"
 VISION_BRANCH="${FORKY_VISION_BRANCH:-forky-vision-routing}"
 BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}"
+SKILL_DIR="$HOME/.claude/skills/Opus-advisor-MaaS-executor"
 
 log()  { printf '\033[1;34m[install-forky]\033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31m[install-forky] error:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -74,15 +75,21 @@ if has_vision_code; then
 else
   log "vision-routing code MISSING — applying patch"
   if [[ -f "$VISION_PATCH" ]]; then
-    # The patch file is documentation-form; try a real git am if a .patch was
-    # generated, else instruct manual application.
+    # Try real git apply first (works if a unified diff was generated)
     if git apply --check "$VISION_PATCH" 2>/dev/null; then
       git apply "$VISION_PATCH"
       git add src/route.ts
       git commit --quiet -m "route: send image-bearing requests to Opus (vision)"
       log "vision patch applied and committed"
     else
-      die "vision patch did not apply cleanly. Open $VISION_PATCH and apply the changes to src/route.ts by hand, then commit."
+      # The patch asset is documentation-form (code blocks with instructions).
+      # Fall back to applying via a Python script that makes the edits directly.
+      log "unified diff did not apply — trying programmatic patch"
+      python3 "$SKILL_DIR/scripts/apply-vision-patch.py" src/route.ts \
+        && git add src/route.ts \
+        && git commit --quiet -m "route: send image-bearing requests to Opus (vision)" \
+        && log "vision patch applied via script" \
+        || die "could not apply vision patch. Open $VISION_PATCH and apply the changes to src/route.ts by hand, then commit."
     fi
   else
     die "vision patch asset missing at $VISION_PATCH"
