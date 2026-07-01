@@ -1,0 +1,2 @@
+rule_id,error_code,description
+B25b-20,717,"NFC-e em uma operação não presencial (tag:indPres<>1, 4 e 5)"
