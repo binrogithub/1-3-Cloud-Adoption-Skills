@@ -53,6 +53,7 @@ claude /login
 # 2. confirm the litellm key + model
 export LITELLM_CCR_KEY="sk-..."          # or whatever the local LiteLLM uses
 export FORKY_EXEC_MODEL="glm-5.2"        # optional override
+export FORKY_OPUS_MODEL="claude-opus-4-8" # optional OAuth Opus model override
 
 # 3. run the installer (clones, branches, builds vision patch)
 ~/.claude/skills/Opus-advisor-MaaS-executor/scripts/install-forky.sh
@@ -87,7 +88,7 @@ To revert everything:
 ### `configure-forky.sh`
 - **Probes LiteLLM** at `http://127.0.0.1:4000/v1/models` with the provided key. If the request fails or `glm-5.2` is missing from `/v1/models`, errors out with a pointer to the `claude-code-huawei-maas` skill. Then sends a real `/v1/chat/completions` ping to confirm the model actually serves (it can be listed but unreachable — that exact gotcha bit us with `glm-5.1`).
 - **Verifies OAuth creds** exist at `~/.claude/.credentials.json`. If missing or malformed, prints the `claude /login` hint and exits.
-- Writes `~/dev/forky/.env` with `EXEC_BASE_URL`, `EXEC_API_KEY`, `EXEC_MODEL`, `PORT=3458` (gitignored by forky's `.gitignore`).
+- Writes `~/dev/forky/.env` with `EXEC_BASE_URL`, `EXEC_API_KEY`, `EXEC_MODEL`, `FORKY_OPUS_MODEL`, and `PORT=3458` (gitignored by forky's `.gitignore`). `FORKY_OPUS_MODEL` defaults to `claude-opus-4-8`; plan, vision, and review routes inherit it unless optional route-specific overrides (`FORKY_PLAN_MODEL`, `FORKY_VISION_MODEL`, `FORKY_REVIEW_MODEL`) are set before configuration.
 - **Detects port `3458` conflicts**. If something else owns it, prompts to change `FORKY_PORT` or stop the other process.
 - Installs `~/.config/systemd/user/forky.service`, enables it, enables `loginctl enable-linger` so it survives reboot + logout, starts it, waits for `server.start` in the log.
 - Writes `~/.local/bin/claude-forky`. The wrapper sets `ANTHROPIC_BASE_URL=http://127.0.0.1:3458`, `ANTHROPIC_MODEL=claude-sonnet-4-6`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW=180000`, and `CLAUDE_CODE_DISABLE_MOUSE_CLICKS=1`, then explicitly unsets `ANTHROPIC_AUTH_TOKEN` and `ANTHROPIC_API_KEY` so Claude.ai MCP connectors stay enabled.
@@ -102,7 +103,7 @@ To revert everything:
 - Confirms `forky.service` is `active`, `:3458` is owned by forky.
 - Sends three requests:
   1. **Text + tools** (mimics real Claude Code) → expects `routedVia: execution` → `aistack` → LiteLLM logs `openai/glm-5.2`.
-  2. **Image + tools** (real 8×8 PNG, generated inline) → expects `routedVia: vision` → `claude-opus-4-7`.
+  2. **Image + tools** (real 8×8 PNG, generated inline) → expects `routedVia: vision` → configured `FORKY_VISION_MODEL` / `FORKY_OPUS_MODEL`.
   3. **Plan-mode hook simulation** (pipe payload to `forky-hook`) → expects `~/.forky/opus` sentinel to appear and clear.
 - Cross-checks the LiteLLM Postgres spend log for `openai/glm-5.2` rows in the test window (independent confirmation beyond forky's own logs).
 - Optionally spawns a real `claude -p` subprocess and times one round-trip end-to-end.
@@ -121,6 +122,7 @@ To revert everything:
 | Service status | `systemctl --user status forky` |
 | Restart after `.env` change | `systemctl --user restart forky` |
 | Live log | `tail -f ~/.forky/forky.log` |
+| Change OAuth Opus model | edit `FORKY_OPUS_MODEL` in `~/dev/forky/.env`, then restart |
 | Force Opus for next 4h (override routing) | `~/dev/forky/bin/forky-opus on` |
 | Cancel force-Opus | `~/dev/forky/bin/forky-opus off` |
 | Show current routing mode | `~/dev/forky/bin/forky-opus status` |
@@ -158,6 +160,7 @@ docker exec litellm_pg_db psql -U llmproxy -d litellm -t -A -F'|' \
 - **Cannot copy text in Claude Code fullscreen over SSH**: this skill sets `CLAUDE_CODE_DISABLE_MOUSE_CLICKS=1`. If selection still fails, start with `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1 claude-forky`.
 - **Plan mode doesn't route to Opus**: check `~/.forky/hook.log` for `UserPromptSubmit` events. The hook only fires if `~/.claude/settings.json` has the `hooks.UserPromptSubmit` entry — re-run `configure-forky.sh` if missing. Also check `~/.forky/opus` sentinel toggling.
 - **Image request fails with `Could not process image`**: usually a malformed test image, not forky. Try a real PNG (e.g. a screenshot). 1×1 placeholder PNGs are rejected by Anthropic.
+- **Need a different Opus model**: set `FORKY_OPUS_MODEL` in `~/dev/forky/.env`, then `systemctl --user restart forky`. Use `FORKY_PLAN_MODEL`, `FORKY_VISION_MODEL`, or `FORKY_REVIEW_MODEL` only when that route should use a different OAuth model.
 - **Long sessions overflow at ~196k tokens**: `CLAUDE_CODE_AUTO_COMPACT_WINDOW=180000` must be in env. `bash -lic 'echo $CLAUDE_CODE_AUTO_COMPACT_WINDOW'` should print `180000`. If 0/empty, re-run `configure-forky.sh`.
 - **Upstream `git pull` lost vision routing**: you switched to `main` and pulled without re-merging. Run `cd ~/dev/forky && git checkout forky-vision-routing && git rebase main` to restore the patch on top of latest.
 - **`claude-glm` (the other skill) broke after this install**: it shouldn't — they don't share ports (3458 vs 3456) or wrappers. If `claude-glm` now behaves like forky, something else set `ANTHROPIC_BASE_URL` globally to forky's port; check the script's `.bashrc` block didn't break the `claude-glm` wrapper's own export.

@@ -27,6 +27,8 @@ OAuth/connectors. Forky splits each `claude-forky` request:
   - `EXEC_BASE_URL=http://127.0.0.1:4000/v1` (local LiteLLM)
   - `EXEC_API_KEY=<litellm key>` (gitignored secret)
   - `EXEC_MODEL=glm-5.2`
+  - `FORKY_OPUS_MODEL=claude-opus-4-8` (plan/sentinel/review default; vision inherits it)
+  - optional route overrides: `FORKY_PLAN_MODEL`, `FORKY_VISION_MODEL`, `FORKY_REVIEW_MODEL`
   - `PORT=3458`
 - **OAuth source**: `~/.claude/.credentials.json` (populated by `claude /login`; forky reads it directly and refreshes tokens via `console.anthropic.com/v1/oauth/token`)
 - **systemd unit**: `~/.config/systemd/user/forky.service` (log at `~/.forky/forky.log`)
@@ -55,6 +57,7 @@ Run `claude-forky` in a new terminal. Plan mode (`Shift+Tab`) and images go to O
 
 - Status / restart: `systemctl --user status forky` / `systemctl --user restart forky`
 - Log: `tail -f ~/.forky/forky.log`
+- Change OAuth Opus model: edit `FORKY_OPUS_MODEL` in `~/dev/forky/.env`, then `systemctl --user restart forky`
 - Force Opus for 4h: `~/dev/forky/bin/forky-opus on` (cancel with `off`)
 - Upgrade forky (preserve vision patch): `cd ~/dev/forky && git fetch && git checkout main && git pull && git checkout forky-vision-routing && git rebase main`
 
