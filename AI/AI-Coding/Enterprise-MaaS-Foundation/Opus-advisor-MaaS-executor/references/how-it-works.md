@@ -2,24 +2,28 @@
 
 ## The problem
 
-Claude Code sends every request to a single Anthropic Messages API endpoint. You either pay
+Claude Code sends each process's requests to a single Anthropic Messages API endpoint. You either pay
 Anthropic for every token (Opus/Sonnet) or you point it at a cheap local proxy backed by
 something like GLM-5.2. But you want **both**: Opus's reasoning for design/planning, and
 GLM-5.2's cheap execution for the bulk of code work. A single `ANTHROPIC_BASE_URL` can't do that.
 
 ## forky's answer
 
-Forky is a local proxy that impersonates the Anthropic Messages API. Claude Code talks to it;
+Forky is a local proxy that impersonates the Anthropic Messages API. The `claude-forky`
+wrapper points Claude Code at it for that session only;
 forky decides per-request which backend should handle it and translates the request format
 if the backend isn't Anthropic.
 
 ```
-claude ──► forky :3458 ──┬──► api.anthropic.com   (OAuth, Opus/Sonnet)
-                         │     [no translation needed]
-                         │
-                         └──► LiteLLM :4000 ──► Huawei MaaS  (GLM-5.2)
-                               [Anthropic → OpenAI translation]
+claude-forky ──► forky :3458 ──┬──► api.anthropic.com   (OAuth, Opus/Sonnet)
+                               │     [no translation needed]
+                               │
+                               └──► LiteLLM :4000 ──► Huawei MaaS  (GLM-5.2)
+                                     [Anthropic → OpenAI translation]
 ```
+
+Plain `claude` should not inherit `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, or
+`ANTHROPIC_API_KEY`; otherwise Claude Code disables Claude.ai MCP connectors.
 
 ## The routing decision
 
@@ -63,6 +67,8 @@ is paid separately via Huawei MaaS.
 When routing to the exec backend, forky translates the Anthropic Messages format to OpenAI
 Chat Completions format:
 - `system` blocks → flattened into the `system` message
+- `system`/`developer` roles inside `messages` → normalized into top-level `system`
+  before validation (needed for Claude Code 2.1.x)
 - `tools` → OpenAI function-calling schema
 - Image `content` blocks → `image_url` (though the vision branch usually catches these first)
 - The response is translated back to Anthropic format for Claude Code.
@@ -82,6 +88,14 @@ request that MaaS rejects with a 400. Setting `CLAUDE_CODE_AUTO_COMPACT_WINDOW=1
 Claude Code auto-compact at 180K, leaving ~16K headroom for one 8K output + tool results
 before the next compaction trigger.
 
+## Why claude-forky does not set ANTHROPIC_AUTH_TOKEN
+
+Older forky setups exported `ANTHROPIC_AUTH_TOKEN=forky-local` globally. Claude Code now
+disables Remote Control, `/schedule`, notification preferences, and Claude.ai MCP connectors
+whenever `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_API_KEY`, or an `apiKeyHelper` is present, even
+if the user is logged into Claude.ai. Forky does not need inbound auth on loopback, so the
+wrapper uses only `ANTHROPIC_BASE_URL` and explicitly unsets auth-token/API-key env vars.
+
 ## Difference from ccr (claude-code-router)
 
 | | forky | ccr |
@@ -99,7 +113,7 @@ GLM tokens on the cheap execution**. Ccr sends everything to one backend.
 ## Coexistence
 
 Both proxies can run simultaneously — they use different ports. `claude-glm` (the ccr wrapper)
-sets its own `ANTHROPIC_BASE_URL` inside the wrapper script, which overrides the global value
-forky's setup writes to `.bashrc`. So:
-- `claude` → forky → hybrid (Opus + GLM)
+sets its own `ANTHROPIC_BASE_URL` inside the wrapper script. So:
+- `claude` → Anthropic/Claude.ai OAuth + connectors
+- `claude-forky` → forky → hybrid (Opus + GLM)
 - `claude-glm` → ccr → GLM only

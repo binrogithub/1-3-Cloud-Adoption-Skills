@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-forky.sh — clone forky, install deps, ensure the vision-routing branch exists.
+# install-forky.sh — clone forky, install deps, ensure local compatibility patches exist.
 # Safe to re-run (idempotent). Does NOT configure or start the service.
 set -euo pipefail
 
@@ -49,14 +49,20 @@ cd "$FORKY_DIR"
 log "bun install"
 "$BUN_BIN" install --silent
 
-# --- ensure vision-routing branch --------------------------------------------
-# The vision patch may already be on main (merged upstream). If so, we still
-# create the branch as a marker + upgrade-safe anchor. If it's not on main,
-# we apply assets/route-vision.patch.
+# --- ensure compatibility branch ---------------------------------------------
+# The local branch carries:
+# - vision routing: image-bearing turns go to Opus, not GLM.
+# - request role normalization: Claude Code may send system/developer roles in
+#   messages; forky moves them to top-level system before validation.
 VISION_PATCH="$HOME/.claude/skills/Opus-advisor-MaaS-executor/assets/route-vision.patch"
+NORMALIZE_PATCHER="$HOME/.claude/skills/Opus-advisor-MaaS-executor/scripts/apply-request-normalize-patch.py"
 
 has_vision_code() {
   grep -q '"vision"' src/route.ts 2>/dev/null
+}
+
+has_role_normalizer() {
+  grep -q 'request.normalized_roles' src/server.ts 2>/dev/null
 }
 
 if git rev-parse --verify --quiet "refs/heads/$VISION_BRANCH" >/dev/null; then
@@ -94,6 +100,17 @@ else
   else
     die "vision patch asset missing at $VISION_PATCH"
   fi
+fi
+
+if has_role_normalizer; then
+  log "request-role normalization present in src/server.ts"
+else
+  log "request-role normalization MISSING — applying patch"
+  python3 "$NORMALIZE_PATCHER" src/server.ts \
+    && git add src/server.ts \
+    && git commit --quiet -m "server: normalize system/developer message roles" \
+    && log "request-role normalization patch applied" \
+    || die "could not patch src/server.ts for system/developer message roles"
 fi
 
 log "forky installed at $FORKY_DIR (branch: $VISION_BRANCH)"
