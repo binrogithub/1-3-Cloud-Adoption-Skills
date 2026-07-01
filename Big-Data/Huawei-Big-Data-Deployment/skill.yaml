@@ -1,0 +1,32 @@
+name: Huawei-Big-Data-Deployment
+version: 0.1.0
+summary: Generate Terraform code and deployment guidance for Huawei Cloud big data services.
+language: en
+category: Big Data / Infrastructure as Code
+primary_file: SKILL.md
+owner: binrogithub
+recommended_path: Big-Data/Huawei-Big-Data-Deployment
+services:
+  - VPC
+  - Subnet
+  - Security Groups
+  - OBS
+  - MRS
+  - DWS
+  - DLI
+  - CDM
+  - IAM Agency
+  - ECS Bastion
+  - EIP
+  - KMS
+  - DataArts Studio planned
+patterns:
+  - minimal-mrs
+  - cdm-mrs-obs-data-lake
+  - mrs-dws-analytics-warehouse
+  - dli-serverless-lakehouse
+  - full-big-data-platform
+  - cdm-dataarts-dws-obs
+terraform_style: reusable-modules
+default_region: la-north-2
+default_security_model: workshop-simple
