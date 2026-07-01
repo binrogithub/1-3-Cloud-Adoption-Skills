@@ -42,6 +42,9 @@ pathlib.Path(target).write_text(''.join(out))
 PY
 fi
 
+rm -f "$HOME/.local/bin/claude-forky"
+log "claude-forky wrapper removed"
+
 # --- 3. remove hooks from settings.json ---------------------------------------
 SETTINGS="$HOME/.claude/settings.json"
 if [[ -f "$SETTINGS" ]]; then

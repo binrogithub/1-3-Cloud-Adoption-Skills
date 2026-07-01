@@ -15,6 +15,8 @@ LITELLM_KEY="${LITELLM_KEY:-${LITELLM_CCR_KEY:-${EXEC_API_KEY:-}}}"
 EXEC_MODEL="${FORKY_EXEC_MODEL:-glm-5.2}"
 FORKY_PORT="${FORKY_PORT:-3458}"
 VISION_MODEL="${FORKY_VISION_MODEL:-claude-opus-4-7}"
+WRAPPER="$HOME/.local/bin/claude-forky"
+TRUST_ROOT_WORKSPACE="${FORKY_TRUST_ROOT_WORKSPACE:-1}"
 
 log()  { printf '\033[1;34m[configure-forky]\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[configure-forky] warn:\033[0m %s\n' "$*" >&2; }
@@ -49,6 +51,10 @@ CREDS="$HOME/.claude/.credentials.json"
 jq -e '.claudeAiOauth.accessToken // .accessToken // .access_token // .oauthAccount.accessToken' "$CREDS" >/dev/null 2>&1 \
   || die "$CREDS exists but has no OAuth token. Re-run 'claude /login'. (Expected .claudeAiOauth.accessToken)"
 log "OAuth credentials present"
+
+# === 2b. verify compatibility patches ========================================
+grep -q 'request.normalized_roles' "$FORKY_DIR/src/server.ts" 2>/dev/null \
+  || die "forky src/server.ts lacks request-role normalization. Re-run install-forky.sh so Claude Code system/developer message roles do not 400."
 
 # === 3. port conflict check ==================================================
 if command -v ss >/dev/null 2>&1; then
@@ -111,7 +117,47 @@ if ! systemctl --user is-active --quiet forky.service; then
 fi
 log "forky.service active"
 
-# === 6. .bashrc block (idempotent) ===========================================
+# === 6. claude-forky wrapper + .bashrc block (idempotent) =====================
+log "writing $WRAPPER"
+mkdir -p "$(dirname "$WRAPPER")"
+cat > "$WRAPPER" <<EOF
+#!/usr/bin/env bash
+# claude-forky: route this Claude Code session through forky only.
+# Plain \`claude\` intentionally remains on the Claude.ai OAuth connector.
+set -euo pipefail
+
+export ANTHROPIC_BASE_URL="http://127.0.0.1:$FORKY_PORT"
+export ANTHROPIC_MODEL="\${ANTHROPIC_MODEL:-claude-sonnet-4-6}"
+export CLAUDE_CODE_AUTO_COMPACT_WINDOW="\${CLAUDE_CODE_AUTO_COMPACT_WINDOW:-180000}"
+export CLAUDE_CODE_DISABLE_MOUSE_CLICKS="\${CLAUDE_CODE_DISABLE_MOUSE_CLICKS:-1}"
+# Keep Claude.ai MCP connectors enabled. Claude Code disables them whenever an
+# API key/auth token source is present, but forky does not require inbound auth.
+unset ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY
+case ",\${NO_PROXY:-}," in
+  *,127.0.0.1,localhost,*) ;;
+  *) export NO_PROXY="\${NO_PROXY:+\$NO_PROXY,}127.0.0.1,localhost" ;;
+esac
+
+if command -v systemctl >/dev/null 2>&1; then
+  if ! systemctl --user is-active --quiet forky.service 2>/dev/null; then
+    systemctl --user start forky.service >/dev/null 2>&1 || true
+  fi
+fi
+
+for _ in {1..20}; do
+  if curl -fsS -m 1 "\$ANTHROPIC_BASE_URL/health" >/dev/null 2>&1 ||
+     curl -fsS -m 1 "\$ANTHROPIC_BASE_URL/" >/dev/null 2>&1; then
+    exec claude "\$@"
+  fi
+  sleep 0.25
+done
+
+echo "claude-forky: forky is not reachable at \$ANTHROPIC_BASE_URL" >&2
+echo "claude-forky: check 'systemctl --user status forky.service' and ~/.forky/forky.log" >&2
+exit 1
+EOF
+chmod 700 "$WRAPPER"
+
 BASHRC="$HOME/.bashrc"
 SNIPPET="$SKILL_DIR/assets/bashrc-snippet.sh"
 BEGIN='# >>> forky-claude-routing >>>'
@@ -180,6 +226,15 @@ settings_path.write_text(json.dumps(s, indent=2) + "\n")
 PY
 log "settings.json hooks merged"
 
+# === 7b. trust /root workspace for local permissions ==========================
+if [[ "$TRUST_ROOT_WORKSPACE" == "1" && -f "$HOME/.claude.json" ]]; then
+  log "trusting /root workspace in ~/.claude.json so settings.local.json permissions are honored"
+  cp "$HOME/.claude.json" "$HOME/.claude.json.bak.$(date +%Y%m%d%H%M%S)"
+  tmp="$(mktemp)"
+  jq '.projects["/root"].hasTrustDialogAccepted = true' "$HOME/.claude.json" > "$tmp"
+  mv "$tmp" "$HOME/.claude.json"
+fi
+
 # === 8. memory ===============================================================
 MEM_DIR="$HOME/.claude/projects/-root/memory"
 if [[ -d "$MEM_DIR" ]]; then
@@ -187,7 +242,7 @@ if [[ -d "$MEM_DIR" ]]; then
   cp "$SKILL_DIR/assets/memory-template.md" "$MEM_DIR/forky-claude-routing.md"
   # update MEMORY.md index
   INDEX="$MEM_DIR/MEMORY.md"
-  LINE='- [forky claude routing](forky-claude-routing.md) — plain `claude` via forky(:3458, systemd): exec→GLM-5.2, plan/vision→Opus(OAuth)'
+  LINE='- [forky claude routing](forky-claude-routing.md) — `claude-forky` via forky(:3458, systemd): exec→GLM-5.2, plan/vision→Opus(OAuth); plain `claude` keeps Claude.ai connectors'
   if [[ -f "$INDEX" ]]; then
     if ! grep -q "forky-claude-routing.md" "$INDEX"; then
       printf '%s\n' "$LINE" >> "$INDEX"
@@ -204,5 +259,5 @@ systemctl --user restart forky.service
 sleep 1
 
 log ""
-log "done. Open a NEW terminal and run: claude"
+log "done. Open a NEW terminal and run: claude-forky"
 log "verify with: $SKILL_DIR/scripts/verify-forky.sh"

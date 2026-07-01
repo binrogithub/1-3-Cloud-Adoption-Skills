@@ -16,16 +16,23 @@ die()  { printf '\033[1;31m[verify-forky] error:\033[0m %s\n' "$*" >&2; exit 1; 
 pass=0; failc=0
 check() { if "$@"; then ok "$2"; pass=$((pass+1)); else fail "$2"; failc=$((failc+1)); fi; }
 
-# --- 1. fresh-shell env -------------------------------------------------------
-check_env() {
-  bash -lic 'echo "${ANTHROPIC_BASE_URL:-}"' 2>/dev/null | grep -q "127.0.0.1:$FORKY_PORT"
+# --- 1. wrapper + shell env ---------------------------------------------------
+check_wrapper() {
+  [[ -x "$HOME/.local/bin/claude-forky" ]] &&
+    grep -q "ANTHROPIC_BASE_URL=\"http://127.0.0.1:$FORKY_PORT\"" "$HOME/.local/bin/claude-forky" &&
+    grep -q "unset ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY" "$HOME/.local/bin/claude-forky"
 }
-check check_env "new shell sees ANTHROPIC_BASE_URL=http://127.0.0.1:$FORKY_PORT"
+check check_wrapper "claude-forky wrapper routes to forky without auth-token env"
 
-check_compact() {
-  [[ "$(bash -lic 'echo "${CLAUDE_CODE_AUTO_COMPACT_WINDOW:-}"' 2>/dev/null)" == "180000" ]]
+check_no_global_auth() {
+  ! bash -lic 'env | grep -E "^(ANTHROPIC_BASE_URL|ANTHROPIC_AUTH_TOKEN|ANTHROPIC_API_KEY)=" >/dev/null' 2>/dev/null
 }
-check check_compact "CLAUDE_CODE_AUTO_COMPACT_WINDOW=180000 in new shell"
+check check_no_global_auth "plain claude shell has no global ANTHROPIC auth/base-url"
+
+check_mouse() {
+  [[ "$(bash -lic 'echo "${CLAUDE_CODE_DISABLE_MOUSE_CLICKS:-}"' 2>/dev/null)" == "1" ]]
+}
+check check_mouse "CLAUDE_CODE_DISABLE_MOUSE_CLICKS=1 in new shell"
 
 # --- 2. service ---------------------------------------------------------------
 check_service() { systemctl --user is-active --quiet forky.service; }
@@ -36,7 +43,6 @@ check check_port "port $FORKY_PORT is listening"
 
 # --- 3. text + tools → execution (GLM) ---------------------------------------
 text_resp="$(curl -fsS -H "Content-Type: application/json" \
-  -H "x-api-key: forky-local" \
   -H "anthropic-version: 2023-06-01" \
   -d '{
     "model": "claude-sonnet-4-6",
@@ -52,9 +58,27 @@ check check_text "text+tools request returns a response"
 # verify it actually routed to execution (not classifier/oauth)
 check_text_route() {
   docker logs forky-systemd 2>&1 | tail -5 | grep '"event":"request"' | tail -1 | grep -q '"routedVia":"execution"' 2>/dev/null \
-    || tail -5 "$HOME/.forky/forky.log" 2>/dev/null | grep '"event":"request"' | tail -1 | grep -q '"routedVia":"execution"' 2>/dev/null
+    || tail -80 "$HOME/.forky/forky.log" 2>/dev/null | grep '"event":"request"' | tail -1 | grep -q '"routedVia":"execution"' 2>/dev/null
 }
 check check_text_route "text+tools routed to execution (not classifier)"
+
+# --- 3b. Claude Code 2.1.x system/developer-role normalization ----------------
+norm_resp="$(curl -fsS -H "Content-Type: application/json" \
+  -H "anthropic-version: 2023-06-01" \
+  -d '{
+    "model": "claude-sonnet-4-6",
+    "max_tokens": 32,
+    "stream": false,
+    "messages": [
+      {"role": "user", "content": "context"},
+      {"role": "system", "content": "reply with exactly: normalized"},
+      {"role": "user", "content": "test"}
+    ]
+  }' \
+  "$FORKY_URL/v1/messages" 2>&1)" || true
+
+check_normalized() { echo "$norm_resp" | grep -qi "normalized\\|content"; }
+check check_normalized "system role inside messages is normalized instead of 400"
 
 # --- 4. image → vision (Opus) ------------------------------------------------
 # generate a real 8×8 green PNG (1×1 is rejected by Anthropic)
@@ -79,7 +103,6 @@ PY
 
 img_b64="$(base64 -w0 "$PNG_FILE")"
 img_resp="$(curl -fsS -H "Content-Type: application/json" \
-  -H "x-api-key: forky-local" \
   -H "anthropic-version: 2023-06-01" \
   -d "{
     \"model\": \"claude-sonnet-4-6\",

@@ -1,15 +1,16 @@
 ---
 name: forky-claude-routing
-description: Plain `claude` is routed through forky (local :3458 systemd service) — execution turns go to GLM-5.2 via LiteLLM→Huawei MaaS, plan-mode and image turns go to Claude Opus via the user's OAuth subscription.
+description: `claude-forky` is routed through forky (local :3458 systemd service) — execution turns go to GLM-5.2 via LiteLLM→Huawei MaaS, plan-mode and image turns go to Claude Opus via the user's OAuth subscription. Plain `claude` remains on Claude.ai OAuth/connectors.
 metadata:
   type: reference
 ---
 
 # forky claude routing
 
-The plain `claude` command is wired through **forky** (https://github.com/vladharl/forky),
+The `claude-forky` command is wired through **forky** (https://github.com/vladharl/forky),
 a local Anthropic Messages API proxy on `127.0.0.1:3458` running as a systemd user service
-(`forky.service`, linger enabled). Forky splits each request:
+(`forky.service`, linger enabled). Plain `claude` is intentionally left on Claude.ai
+OAuth/connectors. Forky splits each `claude-forky` request:
 
 | Turn type | Routes to | Reason |
 |---|---|---|
@@ -29,23 +30,26 @@ a local Anthropic Messages API proxy on `127.0.0.1:3458` running as a systemd us
   - `PORT=3458`
 - **OAuth source**: `~/.claude/.credentials.json` (populated by `claude /login`; forky reads it directly and refreshes tokens via `console.anthropic.com/v1/oauth/token`)
 - **systemd unit**: `~/.config/systemd/user/forky.service` (log at `~/.forky/forky.log`)
-- **Shell env** (in `~/.bashrc`, between `>>> forky-claude-routing >>>` markers):
+- **Wrapper**: `~/.local/bin/claude-forky`
   - `ANTHROPIC_BASE_URL=http://127.0.0.1:3458`
   - `ANTHROPIC_MODEL=claude-sonnet-4-6`
-  - `ANTHROPIC_AUTH_TOKEN=forky-local` (dummy — forky injects the real credential per route)
+  - unsets `ANTHROPIC_AUTH_TOKEN` and `ANTHROPIC_API_KEY` so Claude.ai connectors stay enabled
   - `CLAUDE_CODE_AUTO_COMPACT_WINDOW=180000` (MaaS GLM-5.2 hard input limit is ~196608 tokens; this leaves room for one 8K output + tool results before the proxy 400s)
+  - `CLAUDE_CODE_DISABLE_MOUSE_CLICKS=1` for copy/selection in fullscreen terminals
+- **Shell env** (in `~/.bashrc`, between `>>> forky-claude-routing >>>` markers):
   - `NO_PROXY` includes `127.0.0.1,localhost`
+  - no global `ANTHROPIC_*` gateway/auth vars
 - **Hooks** (in `~/.claude/settings.json`):
   - `UserPromptSubmit` → `~/dev/forky/bin/forky-hook` (sets plan-mode sentinel)
   - `PostToolUse` matcher `ExitPlanMode` → same hook (clears sentinel)
 
 ## How to use
 
-Just run `claude` in a new terminal. Plan mode (`Shift+Tab`) and images go to Opus; everything else goes to GLM-5.2. No wrapper command needed.
+Run `claude-forky` in a new terminal. Plan mode (`Shift+Tab`) and images go to Opus; everything else goes to GLM-5.2. Run plain `claude` when Claude.ai connectors should be used without a custom gateway.
 
 ## Coexistence with claude-glm
 
-`claude-glm` (the `claude-code-huawei-maas` skill) uses port `3456` and sets its own `ANTHROPIC_BASE_URL` inside the wrapper, so it overrides the global value this setup writes. Both can be installed simultaneously.
+`claude-glm` (the `claude-code-huawei-maas` skill) uses port `3456` and sets its own `ANTHROPIC_BASE_URL` inside the wrapper. Both can be installed simultaneously; plain `claude` stays clean.
 
 ## Manual controls
 
