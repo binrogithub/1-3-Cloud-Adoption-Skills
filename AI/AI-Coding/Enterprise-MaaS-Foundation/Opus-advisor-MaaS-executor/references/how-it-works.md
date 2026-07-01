@@ -64,6 +64,10 @@ Forky reads `~/.claude/.credentials.json` (the file `claude /login` creates). It
 - Sends the request to `api.anthropic.com` with the real bearer token.
 - Sets `cache_control: ephemeral` on the last system block and last tool definition,
   enabling Anthropic's prompt caching (~80% input token savings on repeated context).
+- Normalizes prompt-cache TTL order before dispatch. Anthropic rejects a later
+  `ttl: "1h"` marker after any normal 5-minute marker, and Forky's added tool
+  marker can otherwise trip that rule when Claude Code already supplied an
+  extended-cache system marker.
 
 The user's Pro/Max subscription covers the Opus/Sonnet turns. The exec backend (GLM-5.2)
 is paid separately via Huawei MaaS.
