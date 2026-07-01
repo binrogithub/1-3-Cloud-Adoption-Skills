@@ -54,8 +54,10 @@ log "bun install"
 # - vision routing: image-bearing turns go to Opus, not GLM.
 # - request role normalization: Claude Code may send system/developer roles in
 #   messages; forky moves them to top-level system before validation.
+# - cache TTL ordering: Anthropic rejects a 1h cache marker after a 5m marker.
 VISION_PATCH="$HOME/.claude/skills/Opus-advisor-MaaS-executor/assets/route-vision.patch"
 NORMALIZE_PATCHER="$HOME/.claude/skills/Opus-advisor-MaaS-executor/scripts/apply-request-normalize-patch.py"
+CACHE_TTL_PATCHER="$HOME/.claude/skills/Opus-advisor-MaaS-executor/scripts/apply-cache-ttl-order-patch.py"
 
 has_vision_code() {
   grep -q '"vision"' src/route.ts 2>/dev/null
@@ -63,6 +65,10 @@ has_vision_code() {
 
 has_role_normalizer() {
   grep -q 'request.normalized_roles' src/server.ts 2>/dev/null
+}
+
+has_cache_ttl_normalizer() {
+  grep -q 'normalizeCacheControlTtlOrder' src/anthropic.ts 2>/dev/null
 }
 
 if git rev-parse --verify --quiet "refs/heads/$VISION_BRANCH" >/dev/null; then
@@ -111,6 +117,17 @@ else
     && git commit --quiet -m "server: normalize system/developer message roles" \
     && log "request-role normalization patch applied" \
     || die "could not patch src/server.ts for system/developer message roles"
+fi
+
+if has_cache_ttl_normalizer; then
+  log "cache TTL ordering normalization present in src/anthropic.ts"
+else
+  log "cache TTL ordering normalization MISSING — applying patch"
+  python3 "$CACHE_TTL_PATCHER" src/anthropic.ts \
+    && git add src/anthropic.ts \
+    && git commit --quiet -m "anthropic: normalize cache TTL marker order" \
+    && log "cache TTL ordering patch applied" \
+    || die "could not patch src/anthropic.ts for cache TTL ordering"
 fi
 
 log "forky installed at $FORKY_DIR (branch: $VISION_BRANCH)"

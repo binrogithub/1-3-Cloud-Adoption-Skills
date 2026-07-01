@@ -7,6 +7,8 @@ Use this path when the user wants to run the Opus/Fable advisor plus GLM executo
 - Use PowerShell scripts instead of Bash/systemd.
 - Run forky as a hidden background PowerShell process.
 - Use a Windows PowerShell hook at `bin\forky-hook.ps1`.
+- Apply the same local forky compatibility fixes for image routing and Anthropic
+  cache-control TTL ordering.
 - Refresh Machine/User `PATH` inside `run-forky.ps1` so newly installed Bun is found by background processes.
 - Redirect stdout and stderr to separate files because Windows PowerShell cannot redirect both streams to the same file in `Start-Process`.
 - Optionally connect forky directly to Huawei MaaS GLM-5.2 at `https://api.modelarts-maas.com/v2`, without a local LiteLLM hop.

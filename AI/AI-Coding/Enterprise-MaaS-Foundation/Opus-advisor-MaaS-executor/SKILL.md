@@ -1,6 +1,6 @@
 ---
 name: opus-advisor-maas-executor
-description: Install and configure forky (github.com/vladharl/forky) end-to-end so `claude-forky` routes plan-mode + image turns to Claude Opus via the user's Pro/Max OAuth subscription while sending normal execution turns to Huawei Cloud MaaS (GLM-5.2) through an existing local LiteLLM proxy. Use when the user wants to keep their Opus advisor for design/planning and let GLM do cheap code execution, while preserving plain `claude` for Claude.ai OAuth connectors. Sets up forky as a systemd user service, applies local compatibility patches (vision routing and Claude Code system/developer message-role normalization), writes a `claude-forky` wrapper that uses ANTHROPIC_BASE_URL without ANTHROPIC_AUTH_TOKEN, adds copy-friendly mouse settings, trusts `/root` when requested so local permissions are honored, and merges plan-mode hooks into `~/.claude/settings.json`. Assumes LiteLLM is already running on :4000 and that the user has logged into Claude Code (`claude /login`) so OAuth credentials exist.
+description: Install and configure forky (github.com/vladharl/forky) end-to-end so `claude-forky` routes plan-mode + image turns to Claude Opus via the user's Pro/Max OAuth subscription while sending normal execution turns to Huawei Cloud MaaS (GLM-5.2) through an existing local LiteLLM proxy. Use when the user wants to keep their Opus advisor for design/planning and let GLM do cheap code execution, while preserving plain `claude` for Claude.ai OAuth connectors. Sets up forky as a systemd user service, applies local compatibility patches (vision routing, Claude Code system/developer message-role normalization, and Anthropic cache-control TTL ordering), writes a `claude-forky` wrapper that uses ANTHROPIC_BASE_URL without ANTHROPIC_AUTH_TOKEN, adds copy-friendly mouse settings, trusts `/root` when requested so local permissions are honored, and merges plan-mode hooks into `~/.claude/settings.json`. Assumes LiteLLM is already running on :4000 and that the user has logged into Claude Code (`claude /login`) so OAuth credentials exist.
 allowed-tools:
   - Bash
   - Read
@@ -113,6 +113,7 @@ To revert everything:
 - Creates a local branch **`forky-vision-routing`** off `main` and commits local patches:
   - `src/route.ts`: `hasImageContent()` + `vision` routing so image requests go to Opus.
   - `src/server.ts`: normalize Claude Code `system`/`developer` roles inside `messages` into the top-level `system` field before validation. Without this, Claude Code 2.1.x can fail with `400 request shape invalid ... messages[1].role`.
+  - `src/anthropic.ts`: normalize Anthropic prompt-cache TTL ordering so a later `ttl: "1h"` cache marker is downgraded to 5 minutes after any 5-minute marker. Without this, image/OAuth turns can fail with `cache_control.ttl: a ttl='1h' cache_control block must not come after a ttl='5m' cache_control block`.
 - Checks out `forky-vision-routing` as the active branch (this is what the service runs).
 
 ### `configure-forky.sh`
@@ -190,6 +191,7 @@ docker exec litellm_pg_db psql -U llmproxy -d litellm -t -A -F'|' \
 - **Cannot copy text in Claude Code fullscreen over SSH**: this skill sets `CLAUDE_CODE_DISABLE_MOUSE_CLICKS=1`. If selection still fails, start with `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1 claude-forky`.
 - **Plan mode doesn't route to Opus**: check `~/.forky/hook.log` for `UserPromptSubmit` events. The hook only fires if `~/.claude/settings.json` has the `hooks.UserPromptSubmit` entry — re-run `configure-forky.sh` if missing. Also check `~/.forky/opus` sentinel toggling.
 - **Image request fails with `Could not process image`**: usually a malformed test image, not forky. Try a real PNG (e.g. a screenshot). 1×1 placeholder PNGs are rejected by Anthropic.
+- **Image or OAuth request fails with `cache_control.ttl ... ttl='1h' ... after ... ttl='5m'`**: forky is missing the cache TTL ordering patch. Re-run `install-forky.sh` or `install-forky.ps1`, then restart forky. The patch normalizes later 1-hour cache markers down to 5 minutes when Anthropic's ordering rule requires it.
 - **Need a different Opus model**: set `FORKY_OPUS_MODEL` in `~/dev/forky/.env`, then `systemctl --user restart forky`. Use `FORKY_PLAN_MODEL`, `FORKY_VISION_MODEL`, or `FORKY_REVIEW_MODEL` only when that route should use a different OAuth model.
 - **Long sessions overflow at ~196k tokens**: `CLAUDE_CODE_AUTO_COMPACT_WINDOW=180000` must be in env. `bash -lic 'echo $CLAUDE_CODE_AUTO_COMPACT_WINDOW'` should print `180000`. If 0/empty, re-run `configure-forky.sh`.
 - **Upstream `git pull` lost vision routing**: you switched to `main` and pulled without re-merging. Run `cd ~/dev/forky && git checkout forky-vision-routing && git rebase main` to restore the patch on top of latest.
@@ -260,7 +262,8 @@ The workflow orchestrator (Claude) plans and dispatches; GLM-5.2 does all the co
 
 ## Resources
 
-- `scripts/install-forky.sh` — clones forky, applies vision-routing branch.
+- `scripts/install-forky.sh` — clones forky, applies the local compatibility branch.
+- `scripts/apply-cache-ttl-order-patch.py` — patches forky's OAuth path to satisfy Anthropic cache-control TTL ordering.
 - `scripts/configure-forky.sh` — probes LiteLLM + OAuth, writes config, installs service, updates `.bashrc` + `settings.json` + memory.
 - `scripts/verify-forky.sh` — end-to-end checks with independent LiteLLM-side confirmation.
 - `scripts/uninstall-forky.sh` — reversible teardown.
