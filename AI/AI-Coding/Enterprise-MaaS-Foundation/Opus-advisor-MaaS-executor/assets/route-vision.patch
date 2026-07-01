@@ -23,12 +23,14 @@ Open `src/route.ts` and make these changes:
 +  reason: "sentinel" | "opus" | "execution" | "classifier" | "vision";
 ```
 
-### 2. Add the VISION_MODEL constant near the other model constants
+### 2. Add the config-driven Opus and VISION_MODEL constants near the other model constants
 
 ```typescript
+const OPUS_MODEL = process.env.FORKY_OPUS_MODEL ?? "claude-opus-4-8";
+const PLAN_MODE_MODEL = process.env.FORKY_PLAN_MODEL ?? OPUS_MODEL;
 // The execution backend (e.g. GLM-5.2) has no vision capability, so any request
 // carrying an image must be handled by a vision-capable model over OAuth.
-const VISION_MODEL = process.env.FORKY_VISION_MODEL ?? "claude-opus-4-7";
+const VISION_MODEL = process.env.FORKY_VISION_MODEL ?? OPUS_MODEL;
 ```
 
 ### 3. Add the helper types and hasImageContent() function
@@ -73,5 +75,6 @@ function hasImageContent(body: RoutableBody): boolean {
 
 ## Override
 
-Set `FORKY_VISION_MODEL` in `~/dev/forky/.env` to use a different vision model
-(defaults to `claude-opus-4-7`).
+Set `FORKY_OPUS_MODEL` in `~/dev/forky/.env` to change the default OAuth Opus
+model for plan/sentinel/review/vision routes. Use `FORKY_PLAN_MODEL` or
+`FORKY_VISION_MODEL` only when those routes should differ.

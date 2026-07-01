@@ -31,13 +31,19 @@ Plain `claude` should not inherit `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, 
 
 | Reason | Condition | Target |
 |---|---|---|
-| `sentinel` | `~/.forky/opus` file exists | OAuth Opus |
+| `sentinel` | `~/.forky/opus` file exists | OAuth Opus (`FORKY_PLAN_MODEL` or `FORKY_OPUS_MODEL`) |
 | `opus` | model name starts with `claude-opus-` | OAuth Opus |
-| `vision` | request contains an image block | OAuth Opus (vision model) |
+| `vision` | request contains an image block | OAuth Opus (`FORKY_VISION_MODEL` or `FORKY_OPUS_MODEL`) |
 | `classifier` | no tools present, `claude-*` model | OAuth Sonnet |
 | `execution` | everything else | exec backend (GLM-5.2) |
 
 The `execution` case is the common one — real Claude Code agentic turns always carry tools.
+
+Forky reads `~/dev/forky/.env` when the service starts. Set `FORKY_OPUS_MODEL`
+to change the default OAuth Opus model for plan/sentinel/review/vision routes,
+then restart `forky.service`. Use `FORKY_PLAN_MODEL`, `FORKY_VISION_MODEL`, or
+`FORKY_REVIEW_MODEL` only when that route should differ from the shared Opus
+default.
 
 ## How plan mode is detected
 

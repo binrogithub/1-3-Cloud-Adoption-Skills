@@ -27,11 +27,36 @@ def main() -> int:
         )
         changed = True
 
-    # 2. Add VISION_MODEL constant (after the last const ... MODEL line)
+    # 2. Add config-driven Opus/vision constants.
+    if "OPUS_MODEL" not in src:
+        plan_repl = (
+            'const OPUS_MODEL = process.env.FORKY_OPUS_MODEL ?? "claude-opus-4-8";\n'
+            'const PLAN_MODE_MODEL = process.env.FORKY_PLAN_MODEL ?? OPUS_MODEL;'
+        )
+        if re.search(r'^const PLAN_MODE_MODEL = [^\n]+;', src, re.M):
+            src = re.sub(r'^const PLAN_MODE_MODEL = [^\n]+;', plan_repl, src, count=1, flags=re.M)
+            changed = True
+        else:
+            insert = "\n" + plan_repl + "\n"
+            anchor = re.search(r'^(export function decideRoute|function decideRoute|export function)', src, re.M)
+            if anchor:
+                pos = anchor.start()
+                src = src[:pos] + insert + src[pos:]
+                changed = True
+    if "FORKY_PLAN_MODEL" not in src:
+        src = src.replace(
+            'const PLAN_MODE_MODEL = "claude-opus-4-7";',
+            'const PLAN_MODE_MODEL = process.env.FORKY_PLAN_MODEL ?? OPUS_MODEL;',
+        ).replace(
+            'const PLAN_MODE_MODEL = "claude-opus-4-8";',
+            'const PLAN_MODE_MODEL = process.env.FORKY_PLAN_MODEL ?? OPUS_MODEL;',
+        )
+        changed = True
+
     if "VISION_MODEL" not in src:
         insert = (
             '\n// Vision-capable model for image-bearing requests (execution backend has no vision).\n'
-            'const VISION_MODEL = process.env.FORKY_VISION_MODEL ?? "claude-opus-4-7";\n'
+            'const VISION_MODEL = process.env.FORKY_VISION_MODEL ?? OPUS_MODEL;\n'
         )
         # Insert before the first function/export, or at a reasonable anchor
         anchor = re.search(r'^(export function decideRoute|function decideRoute|export function)', src, re.M)
@@ -39,6 +64,15 @@ def main() -> int:
             pos = anchor.start()
             src = src[:pos] + insert + src[pos:]
             changed = True
+    elif "FORKY_VISION_MODEL ?? OPUS_MODEL" not in src:
+        src = src.replace(
+            'const VISION_MODEL = process.env.FORKY_VISION_MODEL ?? "claude-opus-4-7";',
+            'const VISION_MODEL = process.env.FORKY_VISION_MODEL ?? OPUS_MODEL;',
+        ).replace(
+            'const VISION_MODEL = process.env.FORKY_VISION_MODEL ?? "claude-opus-4-8";',
+            'const VISION_MODEL = process.env.FORKY_VISION_MODEL ?? OPUS_MODEL;',
+        )
+        changed = True
 
     # 3. Add hasImageContent helper (before decideRoute)
     if "hasImageContent" not in src:

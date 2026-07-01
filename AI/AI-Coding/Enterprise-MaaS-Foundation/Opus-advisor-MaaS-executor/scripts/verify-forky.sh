@@ -1,12 +1,23 @@
 #!/usr/bin/env bash
-# verify-forky.sh — end-to-end checks: env, service, text→GLM, image→Opus,
+# verify-forky.sh — end-to-end checks: env, service, text→GLM, image→configured Opus,
 # hook sentinel, LiteLLM DB confirmation.
 set -euo pipefail
 
-FORKY_PORT="${FORKY_PORT:-3458}"
+FORKY_DIR="${FORKY_DIR:-$HOME/dev/forky}"
+CONFIG_FILE="${FORKY_CONFIG_FILE:-$FORKY_DIR/.env}"
+if [[ -f "$CONFIG_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$CONFIG_FILE"
+  set +a
+fi
+
+FORKY_PORT="${FORKY_PORT:-${PORT:-3458}}"
 FORKY_URL="http://127.0.0.1:$FORKY_PORT"
 LITELLM_KEY="${LITELLM_KEY:-${LITELLM_CCR_KEY:-${EXEC_API_KEY:-}}}"
-EXEC_MODEL="${FORKY_EXEC_MODEL:-glm-5.2}"
+EXEC_MODEL="${FORKY_EXEC_MODEL:-${EXEC_MODEL:-glm-5.2}}"
+OPUS_MODEL="${FORKY_OPUS_MODEL:-claude-opus-4-8}"
+VISION_MODEL="${FORKY_VISION_MODEL:-$OPUS_MODEL}"
 
 log()  { printf '\033[1;34m[verify-forky]\033[0m %s\n' "$*"; }
 ok()   { printf '\033[1;32m  ✓\033[0m %s\n' "$*"; }
@@ -80,7 +91,7 @@ norm_resp="$(curl -fsS -H "Content-Type: application/json" \
 check_normalized() { echo "$norm_resp" | grep -qi "normalized\\|content"; }
 check check_normalized "system role inside messages is normalized instead of 400"
 
-# --- 4. image → vision (Opus) ------------------------------------------------
+# --- 4. image → vision (configured Opus) -------------------------------------
 # generate a real 8×8 green PNG (1×1 is rejected by Anthropic)
 PNG_FILE="$(mktemp /tmp/forky-verify-XXXXXX.png)"
 python3 - "$PNG_FILE" <<'PY'
@@ -112,7 +123,15 @@ img_resp="$(curl -fsS -H "Content-Type: application/json" \
   "$FORKY_URL/v1/messages" 2>&1)" || true
 
 check_image() { echo "$img_resp" | grep -qi "green\|content"; }
-check check_image "image request routes to vision (Opus) and returns a color answer"
+check check_image "image request returns a color answer"
+
+check_image_route() {
+  tail -120 "$HOME/.forky/forky.log" 2>/dev/null \
+    | grep '"event":"request"' \
+    | tail -1 \
+    | grep -q "\"routedVia\":\"vision\".*\"routedModel\":\"$VISION_MODEL\"\\|\"routedModel\":\"$VISION_MODEL\".*\"routedVia\":\"vision\""
+}
+check check_image_route "image request routes to configured vision model ($VISION_MODEL)"
 rm -f "$PNG_FILE"
 
 # --- 5. hook sentinel ---------------------------------------------------------
@@ -129,11 +148,11 @@ check check_hook "UserPromptSubmit hook creates plan-mode sentinel"
 # --- 6. LiteLLM DB confirmation ----------------------------------------------
 check_db() {
   if ! docker exec litellm_pg_db psql -U llmproxy -d litellm -t -A \
-    -c "select 1 from \"LiteLLM_SpendLogs\" where model like '%glm-5.2%' and \"startTime\" > now() - interval '5 minutes' limit 1" 2>/dev/null | grep -q 1; then
+    -c "select 1 from \"LiteLLM_SpendLogs\" where model like '%$EXEC_MODEL%' and \"startTime\" > now() - interval '5 minutes' limit 1" 2>/dev/null | grep -q 1; then
     return 1
   fi
 }
-check check_db "LiteLLM Postgres shows glm-5.2 served a request in the last 5 min"
+check check_db "LiteLLM Postgres shows $EXEC_MODEL served a request in the last 5 min"
 
 # --- summary ------------------------------------------------------------------
 echo ""
