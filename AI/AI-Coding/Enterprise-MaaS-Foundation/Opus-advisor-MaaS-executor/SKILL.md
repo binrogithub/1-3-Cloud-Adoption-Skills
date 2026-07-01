@@ -46,6 +46,36 @@ Plain `claude` keeps Claude.ai connectors. `claude-glm` keeps working unchanged 
 
 ## Quick Path
 
+### Windows native path
+
+Use this path when the user is on Windows and wants to run directly without WSL/systemd. See [Windows Native Setup](references/windows-native.md) for details.
+
+```powershell
+# 1. Install or update forky and apply Windows compatibility patches
+powershell -ExecutionPolicy Bypass -File .\scripts\install-forky.ps1
+
+# 2. Enter the Huawei MaaS GLM-5.2 API key with hidden input
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-huawei-maas-glm.ps1
+
+# 3. Configure forky to route execution directly to Huawei MaaS GLM-5.2
+powershell -ExecutionPolicy Bypass -File .\scripts\configure-forky-direct-huawei.ps1
+
+# 4. Start and verify the local proxy
+powershell -ExecutionPolicy Bypass -File .\scripts\start-forky.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-forky.ps1
+
+# 5. Start Claude Code through the hybrid router
+claude-forky
+```
+
+To see which requests used Claude versus GLM:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\forky-route-stats.ps1
+```
+
+### Linux/systemd path
+
 ```bash
 # 1. (one-time, by user) make sure Claude Code is logged in for OAuth
 claude /login
