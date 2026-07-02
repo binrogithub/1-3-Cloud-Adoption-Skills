@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex OAuth MaaS Executor"
+  short_description: "Route Codex execution through MaaS"
+  default_prompt: "Use $codex-oauth-maas-executor to install and verify the codex-forky split-routing bridge."

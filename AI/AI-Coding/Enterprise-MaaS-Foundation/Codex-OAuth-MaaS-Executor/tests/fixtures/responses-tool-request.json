@@ -1,0 +1,51 @@
+{
+  "model": "claude-sonnet-4-6",
+  "instructions": "You are a coding agent.",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "lookup_symbol",
+        "description": "Look up a symbol in the workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": ["name"]
+        }
+      }
+    },
+    {
+      "type": "local_shell"
+    },
+    {
+      "type": "apply_patch"
+    }
+  ],
+  "tool_choice": "auto",
+  "input": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Find the main entrypoint."
+        }
+      ]
+    },
+    {
+      "type": "function_call",
+      "call_id": "call_lookup_1",
+      "name": "lookup_symbol",
+      "arguments": "{\"name\":\"main\"}"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_lookup_1",
+      "output": "main is defined in src/main.js"
+    }
+  ]
+}
