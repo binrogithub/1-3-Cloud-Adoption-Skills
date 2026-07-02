@@ -1,6 +1,6 @@
 ---
 name: codex-oauth-maas-executor
-description: Install, configure, verify, or troubleshoot a side-by-side `codex-forky` command that routes normal Codex tool/code-execution turns through an existing forky service to the execution backend such as LiteLLM/Huawei MaaS GLM, while routing non-tool ordinary turns and image turns directly to Codex ChatGPT/OAuth. Assumes forky is already installed and running, usually by Opus-advisor-MaaS-executor.
+description: Install, configure, verify, or troubleshoot a side-by-side `codex-forky` command that routes normal Codex tool/code-execution turns through an existing forky service to the execution backend such as LiteLLM/Huawei MaaS GLM, while routing non-tool ordinary turns and image turns directly to Codex ChatGPT/OAuth. Assumes forky is already installed and running, usually by claude-code-maas-hybrid-router.
 ---
 
 # Codex-OAuth-MaaS-Executor

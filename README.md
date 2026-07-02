@@ -57,6 +57,7 @@ For the latest additions, check the `AI / AI-Coding`, `Big Data`, and `Cloud Fou
 | 33 | AI | AI Coding | [codex-huawei-maas](./AI/AI-Coding/Enterprise-MaaS-Foundation/codex-huawei-maas/README.md) | Configure a side-by-side `codex-glm` command that routes Codex CLI to Huawei Cloud MaaS `glm-5.1` through an isolated CCR `/v1/responses` shim, with optional LiteLLM search and vision routing. |
 | 34 | AI | AI Coding | [codearts-huawei-maas](./AI/AI-Coding/Enterprise-MaaS-Foundation/codearts-huawei-maas/README.md) | Deploy the Huawei CodeArts CLI on macOS arm64 and add a `codearts-litellm` wrapper that routes CodeArts through an OpenAI-compatible LiteLLM gateway. |
 | 35 | AI | AI Coding | [Copilot Huawei MaaS](./AI/AI-Coding/Enterprise-MaaS-Foundation/copilot-huawei-maas/SKILL.md) | Install, verify, diagnose, and harden GitHub Copilot Chat in VS Code when Huawei Cloud MaaS GLM or another Huawei MaaS OpenAI-compatible model is used through OAI Compatible Copilot. |
+| 36 | AI | AI Coding | [Claude Code MaaS Hybrid Router](./AI/AI-Coding/Enterprise-MaaS-Foundation/claude-code-maas-hybrid-router/SKILL.md) | Configure `claude-forky` so Claude Code planning, image, and classifier traffic stays on Claude OAuth while tool/code execution routes to Huawei MaaS GLM through forky and LiteLLM. |
 
 ## How To Navigate This Repository
 

@@ -7,7 +7,7 @@ FORKY_REPO="${FORKY_REPO:-https://github.com/vladharl/forky.git}"
 FORKY_DIR="${FORKY_DIR:-$HOME/dev/forky}"
 VISION_BRANCH="${FORKY_VISION_BRANCH:-forky-vision-routing}"
 BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}"
-SKILL_DIR="$HOME/.claude/skills/Opus-advisor-MaaS-executor"
+SKILL_DIR="$HOME/.claude/skills/claude-code-maas-hybrid-router"
 
 log()  { printf '\033[1;34m[install-forky]\033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31m[install-forky] error:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -55,9 +55,9 @@ log "bun install"
 # - request role normalization: Claude Code may send system/developer roles in
 #   messages; forky moves them to top-level system before validation.
 # - cache TTL ordering: Anthropic rejects a 1h cache marker after a 5m marker.
-VISION_PATCH="$HOME/.claude/skills/Opus-advisor-MaaS-executor/assets/route-vision.patch"
-NORMALIZE_PATCHER="$HOME/.claude/skills/Opus-advisor-MaaS-executor/scripts/apply-request-normalize-patch.py"
-CACHE_TTL_PATCHER="$HOME/.claude/skills/Opus-advisor-MaaS-executor/scripts/apply-cache-ttl-order-patch.py"
+VISION_PATCH="$HOME/.claude/skills/claude-code-maas-hybrid-router/assets/route-vision.patch"
+NORMALIZE_PATCHER="$HOME/.claude/skills/claude-code-maas-hybrid-router/scripts/apply-request-normalize-patch.py"
+CACHE_TTL_PATCHER="$HOME/.claude/skills/claude-code-maas-hybrid-router/scripts/apply-cache-ttl-order-patch.py"
 
 has_vision_code() {
   python3 - src/route.ts <<'PY'

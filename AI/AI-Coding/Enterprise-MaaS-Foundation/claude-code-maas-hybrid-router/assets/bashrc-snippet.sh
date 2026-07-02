@@ -3,7 +3,7 @@
 # - `claude` stays on Claude.ai OAuth/connectors.
 # - `claude-forky` routes through forky on :3458.
 # - `claude-glm` keeps its own CCR route on :3456.
-# Managed by the Opus-advisor-MaaS-executor skill — edit via scripts/configure-forky.sh, not by hand.
+# Managed by the claude-code-maas-hybrid-router skill — edit via scripts/configure-forky.sh, not by hand.
 case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac
 unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY
 export CLAUDE_CODE_DISABLE_MOUSE_CLICKS="${CLAUDE_CODE_DISABLE_MOUSE_CLICKS:-1}"
