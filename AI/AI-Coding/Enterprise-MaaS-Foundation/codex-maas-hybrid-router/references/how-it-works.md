@@ -1,6 +1,6 @@
-# How Codex-OAuth-MaaS-Executor works
+# How Codex MaaS Hybrid Router works
 
-Codex CLI expects the OpenAI Responses API. Forky expects the Anthropic Messages API. The Codex-OAuth-MaaS-Executor bridge adapts protocol only for execution requests; other requests stay on Codex OAuth.
+Codex CLI expects the OpenAI Responses API. Forky expects the Anthropic Messages API. The Codex MaaS Hybrid Router bridge adapts protocol only for execution requests; other requests stay on Codex OAuth.
 
 ```text
 Codex CLI
@@ -44,7 +44,7 @@ Forky remains the source of truth for:
 - execution backend URL and model
 - prompt caching behavior
 
-Codex-OAuth-MaaS-Executor owns only:
+Codex MaaS Hybrid Router owns only:
 
 - Codex profile and model catalog
 - local Responses endpoint on `127.0.0.1:3460`

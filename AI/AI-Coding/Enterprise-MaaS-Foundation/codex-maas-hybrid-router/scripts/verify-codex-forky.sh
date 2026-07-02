@@ -42,7 +42,7 @@ check_runtime_config() {
   local profile="$CODEX_HOME_DIR/forky.config.toml"
   local env_file="$HOME/.config/codex-forky/env"
   local catalog="$CODEX_FORKY_HOME/model-catalog.json"
-  local skill_file="$CODEX_HOME_DIR/skills/codex-oauth-maas-executor/SKILL.md"
+  local skill_file="$CODEX_HOME_DIR/skills/codex-maas-hybrid-router/SKILL.md"
 
   if [[ ! -f "$profile" ]]; then
     fail "Codex forky profile missing: $profile"

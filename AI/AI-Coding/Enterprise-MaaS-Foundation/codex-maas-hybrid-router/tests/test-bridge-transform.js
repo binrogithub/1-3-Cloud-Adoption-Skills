@@ -32,6 +32,12 @@ assert.strictEqual(bridge.shouldRouteToForkyExecution(fixture), true);
 assert.deepStrictEqual(bridge.routeDecision({ input: [{ role: 'user', content: 'hi' }] }).route, 'codex-oauth');
 assert.deepStrictEqual(bridge.routeDecision({ input: [{ role: 'user', content: 'hi' }] }).reason, 'no_tools');
 assert.deepStrictEqual(bridge.routeDecision(fixture).reason, 'tools_no_image');
+assert.strictEqual(bridge.isSearchIntentInput([
+  { role: 'user', content: [{ type: 'input_text', text: 'Work only in the current directory and edit files.' }] },
+]), false);
+assert.strictEqual(bridge.isSearchIntentInput([
+  { role: 'user', content: [{ type: 'input_text', text: 'Search the web for latest router news.' }] },
+]), true);
 assert.strictEqual(bridge.shouldRouteToForkyExecution({
   ...fixture,
   input: [

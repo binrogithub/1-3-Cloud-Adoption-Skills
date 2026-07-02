@@ -58,7 +58,7 @@ install_codex_skill() {
   local skill_dir skill_dest skill_dest_parent
   skill_dir="$(cd "$(script_dir)/.." && pwd -P)"
   [[ -f "$skill_dir/SKILL.md" ]] || return 0
-  skill_dest="$CODEX_HOME_DIR/skills/codex-oauth-maas-executor"
+  skill_dest="$CODEX_HOME_DIR/skills/codex-maas-hybrid-router"
   skill_dest_parent="$(dirname "$skill_dest")"
   mkdir -p "$skill_dest_parent"
   chmod 700 "$CODEX_HOME_DIR" "$skill_dest_parent" 2>/dev/null || true
