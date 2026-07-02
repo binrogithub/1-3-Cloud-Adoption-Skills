@@ -46,7 +46,7 @@ function Set-Sentinel {
 
 switch ($event) {
   "UserPromptSubmit" {
-    if ($mode -eq "plan") { Set-Sentinel } else { Clear-SentinelIfOwned }
+    if ($mode -eq "plan" -or -not $mode) { Set-Sentinel } else { Clear-SentinelIfOwned }
   }
   "PostToolUse" {
     if ($tool -eq "ExitPlanMode") { Clear-SentinelIfOwned }

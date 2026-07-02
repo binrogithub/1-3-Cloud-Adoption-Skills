@@ -94,11 +94,6 @@ mkdir -p "$(dirname "$UNIT_DST")"
 log "installing systemd unit → $UNIT_DST"
 cp "$UNIT_SRC" "$UNIT_DST"
 
-# If bun isn't at the default path, patch ExecStart
-if [[ ! -x "$HOME/.bun/bin/bun" ]] && command -v bun >/dev/null 2>&1; then
-  sed -i "s|%h/.bun/bin/bun|$(command -v bun)|" "$UNIT_DST"
-fi
-
 systemctl --user daemon-reload
 systemctl --user enable forky.service >/dev/null 2>&1
 

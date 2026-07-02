@@ -58,7 +58,10 @@ function hasImageContent(body: RoutableBody): boolean {
 }
 ```
 
-### 4. Add the vision branch in decideRoute(), before the final execution return
+### 4. Add the vision branch in decideRoute(), before the classifier branch
+
+Image prompts commonly have no tools, so this must run before the classifier
+heuristic. Otherwise zero-tool image requests are routed as classifier traffic.
 
 ```typescript
   if (hasImageContent(body)) {
