@@ -63,7 +63,7 @@ Run `claude-forky` in a new terminal. Plan mode (`Shift+Tab`) and images go to O
 
 ## Reinstall / teardown
 
-Run the `Opus-advisor-MaaS-executor` skill scripts:
+Run the `claude-code-maas-hybrid-router` skill scripts:
 - `scripts/configure-forky.sh` — idempotent re-configure
 - `scripts/uninstall-forky.sh` — full reversible teardown (service + .bashrc + hooks; asks before deleting repo + this memory file)
 

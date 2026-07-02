@@ -57,7 +57,7 @@ if ($exec.Count -eq 0) {
 }
 
 Write-Host ""
-Write-Host "== Claude advisor/classifier/plan requests =="
+Write-Host "== Claude OAuth/classifier/plan requests =="
 $claude = @($requests | Where-Object { $_.actualProvider -eq "anthropic-oauth" })
 if ($claude.Count -eq 0) {
   Write-Host "(none)"

@@ -1,6 +1,6 @@
 # Windows Native Setup
 
-Use this path when the user wants to run the Opus/Fable advisor plus GLM executor workflow directly on Windows, without WSL or systemd.
+Use this path when the user wants to run the Claude OAuth planning/vision plus GLM executor workflow directly on Windows, without WSL or systemd.
 
 ## What Changes Versus Linux
 
@@ -44,11 +44,11 @@ Default Windows direct routing:
 
 ```text
 normal execution -> Huawei MaaS GLM-5.2
-plan / forced advisor / image turns -> Claude OAuth
+plan / forced Claude / image turns -> Claude OAuth
 classifier pings -> Claude OAuth Sonnet
 ```
 
-The default plan model in `configure-forky-direct-huawei.ps1` is `claude-fable-5`. Override with `-PlanModel` if the account uses a different advisor model.
+The default plan model in `configure-forky-direct-huawei.ps1` is `claude-fable-5`. Override with `-PlanModel` if the account uses a different Claude OAuth model.
 
 ## Verify Routing
 

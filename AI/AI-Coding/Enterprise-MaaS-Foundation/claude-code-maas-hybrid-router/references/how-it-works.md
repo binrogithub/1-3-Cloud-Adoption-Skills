@@ -117,8 +117,8 @@ wrapper uses only `ANTHROPIC_BASE_URL` and explicitly unsets auth-token/API-key 
 | Use case | hybrid Opus + GLM in one command | GLM-only (or other single backend) |
 | Prompt caching | yes (ephemeral cache_control) | depends on backend |
 
-Forky's key advantage: **you keep your Opus advisor for the hard thinking and only spend
-GLM tokens on the cheap execution**. Ccr sends everything to one backend.
+Forky's key advantage: **you keep Claude OAuth for hard planning and vision while spending
+GLM tokens on execution**. Ccr sends everything to one backend.
 
 ## Coexistence
 

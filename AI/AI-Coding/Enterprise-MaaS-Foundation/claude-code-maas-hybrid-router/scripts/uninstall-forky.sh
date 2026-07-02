@@ -5,7 +5,7 @@
 set -euo pipefail
 
 FORKY_DIR="${FORKY_DIR:-$HOME/dev/forky}"
-SKILL_DIR="$HOME/.claude/skills/Opus-advisor-MaaS-executor"
+SKILL_DIR="$HOME/.claude/skills/claude-code-maas-hybrid-router"
 
 log()  { printf '\033[1;34m[uninstall-forky]\033[0m %s\n' "$*"; }
 ask()  { printf '\033[1;33m[uninstall-forky]\033[0m %s [y/N] ' "$*"; read -r ans; [[ "$ans" == "y" || "$ans" == "Y" ]]; }

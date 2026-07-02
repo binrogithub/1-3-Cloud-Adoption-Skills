@@ -1,7 +1,7 @@
 param(
   [string]$EnvFile = "$PSScriptRoot\glm-local.env",
   [string]$ForkyDir = "$env:USERPROFILE\dev\forky",
-  [string]$SkillDir = "$env:USERPROFILE\.claude\skills\opus-advisor-maas-executor-windows",
+  [string]$SkillDir = "$env:USERPROFILE\.claude\skills\claude-code-maas-hybrid-router",
   [string]$PlanModel = "claude-fable-5",
   [string]$ClassifierModel = "claude-sonnet-4-6",
   [int]$Port = 3458

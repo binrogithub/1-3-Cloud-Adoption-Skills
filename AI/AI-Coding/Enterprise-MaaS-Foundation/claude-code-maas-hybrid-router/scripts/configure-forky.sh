@@ -7,7 +7,7 @@ set -euo pipefail
 FORKY_DIR="${FORKY_DIR:-$HOME/dev/forky}"
 VISION_BRANCH="${FORKY_VISION_BRANCH:-forky-vision-routing}"
 BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}"
-SKILL_DIR="$HOME/.claude/skills/Opus-advisor-MaaS-executor"
+SKILL_DIR="$HOME/.claude/skills/claude-code-maas-hybrid-router"
 
 # --- tunables (env overrides) ------------------------------------------------
 LITELLM_URL="${LITELLM_URL:-http://127.0.0.1:4000/v1}"
@@ -75,7 +75,7 @@ fi
 ENV_FILE="$FORKY_DIR/.env"
 log "writing $ENV_FILE"
 cat > "$ENV_FILE" <<EOF
-# Managed by Opus-advisor-MaaS-executor skill. Re-run configure-forky.sh to update.
+# Managed by claude-code-maas-hybrid-router skill. Re-run configure-forky.sh to update.
 EXEC_BASE_URL="$LITELLM_URL"
 EXEC_API_KEY="$LITELLM_KEY"
 EXEC_MODEL="$EXEC_MODEL"

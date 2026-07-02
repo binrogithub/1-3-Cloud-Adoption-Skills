@@ -12,7 +12,7 @@ they serve different intents and must not be merged.
 | Skill | Command | Backend | Relationship to Anthropic API |
 | --- | --- | --- | --- |
 | `claude-code-huawei-maas` | `claude-glm` | GLM-5.1 via LiteLLM on `:3456` | **Full replacement.** Claude Code talks only to MaaS. The official Anthropic endpoint is not used at all. |
-| `Opus-advisor-MaaS-executor` | `claude-forky` | Opus (OAuth) for plan/vision + GLM-5.2 for execution, via forky on `:3458` | **Hybrid.** The official Claude (Opus) is retained for planning and image/vision tasks; MaaS (GLM) handles execution. Both Anthropic and MaaS are used. |
+| `claude-code-maas-hybrid-router` | `claude-forky` | Claude OAuth for plan/vision/classifier + GLM-5.2 for execution, via forky on `:3458` | **Hybrid router.** Claude is retained for planning, image/vision, and classifier traffic; MaaS (GLM) handles execution. Both Anthropic and MaaS are used. |
 
 ### `claude-glm` — MaaS-only
 
@@ -23,19 +23,19 @@ instance that **never contacts the Anthropic API**. Use this when the
 Anthropic endpoint is unavailable, blocked, or not desired, and you want
 every Claude Code capability (chat, tools, agents, MCP) served by MaaS.
 
-### `claude-forky` — Hybrid (Claude + MaaS)
+### `claude-forky` — Hybrid Router (Claude + MaaS)
 
-`Opus-advisor-MaaS-executor` installs a forky router (`:3458`) that splits
-traffic by intent: planning and image/vision requests go to Opus through
-the official Anthropic OAuth path, while execution (code edits, shell
-commands, agent runs) goes to GLM on MaaS. The resulting `claude-forky`
-command **keeps Claude (Opus) available** and adds MaaS as the execution
-backend. Use this when you want Opus-quality planning and vision but
-prefer MaaS for the bulk of execution work.
+`claude-code-maas-hybrid-router` installs a forky router (`:3458`) that splits
+traffic by intent: planning, image/vision, and classifier requests go through
+the official Claude OAuth path, while execution (code edits, shell commands,
+agent runs) goes to GLM on MaaS. The resulting `claude-forky` command keeps
+Claude available where it matters and adds MaaS as the execution backend.
+Use this when you want Claude-quality planning and vision but prefer MaaS
+for the bulk of execution work.
 
 ## Prerequisite relationship
 
-`Opus-advisor-MaaS-executor` depends on the LiteLLM stack provisioned by
+`claude-code-maas-hybrid-router` depends on the LiteLLM stack provisioned by
 `claude-code-huawei-maas` (or by `LiteLLM-Huawei-MaaS-Proxy`). Install the
 MaaS proxy skill first, then layer forky on top. The reverse dependency
 does not hold — `claude-glm` is self-contained.

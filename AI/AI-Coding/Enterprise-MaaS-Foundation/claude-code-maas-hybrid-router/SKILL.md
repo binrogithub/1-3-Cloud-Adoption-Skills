@@ -1,6 +1,6 @@
 ---
-name: opus-advisor-maas-executor
-description: Install and configure forky (github.com/vladharl/forky) end-to-end so `claude-forky` routes plan-mode + image turns to Claude Opus via the user's Pro/Max OAuth subscription while sending normal execution turns to Huawei Cloud MaaS (GLM-5.2) through an existing local LiteLLM proxy. Use when the user wants to keep their Opus advisor for design/planning and let GLM do cheap code execution, while preserving plain `claude` for Claude.ai OAuth connectors. Sets up forky as a systemd user service, applies local compatibility patches (vision routing, Claude Code system/developer message-role normalization, and Anthropic cache-control TTL ordering), writes a `claude-forky` wrapper that uses ANTHROPIC_BASE_URL without ANTHROPIC_AUTH_TOKEN, adds copy-friendly mouse settings, trusts `/root` when requested so local permissions are honored, and merges plan-mode hooks into `~/.claude/settings.json`. Assumes LiteLLM is already running on :4000 and that the user has logged into Claude Code (`claude /login`) so OAuth credentials exist.
+name: claude-code-maas-hybrid-router
+description: Install and configure forky (github.com/vladharl/forky) end-to-end so `claude-forky` routes Claude Code planning, image, and classifier traffic through Claude OAuth while sending normal tool/code execution to Huawei Cloud MaaS (GLM-5.2) through an existing local LiteLLM proxy. Use when the user wants one Claude Code command with Claude-quality reasoning and vision plus lower-cost MaaS execution, while preserving plain `claude` for Claude.ai OAuth connectors. Sets up forky as a systemd user service, applies local compatibility patches (vision routing, Claude Code system/developer message-role normalization, and Anthropic cache-control TTL ordering), writes a `claude-forky` wrapper that uses ANTHROPIC_BASE_URL without ANTHROPIC_AUTH_TOKEN, adds copy-friendly mouse settings, trusts `/root` when requested so local permissions are honored, and merges plan-mode hooks into `~/.claude/settings.json`. Assumes LiteLLM is already running on :4000 and that the user has logged into Claude Code (`claude /login`) so OAuth credentials exist.
 allowed-tools:
   - Bash
   - Read
@@ -9,7 +9,7 @@ allowed-tools:
   - AskUserQuestion
 ---
 
-# Opus-advisor-MaaS-executor
+# Claude Code MaaS Hybrid Router
 
 ## Overview
 
@@ -86,13 +86,13 @@ export FORKY_EXEC_MODEL="glm-5.2"        # optional override
 export FORKY_OPUS_MODEL="claude-opus-4-8" # optional OAuth Opus model override
 
 # 3. run the installer (clones, branches, builds vision patch)
-~/.claude/skills/Opus-advisor-MaaS-executor/scripts/install-forky.sh
+~/.claude/skills/claude-code-maas-hybrid-router/scripts/install-forky.sh
 
 # 4. configure: writes .env, systemd unit, claude-forky wrapper, .bashrc helper block, settings.json hooks, memory
-~/.claude/skills/Opus-advisor-MaaS-executor/scripts/configure-forky.sh
+~/.claude/skills/claude-code-maas-hybrid-router/scripts/configure-forky.sh
 
 # 5. verify (text → GLM, image → Opus, hook toggles sentinel, LiteLLM DB confirms)
-~/.claude/skills/Opus-advisor-MaaS-executor/scripts/verify-forky.sh
+~/.claude/skills/claude-code-maas-hybrid-router/scripts/verify-forky.sh
 
 # 6. open a new terminal and run:
 claude-forky
@@ -101,7 +101,7 @@ claude-forky
 To revert everything:
 
 ```bash
-~/.claude/skills/Opus-advisor-MaaS-executor/scripts/uninstall-forky.sh
+~/.claude/skills/claude-code-maas-hybrid-router/scripts/uninstall-forky.sh
 ```
 
 ## What the scripts do (and why each step is necessary)
@@ -207,7 +207,7 @@ docker exec litellm_pg_db psql -U llmproxy -d litellm -t -A -F'|' \
 | Command | `claude-forky` | `claude-glm` |
 | Backend choice | OAuth (plan/vision) **+** GLM (exec) | GLM only |
 | Model alias trick | none — sends Anthropic format, translates internally | uses `claude-opus-4-6` alias on LiteLLM |
-| When to use | want Opus advisor & GLM executor in one command | want a dedicated GLM-only command |
+| When to use | want Claude planning/vision and GLM execution in one command | want a dedicated GLM-only command |
 
 Both can be installed side by side. Plain `claude` remains available for Claude.ai OAuth/connectors.
 
