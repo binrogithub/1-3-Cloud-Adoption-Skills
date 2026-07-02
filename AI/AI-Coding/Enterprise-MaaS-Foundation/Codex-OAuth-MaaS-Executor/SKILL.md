@@ -45,12 +45,13 @@ Environment overrides:
 | `CODEX_FORKY_CONTEXT_TOKENS` | `180000` | Codex model catalog context window |
 | `CODEX_FORKY_MAX_OUTPUT_TOKENS` | `8192` | Anthropic `max_tokens` |
 | `INSTALL_SYSTEMD_USER_SERVICE` | `1` | Install `codex-forky-bridge.service` when possible |
+| `INSTALL_CODEX_SKILL` | `1` | Copy this skill into `$CODEX_HOME/skills/codex-oauth-maas-executor` for future auto-discovery |
 
 ## Files
 
 - `scripts/configure-codex-forky.sh` writes the Codex profile, model catalog, wrapper, env file, bridge copy, and optional systemd service.
 - `scripts/codex-forky-responses-bridge.cjs` exposes `/v1/responses` and translates the practical Codex Responses subset to Anthropic Messages.
-- `scripts/verify-codex-forky.sh` checks OAuth tokens, forky health, `EXEC_MODEL`, bridge startup, OAuth routing, and execution routing.
+- `scripts/verify-codex-forky.sh` checks OAuth tokens, forky health, `EXEC_MODEL`, stale runtime config, skill auto-discovery, bridge startup, OAuth routing, and execution routing.
 - `tests/test-bridge-transform.js` covers request and tool conversion.
 - `references/how-it-works.md` explains the architecture and routing boundaries.
 
@@ -77,3 +78,4 @@ codex-forky exec --skip-git-repo-check --ephemeral "Reply with OK only"
 - Text-only prompts route to Codex OAuth: expected. Agentic Codex execution normally includes tools and routes to forky/glm-5.2.
 - Image requests route to Codex OAuth: expected. They bypass forky so GLM's lack of vision does not matter.
 - OAuth request fails with 401: run `codex login` again so `~/.codex/auth.json` has fresh ChatGPT tokens.
+- `codex-forky` shows `gpt-5.5 high` or loops through many file reads: stale local runtime config is likely. Rerun `env -u CODEX_FORKY_MODEL -u CODEX_FORKY_OAUTH_MODEL ./scripts/configure-codex-forky.sh`, then start a new `codex-forky` session. `./scripts/verify-codex-forky.sh` should report `Codex profile uses claude-sonnet-4-6 with reasoning disabled`.

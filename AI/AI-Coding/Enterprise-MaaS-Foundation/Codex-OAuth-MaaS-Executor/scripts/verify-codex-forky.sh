@@ -7,6 +7,8 @@ if [[ -f "$HOME/.config/codex-forky/env" ]]; then
 fi
 
 CODEX_FORKY_BIN_DIR="${CODEX_FORKY_BIN_DIR:-$HOME/.local/bin}"
+CODEX_HOME_DIR="${CODEX_HOME:-$HOME/.codex}"
+CODEX_FORKY_HOME="${CODEX_FORKY_HOME:-$HOME/.codex-forky}"
 CODEX_FORKY_BRIDGE_URL="${CODEX_FORKY_BRIDGE_URL:-http://127.0.0.1:3460}"
 CODEX_FORKY_ROUTER_KEY="${CODEX_FORKY_ROUTER_KEY:-codex-forky-local}"
 CODEX_FORKY_MODEL="${CODEX_FORKY_MODEL:-claude-sonnet-4-6}"
@@ -34,6 +36,59 @@ need_cmd() {
 bridge_healthy() {
   curl -fsS -m 2 -H "Authorization: Bearer $CODEX_FORKY_ROUTER_KEY" \
     "$CODEX_FORKY_BRIDGE_URL/v1/responses" >/dev/null 2>&1
+}
+
+check_runtime_config() {
+  local profile="$CODEX_HOME_DIR/forky.config.toml"
+  local env_file="$HOME/.config/codex-forky/env"
+  local catalog="$CODEX_FORKY_HOME/model-catalog.json"
+  local skill_file="$CODEX_HOME_DIR/skills/codex-oauth-maas-executor/SKILL.md"
+
+  if [[ ! -f "$profile" ]]; then
+    fail "Codex forky profile missing: $profile"
+  elif grep -q "^model = \"$CODEX_FORKY_MODEL\"$" "$profile" &&
+       grep -q '^model_reasoning_effort = "none"$' "$profile"; then
+    ok "Codex profile uses $CODEX_FORKY_MODEL with reasoning disabled"
+  else
+    fail "Codex profile is stale; expected model=$CODEX_FORKY_MODEL and model_reasoning_effort=none in $profile"
+  fi
+
+  if [[ ! -f "$env_file" ]]; then
+    fail "codex-forky env file missing: $env_file"
+  elif grep -q "^export CODEX_FORKY_MODEL=\"$CODEX_FORKY_MODEL\"$" "$env_file"; then
+    ok "codex-forky env uses $CODEX_FORKY_MODEL"
+  else
+    fail "codex-forky env is stale; expected CODEX_FORKY_MODEL=$CODEX_FORKY_MODEL in $env_file"
+  fi
+
+  CATALOG="$catalog" EXPECTED_MODEL="$CODEX_FORKY_MODEL" node <<'NODE'
+const fs = require('fs');
+const catalog = process.env.CATALOG;
+const expected = process.env.EXPECTED_MODEL;
+try {
+  const body = JSON.parse(fs.readFileSync(catalog, 'utf8'));
+  const model = body.models && body.models[0];
+  if (!model) throw new Error('model catalog has no models[0]');
+  if (model.slug !== expected) throw new Error(`catalog slug is ${model.slug}, expected ${expected}`);
+  if (model.supports_search_tool !== false) throw new Error('catalog should not advertise search support');
+  if (model.supports_reasoning_summaries !== false) throw new Error('catalog should not advertise reasoning summaries');
+  process.exit(0);
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
+NODE
+  if [[ $? -eq 0 ]]; then
+    ok "model catalog is lean for $CODEX_FORKY_MODEL"
+  else
+    fail "model catalog is stale; rerun scripts/configure-codex-forky.sh"
+  fi
+
+  if [[ -f "$skill_file" ]]; then
+    ok "Codex skill is installed at $skill_file"
+  else
+    fail "Codex skill is not installed at $skill_file; rerun scripts/configure-codex-forky.sh"
+  fi
 }
 
 start_bridge_if_needed() {
@@ -172,6 +227,7 @@ main() {
   check_codex_oauth
   check_forky
   check_exec_model
+  check_runtime_config
   start_bridge_if_needed
   check_oauth_route
   check_execution_route
