@@ -44,7 +44,7 @@ For the latest additions, check the `AI / AI-Coding`, `Big Data`, and `Cloud Fou
 | 20 | AI | AI Applications | [Dify NL2SQL Docker](./AI/AI-Applications/dify-nl2sql-docker/README.md) | Build and operate a local Dify Workflow that converts natural language into safe read-only SQL through Docker Compose, LiteLLM/OpenAI-compatible models, and a PostgreSQL query gateway. |
 | 21 | AI | Specialized Migration Operations | [MGC Cross-Region Migration](./AI/host_migration/README.md) | Execute and troubleshoot Huawei Cloud cross-region server migration with MGC/SMS and Terraform, including SMS-first execution, rsync fallback for `SMS.6504`, task cleanup, quota checks, and reusable postmortem assets. |
 | 22 | AI | AI Coding | [CSS Code Search MCP](./AI/AI-Coding/Enterprise-MaaS-Foundation/CSS-Code-Search-MCP/README.md) | Provision a Huawei Cloud CSS cluster, index a code repository into CSS/OpenSearch, and expose it as a searchable MCP tool for claude-glm with search_code, list_skills, and get_file tools. |
-| 23 | AI | AI Coding | [Claude Code Huawei MaaS](./AI/AI-Coding/Enterprise-MaaS-Foundation/claude-code-huawei-maas/README.md) | Route Claude Code through claude-code-router to Huawei Cloud MaaS, configure `glm-5.1`, tune context/output limits, and optionally add Z.ai web-search-prime MCP search or a standalone Anthropic Messages API proxy for the Claude Agent SDK. |
+| 23 | AI | AI Coding | [Claude Code MaaS Direct Router](./AI/AI-Coding/Enterprise-MaaS-Foundation/claude-code-maas-direct-router/README.md) | Configure the MaaS-only `claude-glm` command through claude-code-router and LiteLLM so Claude Code traffic routes directly to Huawei Cloud MaaS, with optional search and Claude Agent SDK proxy paths. |
 | 24 | AI | Agent Platform | [Enterprise Agent Memory](./AI/Agent-Platform/enterprise-agent-memory-skill/README.md) | Build cross-session persistent memory for enterprise agents with hook-based capture, AI compression, tiered retrieval, privacy controls, and audit trails. |
 | 25 | AI | Agent Platform | [Agent Context Compression and Retrieval](./AI/Agent-Platform/agent-context-compression-and-retrieval-skill/README.md) | Build automatic context compression and tiered recall for enterprise agents with recall probes, artifact probes, and token cost visibility. |
 | 26 | AI | Agent Platform | [Project Memory RAG](./AI/Agent-Platform/project-memory-rag-skill/README.md) | Build project-level knowledge persistence that combines learned memory, document RAG, GraphRAG, MCP access, and skill-based procedural memory. |
@@ -73,7 +73,7 @@ For the latest additions, check the `AI / AI-Coding`, `Big Data`, and `Cloud Fou
 The skill packages are written so they can be used by multiple AI coding agents.
 
 - **Codex**: use `SKILL.md` as the agent-facing workflow, then load `references/` or run bundled scripts only when needed.
-- **Claude Code**: use the same `SKILL.md` and reusable assets as task context. For Huawei Cloud MaaS-backed Claude Code setup, start from the Claude Code SDK Agent MaaS skill or the Claude Code Huawei MaaS router skill in the AI Coding domain.
+- **Claude Code**: use the same `SKILL.md` and reusable assets as task context. For Huawei Cloud MaaS-backed Claude Code setup, start from the Claude Code SDK Agent MaaS skill or the Claude Code MaaS Direct Router skill in the AI Coding domain.
 - **Other coding agents**: use the repository index to locate the scenario package, then treat `README.md` or `Readme.md` as the human overview and `SKILL.md` as the operational instruction set.
 
 ## Level 1 Domains

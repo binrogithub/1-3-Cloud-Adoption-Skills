@@ -1,13 +1,13 @@
 ---
-name: claude-code-huawei-maas
-description: Configure Claude Code to use Huawei Cloud MaaS or ModelArts MaaS through claude-code-router and a LiteLLM Anthropic adapter, optionally add a CCR bridge for LiteLLM-backed search or Z.ai web-search-prime MCP search, add a claude-anou anonymous blind model-test command, or configure the Claude Agent SDK (and Claude Code) against a standalone local Anthropic Messages API proxy backed directly by the MaaS OpenAI-compatible endpoint. Use when Codex needs to add a side-by-side claude-glm command that routes to Huawei MaaS glm-5.1 while preserving the original claude command on Anthropic, install or configure claude-code-router, deploy the production CCR config/custom-router/adapter, adjust context length, verify that Claude Code is actually backed by MaaS, route Claude Code WebSearch/current-news/latest prompts through a LiteLLM Exa search injection path, configure Z.ai MCP search with Z_API_KEY, add an optional claude-anou command that runs Claude Code as "Anonymous-Model" and binds each project to a hidden anon-model-a/anon-model-b backend for blind A/B model comparison, or wire the TypeScript Claude Agent SDK query() and Claude Code to a simpler 127.0.0.1:3000 Anthropic-to-MaaS proxy (including tool-call/streaming compatibility, rate limiting, metrics, and metadata-only logging).
+name: claude-code-maas-direct-router
+description: Configure Claude Code's `claude-glm` command as a direct MaaS router: all Claude Code traffic for that command goes through claude-code-router and a LiteLLM Anthropic adapter to Huawei Cloud MaaS or ModelArts MaaS, while the original `claude` command stays on Anthropic. Optionally add a CCR bridge for LiteLLM-backed search or Z.ai web-search-prime MCP search, add a claude-anou anonymous blind model-test command, or configure the Claude Agent SDK (and Claude Code) against a standalone local Anthropic Messages API proxy backed directly by the MaaS OpenAI-compatible endpoint. Use when Codex needs to install or troubleshoot the MaaS-only `claude-glm` path, deploy the production CCR config/custom-router/adapter, adjust context length, verify that Claude Code is actually backed by MaaS, route Claude Code WebSearch/current-news/latest prompts through a LiteLLM Exa search injection path, configure Z.ai MCP search with Z_API_KEY, add an optional claude-anou command that runs Claude Code as "Anonymous-Model" and binds each project to a hidden anon-model-a/anon-model-b backend for blind A/B model comparison, or wire the TypeScript Claude Agent SDK query() and Claude Code to a simpler 127.0.0.1:3000 Anthropic-to-MaaS proxy (including tool-call/streaming compatibility, rate limiting, metrics, and metadata-only logging).
 ---
 
-# Claude Code Huawei MaaS
+# Claude Code MaaS Direct Router
 
 ## Overview
 
-Use this skill to route Claude Code through `claude-code-router` (`ccr`) and a LiteLLM Anthropic adapter to Huawei Cloud MaaS. The setup is side-by-side: keep the original `claude` command on Anthropic and add `claude-glm`/`Claude-glm` for Huawei MaaS `glm-5.1`. The deployed chain is `claude-glm → ccr (3456, custom router) → LiteLLM Anthropic adapter (4010) → LiteLLM (4000, docker) → MaaS glm-5.1`, routed via the `claude-opus-4-6` alias. It can also install the CCR bridge used with LiteLLM-side Exa search injection or add the Z.ai `web-search-prime` MCP search tool for Claude Code.
+Use this skill to route the `claude-glm` command directly through `claude-code-router` (`ccr`) and a LiteLLM Anthropic adapter to Huawei Cloud MaaS. The setup is side-by-side: keep the original `claude` command on Anthropic and add `claude-glm`/`Claude-glm` as the MaaS-only path for Huawei MaaS `glm-5.1`. The deployed chain is `claude-glm → ccr (3456, custom router) → LiteLLM Anthropic adapter (4010) → LiteLLM (4000, docker) → MaaS glm-5.1`, routed via the `claude-opus-4-6` alias. It can also install the CCR bridge used with LiteLLM-side Exa search injection or add the Z.ai `web-search-prime` MCP search tool for Claude Code.
 
 ## Quick Path
 
@@ -39,7 +39,7 @@ Example:
 
 ```bash
 export HUAWEI_MAAS_API_KEY='...'
-/root/.codex/skills/claude-code-huawei-maas/scripts/configure-claude-glm.sh
+/root/.codex/skills/claude-code-maas-direct-router/scripts/configure-claude-glm.sh
 ```
 
 The side-by-side script accepts `HUAWEI_MAAS_API_KEY`, `MAAS_API_KEY`, or `API_KEY` and stores it in `~/.config/claude-glm/env` with `0600` permissions so only `claude-glm` uses it, alongside the LiteLLM virtual keys.
@@ -48,14 +48,14 @@ Add Z.ai search MCP:
 
 ```bash
 export Z_API_KEY='...'
-/root/.codex/skills/claude-code-huawei-maas/scripts/configure-zai-search-mcp.sh
+/root/.codex/skills/claude-code-maas-direct-router/scripts/configure-zai-search-mcp.sh
 ```
 
 Add the CCR bridge for LiteLLM-backed search:
 
 ```bash
-/root/.codex/skills/claude-code-huawei-maas/scripts/configure-ccr-search.py --dry-run
-/root/.codex/skills/claude-code-huawei-maas/scripts/configure-ccr-search.py --apply
+/root/.codex/skills/claude-code-maas-direct-router/scripts/configure-ccr-search.py --dry-run
+/root/.codex/skills/claude-code-maas-direct-router/scripts/configure-ccr-search.py --apply
 ```
 
 ## Side-By-Side Claude-GLM
@@ -305,8 +305,8 @@ Expected CCR behavior:
 Preferred setup script:
 
 ```bash
-/root/.codex/skills/claude-code-huawei-maas/scripts/configure-ccr-search.py --dry-run
-/root/.codex/skills/claude-code-huawei-maas/scripts/configure-ccr-search.py --apply
+/root/.codex/skills/claude-code-maas-direct-router/scripts/configure-ccr-search.py --dry-run
+/root/.codex/skills/claude-code-maas-direct-router/scripts/configure-ccr-search.py --apply
 ```
 
 Validate CCR search routing:
@@ -349,7 +349,7 @@ Preferred setup:
 
 ```bash
 export Z_API_KEY='...'
-/root/.codex/skills/claude-code-huawei-maas/scripts/configure-zai-search-mcp.sh
+/root/.codex/skills/claude-code-maas-direct-router/scripts/configure-zai-search-mcp.sh
 ```
 
 Manual user-scope config in `~/.claude.json`:
@@ -415,7 +415,7 @@ Prerequisites:
 Install:
 
 ```bash
-/root/.codex/skills/claude-code-huawei-maas/scripts/configure-claude-anou.sh
+/root/.codex/skills/claude-code-maas-direct-router/scripts/configure-claude-anou.sh
 ```
 
 Use (always run from inside the project directory you want to test):

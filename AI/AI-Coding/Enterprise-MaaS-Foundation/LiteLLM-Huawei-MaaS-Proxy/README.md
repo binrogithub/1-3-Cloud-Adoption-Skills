@@ -258,7 +258,7 @@ The dashboard includes a "Deployment Load Balancing" row with 5 panels:
 - Image prompts containing OpenAI-style `image_url` blocks or Anthropic-style `image` blocks are rewritten to the `vision-openrouter` model group.
 - Responses API function tool shapes are repaired before deployment calls so LiteLLM can bridge CCR `/v1/responses` traffic to OpenAI-compatible chat models.
 
-For `claude-glm`, pair this LiteLLM proxy with `claude-code-huawei-maas/scripts/configure-ccr-search.py`. CCR should strip local Claude Code `WebSearch`/`WebFetch` tools for search-intent prompts, while LiteLLM performs the actual Exa prefetch.
+For `claude-glm`, pair this LiteLLM proxy with `claude-code-maas-direct-router/scripts/configure-ccr-search.py`. CCR should strip local Claude Code `WebSearch`/`WebFetch` tools for search-intent prompts, while LiteLLM performs the actual Exa prefetch.
 
 ## Source Patches, Rolling Budget, and Anthropic Adapter
 
