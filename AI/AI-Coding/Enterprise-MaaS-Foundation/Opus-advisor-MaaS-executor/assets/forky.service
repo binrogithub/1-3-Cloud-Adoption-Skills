@@ -7,7 +7,8 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=%h/dev/forky
 EnvironmentFile=%h/dev/forky/.env
-ExecStart=%h/.bun/bin/bun %h/dev/forky/bin/forky
+# forky/bin/forky is a native executable; do not run it through bun.
+ExecStart=%h/dev/forky/bin/forky
 Restart=always
 RestartSec=2
 StandardOutput=append:%h/.forky/forky.log

@@ -60,7 +60,13 @@ NORMALIZE_PATCHER="$HOME/.claude/skills/Opus-advisor-MaaS-executor/scripts/apply
 CACHE_TTL_PATCHER="$HOME/.claude/skills/Opus-advisor-MaaS-executor/scripts/apply-cache-ttl-order-patch.py"
 
 has_vision_code() {
-  grep -q '"vision"' src/route.ts 2>/dev/null
+  python3 - src/route.ts <<'PY'
+import pathlib, sys
+src = pathlib.Path(sys.argv[1]).read_text()
+vision = src.find("if (hasImageContent(body))")
+classifier = src.find("if (looksLikeClassifierRequest(model, body))")
+sys.exit(0 if '"vision"' in src and vision >= 0 and classifier >= 0 and vision < classifier else 1)
+PY
 }
 
 has_role_normalizer() {
@@ -69,6 +75,10 @@ has_role_normalizer() {
 
 has_cache_ttl_normalizer() {
   grep -q 'normalizeCacheControlTtlOrder' src/anthropic.ts 2>/dev/null
+}
+
+has_plan_hook_fallback() {
+  grep -q '\[ "$MODE" = "_" \]' bin/forky-hook 2>/dev/null
 }
 
 if git rev-parse --verify --quiet "refs/heads/$VISION_BRANCH" >/dev/null; then
@@ -129,6 +139,30 @@ else
     && log "cache TTL ordering patch applied" \
     || die "could not patch src/anthropic.ts for cache TTL ordering"
 fi
+
+if has_plan_hook_fallback; then
+  log "plan-mode hook fallback present in bin/forky-hook"
+else
+  log "plan-mode hook fallback MISSING — patching bin/forky-hook"
+  python3 - bin/forky-hook <<'PY'
+import pathlib, sys
+path = pathlib.Path(sys.argv[1])
+src = path.read_text()
+old = 'if [ "$MODE" = "plan" ]; then'
+new = 'if [ "$MODE" = "plan" ] || [ "$MODE" = "_" ]; then'
+if old not in src:
+    raise SystemExit(f"could not find hook mode condition in {path}")
+path.write_text(src.replace(old, new, 1))
+PY
+  chmod +x bin/forky-hook
+  git add bin/forky-hook
+  git commit --quiet -m "hook: treat missing permission mode as plan sentinel"
+  log "plan-mode hook fallback patch applied"
+fi
+
+log "building native forky executable"
+"$BUN_BIN" run build >/dev/null
+chmod +x bin/forky
 
 log "forky installed at $FORKY_DIR (branch: $VISION_BRANCH)"
 log "next: run scripts/configure-forky.sh"

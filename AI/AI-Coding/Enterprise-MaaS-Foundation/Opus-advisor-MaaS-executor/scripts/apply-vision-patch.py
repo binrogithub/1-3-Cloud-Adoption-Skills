@@ -101,13 +101,38 @@ function hasImageContent(body: RoutableBody): boolean {
             src = src[:pos] + helper + src[pos:]
             changed = True
 
-    # 4. Add vision branch before the final execution return
-    if 'reason: "vision"' not in src:
-        # Find the execution return and insert before it
+    # 4. Add or move vision branch before the classifier heuristic. Image
+    # prompts usually have no tools; if classifier runs first, image requests
+    # are incorrectly routed as tool-less classifier traffic.
+    vision_branch = (
+        '  if (hasImageContent(body)) {\n'
+        '    return { provider: "anthropic-oauth", rewriteModel: VISION_MODEL, reason: "vision" };\n'
+        '  }\n\n'
+    )
+    vision_route = src.find("if (hasImageContent(body))")
+    classifier_route = src.find("if (looksLikeClassifierRequest(model, body))")
+    if vision_route < 0:
         src = re.sub(
-            r'(  return \{ provider:\s*"aistack"[^}]*reason:\s*"execution"[^}]*\};)',
-            '  if (hasImageContent(body)) {\n    return { provider: "anthropic-oauth", rewriteModel: VISION_MODEL, reason: "vision" };\n  }\n\n\1',
+            r'(  if \(looksLikeClassifierRequest\(model, body\)\) \{)',
+            vision_branch + r'\1',
             src,
+            count=1,
+        )
+        changed = True
+    elif classifier_route >= 0 and vision_route > classifier_route:
+        src = re.sub(
+            r'\n?  if \(hasImageContent\(body\)\) \{\n'
+            r'    return \{ provider: "anthropic-oauth", rewriteModel: VISION_MODEL, reason: "vision" \};\n'
+            r'  \}\n\n?',
+            "\n",
+            src,
+            count=1,
+        )
+        src = re.sub(
+            r'(  if \(looksLikeClassifierRequest\(model, body\)\) \{)',
+            vision_branch + r'\1',
+            src,
+            count=1,
         )
         changed = True
 
