@@ -1,9 +1,9 @@
 ---
-name: codex-oauth-maas-executor
-description: Install, configure, verify, or troubleshoot a side-by-side `codex-forky` command that routes normal Codex tool/code-execution turns through an existing forky service to the execution backend such as LiteLLM/Huawei MaaS GLM, while routing non-tool ordinary turns and image turns directly to Codex ChatGPT/OAuth. Assumes forky is already installed and running, usually by claude-code-maas-hybrid-router.
+name: codex-maas-hybrid-router
+description: Install, configure, verify, or troubleshoot a side-by-side `codex-forky` command that routes normal Codex tool/code-execution turns through an existing forky service to the MaaS execution backend such as LiteLLM/Huawei MaaS GLM, while routing non-tool ordinary turns and image turns directly to Codex ChatGPT/OAuth. Assumes forky is already installed and running, usually by claude-code-maas-hybrid-router.
 ---
 
-# Codex-OAuth-MaaS-Executor
+# Codex MaaS Hybrid Router
 
 ## Overview
 
@@ -20,7 +20,7 @@ It preserves plain `codex`. It does not install forky itself and does not change
 ## Quick Path
 
 ```bash
-cd AI/AI-Coding/Enterprise-MaaS-Foundation/Codex-OAuth-MaaS-Executor
+cd AI/AI-Coding/Enterprise-MaaS-Foundation/codex-maas-hybrid-router
 ./scripts/configure-codex-forky.sh
 codex-forky exec --skip-git-repo-check --ephemeral "Reply with OK only"
 ```
@@ -45,7 +45,7 @@ Environment overrides:
 | `CODEX_FORKY_CONTEXT_TOKENS` | `180000` | Codex model catalog context window |
 | `CODEX_FORKY_MAX_OUTPUT_TOKENS` | `8192` | Anthropic `max_tokens` |
 | `INSTALL_SYSTEMD_USER_SERVICE` | `1` | Install `codex-forky-bridge.service` when possible |
-| `INSTALL_CODEX_SKILL` | `1` | Copy this skill into `$CODEX_HOME/skills/codex-oauth-maas-executor` for future auto-discovery |
+| `INSTALL_CODEX_SKILL` | `1` | Copy this skill into `$CODEX_HOME/skills/codex-maas-hybrid-router` for future auto-discovery |
 
 ## Files
 

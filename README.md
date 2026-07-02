@@ -4,7 +4,7 @@ This repository defines a practical skill framework for Huawei Cloud adoption wo
 
 An AI skill in this repository is not just a prompt. It is a reusable capability unit built around a cloud scenario, where AI helps with understanding, design, migration, operations, development, analysis, or optimization.
 
-Recent updates added the Copilot Huawei MaaS skill for VS Code GitHub Copilot Chat through OAI Compatible Copilot, the CodeArts Huawei MaaS skill for a `codearts-litellm` wrapper, the codex-huawei-maas skill for a side-by-side `codex-glm` command through an isolated CCR `/v1/responses` shim, and the LiteLLM Huawei MaaS Proxy skill with an optional self-hosted SearXNG search MCP profile.
+Recent updates added the Copilot Huawei MaaS skill for VS Code GitHub Copilot Chat through OAI Compatible Copilot, the CodeArts Huawei MaaS skill for a `codearts-litellm` wrapper, the codex-huawei-maas skill for a side-by-side `codex-glm` command through an isolated CCR `/v1/responses` shim, the Codex MaaS Hybrid Router skill for `codex-forky` split routing, and the LiteLLM Huawei MaaS Proxy skill with an optional self-hosted SearXNG search MCP profile.
 
 Each skill should include:
 
@@ -18,7 +18,7 @@ Each skill should include:
 
 Use this index when Codex, Claude Code, or another AI agent needs to locate the right reusable skill quickly. Start from the business scenario, then open the linked skill folder. The child skill `README.md` gives the repository-facing summary, while `SKILL.md` contains the agent-facing workflow and trigger rules when present.
 
-For the latest additions, check the `AI / AI-Coding`, `Big Data`, and `Cloud Foundation` entries near the end of the index, including Copilot Huawei MaaS, CodeArts Huawei MaaS, codex-huawei-maas, LiteLLM Huawei MaaS Proxy, SEC EDGAR monitoring, and HTTP proxy SSH skills.
+For the latest additions, check the `AI / AI-Coding`, `Big Data`, and `Cloud Foundation` entries near the end of the index, including Copilot Huawei MaaS, CodeArts Huawei MaaS, codex-huawei-maas, Codex MaaS Hybrid Router, LiteLLM Huawei MaaS Proxy, SEC EDGAR monitoring, and HTTP proxy SSH skills.
 
 | # | Domain | Use Case | Skill | Use When |
 | --- | --- | --- | --- | --- |
@@ -58,6 +58,7 @@ For the latest additions, check the `AI / AI-Coding`, `Big Data`, and `Cloud Fou
 | 34 | AI | AI Coding | [codearts-huawei-maas](./AI/AI-Coding/Enterprise-MaaS-Foundation/codearts-huawei-maas/README.md) | Deploy the Huawei CodeArts CLI on macOS arm64 and add a `codearts-litellm` wrapper that routes CodeArts through an OpenAI-compatible LiteLLM gateway. |
 | 35 | AI | AI Coding | [Copilot Huawei MaaS](./AI/AI-Coding/Enterprise-MaaS-Foundation/copilot-huawei-maas/SKILL.md) | Install, verify, diagnose, and harden GitHub Copilot Chat in VS Code when Huawei Cloud MaaS GLM or another Huawei MaaS OpenAI-compatible model is used through OAI Compatible Copilot. |
 | 36 | AI | AI Coding | [Claude Code MaaS Hybrid Router](./AI/AI-Coding/Enterprise-MaaS-Foundation/claude-code-maas-hybrid-router/SKILL.md) | Configure `claude-forky` so Claude Code planning, image, and classifier traffic stays on Claude OAuth while tool/code execution routes to Huawei MaaS GLM through forky and LiteLLM. |
+| 37 | AI | AI Coding | [Codex MaaS Hybrid Router](./AI/AI-Coding/Enterprise-MaaS-Foundation/codex-maas-hybrid-router/README.md) | Configure `codex-forky` so Codex CLI tool/code-execution turns route through forky to Huawei MaaS GLM while non-tool and image turns stay on Codex ChatGPT/OAuth. |
 
 ## How To Navigate This Repository
 

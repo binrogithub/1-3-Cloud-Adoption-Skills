@@ -204,7 +204,8 @@ function latestUserTextFromInput(input) {
 }
 
 function isSearchIntentInput(input) {
-  return /搜索|新闻|最新|今天|今日|current|latest|today|news|search/i.test(latestUserTextFromInput(input));
+  const text = latestUserTextFromInput(input);
+  return /搜索|新闻|最新|今天|今日|latest|today|news|web\s*search|search\s+(?:the\s+)?(?:web|internet|online)|current\s+(?:news|events|information|info|headlines|weather|price|prices|status)/i.test(text);
 }
 
 function parseDataUrl(value) {

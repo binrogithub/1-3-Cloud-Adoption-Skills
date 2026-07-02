@@ -1,4 +1,4 @@
-# Codex-OAuth-MaaS-Executor
+# Codex MaaS Hybrid Router
 
 Side-by-side `codex-forky` command for using Codex CLI with split routing:
 
@@ -55,7 +55,7 @@ CODEX_FORKY_MAX_OUTPUT_TOKENS=8192
 - `~/.codex-forky/model-catalog.json`
 - `~/.codex-forky/codex-forky-responses-bridge.cjs`
 - `~/.config/codex-forky/env`
-- `~/.codex/skills/codex-oauth-maas-executor/`
+- `~/.codex/skills/codex-maas-hybrid-router/`
 - `~/.local/bin/codex-forky`
 - `~/.local/bin/Codex-forky`
 - `~/.local/bin/codex-forky-bridge-run`

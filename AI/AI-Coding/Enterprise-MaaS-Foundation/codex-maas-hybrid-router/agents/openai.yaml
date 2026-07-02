@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex MaaS Hybrid Router"
+  short_description: "Route Codex execution through MaaS"
+  default_prompt: "Use $codex-maas-hybrid-router to install and verify the codex-forky split-routing bridge."

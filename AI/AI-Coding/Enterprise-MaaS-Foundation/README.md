@@ -43,6 +43,6 @@ does not hold — `claude-glm` is self-contained.
 ## Other entries in this directory
 
 - `LiteLLM-Huawei-MaaS-Proxy` — the shared LiteLLM proxy both skills build on.
-- `Codex-OAuth-MaaS-Executor`, `codex-huawei-maas`, `copilot-huawei-maas`,
+- `codex-maas-hybrid-router`, `codex-huawei-maas`, `copilot-huawei-maas`,
   `codearts-huawei-maas`, `CSS-Code-Search-MCP` — sibling integrations for
   other clients; unrelated to the two Claude Code entries above.
