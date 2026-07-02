@@ -51,7 +51,7 @@ Run `claude-forky` in a new terminal. Plan mode (`Shift+Tab`) and images go to O
 
 ## Coexistence with claude-glm
 
-`claude-glm` (the `claude-code-huawei-maas` skill) uses port `3456` and sets its own `ANTHROPIC_BASE_URL` inside the wrapper. Both can be installed simultaneously; plain `claude` stays clean.
+`claude-glm` (the `claude-code-maas-direct-router` skill) uses port `3456` and sets its own `ANTHROPIC_BASE_URL` inside the wrapper. Both can be installed simultaneously; plain `claude` stays clean.
 
 ## Manual controls
 

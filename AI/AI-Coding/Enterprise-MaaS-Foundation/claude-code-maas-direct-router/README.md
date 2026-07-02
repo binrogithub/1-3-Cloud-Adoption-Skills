@@ -1,10 +1,10 @@
-# claude-code-huawei-maas
+# Claude Code MaaS Direct Router
 
-This skill documents Claude Code CLI usage patterns for connecting to Huawei Cloud MaaS through `claude-code-router`.
+This skill documents the direct-router Claude Code CLI path for connecting `claude-glm` to Huawei Cloud MaaS through `claude-code-router`.
 
 It is intended for operators who want either:
 
-- side-by-side commands where `claude` continues using Anthropic Claude models and `claude-glm` uses Huawei MaaS `glm-5.1`
+- side-by-side commands where `claude` continues using Anthropic Claude models and `claude-glm` routes directly to Huawei MaaS `glm-5.1`
 - Claude Code search prompts routed through CCR to a LiteLLM callback that injects Exa search results
 
 ## Scope
@@ -298,7 +298,7 @@ Recommended operating pattern:
 ## Files
 
 ```text
-claude-code-huawei-maas/
+claude-code-maas-direct-router/
 ├── README.md
 ├── SKILL.md
 ├── adapter/                  # LiteLLM Anthropic adapter (port 4010): usage passthrough lives here

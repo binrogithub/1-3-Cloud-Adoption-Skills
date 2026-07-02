@@ -60,7 +60,7 @@ All of these are collected by `./scripts/init_env.sh` (interactive, `--auto`, or
 - **TTFT and ITL custom metrics are streaming-only.**
 - **Search injection is LiteLLM-side.** `custom_callbacks.py` detects search intent and calls Exa when `EXA_API_KEY` is available.
 - **Image routing is LiteLLM-side.** `custom_callbacks.py` detects `image_url` / `image` content blocks and rewrites the request to `vision-openrouter`.
-- **Claude Code search should strip local WebSearch/WebFetch in CCR.** Pair this proxy with the `claude-code-huawei-maas` CCR bridge so GLM is not asked to emit fragile search tool JSON.
+- **Claude Code search should strip local WebSearch/WebFetch in CCR.** Pair this proxy with the `claude-code-maas-direct-router` CCR bridge so GLM is not asked to emit fragile search tool JSON.
 - **With N MaaS API keys, each model has N deployments.** LiteLLM load-balances across them. Effective RPM/TPM = per-key × N.
 - **`HUAWEI_MAAS_API_KEY` is mandatory.** Extra keys are optional. `HUAWEI_MAAS_API_KEY_COUNT` and `HUAWEI_MAAS_API_KEY_N` are set by `init_env.sh`.
 

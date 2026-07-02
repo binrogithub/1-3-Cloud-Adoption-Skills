@@ -35,7 +35,7 @@ Plain `claude` keeps Claude.ai connectors. `claude-glm` keeps working unchanged 
 
 ## Prerequisites (the skill checks all of them)
 
-1. **LiteLLM running on `127.0.0.1:4000`** with a `glm-5.2` model alias and a working API key. Provisioned by the separate `LiteLLM-Huawei-MaaS-Proxy` / `claude-code-huawei-maas` skill — this skill **assumes** it, fails fast if absent.
+1. **LiteLLM running on `127.0.0.1:4000`** with a `glm-5.2` model alias and a working API key. Provisioned by the separate `LiteLLM-Huawei-MaaS-Proxy` / `claude-code-maas-direct-router` skill — this skill **assumes** it, fails fast if absent.
 2. **`bun >= 1.3`** in PATH (forky's runtime).
 3. **`git`** in PATH.
 4. **`claude` CLI** installed (`npm install -g @anthropic-ai/claude-code` if missing).
@@ -117,7 +117,7 @@ To revert everything:
 - Checks out `forky-vision-routing` as the active branch (this is what the service runs).
 
 ### `configure-forky.sh`
-- **Probes LiteLLM** at `http://127.0.0.1:4000/v1/models` with the provided key. If the request fails or `glm-5.2` is missing from `/v1/models`, errors out with a pointer to the `claude-code-huawei-maas` skill. Then sends a real `/v1/chat/completions` ping to confirm the model actually serves (it can be listed but unreachable — that exact gotcha bit us with `glm-5.1`).
+- **Probes LiteLLM** at `http://127.0.0.1:4000/v1/models` with the provided key. If the request fails or `glm-5.2` is missing from `/v1/models`, errors out with a pointer to the `claude-code-maas-direct-router` skill. Then sends a real `/v1/chat/completions` ping to confirm the model actually serves (it can be listed but unreachable — that exact gotcha bit us with `glm-5.1`).
 - **Verifies OAuth creds** exist at `~/.claude/.credentials.json`. If missing or malformed, prints the `claude /login` hint and exits.
 - Writes `~/dev/forky/.env` with `EXEC_BASE_URL`, `EXEC_API_KEY`, `EXEC_MODEL`, `FORKY_OPUS_MODEL`, and `PORT=3458` (gitignored by forky's `.gitignore`). `FORKY_OPUS_MODEL` defaults to `claude-opus-4-8`; plan, vision, and review routes inherit it unless optional route-specific overrides (`FORKY_PLAN_MODEL`, `FORKY_VISION_MODEL`, `FORKY_REVIEW_MODEL`) are set before configuration.
 - **Detects port `3458` conflicts**. If something else owns it, prompts to change `FORKY_PORT` or stop the other process.
@@ -183,7 +183,7 @@ docker exec litellm_pg_db psql -U llmproxy -d litellm -t -A -F'|' \
 - **`Could not read OAuth credentials at ~/.claude/.credentials.json`**: run `claude /login` first; if already logged in but credentials are missing, run `claude setup-token`. Plan mode and vision will be broken without OAuth — exec-only mode is not supported by this skill.
 - **`Port 3458 already in use`**: another process owns it. Either stop it, or set `FORKY_PORT=3459` before running `configure-forky.sh` (the script also updates the `.env`, the systemd unit, and the `.bashrc` block).
 - **`LiteLLM /v1/models returned HTTP 401`**: wrong `LITELLM_CCR_KEY`. Check `/root/LiteLLM/.env` or your shell.
-- **`glm-5.2 is listed but a real chat/completions call returns 400`**: the model is declared in LiteLLM but its `litellm_params.model` or `api_base` is wrong, or the MaaS quota is exhausted. Use the `claude-code-huawei-maas` skill's recovery scripts. This skill will not silently fall back to a different model — it surfaces the error.
+- **`glm-5.2 is listed but a real chat/completions call returns 400`**: the model is declared in LiteLLM but its `litellm_params.model` or `api_base` is wrong, or the MaaS quota is exhausted. Use the `claude-code-maas-direct-router` skill's recovery scripts. This skill will not silently fall back to a different model — it surfaces the error.
 - **Plain `claude` still uses Anthropic directly**: expected. Use `claude-forky` for hybrid routing.
 - **`claude-forky` shows `claude.ai connectors are disabled...`**: wrong. Check `~/.local/bin/claude-forky` unsets `ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY`, and check your shell/IDE did not inject those variables. Claude Code disables connectors when auth-token/API-key env vars are present.
 - **`400 request shape invalid ... messages[1].role`**: forky is missing the server role-normalization patch. Re-run `install-forky.sh`, confirm `grep request.normalized_roles ~/dev/forky/src/server.ts`, then `systemctl --user restart forky`.
@@ -199,9 +199,9 @@ docker exec litellm_pg_db psql -U llmproxy -d litellm -t -A -F'|' \
 - **OAuth creds structure**: `~/.claude/.credentials.json` uses `.claudeAiOauth.accessToken` (not `.accessToken` at top level). The configure script checks this. If you see "no OAuth token", run `claude /login` and verify with `jq '.claudeAiOauth.accessToken' ~/.claude/.credentials.json`.
 - **Vision patch not on upstream `main`**: as of 2026-06, upstream may not have the `hasImageContent()` / `vision` routing branch. `install-forky.sh` detects this and applies the patch automatically via `apply-vision-patch.py`. If it fails, apply the changes from `assets/route-vision.patch` by hand.
 
-## Coexistence with `claude-code-huawei-maas`
+## Coexistence with `claude-code-maas-direct-router`
 
-| | This skill (forky) | claude-code-huawei-maas (ccr) |
+| | This skill (forky) | claude-code-maas-direct-router (ccr) |
 |---|---|---|
 | Port | 3458 | 3456 |
 | Command | `claude-forky` | `claude-glm` |

@@ -34,7 +34,7 @@ mkdir -p "$HOME/.forky"
 # === 1. probe LiteLLM ========================================================
 log "probing LiteLLM at $LITELLM_URL"
 models_json="$(curl -fsS -H "Authorization: Bearer $LITELLM_KEY" "$LITELLM_URL/models" 2>/dev/null)" \
-  || die "LiteLLM /v1/models unreachable at $LITELLM_URL. Is the LiteLLM proxy running? (claude-code-huawei-maas skill owns it.)"
+  || die "LiteLLM /v1/models unreachable at $LITELLM_URL. Is the LiteLLM proxy running? (claude-code-maas-direct-router skill owns it.)"
 
 echo "$models_json" | jq -e --arg m "$EXEC_MODEL" '.data[] | select(.id == $m)' >/dev/null 2>&1 \
   || die "model '$EXEC_MODEL' not in LiteLLM /v1/models. Available: $(echo "$models_json" | jq -r '.data[].id' | tr '\n' ' ')"

@@ -26,7 +26,7 @@ def test_project_scope_matches_repo_identity(tmp_path):
     scope = project_scope(repo)
 
     assert memory_matches_project("Notes about code-dreaming skill behavior", scope)
-    assert not memory_matches_project("Notes about claude-code-huawei-maas production state", scope)
+    assert not memory_matches_project("Notes about claude-code-maas-direct-router production state", scope)
 
 
 def test_dream_auto_skips_parent_workspace_foreign_memory(tmp_path, monkeypatch, capsys):
@@ -36,7 +36,7 @@ def test_dream_auto_skips_parent_workspace_foreign_memory(tmp_path, monkeypatch,
     repo = _repo(workspace / "AI" / "code-dreaming")
     memory = _native_memory(home, workspace)
     (memory / "claude-glm-production-state.md").write_text(
-        "# claude-glm production state\n\nclaude-code-huawei-maas deployment chain.\n",
+        "# claude-glm production state\n\nclaude-code-maas-direct-router deployment chain.\n",
         encoding="utf-8",
     )
 
@@ -57,7 +57,7 @@ def test_dream_scope_filter_off_preserves_parent_workspace_behavior(tmp_path, mo
     repo = _repo(workspace / "AI" / "code-dreaming")
     memory = _native_memory(home, workspace)
     (memory / "claude-glm-production-state.md").write_text(
-        "# claude-glm production state\n\nclaude-code-huawei-maas deployment chain.\n",
+        "# claude-glm production state\n\nclaude-code-maas-direct-router deployment chain.\n",
         encoding="utf-8",
     )
 
@@ -94,7 +94,7 @@ def test_dream_explicit_parent_native_memory_still_filters_auto(tmp_path, monkey
     repo = _repo(workspace / "AI" / "code-dreaming")
     memory = _native_memory(home, workspace)
     (memory / "claude-glm-production-state.md").write_text(
-        "# claude-glm production state\n\nclaude-code-huawei-maas deployment chain.\n",
+        "# claude-glm production state\n\nclaude-code-maas-direct-router deployment chain.\n",
         encoding="utf-8",
     )
 

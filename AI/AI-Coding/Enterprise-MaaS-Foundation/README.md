@@ -11,17 +11,17 @@ they serve different intents and must not be merged.
 
 | Skill | Command | Backend | Relationship to Anthropic API |
 | --- | --- | --- | --- |
-| `claude-code-huawei-maas` | `claude-glm` | GLM-5.1 via LiteLLM on `:3456` | **Full replacement.** Claude Code talks only to MaaS. The official Anthropic endpoint is not used at all. |
+| `claude-code-maas-direct-router` | `claude-glm` | GLM-5.1 via LiteLLM on `:3456` | **Direct router.** The `claude-glm` command talks only to MaaS. The official Anthropic endpoint is not used by that command. |
 | `claude-code-maas-hybrid-router` | `claude-forky` | Claude OAuth for plan/vision/classifier + GLM-5.2 for execution, via forky on `:3458` | **Hybrid router.** Claude is retained for planning, image/vision, and classifier traffic; MaaS (GLM) handles execution. Both Anthropic and MaaS are used. |
 
-### `claude-glm` — MaaS-only
+### `claude-glm` — Direct Router (MaaS-only)
 
-`claude-code-huawei-maas` provisions a LiteLLM proxy that speaks the
-Anthropic API shape but forwards every request to Huawei MaaS (GLM). The
-resulting `claude-glm` command is a fully self-contained Claude Code
-instance that **never contacts the Anthropic API**. Use this when the
-Anthropic endpoint is unavailable, blocked, or not desired, and you want
-every Claude Code capability (chat, tools, agents, MCP) served by MaaS.
+`claude-code-maas-direct-router` provisions a CCR/LiteLLM path that speaks the
+Anthropic API shape but forwards `claude-glm` requests to Huawei MaaS (GLM).
+The resulting command is a fully self-contained MaaS-backed Claude Code
+instance that does not contact the Anthropic API. Use this when the Anthropic
+endpoint is unavailable, blocked, or not desired, and you want every Claude
+Code capability (chat, tools, agents, MCP) served by MaaS.
 
 ### `claude-forky` — Hybrid Router (Claude + MaaS)
 
@@ -36,7 +36,7 @@ for the bulk of execution work.
 ## Prerequisite relationship
 
 `claude-code-maas-hybrid-router` depends on the LiteLLM stack provisioned by
-`claude-code-huawei-maas` (or by `LiteLLM-Huawei-MaaS-Proxy`). Install the
+`claude-code-maas-direct-router` (or by `LiteLLM-Huawei-MaaS-Proxy`). Install the
 MaaS proxy skill first, then layer forky on top. The reverse dependency
 does not hold — `claude-glm` is self-contained.
 
