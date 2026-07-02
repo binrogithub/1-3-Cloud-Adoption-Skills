@@ -55,6 +55,7 @@ CODEX_FORKY_MAX_OUTPUT_TOKENS=8192
 - `~/.codex-forky/model-catalog.json`
 - `~/.codex-forky/codex-forky-responses-bridge.cjs`
 - `~/.config/codex-forky/env`
+- `~/.codex/skills/codex-oauth-maas-executor/`
 - `~/.local/bin/codex-forky`
 - `~/.local/bin/Codex-forky`
 - `~/.local/bin/codex-forky-bridge-run`
@@ -95,7 +96,16 @@ curl -fsS -H "Authorization: Bearer ${CODEX_FORKY_ROUTER_KEY:-codex-forky-local}
 codex-forky exec --skip-git-repo-check --ephemeral "Reply with OK only"
 ```
 
-The verify script checks Codex OAuth tokens, forky health, forky `EXEC_MODEL=glm-5.2`, bridge startup, no-tool OAuth routing to `gpt-5.5`, and tool routing into forky execution.
+The verify script checks Codex OAuth tokens, forky health, forky `EXEC_MODEL=glm-5.2`, stale `gpt-5.5 high` runtime config, skill auto-discovery, bridge startup, no-tool OAuth routing to `gpt-5.5`, and tool routing into forky execution.
+
+If `codex-forky` opens with `model: gpt-5.5 high` or repeatedly reads the wrong skill, the local runtime was configured before the lean profile was installed. Re-run:
+
+```bash
+env -u CODEX_FORKY_MODEL -u CODEX_FORKY_OAUTH_MODEL ./scripts/configure-codex-forky.sh
+./scripts/verify-codex-forky.sh
+```
+
+Open a new `codex-forky` session after reconfiguration; existing sessions keep their old profile state.
 
 ## Rollback
 

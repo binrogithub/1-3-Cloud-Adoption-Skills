@@ -15,6 +15,7 @@ CODEX_FORKY_CONTEXT_TOKENS="${CODEX_FORKY_CONTEXT_TOKENS:-180000}"
 CODEX_FORKY_MAX_OUTPUT_TOKENS="${CODEX_FORKY_MAX_OUTPUT_TOKENS:-8192}"
 FORKY_BASE_URL="${FORKY_BASE_URL:-http://127.0.0.1:3458}"
 INSTALL_SYSTEMD_USER_SERVICE="${INSTALL_SYSTEMD_USER_SERVICE:-1}"
+INSTALL_CODEX_SKILL="${INSTALL_CODEX_SKILL:-1}"
 CODEX_FORKY_RESTART_BRIDGE="${CODEX_FORKY_RESTART_BRIDGE:-1}"
 VERIFY="${VERIFY:-1}"
 
@@ -50,6 +51,31 @@ write_bridge() {
   chmod 700 "$CODEX_FORKY_HOME"
   cp "$(script_dir)/codex-forky-responses-bridge.cjs" "$CODEX_FORKY_HOME/codex-forky-responses-bridge.cjs"
   chmod 700 "$CODEX_FORKY_HOME/codex-forky-responses-bridge.cjs"
+}
+
+install_codex_skill() {
+  [[ "$INSTALL_CODEX_SKILL" == "1" ]] || return 0
+  local skill_dir skill_dest skill_dest_parent
+  skill_dir="$(cd "$(script_dir)/.." && pwd -P)"
+  [[ -f "$skill_dir/SKILL.md" ]] || return 0
+  skill_dest="$CODEX_HOME_DIR/skills/codex-oauth-maas-executor"
+  skill_dest_parent="$(dirname "$skill_dest")"
+  mkdir -p "$skill_dest_parent"
+  chmod 700 "$CODEX_HOME_DIR" "$skill_dest_parent" 2>/dev/null || true
+
+  if [[ -d "$skill_dest" ]] && [[ "$(cd "$skill_dest" && pwd -P)" == "$skill_dir" ]]; then
+    return 0
+  fi
+
+  if command -v rsync >/dev/null 2>&1; then
+    mkdir -p "$skill_dest"
+    rsync -a --delete "$skill_dir/" "$skill_dest/"
+  else
+    rm -rf "$skill_dest.tmp"
+    cp -a "$skill_dir" "$skill_dest.tmp"
+    rm -rf "$skill_dest"
+    mv "$skill_dest.tmp" "$skill_dest"
+  fi
 }
 
 write_env_file() {
@@ -268,6 +294,7 @@ main() {
 
   probe_forky
   write_bridge
+  install_codex_skill
   write_env_file
   write_codex_profile
   write_model_catalog
