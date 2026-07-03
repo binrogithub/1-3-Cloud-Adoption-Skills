@@ -44,6 +44,12 @@ patched**) fixes both:
   byte-identical; failures are fail-open (pass-through). OpenAI-protocol
   streams (`/chat/completions` clients) are never touched.
 
+It also diagnoses a separate endpoint-capability failure: if the model emits
+raw `<tool_call>` markup as ordinary text, Claude Code will display that text
+and no tool will execute. The guard reports this via
+`asg_unparsed_tool_markup_total`, but it does not rewrite model-invented
+markup. Enable structured function/tool calling on the backend endpoint.
+
 Design details: [`../docs/PRD-anthropic-stream-guard.md`](../docs/PRD-anthropic-stream-guard.md)
 
 ## Install
@@ -121,13 +127,22 @@ curl -sN http://127.0.0.1:4000/v1/messages \
        "messages":[{"role":"user","content":"what is 2+2? think briefly"}]}' \
   | grep -oE "\"type\": \"(text|thinking|thinking_delta|text_delta)\"" | head
 
-# full regression (text / 185K context / image / search):
+# tool-call capability check (issue #111):
+python3 ../tests/live_smoke.py tools
+
+# full regression (text / 185K context / image / search / tools):
 python3 ../tests/live_smoke.py all
 ```
 
 Expected: `content_block_start` types match their delta families
 (`thinking` block first, then `text`), and an interactive Claude Code client
 works at `/effort max`.
+
+For the tool-call check, expected is `PASS - structured tool_use block`. If it
+reports raw tool markup, fix the backend route: for Huawei MaaS, use an
+endpoint with function calling enabled for OpenAI-compatible requests; for
+self-hosted vLLM, start with `--enable-auto-tool-choice` and the matching
+`--tool-call-parser`.
 
 ## Rollback
 

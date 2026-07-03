@@ -44,6 +44,7 @@ Prometheus metrics (exported via the proxy /metrics endpoint):
   asg_synthesized_blocks_total  synthesized stop/start pairs
   asg_parse_errors_total        chunks that failed to parse (passed through)
   asg_oversize_passthrough_total chunks skipped due to size cap
+  asg_unparsed_tool_markup_total raw tool-call markup seen in text streams
 """
 
 import json
@@ -67,6 +68,7 @@ ANTHROPIC_EVENT_TYPES = {
 INDEXED_EVENTS = {"content_block_start", "content_block_delta", "content_block_stop"}
 THINKING_DELTAS = {"thinking_delta", "signature_delta"}
 BLOCK_FAMILIES = {"thinking", "text", "tool_use"}
+TOOL_MARKUP_PREFIX = b"<tool_call"
 
 STRIP_THINKING = os.getenv("ASG_STRIP_THINKING", "true").strip().lower() != "false"
 STRIPPED_REQUEST_KEYS = ("thinking", "reasoning", "reasoning_effort")
@@ -211,6 +213,31 @@ def _has_tool_identity(block: Any) -> bool:
     return isinstance(block.get("id"), str) and isinstance(block.get("name"), str)
 
 
+def _text_delta_bytes(event: Any) -> Optional[bytes]:
+    if not isinstance(event, dict):
+        return None
+    delta = event.get("delta")
+    if isinstance(delta, dict) and delta.get("type") == "text_delta":
+        text = delta.get("text")
+        if isinstance(text, str):
+            return text.encode("utf-8", errors="ignore")
+    return None
+
+
+def _detect_tool_markup(st: "_StreamState", event: Any) -> bool:
+    sample = _text_delta_bytes(event)
+    if not sample:
+        return False
+    combined = st.markup_tail + sample
+    keep = max(0, len(TOOL_MARKUP_PREFIX) - 1)
+    st.markup_tail = combined[-keep:] if keep else b""
+    return TOOL_MARKUP_PREFIX in combined
+
+
+def _raw_chunk_has_tool_markup(chunk: Any) -> bool:
+    return isinstance(chunk, (bytes, bytearray)) and TOOL_MARKUP_PREFIX in chunk
+
+
 def _normalize_thinking_signatures(value: Any, seen: Optional[set] = None) -> Any:
     """LiteLLM's success logger requires thinking.signature to be a string."""
     if seen is None:
@@ -282,6 +309,7 @@ class _StreamState:
         "saw_tool_use",
         "last_was_bytes",
         "markup_warned",
+        "markup_tail",
     )
 
     def __init__(self, request_has_tools: bool = False) -> None:
@@ -299,6 +327,7 @@ class _StreamState:
         self.saw_tool_use = False
         self.last_was_bytes = True
         self.markup_warned = False
+        self.markup_tail = b""
 
 
 class AnthropicStreamGuard(CustomLogger):
@@ -357,8 +386,7 @@ class AnthropicStreamGuard(CustomLogger):
                 if (
                     st.request_has_tools
                     and not st.markup_warned
-                    and is_bytes
-                    and b"<tool_call" in chunk
+                    and _raw_chunk_has_tool_markup(chunk)
                 ):
                     st.markup_warned = True
                     TOOL_MARKUP.inc()
@@ -386,6 +414,11 @@ class AnthropicStreamGuard(CustomLogger):
                     and st.offset == 0
                     and st.block_open
                     and chunk.startswith(_DELTA_PREFIX)
+                    and (
+                        not st.request_has_tools
+                        or st.markup_warned
+                        or (not st.markup_tail and TOOL_MARKUP_PREFIX[:1] not in chunk)
+                    )
                 ):
                     family, ambiguous = _sniff_delta_family(bytes(chunk))
                     if not ambiguous and family == st.cur_type:
@@ -410,6 +443,20 @@ class AnthropicStreamGuard(CustomLogger):
                         yield out
                     yield chunk
                     continue
+
+                if (
+                    st.request_has_tools
+                    and not st.markup_warned
+                    and _detect_tool_markup(st, event)
+                ):
+                    st.markup_warned = True
+                    TOOL_MARKUP.inc()
+                    verbose_proxy_logger.warning(
+                        "[anthropic_stream_guard] raw '<tool_call' markup in "
+                        "stream text while the request declared tools - the "
+                        "backend endpoint likely has no tool-call parser "
+                        "(tool calls will render as plain text in clients)"
+                    )
 
                 for out in self._process(st, event, chunk, is_bytes):
                     yield out

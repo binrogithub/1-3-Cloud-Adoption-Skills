@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Live smoke test: Claude Code -> :4010 adapter -> LiteLLM -> GLM-5.2 / vision.
-Tests: short text, large payload, image routing, search intent.
+Tests: short text, large payload, image routing, search intent, tool calling.
 Reads LITELLM_ANTHROPIC_KEY from /root/LiteLLM/.env.
-Usage: python3 tests/live_smoke.py [all|text|big|image|search]
+Usage: python3 tests/live_smoke.py [all|text|big|image|search|tools]
 """
 import json, os, re, sys, time, urllib.request, urllib.error, base64, zlib, struct
 

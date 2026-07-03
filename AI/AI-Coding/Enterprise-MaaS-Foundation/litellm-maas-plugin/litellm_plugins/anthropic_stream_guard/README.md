@@ -15,6 +15,10 @@ clients when the backend is an OpenAI-compatible reasoning model whose
   `content_block_stop`/`start` pairs, index remapping. Byte-identical
   pass-through for already-correct streams; fail-open on errors; never touches
   OpenAI-protocol streams.
+- **Tool-call diagnostics**: increments `asg_unparsed_tool_markup_total` and
+  logs one redacted warning when a tools request streams raw `<tool_call`
+  markup as visible text. The guard intentionally does not rewrite improvised
+  model markup; fix the backend endpoint so it returns structured tool calls.
 
 Install, configuration requirements, verification, and rollback:
 see [`../../server/README.md`](../../server/README.md).
@@ -24,10 +28,27 @@ Deploy as a **single file** mounted at `/app/anthropic_stream_guard.py` and
 register `anthropic_stream_guard.proxy_handler_instance` under
 `litellm_settings.callbacks`.
 
+## Tool-call markup in Claude Code
+
+If Claude Code shows raw text such as `<tool_call>Bash_tool>` and file
+contents instead of the normal tool progress UI, the backend model endpoint is
+not parsing function/tool calls. Diagnose it with:
+
+```bash
+client/configure-claude-code.sh sk-<key> --base-url http://<gateway>:4000 --verify
+python3 tests/live_smoke.py tools
+```
+
+Expected result: a structured `tool_use` block. If the response contains raw
+markup, enable function calling on the endpoint. For Huawei MaaS, use a
+model/endpoint version with OpenAI-compatible tools enabled. For self-hosted
+vLLM, start with `--enable-auto-tool-choice` and the matching
+`--tool-call-parser`.
+
 ## Hardening (10k-user scale)
 
 Security invariants (enforced in code comments I1-I7 and by the test suite
-`tests/test_anthropic_stream_guard.py`, 9 tests):
+`tests/test_anthropic_stream_guard.py`, 21 checks):
 
 | Invariant | Mechanism |
 |---|---|
@@ -46,6 +67,9 @@ asg_retyped_blocks_total        first-block type corrections
 asg_synthesized_blocks_total    synthesized stop/start pairs
 asg_parse_errors_total          unparseable chunks (passed through)
 asg_oversize_passthrough_total  chunks skipped by the size cap
+asg_synthesized_terminations_total streams finalized after early upstream end
+asg_upstream_stream_errors_total upstream iterator exceptions finalized
+asg_unparsed_tool_markup_total  raw <tool_call markup seen in tool requests
 ```
 
 Alerting suggestions: page when `asg_parse_errors_total` rate stays above zero
