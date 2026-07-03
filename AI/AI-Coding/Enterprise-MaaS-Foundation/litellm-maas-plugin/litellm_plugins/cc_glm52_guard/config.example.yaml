@@ -1,0 +1,93 @@
+# Example LiteLLM config fragment for cc_glm52_guard.
+# This file intentionally contains no real API keys.
+
+model_list:
+  - model_name: glm-5.2
+    litellm_params:
+      model: openai/glm-5.2
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
+    model_info:
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+
+  - model_name: claude-sonnet-4-6
+    litellm_params:
+      model: openai/glm-5.2
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
+    model_info:
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+
+  - model_name: claude-opus-4-6
+    litellm_params:
+      model: openai/glm-5.2
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
+    model_info:
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+
+  - model_name: claude-opus-4-6-backend
+    litellm_params:
+      model: openai/glm-5.2
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
+    model_info:
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+
+  - model_name: claude-sonnet-4-6-backend
+    litellm_params:
+      model: openai/glm-5.2
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
+    model_info:
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+
+  - model_name: claude-glm1
+    litellm_params:
+      model: openai/glm-5.2
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
+    model_info:
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+
+  - model_name: opus-summary
+    litellm_params:
+      model: anthropic/claude-opus-4.8
+      api_key: os.environ/OPUS_48_API_KEY
+
+  - model_name: vision-openrouter
+    litellm_params:
+      model: openrouter/openai/gpt-4o
+      api_base: https://openrouter.ai/api/v1
+      api_key: os.environ/OpenRouter_API_KEY
+    model_info:
+      supports_vision: true
+      max_input_tokens: 128000
+      max_output_tokens: 16384
+
+litellm_settings:
+  drop_params: true
+  callbacks:
+    - cc_glm52_guard.proxy_handler_instance
+
+router_settings:
+  enable_pre_call_checks: true
+
+general_settings:
+  context_management_summary_model: opus-summary
+
+# Runtime environment controls:
+# CC_GLM52_EXECUTION_MODEL=glm-5.2
+# CC_GLM52_VISION_MODEL=vision-openrouter
+# CC_GLM52_SUMMARY_MODEL=opus-summary
+# CC_GLM52_SOFT_LIMIT=180000
+# CC_GLM52_COMPACT_TRIGGER=150000
+# CC_GLM52_CLEAR_TOOL_TRIGGER=100000
+# CC_GLM52_SEARCH_MODE=native
+# CC_GLM52_CAPABILITY_MODE=frontend_capable
