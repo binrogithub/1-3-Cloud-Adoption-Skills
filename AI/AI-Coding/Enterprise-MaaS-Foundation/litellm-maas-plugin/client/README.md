@@ -62,7 +62,7 @@ Every modified file gets a timestamped `.bak.*` backup.
 --profile FILE   also write a managed export block to a shell profile
 --no-settings    skip settings.json (exports only)
 --print-env      print export commands, write nothing
---verify         send a minimal /v1/messages request and report PASS/FAIL
+--verify         verify /v1/messages and structured tool-call capability
 ```
 
 ## Troubleshooting
@@ -73,6 +73,7 @@ Every modified file gets a timestamped `.bak.*` backup.
 | `401 key_model_access_denied` | key not allowed for the requested model | admin: key ACL must include `claude-*` (Claude Code uses several internal model names) |
 | `404 ... /responses ... APIG.0101` | gateway missing the chat-completions routing flag / plugin | admin: run `server/install-litellm-plugin.sh` |
 | works at low effort, breaks at `/effort max` | gateway missing the stream-fix plugin | admin: run `server/install-litellm-plugin.sh` |
+| tool calls print raw `<tool_call>...` text and no tools execute | backend endpoint is not parsing function/tool calls | admin: enable OpenAI-compatible function calling on MaaS, or start vLLM with `--enable-auto-tool-choice` and the matching `--tool-call-parser`; confirm with `--verify` |
 | old session still failing after configure | env captured at session start | fully exit Claude Code and start it again |
 | 401 with a non-`sk-` key in gateway logs | stale `ANTHROPIC_AUTH_TOKEN` exported in a long-running shell (legacy wrapper) | log out of that shell and back in, or re-run this script with `--pin-auth-token` |
 | "Both ANTHROPIC_AUTH_TOKEN and ANTHROPIC_API_KEY set" notice | `--pin-auth-token` was used, or the shell exports a stale AUTH_TOKEN | harmless if both hold the same key; to silence it, start a fresh login shell and configure without `--pin-auth-token` |

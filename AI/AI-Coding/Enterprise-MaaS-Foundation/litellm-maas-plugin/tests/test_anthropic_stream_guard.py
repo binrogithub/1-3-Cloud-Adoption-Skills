@@ -339,4 +339,37 @@ assert _rec.n==1, f"TOOL_MARKUP should increment once per stream, got {_rec.n}"
 _cbmod.TOOL_MARKUP=_old_markup
 print("T19 unparsed tool markup detected without rewrite: PASS")
 
-print("ALL 19 TESTS PASS")
+# T20 raw <tool_call marker split across byte chunks is still diagnosed
+_rec = _Rec(); _old_markup = _cbmod.TOOL_MARKUP; _cbmod.TOOL_MARKUP = _rec
+SPLIT_MARKUP=[sse(e) for e in [
+ {"type":"message_start","message":{"id":"m6"}},
+ {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<tool_"}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"call>Bash_tool>"}},
+ {"type":"content_block_stop","index":0},
+ {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":9}},
+ {"type":"message_stop"},
+]]
+out=asyncio.run(run(SPLIT_MARKUP, {"tools":[{"name":"Bash"}]}))
+assert out==SPLIT_MARKUP, "split markup detection must never rewrite bytes"
+assert _rec.n==1, f"TOOL_MARKUP should increment once per stream, got {_rec.n}"
+_cbmod.TOOL_MARKUP=_old_markup
+print("T20 split unparsed tool markup detected without rewrite: PASS")
+
+# T21 dict-mode text deltas are diagnosed too
+_rec = _Rec(); _old_markup = _cbmod.TOOL_MARKUP; _cbmod.TOOL_MARKUP = _rec
+DICT_MARKUP=[
+ {"type":"message_start","message":{"id":"m7"}},
+ {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<tool_call>Bash_tool>"}},
+ {"type":"content_block_stop","index":0},
+ {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":9}},
+ {"type":"message_stop"},
+]
+out=asyncio.run(run(DICT_MARKUP, {"tools":[{"name":"Bash"}]}))
+assert out==DICT_MARKUP, "dict markup detection must never rewrite events"
+assert _rec.n==1, f"TOOL_MARKUP should increment once per stream, got {_rec.n}"
+_cbmod.TOOL_MARKUP=_old_markup
+print("T21 dict-mode unparsed tool markup detected without rewrite: PASS")
+
+print("ALL 21 TESTS PASS")
