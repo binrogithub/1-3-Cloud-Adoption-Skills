@@ -59,6 +59,7 @@ ANTHROPIC_EVENT_TYPES = {
 
 INDEXED_EVENTS = {"content_block_start", "content_block_delta", "content_block_stop"}
 THINKING_DELTAS = {"thinking_delta", "signature_delta"}
+BLOCK_FAMILIES = {"thinking", "text", "tool_use"}
 
 STRIP_THINKING = os.getenv("ASG_STRIP_THINKING", "true").strip().lower() != "false"
 STRIPPED_REQUEST_KEYS = ("thinking", "reasoning", "reasoning_effort")
@@ -141,6 +142,13 @@ def _sse(event: Dict[str, Any]) -> bytes:
     return f"event: {event['type']}\ndata: {json.dumps(event)}\n\n".encode()
 
 
+def _request_has_tools(request_data: Any) -> bool:
+    if not isinstance(request_data, dict):
+        return False
+    tools = request_data.get("tools")
+    return isinstance(tools, list) and len(tools) > 0
+
+
 def _delta_family(event: Dict[str, Any]) -> Optional[str]:
     delta = event.get("delta")
     if not isinstance(delta, dict):
@@ -155,27 +163,107 @@ def _delta_family(event: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def _make_start(index: int, block_type: str) -> Dict[str, Any]:
-    block = (
-        {"type": "thinking", "thinking": ""}
-        if block_type == "thinking"
-        else {"type": "text", "text": ""}
-    )
+def _text_delta_from_input_json(event: Dict[str, Any]) -> Dict[str, Any]:
+    """Treat impossible tool-call argument deltas as plain text.
+
+    Some OpenAI-compatible backends emit tool-call deltas even when the
+    Anthropic request declared no tools. LiteLLM then maps those to
+    input_json_delta. Passing that through creates a fake Claude Code tool call
+    named "tool"; preserving the fragment as text is the least surprising
+    recovery for no-tool requests.
+    """
+    delta = event.get("delta") if isinstance(event, dict) else None
+    if not isinstance(delta, dict) or delta.get("type") != "input_json_delta":
+        return event
+    fixed = dict(event)
+    fixed["delta"] = {
+        "type": "text_delta",
+        "text": str(delta.get("partial_json") or ""),
+    }
+    return fixed
+
+
+def _has_tool_identity(block: Any) -> bool:
+    if not isinstance(block, dict):
+        return False
+    return isinstance(block.get("id"), str) and isinstance(block.get("name"), str)
+
+
+def _normalize_thinking_signatures(value: Any, seen: Optional[set] = None) -> Any:
+    """LiteLLM's success logger requires thinking.signature to be a string."""
+    if seen is None:
+        seen = set()
+    value_id = id(value)
+    if value_id in seen:
+        return value
+    seen.add(value_id)
+
+    if isinstance(value, dict):
+        if value.get("type") == "thinking" and value.get("signature") is None:
+            value["signature"] = ""
+        for item in value.values():
+            _normalize_thinking_signatures(item, seen)
+        return value
+
+    if isinstance(value, list):
+        for item in value:
+            _normalize_thinking_signatures(item, seen)
+        return value
+
+    content = getattr(value, "content", None)
+    if content is not None:
+        _normalize_thinking_signatures(content, seen)
+
+    if getattr(value, "type", None) == "thinking" and getattr(value, "signature", None) is None:
+        try:
+            setattr(value, "signature", "")
+        except Exception:
+            pass
+    return value
+
+
+def _make_start(
+    index: int,
+    block_type: str,
+    source_block: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    if block_type == "thinking":
+        block = {"type": "thinking", "thinking": "", "signature": ""}
+    elif block_type == "tool_use":
+        source = source_block if isinstance(source_block, dict) else {}
+        # Tool blocks are only synthesized after the caller has verified that
+        # the stream supplied real tool identity metadata.
+        block = {
+            "type": "tool_use",
+            "id": source["id"],
+            "name": source["name"],
+            "input": source.get("input") if isinstance(source.get("input"), dict) else {},
+        }
+    else:
+        block = {"type": "text", "text": ""}
     return {"type": "content_block_start", "index": index, "content_block": block}
 
 
 class _StreamState:
     """Per-request state only (I1). Never promote fields to module/class level."""
 
-    __slots__ = ("offset", "cur_index", "cur_type", "block_open", "pending")
+    __slots__ = (
+        "offset",
+        "cur_index",
+        "cur_type",
+        "block_open",
+        "pending",
+        "request_has_tools",
+    )
 
-    def __init__(self) -> None:
+    def __init__(self, request_has_tools: bool = False) -> None:
         self.offset = 0          # index shift from synthesized blocks
         self.cur_index = 0       # output-side index of the open block
         self.cur_type = ""       # effective type of the open block
         self.block_open = False
         # buffered (event, raw_chunk); raw only reusable while offset == 0
         self.pending: Optional[Tuple[Dict[str, Any], Any]] = None
+        self.request_has_tools = request_has_tools
 
 
 class AnthropicStreamGuard(CustomLogger):
@@ -189,6 +277,14 @@ class AnthropicStreamGuard(CustomLogger):
                 data.pop(key, None)
         return data
 
+    async def async_post_call_success_hook(self, data, user_api_key_dict, response):
+        _normalize_thinking_signatures(response)
+        return response
+
+    async def async_logging_hook(self, kwargs: dict, result: Any, call_type: str):
+        _normalize_thinking_signatures(result)
+        return kwargs, result
+
     # ---- response side -----------------------------------------------------
 
     async def async_post_call_streaming_iterator_hook(
@@ -197,7 +293,7 @@ class AnthropicStreamGuard(CustomLogger):
         response: Any,
         request_data: dict,
     ) -> AsyncGenerator[Any, None]:
-        st = _StreamState()
+        st = _StreamState(request_has_tools=_request_has_tools(request_data))
         async for chunk in response:
             try:
                 is_bytes = isinstance(chunk, (bytes, bytearray))
@@ -289,13 +385,38 @@ class AnthropicStreamGuard(CustomLogger):
 
         if etype == "content_block_delta":
             family = _delta_family(event)
+            original_ok = True
+            if (
+                st.pending is None
+                and family == "tool_use"
+                and st.cur_type != "tool_use"
+            ):
+                event = _text_delta_from_input_json(event)
+                family = "text"
+                original_ok = False
 
             if st.pending is not None:
                 start_event, start_raw = st.pending
                 st.pending = None
                 declared = (start_event.get("content_block") or {}).get("type", "")
-                if family in ("text", "thinking") and declared in ("text", "thinking") and family != declared:
-                    start_event = _make_start(start_event.get("index", 0), family)
+                if (
+                    family == "tool_use"
+                    and declared != "tool_use"
+                    and (
+                        not st.request_has_tools
+                        or not _has_tool_identity(start_event.get("content_block"))
+                    )
+                ):
+                    event = _text_delta_from_input_json(event)
+                    family = "text"
+                    original_ok = False
+                if family in BLOCK_FAMILIES and family != declared:
+                    source_block = start_event.get("content_block")
+                    start_event = _make_start(
+                        start_event.get("index", 0),
+                        family,
+                        source_block if isinstance(source_block, dict) else None,
+                    )
                     RETYPED.inc()
                     verbose_proxy_logger.debug(
                         "[anthropic_stream_guard] retyped block %s -> %s",
@@ -307,13 +428,13 @@ class AnthropicStreamGuard(CustomLogger):
                 st.cur_index = start_event.get("index", 0)
                 st.cur_type = (start_event.get("content_block") or {}).get("type", "")
                 st.block_open = True
-                yield emit(event, original_ok=True)
+                yield emit(event, original_ok=original_ok)
                 return
 
             if (
                 st.block_open
-                and family in ("text", "thinking")
-                and st.cur_type in ("text", "thinking")
+                and family in BLOCK_FAMILIES
+                and st.cur_type in BLOCK_FAMILIES
                 and family != st.cur_type
             ):
                 # synthesize the block transition the adapter forgot to emit
@@ -334,7 +455,7 @@ class AnthropicStreamGuard(CustomLogger):
                 yield _sse(event) if as_bytes else event
                 return
 
-            yield emit(event, original_ok=True)
+            yield emit(event, original_ok=original_ok)
             return
 
         if etype == "content_block_stop":
