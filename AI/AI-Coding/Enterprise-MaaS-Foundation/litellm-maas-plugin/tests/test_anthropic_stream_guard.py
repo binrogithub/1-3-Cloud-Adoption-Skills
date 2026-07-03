@@ -1,16 +1,34 @@
 import asyncio, sys, json
+import logging, types
+
+if "litellm" not in sys.modules:
+    litellm = types.ModuleType("litellm")
+    logging_module = types.ModuleType("litellm._logging")
+    integrations = types.ModuleType("litellm.integrations")
+    custom_logger = types.ModuleType("litellm.integrations.custom_logger")
+
+    class CustomLogger:
+        pass
+
+    logging_module.verbose_proxy_logger = logging.getLogger("anthropic_stream_guard_test")
+    custom_logger.CustomLogger = CustomLogger
+    sys.modules.setdefault("litellm", litellm)
+    sys.modules.setdefault("litellm._logging", logging_module)
+    sys.modules.setdefault("litellm.integrations", integrations)
+    sys.modules.setdefault("litellm.integrations.custom_logger", custom_logger)
+
 sys.path.insert(0, "/root/litellm-maas-plugin/litellm_plugins/anthropic_stream_guard")
-from callback import proxy_handler_instance, _sse
+from callback import proxy_handler_instance, _normalize_thinking_signatures, _sse
 
 def sse(e): return _sse(e)
 
 async def feed(items):
     for e in items: yield e
 
-async def run(items):
+async def run(items, request_data=None):
     out=[]
     async for c in proxy_handler_instance.async_post_call_streaming_iterator_hook(
-        user_api_key_dict=None, response=feed(items), request_data={}):
+        user_api_key_dict=None, response=feed(items), request_data=request_data or {}):
         out.append(c)
     return out
 
@@ -149,4 +167,80 @@ assert validate(parse_all(r1))==[(0,"thinking"),(1,"text")]
 assert r2==OK
 print("T8 concurrent stream isolation: PASS")
 
-print("ALL 9 TESTS PASS")
+# T9 malformed first tool block: adapter declared text but emitted input_json_delta
+MAL_TOOL_FIRST=[sse(e) for e in [
+ {"type":"content_block_start","index":0,"content_block":{"type":"text","id":"t1","name":"Bash","input":{}}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\"command\":\"pwd\"}"}},
+ {"type":"content_block_stop","index":0},
+ {"type":"message_delta","delta":{"stop_reason":"tool_use"},"usage":{"output_tokens":4}},
+ {"type":"message_stop"},
+]]
+evs=parse_all(asyncio.run(run(MAL_TOOL_FIRST, {"tools":[{"name":"Bash"}]})))
+assert validate(evs)==[(0,"tool_use")]
+assert evs[0]["content_block"]["id"]=="t1"
+assert evs[0]["content_block"]["name"]=="Bash"
+print("T9 malformed first tool block retyping: PASS")
+
+# T10 malformed text->tool transition with no tool identity: keep it as text
+MAL_TEXT_TOOL=[sse(e) for e in [
+ {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"running"}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{}"}},
+ {"type":"content_block_stop","index":0},
+ {"type":"message_stop"},
+]]
+evs=parse_all(asyncio.run(run(MAL_TEXT_TOOL, {"tools":[{"name":"Bash"}]})))
+assert validate(evs)==[(0,"text")]
+assert [e["delta"]["type"] for e in evs if e["type"]=="content_block_delta"] == [
+    "text_delta",
+    "text_delta",
+]
+print("T10 text-to-fake-tool transition downgraded: PASS")
+
+# T11 no declared tools: adapter/tool-call artifact must stay text, not create fake tool
+NO_TOOLS_FAKE_TOOL=[sse(e) for e in [
+ {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"if balance"}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":" < amount:"}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" raise InsufficientFundsError()"}},
+ {"type":"content_block_stop","index":0},
+ {"type":"message_stop"},
+]]
+evs=parse_all(asyncio.run(run(NO_TOOLS_FAKE_TOOL)))
+assert validate(evs)==[(0,"text")]
+assert [e["delta"]["type"] for e in evs if e["type"]=="content_block_delta"] == [
+    "text_delta",
+    "text_delta",
+    "text_delta",
+]
+assert "if balance < amount:" in "".join(
+    e["delta"].get("text","") for e in evs if e["type"]=="content_block_delta"
+)
+print("T11 no-tool input_json artifact downgraded to text: PASS")
+
+# T12 non-stream/logging response normalization: thinking signature must be a string
+resp={"content":[{"type":"thinking","thinking":"x","signature":None},{"type":"text","text":"OK"}]}
+_normalize_thinking_signatures(resp)
+assert resp["content"][0]["signature"] == ""
+print("T12 thinking signature normalization: PASS")
+
+# T13 tools request with text start but no id/name must not create toolu_asg/tool
+TOOLS_BUT_NO_ID=[sse(e) for e in [
+ {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":" < hi:"}},
+ {"type":"content_block_stop","index":0},
+ {"type":"message_stop"},
+]]
+evs=parse_all(asyncio.run(run(TOOLS_BUT_NO_ID, {"tools":[{"name":"Bash"}]})))
+assert validate(evs)==[(0,"text")]
+assert all(
+    e.get("content_block", {}).get("name") != "tool"
+    for e in evs
+    if e["type"] == "content_block_start"
+)
+assert " < hi:" in "".join(
+    e["delta"].get("text","") for e in evs if e["type"]=="content_block_delta"
+)
+print("T13 tools request without tool identity downgraded: PASS")
+
+print("ALL 13 TESTS PASS")
