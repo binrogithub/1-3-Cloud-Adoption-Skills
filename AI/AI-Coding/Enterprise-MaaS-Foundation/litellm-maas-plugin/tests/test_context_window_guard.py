@@ -35,12 +35,26 @@ cwg = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(cwg)
 
 
-def run_hook(data):
+def run_hook(data, guard=None):
     return asyncio.run(
-        cwg.proxy_handler_instance.async_pre_call_hook(
+        (guard or cwg.proxy_handler_instance).async_pre_call_hook(
             user_api_key_dict=None, cache=None, data=data, call_type="completion"
         )
     )
+
+
+def vision_guard():
+    g = cwg.ContextWindowGuard()
+    g.vision_model = "vision-openrouter"
+    g.vision_keep_models = {"vision-openrouter"}
+    return g
+
+
+def image_block(chars):
+    return {
+        "type": "image",
+        "source": {"type": "base64", "media_type": "image/png", "data": "A" * chars},
+    }
 
 
 def big_ascii(tokens):
@@ -152,6 +166,100 @@ def test_fail_open_on_weird_shapes():
 
     assert run_hook("not-a-dict") == "not-a-dict"
     assert run_hook({"model": "m"}) == {"model": "m"}
+
+
+def test_image_request_rerouted_to_vision_model():
+    # the 703KB-PNG failure: image request must go to the vision model
+    # instead of 400ing on the text-only GLM backend
+    data = {
+        "model": "claude-opus-4-6",
+        "messages": [
+            {"role": "user", "content": [
+                {"type": "text", "text": "读一下这个图"},
+                image_block(900_000),  # ~703KB PNG as base64
+            ]},
+        ],
+        "metadata": {},
+    }
+    run_hook(data, vision_guard())
+    assert data["model"] == "vision-openrouter"
+    # image kept for the vision model
+    types = [b["type"] for b in data["messages"][0]["content"]]
+    assert "image" in types
+    assert data["metadata"]["context_window_guard"]["vision_route"] == "vision-openrouter"
+
+
+def test_vision_route_trims_text_but_keeps_image():
+    messages = [{"role": "user", "content": "start"}]
+    for i in range(6):
+        messages.extend(tool_exchange(big_ascii(30000), tool_id=f"t{i}"))
+    messages.append({"role": "user", "content": [
+        {"type": "text", "text": "看图"}, image_block(900_000)]})
+    data = {"model": "claude-opus-4-6", "messages": messages, "metadata": {}}
+    g = vision_guard()
+
+    run_hook(data, g)
+
+    assert data["model"] == "vision-openrouter"
+    types = [b["type"] for b in data["messages"][-1]["content"]]
+    assert "image" in types, "vision route must keep the image"
+    slots = cwg._collect_slots(data["messages"])
+    imgs = [s for s in slots if s.kind == "image"]
+    assert cwg._estimate_with_images(data, imgs, vision_route=True) <= g.vision_target
+
+
+def test_already_vision_model_not_rerouted_but_budgeted():
+    data = {
+        "model": "vision-openrouter",
+        "messages": [{"role": "user", "content": [
+            {"type": "text", "text": "hi"}, image_block(200_000)]}],
+        "metadata": {},
+    }
+    run_hook(data, vision_guard())
+    assert data["model"] == "vision-openrouter"
+    types = [b["type"] for b in data["messages"][0]["content"]]
+    assert "image" in types
+
+
+def test_image_stripped_when_no_vision_model():
+    # fallback: no vision route configured -> oversized image is stubbed
+    # so the request no longer 400s on the GLM tokenizer
+    data = {
+        "model": "claude-opus-4-6",
+        "messages": [
+            {"role": "user", "content": [
+                {"type": "text", "text": "读一下这个图"},
+                image_block(900_000),
+            ]},
+        ],
+        "metadata": {},
+    }
+    run_hook(data)  # default instance: vision_model unset
+    content = data["messages"][0]["content"]
+    assert all(b["type"] != "image" for b in content), "image must be stubbed"
+    assert any("image removed by context_window_guard" in b.get("text", "")
+               for b in content)
+    audit = data["metadata"]["context_window_guard"]
+    assert audit["images_removed"] == 1
+    assert data["model"] == "claude-opus-4-6"
+
+
+def test_image_in_tool_result_stripped_when_no_vision_model():
+    data = {
+        "model": "claude-opus-4-6",
+        "messages": [
+            {"role": "assistant", "content": [
+                {"type": "tool_use", "id": "t1", "name": "Read", "input": {}}]},
+            {"role": "user", "content": [
+                {"type": "tool_result", "tool_use_id": "t1",
+                 "content": [image_block(900_000)]}]},
+        ],
+        "metadata": {},
+    }
+    run_hook(data)
+    inner = data["messages"][-1]["content"][0]["content"]
+    assert all(b["type"] != "image" for b in inner)
+    assert data["metadata"]["context_window_guard"]["images_removed"] == 1
 
 
 def test_trim_under_backend_limit_with_margin():
