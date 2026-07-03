@@ -8,6 +8,13 @@ as ONE "text" content block mixing thinking_delta and text_delta events.
 Also strips Anthropic thinking/reasoning request params so /v1/messages
 stays on /chat/completions instead of the unsupported Responses API.
 
+Additionally repairs streams the upstream ends early: GLM on MaaS sometimes
+closes its SSE right after a tool call without a terminal chunk, so the
+adapter emits no message_delta/message_stop; Claude Code then reports
+"API Error: Connection closed mid-response" despite having received the
+content. On end-of-stream (including upstream iterator exceptions) the guard
+synthesizes the missing content_block_stop / message_delta / message_stop.
+
 Security / hardening invariants (do not break when maintaining):
   I1  No shared mutable state across requests: all stream state lives in a
       per-call _StreamState. Tenant isolation depends on this.
@@ -85,13 +92,28 @@ try:
     OVERSIZE = _Counter(
         "asg_oversize_passthrough_total", "chunks skipped due to ASG_MAX_PARSE_BYTES"
     )
+    SYNTH_TERM = _Counter(
+        "asg_synthesized_terminations_total",
+        "streams that ended early and got synthesized terminal events",
+    )
+    UPSTREAM_ERRORS = _Counter(
+        "asg_upstream_stream_errors_total",
+        "exceptions raised by the upstream stream iterator (stream finalized)",
+    )
+    TOOL_MARKUP = _Counter(
+        "asg_unparsed_tool_markup_total",
+        "streams where raw <tool_call markup appeared in text while the "
+        "request declared tools (backend endpoint not parsing tool calls)",
+    )
 except Exception:  # duplicate registration, missing dep, ...
 
     class _Noop:
         def inc(self, *_a, **_k):
             pass
 
-    RETYPED = SYNTHESIZED = PARSE_ERRORS = OVERSIZE = _Noop()
+    RETYPED = SYNTHESIZED = PARSE_ERRORS = OVERSIZE = SYNTH_TERM = (
+        UPSTREAM_ERRORS
+    ) = TOOL_MARKUP = _Noop()
 
 # ---- byte-level fast path (I6) --------------------------------------------
 _DELTA_PREFIX = b"event: content_block_delta"
@@ -254,6 +276,12 @@ class _StreamState:
         "block_open",
         "pending",
         "request_has_tools",
+        "saw_message_start",
+        "saw_message_delta",
+        "saw_message_stop",
+        "saw_tool_use",
+        "last_was_bytes",
+        "markup_warned",
     )
 
     def __init__(self, request_has_tools: bool = False) -> None:
@@ -264,6 +292,13 @@ class _StreamState:
         # buffered (event, raw_chunk); raw only reusable while offset == 0
         self.pending: Optional[Tuple[Dict[str, Any], Any]] = None
         self.request_has_tools = request_has_tools
+        # terminal-event bookkeeping for end-of-stream synthesis
+        self.saw_message_start = False
+        self.saw_message_delta = False
+        self.saw_message_stop = False
+        self.saw_tool_use = False
+        self.last_was_bytes = True
+        self.markup_warned = False
 
 
 class AnthropicStreamGuard(CustomLogger):
@@ -294,13 +329,50 @@ class AnthropicStreamGuard(CustomLogger):
         request_data: dict,
     ) -> AsyncGenerator[Any, None]:
         st = _StreamState(request_has_tools=_request_has_tools(request_data))
-        async for chunk in response:
+        response_iter = response.__aiter__()
+        while True:
+            try:
+                chunk = await response_iter.__anext__()
+            except StopAsyncIteration:
+                break
+            except Exception as err:
+                # Upstream died mid-stream. Finalize instead of propagating so
+                # the client still receives a well-formed message (I2).
+                UPSTREAM_ERRORS.inc()
+                verbose_proxy_logger.error(
+                    "[anthropic_stream_guard] %s from upstream stream "
+                    "(finalizing early)",
+                    type(err).__name__,
+                )
+                break
             try:
                 is_bytes = isinstance(chunk, (bytes, bytearray))
+                st.last_was_bytes = is_bytes
+
+                # Diagnostic only (issue #111): the model writing its native
+                # tool-call template as visible text means the backend endpoint
+                # is not parsing tool calls. Rewriting improvised markup would
+                # be unstable and could corrupt legitimate code text, so we
+                # surface it via metric + log instead.
+                if (
+                    st.request_has_tools
+                    and not st.markup_warned
+                    and is_bytes
+                    and b"<tool_call" in chunk
+                ):
+                    st.markup_warned = True
+                    TOOL_MARKUP.inc()
+                    verbose_proxy_logger.warning(
+                        "[anthropic_stream_guard] raw '<tool_call' markup in "
+                        "stream text while the request declared tools - the "
+                        "backend endpoint likely has no tool-call parser "
+                        "(tool calls will render as plain text in clients)"
+                    )
 
                 # I4: never parse oversized events; forward as-is.
                 if is_bytes and len(chunk) > MAX_PARSE_BYTES:
                     OVERSIZE.inc()
+                    self._note_passthrough_terminals(st, bytes(chunk))
                     for out in self._flush_pending(st):
                         yield out
                     yield chunk
@@ -332,6 +404,8 @@ class AnthropicStreamGuard(CustomLogger):
                     )
                 )
                 if event is None:  # not an anthropic event -> passthrough
+                    if is_bytes:
+                        self._note_passthrough_terminals(st, bytes(chunk))
                     for out in self._flush_pending(st):
                         yield out
                     yield chunk
@@ -349,10 +423,53 @@ class AnthropicStreamGuard(CustomLogger):
                     yield st.pending[1]
                     st.pending = None
                 yield chunk
-        if st.pending is not None:  # end of stream: flush dangling start
-            yield st.pending[1]
+        for out in self._finalize(st):
+            yield out
 
     # ---- state machine -------------------------------------------------------
+
+    @staticmethod
+    def _note_passthrough_terminals(st: _StreamState, chunk: bytes) -> None:
+        """Terminal markers seen in chunks we forward without parsing (multi-
+        event chunks, oversized chunks) disable end-of-stream synthesis. A
+        faked marker in attacker-influenced text can only SUPPRESS the rescue,
+        never inject events, so this is safe in the fail-open direction."""
+        if b"message_stop" in chunk:
+            st.saw_message_stop = True
+        if b"message_start" in chunk:
+            st.saw_message_start = True
+
+    def _finalize(self, st: _StreamState):
+        """End of stream: flush a dangling start, then synthesize the terminal
+        events the upstream/adapter failed to send. Without message_stop,
+        Claude Code reports 'Connection closed mid-response' and discards the
+        turn's continuity even though the content arrived intact."""
+        for out in self._flush_pending(st):
+            yield out
+        if not st.saw_message_start or st.saw_message_stop:
+            return
+        if st.block_open:
+            stop_ev = {"type": "content_block_stop", "index": st.cur_index}
+            yield _sse(stop_ev) if st.last_was_bytes else stop_ev
+            st.block_open = False
+        if not st.saw_message_delta:
+            delta_ev = {
+                "type": "message_delta",
+                "delta": {
+                    "stop_reason": "tool_use" if st.saw_tool_use else "end_turn",
+                    "stop_sequence": None,
+                },
+                "usage": {"output_tokens": 0},
+            }
+            yield _sse(delta_ev) if st.last_was_bytes else delta_ev
+        stop_msg = {"type": "message_stop"}
+        yield _sse(stop_msg) if st.last_was_bytes else stop_msg
+        SYNTH_TERM.inc()
+        verbose_proxy_logger.warning(
+            "[anthropic_stream_guard] stream ended without terminal events; "
+            "synthesized %s + message_stop",
+            "message_delta" if not st.saw_message_delta else "message_stop",
+        )
 
     def _flush_pending(self, st: _StreamState):
         if st.pending is not None:
@@ -361,10 +478,18 @@ class AnthropicStreamGuard(CustomLogger):
             st.cur_index = event.get("index", st.cur_index)
             st.cur_type = (event.get("content_block") or {}).get("type", "")
             st.block_open = True
+            if st.cur_type == "tool_use":
+                st.saw_tool_use = True
             yield raw if st.offset == 0 else _sse(event)
 
     def _process(self, st, event, raw, as_bytes):
         etype = event["type"]
+        if etype == "message_start":
+            st.saw_message_start = True
+        elif etype == "message_delta":
+            st.saw_message_delta = True
+        elif etype == "message_stop":
+            st.saw_message_stop = True
         shifted = False
         if etype in INDEXED_EVENTS and st.offset:
             event = dict(event)
@@ -428,6 +553,8 @@ class AnthropicStreamGuard(CustomLogger):
                 st.cur_index = start_event.get("index", 0)
                 st.cur_type = (start_event.get("content_block") or {}).get("type", "")
                 st.block_open = True
+                if st.cur_type == "tool_use":
+                    st.saw_tool_use = True
                 yield emit(event, original_ok=original_ok)
                 return
 

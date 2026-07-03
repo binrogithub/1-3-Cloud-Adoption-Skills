@@ -193,4 +193,36 @@ if [[ "$VERIFY" == "1" ]]; then
     exit 1
   fi
   rm -f /tmp/asg_verify.$$
+
+  # Tool-call capability: Claude Code is unusable when the backend endpoint
+  # does not parse tool calls - the model prints raw <tool_call> markup as
+  # visible text and no tools ever execute (issue #111).
+  echo "Verifying tool-call capability ..."
+  tool_body=$(printf '{"model":"%s","max_tokens":300,"tools":[{"name":"echo_check","description":"Echo a short string back. Used to verify tool calling works.","input_schema":{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}}],"messages":[{"role":"user","content":"Call the echo_check tool with text set to ok. Do not answer in plain text."}]}' "$MODEL")
+  tool_code=$(curl -sS -o /tmp/asg_verify_tool.$$ -w "%{http_code}" -m 60 \
+    -H "content-type: application/json" \
+    -H "x-api-key: $API_KEY" \
+    -H "anthropic-version: 2023-06-01" \
+    -d "$tool_body" "$BASE_URL/v1/messages" || echo "000")
+  if [[ "$tool_code" == "200" ]] && grep -q '"type"[[:space:]]*:[[:space:]]*"tool_use"' /tmp/asg_verify_tool.$$; then
+    echo "TOOL-CALL PASS (structured tool_use block received)"
+  elif grep -qE '<tool_call|<arg_key>|</[A-Za-z_]+_tool>' /tmp/asg_verify_tool.$$; then
+    echo "TOOL-CALL FAIL: the backend returned raw tool-call MARKUP as text."
+    echo "  Your model endpoint is not parsing tool calls into structured"
+    echo "  tool_calls. In Claude Code every tool invocation will appear as"
+    echo "  raw text (<tool_call>...) and no tools will execute."
+    echo "  Fix on the SERVER side, not in this client:"
+    echo "   - Huawei MaaS: use a model/endpoint version with function"
+    echo "     calling (tools) enabled for OpenAI-compatible requests."
+    echo "   - Self-hosted vLLM: start with --enable-auto-tool-choice and"
+    echo "     the matching --tool-call-parser for your model."
+    head -c 300 /tmp/asg_verify_tool.$$ 2>/dev/null; echo
+    rm -f /tmp/asg_verify_tool.$$
+    exit 1
+  else
+    echo "TOOL-CALL WARN (HTTP $tool_code, no tool_use block in response;"
+    echo "  inconclusive - the model may simply not have called the tool):"
+    head -c 300 /tmp/asg_verify_tool.$$ 2>/dev/null; echo
+  fi
+  rm -f /tmp/asg_verify_tool.$$
 fi

@@ -17,7 +17,11 @@ if "litellm" not in sys.modules:
     sys.modules.setdefault("litellm.integrations", integrations)
     sys.modules.setdefault("litellm.integrations.custom_logger", custom_logger)
 
-sys.path.insert(0, "/root/litellm-maas-plugin/litellm_plugins/anthropic_stream_guard")
+from pathlib import Path
+sys.path.insert(
+    0,
+    str(Path(__file__).resolve().parents[1] / "litellm_plugins" / "anthropic_stream_guard"),
+)
 from callback import proxy_handler_instance, _normalize_thinking_signatures, _sse
 
 def sse(e): return _sse(e)
@@ -243,4 +247,96 @@ assert " < hi:" in "".join(
 )
 print("T13 tools request without tool identity downgraded: PASS")
 
-print("ALL 13 TESTS PASS")
+# T14 upstream ends right after a complete tool_use block (the GLM/MaaS
+# "Connection closed mid-response" bug): guard must synthesize termination
+TRUNC_TOOL=[sse(e) for e in [
+ {"type":"message_start","message":{"id":"m1"}},
+ {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"我先看一下"}},
+ {"type":"content_block_stop","index":0},
+ {"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"t1","name":"Bash","input":{}}},
+ {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"command\":\"ls\"}"}},
+ {"type":"content_block_stop","index":1},
+ # stream dies here: no message_delta, no message_stop
+]]
+evs=parse_all(asyncio.run(run(TRUNC_TOOL, {"tools":[{"name":"Bash"}]})))
+types=[e["type"] for e in evs]
+assert types[-1]=="message_stop", f"must end with message_stop, got {types[-3:]}"
+assert types[-2]=="message_delta"
+md=[e for e in evs if e["type"]=="message_delta"][-1]
+assert md["delta"]["stop_reason"]=="tool_use"
+print("T14 synthesized termination after tool_use: PASS")
+
+# T15 upstream dies mid-text with the block still open
+TRUNC_TEXT=[sse(e) for e in [
+ {"type":"message_start","message":{"id":"m2"}},
+ {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"partial ans"}},
+ # stream dies mid-block
+]]
+evs=parse_all(asyncio.run(run(TRUNC_TEXT)))
+types=[e["type"] for e in evs]
+assert types[-3:]==["content_block_stop","message_delta","message_stop"], types[-4:]
+md=[e for e in evs if e["type"]=="message_delta"][-1]
+assert md["delta"]["stop_reason"]=="end_turn"
+print("T15 synthesized termination mid-text: PASS")
+
+# T16 healthy complete streams gain NOTHING (T2/T3 byte-identity still hold)
+assert asyncio.run(run(OK))==OK
+assert asyncio.run(run(TXT))==TXT
+print("T16 no synthesis on complete streams: PASS")
+
+# T17 upstream iterator raises mid-stream: finalize instead of propagating
+async def dying_feed(items, exc):
+    for e in items: yield e
+    raise exc
+async def run_dying(items, exc):
+    out=[]
+    async for c in proxy_handler_instance.async_post_call_streaming_iterator_hook(
+        user_api_key_dict=None, response=dying_feed(items, exc), request_data={}):
+        out.append(c)
+    return out
+DIES=[sse(e) for e in [
+ {"type":"message_start","message":{"id":"m3"}},
+ {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"hi"}},
+]]
+evs=parse_all(asyncio.run(run_dying(DIES, RuntimeError("upstream died"))))
+types=[e["type"] for e in evs]
+assert types[-1]=="message_stop", types
+print("T17 upstream exception finalized: PASS")
+
+# T18 fake message_stop marker inside passthrough chunk suppresses synthesis
+# (fail-open direction: rescue disabled, nothing injected)
+FAKE=[
+ sse({"type":"message_start","message":{"id":"m4"}}),
+ b'data: {"some":"passthrough with message_stop marker"}\ndata: {"x":1}\n\n',
+]
+out=asyncio.run(run(FAKE))
+tail=b"".join(c for c in out if isinstance(c,(bytes,bytearray)))
+assert b'"type": "message_stop"' not in tail
+print("T18 fake terminal marker suppresses synthesis: PASS")
+
+# T19 raw <tool_call markup in text with tools declared: metric+log only,
+# stream must pass through byte-identical (no rewrite of improvised markup)
+import callback as _cbmod
+class _Rec:
+    def __init__(self): self.n = 0
+    def inc(self, *_a, **_k): self.n += 1
+_rec = _Rec(); _old_markup = _cbmod.TOOL_MARKUP; _cbmod.TOOL_MARKUP = _rec
+MARKUP=[sse(e) for e in [
+ {"type":"message_start","message":{"id":"m5"}},
+ {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"开始创建。<tool_call>Bash_tool>"}},
+ {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<command>mkdir -p /x</command></Bash_tool>"}},
+ {"type":"content_block_stop","index":0},
+ {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":9}},
+ {"type":"message_stop"},
+]]
+out=asyncio.run(run(MARKUP, {"tools":[{"name":"Bash"}]}))
+assert out==MARKUP, "markup detection must never rewrite the stream"
+assert _rec.n==1, f"TOOL_MARKUP should increment once per stream, got {_rec.n}"
+_cbmod.TOOL_MARKUP=_old_markup
+print("T19 unparsed tool markup detected without rewrite: PASS")
+
+print("ALL 19 TESTS PASS")

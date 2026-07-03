@@ -98,6 +98,30 @@ def t_search():
         "messages": [{"role": "user", "content": "搜索今天的最新新闻，给我三条 (search latest news today)"}]})
     return show("5. search-intent (backend alias)", s, b, dt)
 
+def t_tooluse():
+    """Backend must parse tool calls into structured tool_use blocks. If the
+    model instead prints raw <tool_call> markup as text, Claude Code shows the
+    whole thing as plain text and never executes tools (issue #111)."""
+    s, b, dt = post(ADAPTER, {"model": "claude-opus-4-6", "max_tokens": 300,
+        "tools": [{"name": "echo_check",
+                   "description": "Echo a short string back. Used to verify tool calling works.",
+                   "input_schema": {"type": "object",
+                                    "properties": {"text": {"type": "string"}},
+                                    "required": ["text"]}}],
+        "messages": [{"role": "user",
+                      "content": "Call the echo_check tool with text set to ok. Do not answer in plain text."}]})
+    show("6. tool-call capability", s, b, dt)
+    if '"tool_use"' in b:
+        print("verdict: PASS - structured tool_use block")
+    elif re.search(r'<tool_call|<arg_key>|</[A-Za-z_]+_tool>', b):
+        print("verdict: FAIL - raw tool markup in text; backend endpoint is "
+              "not parsing tool calls (enable function calling on the "
+              "endpoint / vLLM --enable-auto-tool-choice --tool-call-parser)")
+        return -1
+    else:
+        print("verdict: WARN - no tool_use block (inconclusive)")
+    return s
+
 if __name__ == "__main__":
     which = sys.argv[1] if len(sys.argv) > 1 else "all"
     r = {}
@@ -106,6 +130,7 @@ if __name__ == "__main__":
     if which in ("all", "image"):  r["image_default"] = t_image_default()
     if which in ("all", "image"):  r["image_vision"] = t_image_vision()
     if which in ("all", "search"): r["search"] = t_search()
+    if which in ("all", "tools"):  r["tooluse"] = t_tooluse()
     print("\n===== SUMMARY =====")
     for k, v in r.items():
         print(f"{k:16} HTTP {v}")
