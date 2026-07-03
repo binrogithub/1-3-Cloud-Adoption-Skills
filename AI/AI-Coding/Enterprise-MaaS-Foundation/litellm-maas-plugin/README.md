@@ -70,6 +70,21 @@ that contains similar strings).
 - Self-hosted vLLM: start the server with `--enable-auto-tool-choice` and
   the matching `--tool-call-parser` for your model family.
 
+### Image requests fail with "prompt length ... must less than ..." (400)
+
+A base64 screenshot tokenizes at ~2.5 chars/token on the GLM tokenizer — a
+single 703KB PNG is 100K+ real tokens — and the text-only backend cannot use
+it anyway. `context_window_guard` handles images two ways:
+
+- **Vision routing (recommended)**: set `CWG_VISION_MODEL=vision-openrouter`
+  in the LiteLLM container environment. Image-bearing requests are rerouted
+  to that model with a vision-window budget (`CWG_VISION_TRIGGER/TARGET`,
+  default 110K/100K); images are kept and only text history is trimmed.
+  Aliases in `CWG_VISION_KEEP_MODELS` are never rerouted.
+- **Fallback (no vision model configured)**: oversized images are replaced
+  with an explanatory text stub during trimming so the request no longer
+  400s (`CWG_STRIP_IMAGES=never` disables this).
+
 ### Streams end with "API Error: Connection closed mid-response"
 
 The guard synthesizes terminal events when the upstream ends a stream early,
