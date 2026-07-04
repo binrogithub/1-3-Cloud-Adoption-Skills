@@ -37,6 +37,8 @@ Security / hardening invariants (do not break when maintaining):
 
 Env:
   ASG_STRIP_THINKING=true|false   strip thinking/reasoning params (default true)
+  ASG_AMPLIFY_INTERJECTIONS=true|false  re-surface queued mid-task user
+                                  messages as top-level text (default true)
   ASG_MAX_PARSE_BYTES=262144      max SSE event size that will be parsed
 
 Prometheus metrics (exported via the proxy /metrics endpoint):
@@ -45,10 +47,12 @@ Prometheus metrics (exported via the proxy /metrics endpoint):
   asg_parse_errors_total        chunks that failed to parse (passed through)
   asg_oversize_passthrough_total chunks skipped due to size cap
   asg_unparsed_tool_markup_total raw tool-call markup seen in text streams
+  asg_amplified_interjections_total queued user messages re-surfaced (#115)
 """
 
 import json
 import os
+import re
 from typing import Any, AsyncGenerator, Dict, Optional, Tuple
 
 from litellm._logging import verbose_proxy_logger
@@ -72,6 +76,19 @@ TOOL_MARKUP_PREFIX = b"<tool_call"
 
 STRIP_THINKING = os.getenv("ASG_STRIP_THINKING", "true").strip().lower() != "false"
 STRIPPED_REQUEST_KEYS = ("thinking", "reasoning", "reasoning_effort")
+
+# ---- issue #115: queued mid-task user messages -----------------------------
+# Claude Code delivers messages typed while a task is running as
+# <system-reminder> text buried inside the next tool_result, relying on the
+# model to notice and obey. Models without that alignment (GLM-5.2) ignore
+# it. We re-surface each queued message as a standalone text block at the END
+# of the newest user message, where every chat template gives it top salience.
+AMPLIFY_INTERJECTIONS = (
+    os.getenv("ASG_AMPLIFY_INTERJECTIONS", "true").strip().lower() != "false"
+)
+INTERJECTION_MARKER = "address the user's message"
+AMPLIFIED_HEADER = "[USER INTERJECTION - queued while the previous task was running]"
+_SYSTEM_REMINDER_RE = re.compile(r"<system-reminder>(.*?)</system-reminder>", re.DOTALL)
 
 try:
     MAX_PARSE_BYTES = max(4096, int(os.getenv("ASG_MAX_PARSE_BYTES", "262144")))
@@ -107,6 +124,10 @@ try:
         "streams where raw <tool_call markup appeared in text while the "
         "request declared tools (backend endpoint not parsing tool calls)",
     )
+    INTERJECTIONS = _Counter(
+        "asg_amplified_interjections_total",
+        "queued mid-task user messages re-surfaced as top-level text (#115)",
+    )
 except Exception:  # duplicate registration, missing dep, ...
 
     class _Noop:
@@ -115,7 +136,7 @@ except Exception:  # duplicate registration, missing dep, ...
 
     RETYPED = SYNTHESIZED = PARSE_ERRORS = OVERSIZE = SYNTH_TERM = (
         UPSTREAM_ERRORS
-    ) = TOOL_MARKUP = _Noop()
+    ) = TOOL_MARKUP = INTERJECTIONS = _Noop()
 
 # ---- byte-level fast path (I6) --------------------------------------------
 _DELTA_PREFIX = b"event: content_block_delta"
@@ -330,15 +351,87 @@ class _StreamState:
         self.markup_tail = b""
 
 
+def _last_message_strings(content):
+    for block in content:
+        if not isinstance(block, dict):
+            continue
+        if isinstance(block.get("text"), str):
+            yield block["text"]
+        elif block.get("type") == "tool_result":
+            inner = block.get("content")
+            if isinstance(inner, str):
+                yield inner
+            elif isinstance(inner, list):
+                for item in inner:
+                    if isinstance(item, dict) and isinstance(item.get("text"), str):
+                        yield item["text"]
+
+
+def amplify_user_interjections(data: Dict[str, Any]) -> int:
+    """Re-surface queued mid-task user messages (#115). Only the NEWEST user
+    message is scanned - older occurrences are history the client resends
+    verbatim and must not be resurrected. Idempotent across retries."""
+    messages = data.get("messages")
+    if not isinstance(messages, list) or not messages:
+        return 0
+    last = messages[-1]
+    if not isinstance(last, dict) or last.get("role") != "user":
+        return 0
+    content = last.get("content")
+    if not isinstance(content, list):
+        return 0
+    for block in content:  # retry idempotency
+        if (
+            isinstance(block, dict)
+            and isinstance(block.get("text"), str)
+            and block["text"].startswith(AMPLIFIED_HEADER)
+        ):
+            return 0
+    seen = []
+    for text in _last_message_strings(content):
+        for match in _SYSTEM_REMINDER_RE.finditer(text):
+            inner = match.group(1).strip()
+            if INTERJECTION_MARKER in inner and inner not in seen:
+                seen.append(inner)
+    for inner in seen:
+        content.append({
+            "type": "text",
+            "text": (
+                AMPLIFIED_HEADER
+                + "\nRespond to the user message below FIRST, before any "
+                "further tool calls or task steps. If it changes the current "
+                "plan, follow it.\n---\n" + inner + "\n---"
+            ),
+        })
+    return len(seen)
+
+
 class AnthropicStreamGuard(CustomLogger):
     # ---- request side ------------------------------------------------------
 
     async def async_pre_call_hook(self, user_api_key_dict, cache, data, call_type):
         """Strip Anthropic thinking/reasoning params so /v1/messages routes
-        via chat/completions instead of the (unsupported) Responses API."""
+        via chat/completions instead of the (unsupported) Responses API.
+        Also re-surfaces queued mid-task user messages (#115)."""
         if STRIP_THINKING and isinstance(data, dict):
             for key in STRIPPED_REQUEST_KEYS:
                 data.pop(key, None)
+        if AMPLIFY_INTERJECTIONS and isinstance(data, dict):
+            try:
+                count = amplify_user_interjections(data)
+                if count:
+                    INTERJECTIONS.inc(count)
+                    verbose_proxy_logger.warning(
+                        "[anthropic_stream_guard] re-surfaced %s queued user "
+                        "message(s) as top-level text (#115)",
+                        count,
+                    )
+            except Exception as err:  # fail-open, no payload in logs
+                verbose_proxy_logger.error(
+                    "[anthropic_stream_guard] %s while amplifying "
+                    "interjections (request passed through)",
+                    type(err).__name__,
+                )
         return data
 
     async def async_post_call_success_hook(self, data, user_api_key_dict, response):

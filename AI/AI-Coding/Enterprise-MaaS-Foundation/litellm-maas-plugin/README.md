@@ -85,6 +85,26 @@ it anyway. `context_window_guard` handles images two ways:
   with an explanatory text stub during trimming so the request no longer
   400s (`CWG_STRIP_IMAGES=never` disables this).
 
+### Messages typed during a running task are silently ignored
+
+**Symptom** ([issue #115](https://github.com/binrogithub/1-3-Cloud-Adoption-Skills/issues/115)):
+messages typed while Claude Code is mid-task get queued and injected into the
+next tool result as `<system-reminder>` text ("you MUST address the user's
+message"), but the model never acknowledges them and keeps executing its plan.
+
+**Root cause**: that delivery is soft - plain text buried inside a tool
+result, competing with the model's completion bias. Anthropic models are
+aligned to honor it; GLM-5.2 is not.
+
+**Fix**: `anthropic_stream_guard` detects the queued-message reminder in the
+newest user message and re-surfaces it as a standalone text block at the END
+of that message ("[USER INTERJECTION ...] Respond to the user message below
+FIRST..."), where every chat template gives it top salience. Only the newest
+message is scanned (history is never resurrected), ordinary system-reminders
+are untouched, and the rewrite is idempotent across retries. Disable with
+`ASG_AMPLIFY_INTERJECTIONS=false`; observe via
+`asg_amplified_interjections_total`.
+
 ### Streams end with "API Error: Connection closed mid-response"
 
 The guard synthesizes terminal events when the upstream ends a stream early,
