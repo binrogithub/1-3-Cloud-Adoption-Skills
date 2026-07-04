@@ -420,4 +420,31 @@ assert amplify_user_interjections(req3) == 0
 assert json.dumps(req3) == before3
 print("T24 historical reminders not resurrected: PASS")
 
-print("ALL 24 TESTS PASS")
+# T25 Anthropic server tools stripped; client tools untouched
+from callback import strip_server_tools
+req_t = {"tools": [
+    {"type": "web_search_20250305", "name": "web_search", "max_uses": 8},
+    {"name": "Bash", "description": "run", "input_schema": {"type": "object"}},
+], "tool_choice": {"type": "auto"}}
+assert strip_server_tools(req_t) == 1
+assert [t["name"] for t in req_t["tools"]] == ["Bash"]
+assert "tool_choice" in req_t  # still has usable tools
+print("T25 server tool stripped, client tool kept: PASS")
+
+# T26 lone server tool: tools and tool_choice dropped entirely (CC WebSearch
+# sub-request shape that intermittently 400s on GLM/MaaS 'tools' validation)
+req_t2 = {"tools": [{"type": "web_search_20250305", "name": "web_search", "max_uses": 8}],
+          "tool_choice": {"type": "auto"}}
+assert strip_server_tools(req_t2) == 1
+assert "tools" not in req_t2 and "tool_choice" not in req_t2
+print("T26 lone server tool drops tools+tool_choice: PASS")
+
+# T27 requests without server tools are untouched byte-for-byte
+req_t3 = {"tools": [{"name": "Bash", "input_schema": {"type": "object"}}]}
+before_t3 = json.dumps(req_t3)
+assert strip_server_tools(req_t3) == 0
+assert json.dumps(req_t3) == before_t3
+assert strip_server_tools({}) == 0
+print("T27 client-only tools untouched: PASS")
+
+print("ALL 27 TESTS PASS")

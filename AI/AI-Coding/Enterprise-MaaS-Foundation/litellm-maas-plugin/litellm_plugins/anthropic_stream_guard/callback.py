@@ -39,6 +39,9 @@ Env:
   ASG_STRIP_THINKING=true|false   strip thinking/reasoning params (default true)
   ASG_AMPLIFY_INTERJECTIONS=true|false  re-surface queued mid-task user
                                   messages as top-level text (default true)
+  ASG_STRIP_SERVER_TOOLS=true|false  remove Anthropic server-tool entries
+                                  (web_search etc.) the backend cannot run
+                                  (default true)
   ASG_MAX_PARSE_BYTES=262144      max SSE event size that will be parsed
 
 Prometheus metrics (exported via the proxy /metrics endpoint):
@@ -48,6 +51,7 @@ Prometheus metrics (exported via the proxy /metrics endpoint):
   asg_oversize_passthrough_total chunks skipped due to size cap
   asg_unparsed_tool_markup_total raw tool-call markup seen in text streams
   asg_amplified_interjections_total queued user messages re-surfaced (#115)
+  asg_server_tools_stripped_total Anthropic server-tool entries removed
 """
 
 import json
@@ -85,6 +89,26 @@ STRIPPED_REQUEST_KEYS = ("thinking", "reasoning", "reasoning_effort")
 # of the newest user message, where every chat template gives it top salience.
 AMPLIFY_INTERJECTIONS = (
     os.getenv("ASG_AMPLIFY_INTERJECTIONS", "true").strip().lower() != "false"
+)
+
+# ---- Anthropic server tools ------------------------------------------------
+# Claude Code's WebSearch sub-request (and some main-loop requests) declare
+# Anthropic SERVER tools such as web_search_20250305 - schema-less entries
+# executed by Anthropic's own backend. GLM/MaaS cannot execute them and its
+# request validation intermittently rejects the whole call with
+# "request param validation error, 'tools'". Search is fulfilled proxy-side
+# (Exa injection), so these entries are pure poison for this backend.
+STRIP_SERVER_TOOLS = (
+    os.getenv("ASG_STRIP_SERVER_TOOLS", "true").strip().lower() != "false"
+)
+SERVER_TOOL_TYPE_PREFIXES = (
+    "web_search",
+    "web_fetch",
+    "computer_",
+    "bash_",
+    "text_editor_",
+    "code_execution",
+    "memory_",
 )
 INTERJECTION_MARKER = "address the user's message"
 AMPLIFIED_HEADER = "[USER INTERJECTION - queued while the previous task was running]"
@@ -128,6 +152,11 @@ try:
         "asg_amplified_interjections_total",
         "queued mid-task user messages re-surfaced as top-level text (#115)",
     )
+    SERVER_TOOLS_STRIPPED = _Counter(
+        "asg_server_tools_stripped_total",
+        "Anthropic server-tool entries removed before the OpenAI-compatible "
+        "backend (GLM/MaaS rejects them with a 'tools' validation error)",
+    )
 except Exception:  # duplicate registration, missing dep, ...
 
     class _Noop:
@@ -136,7 +165,7 @@ except Exception:  # duplicate registration, missing dep, ...
 
     RETYPED = SYNTHESIZED = PARSE_ERRORS = OVERSIZE = SYNTH_TERM = (
         UPSTREAM_ERRORS
-    ) = TOOL_MARKUP = INTERJECTIONS = _Noop()
+    ) = TOOL_MARKUP = INTERJECTIONS = SERVER_TOOLS_STRIPPED = _Noop()
 
 # ---- byte-level fast path (I6) --------------------------------------------
 _DELTA_PREFIX = b"event: content_block_delta"
@@ -367,6 +396,35 @@ def _last_message_strings(content):
                         yield item["text"]
 
 
+def strip_server_tools(data: Dict[str, Any]) -> int:
+    """Remove Anthropic server-tool entries (no input_schema, versioned
+    type like web_search_20250305) from the request's tools list. Client
+    tools - which always carry input_schema - are never touched. When
+    nothing remains, tools and tool_choice are dropped entirely."""
+    tools = data.get("tools")
+    if not isinstance(tools, list):
+        return 0
+    kept = []
+    removed = 0
+    for tool in tools:
+        if (
+            isinstance(tool, dict)
+            and "input_schema" not in tool
+            and isinstance(tool.get("type"), str)
+            and tool["type"].startswith(SERVER_TOOL_TYPE_PREFIXES)
+        ):
+            removed += 1
+            continue
+        kept.append(tool)
+    if removed:
+        if kept:
+            data["tools"] = kept
+        else:
+            data.pop("tools", None)
+            data.pop("tool_choice", None)
+    return removed
+
+
 def amplify_user_interjections(data: Dict[str, Any]) -> int:
     """Re-surface queued mid-task user messages (#115). Only the NEWEST user
     message is scanned - older occurrences are history the client resends
@@ -416,6 +474,22 @@ class AnthropicStreamGuard(CustomLogger):
         if STRIP_THINKING and isinstance(data, dict):
             for key in STRIPPED_REQUEST_KEYS:
                 data.pop(key, None)
+        if STRIP_SERVER_TOOLS and isinstance(data, dict):
+            try:
+                stripped = strip_server_tools(data)
+                if stripped:
+                    SERVER_TOOLS_STRIPPED.inc(stripped)
+                    verbose_proxy_logger.warning(
+                        "[anthropic_stream_guard] stripped %s Anthropic "
+                        "server tool(s) the backend cannot execute",
+                        stripped,
+                    )
+            except Exception as err:  # fail-open
+                verbose_proxy_logger.error(
+                    "[anthropic_stream_guard] %s while stripping server "
+                    "tools (request passed through)",
+                    type(err).__name__,
+                )
         if AMPLIFY_INTERJECTIONS and isinstance(data, dict):
             try:
                 count = amplify_user_interjections(data)
