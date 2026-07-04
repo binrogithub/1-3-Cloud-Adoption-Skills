@@ -372,4 +372,52 @@ assert _rec.n==1, f"TOOL_MARKUP should increment once per stream, got {_rec.n}"
 _cbmod.TOOL_MARKUP=_old_markup
 print("T21 dict-mode unparsed tool markup detected without rewrite: PASS")
 
-print("ALL 21 TESTS PASS")
+# T22 queued mid-task user message (#115): re-surfaced as top-level text
+from callback import amplify_user_interjections, AMPLIFIED_HEADER
+REMINDER = ("<system-reminder>\nThe user sent the following message: "
+            "still compacting? you are not compacting just now?\n"
+            "IMPORTANT: After completing your current task, you MUST address "
+            "the user's message. Do not ignore it.\n</system-reminder>")
+req = {"messages": [
+    {"role": "assistant", "content": [{"type": "tool_use", "id": "t1", "name": "Bash", "input": {}}]},
+    {"role": "user", "content": [
+        {"type": "tool_result", "tool_use_id": "t1",
+         "content": [{"type": "text", "text": "ok\n" + REMINDER}]},
+    ]},
+]}
+n = amplify_user_interjections(req)
+assert n == 1, n
+last_block = req["messages"][-1]["content"][-1]
+assert last_block["type"] == "text"
+assert last_block["text"].startswith(AMPLIFIED_HEADER)
+assert "still compacting?" in last_block["text"]
+# idempotent on retry
+assert amplify_user_interjections(req) == 0
+print("T22 queued user message re-surfaced: PASS")
+
+# T23 ordinary system-reminders must NOT be amplified
+req2 = {"messages": [
+    {"role": "user", "content": [
+        {"type": "tool_result", "tool_use_id": "t1",
+         "content": "<system-reminder>The TODO list was updated.</system-reminder>"},
+        {"type": "text", "text": "<system-reminder>Contents of CLAUDE.md: ...</system-reminder>"},
+    ]},
+]}
+before2 = json.dumps(req2)
+assert amplify_user_interjections(req2) == 0
+assert json.dumps(req2) == before2, "ordinary reminders must not mutate the request"
+print("T23 ordinary system-reminders untouched: PASS")
+
+# T24 only the NEWEST user message is scanned (history not resurrected)
+req3 = {"messages": [
+    {"role": "user", "content": [
+        {"type": "tool_result", "tool_use_id": "t0", "content": REMINDER}]},
+    {"role": "assistant", "content": [{"type": "text", "text": "done"}]},
+    {"role": "user", "content": [{"type": "text", "text": "next task"}]},
+]}
+before3 = json.dumps(req3)
+assert amplify_user_interjections(req3) == 0
+assert json.dumps(req3) == before3
+print("T24 historical reminders not resurrected: PASS")
+
+print("ALL 24 TESTS PASS")
