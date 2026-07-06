@@ -1,6 +1,7 @@
 import asyncio
 import copy
 import importlib.util
+import json
 import logging
 import sys
 import types
@@ -260,6 +261,62 @@ def test_image_in_tool_result_stripped_when_no_vision_model():
     inner = data["messages"][-1]["content"][0]["content"]
     assert all(b["type"] != "image" for b in inner)
     assert data["metadata"]["context_window_guard"]["images_removed"] == 1
+
+
+def test_shrunk_tool_inputs_keep_parameter_shape():
+    # regression for the live "invalid tool parameters" failure: replacing
+    # cleared tool_use inputs with a stub dict taught GLM to invoke NEW tools
+    # with {"cleared_by_proxy": ...}; trimmed inputs must stay valid-shaped
+    messages = [{"role": "user", "content": "start"}]
+    for i in range(8):
+        messages.append({
+            "role": "assistant",
+            "content": [{
+                "type": "tool_use", "id": f"t{i}", "name": "Write",
+                "input": {"file_path": f"/tmp/f{i}.py", "content": big_ascii(25000)},
+            }],
+        })
+        messages.append({
+            "role": "user",
+            "content": [{"type": "tool_result", "tool_use_id": f"t{i}",
+                         "content": "written"}],
+        })
+    messages.append({"role": "user", "content": "continue"})
+    data = {"model": "claude-opus-4-6", "messages": messages, "metadata": {}}
+
+    run_hook(data)
+
+    assert cwg._payload_estimate(data) <= cwg.proxy_handler_instance.target
+    dumped = json.dumps(data["messages"], ensure_ascii=False)
+    assert "cleared_by_proxy" not in dumped
+    shrunk = data["messages"][1]["content"][0]["input"]
+    # parameter keys survive; oversized value is silently truncated (no
+    # marker text - models copy markers into new calls too)
+    assert set(shrunk) == {"file_path", "content"}
+    assert shrunk["file_path"] == "/tmp/f0.py"
+    assert len(shrunk["content"]) <= cwg.TOOL_INPUT_KEEP_CHARS
+    assert "truncated by context_window_guard" not in shrunk["content"]
+    assert data["metadata"]["context_window_guard"]["blocks_cleared"] >= 1
+
+
+def test_shrunk_tool_inputs_idempotent():
+    messages = [{"role": "user", "content": "start"}]
+    for i in range(8):
+        pair = tool_exchange(big_ascii(25000), tool_id=f"t{i}")
+        pair[0]["content"][0]["input"] = {"command": big_ascii(25000)}
+        messages.extend(pair)
+    messages.append({"role": "user", "content": "continue"})
+    data = {"model": "claude-opus-4-6", "messages": messages, "metadata": {}}
+
+    def inputs():
+        return [m["content"][0]["input"] for m in data["messages"]
+                if isinstance(m.get("content"), list)
+                and m["content"][0].get("type") == "tool_use"]
+
+    run_hook(data)
+    first = copy.deepcopy(inputs())
+    run_hook(data)
+    assert inputs() == first
 
 
 def test_trim_under_backend_limit_with_margin():
