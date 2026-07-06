@@ -17,9 +17,11 @@ Anthropic's server-side context edits would:
       image payloads tokenize at ~2.5 chars/token on the GLM tokenizer and a
       single screenshot can add 100K+ real tokens the text estimator misses;
       only used when no vision route is available (see below)
-  P1  clear tool_result contents and tool_use inputs in old messages
+  P1  clear tool_result contents and shrink tool_use inputs in old messages
       (oldest first; the most recent CWG_KEEP_RECENT_MESSAGES messages are
-      untouched by this phase)
+      untouched by this phase). tool_use inputs keep their real parameter
+      keys with values silently truncated - never a stub dict, which the
+      backend model imitates for new calls (invalid tool parameters)
   P2  truncate remaining large strings to their head, in progressively
       smaller keep sizes; tool_result blocks shrink before text blocks, and
       the text of the newest message shrinks last
@@ -81,7 +83,9 @@ TRUNCATE_KEEP_CHARS = (8000, 2000, 400)
 IMAGE_CHARS_PER_TOKEN = 2.5
 
 CLEARED_STUB = "[cleared by context_window_guard: prompt exceeded the model context window]"
-CLEARED_INPUT_STUB = {"cleared_by_proxy": "tool input removed to fit the model context window"}
+
+# P1 keeps this many head chars of each oversized tool_use input value.
+TOOL_INPUT_KEEP_CHARS = 120
 IMAGE_STUB_BLOCK = {
     "type": "text",
     "text": "[image removed by context_window_guard: the prompt exceeded the "
@@ -144,6 +148,30 @@ def _payload_estimate(data: Dict[str, Any]) -> int:
 def _truncated(text: str, keep: int) -> str:
     removed = len(text) - keep
     return text[:keep] + f"\n[...truncated by context_window_guard: {removed} chars removed]"
+
+
+def _shrunk_tool_input(value: Dict[str, Any]) -> Dict[str, Any]:
+    """Shrink a historical tool_use input while keeping its parameter shape.
+
+    Replacing the whole input with a stub dict teaches the backend model a
+    fake calling convention that it then imitates for NEW tool calls
+    (observed live: after heavy trimming, GLM invoked Bash/TaskCreate with
+    {"cleared_by_proxy": ...} and the client rejected every call with
+    InputValidationError). Keeping the real keys and truncating oversized
+    values leaves only valid-shaped examples in the history. Truncation is
+    silent — no marker text — because models copy markers into new calls.
+    """
+    shrunk: Dict[str, Any] = {}
+    for key, item in value.items():
+        if isinstance(item, str):
+            shrunk[key] = item[:TOOL_INPUT_KEEP_CHARS]
+            continue
+        try:
+            dump = json.dumps(item, ensure_ascii=False)
+        except (TypeError, ValueError):
+            dump = str(item)
+        shrunk[key] = item if len(dump) <= TOOL_INPUT_KEEP_CHARS else dump[:TOOL_INPUT_KEEP_CHARS]
+    return shrunk
 
 
 class _Slot:
@@ -311,7 +339,13 @@ def trim_request(
         if saved <= 0:
             continue
         if slot.kind == "tool_use_input":
-            slot.set(dict(CLEARED_INPUT_STUB))
+            original = slot.get()
+            if not isinstance(original, dict):
+                continue
+            replacement = _shrunk_tool_input(original)
+            if replacement == original:
+                continue
+            slot.set(replacement)
         else:
             slot.set(CLEARED_STUB)
         running -= saved - _slot_estimate(slot)

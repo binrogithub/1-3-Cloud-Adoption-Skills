@@ -105,6 +105,23 @@ are untouched, and the rewrite is idempotent across retries. Disable with
 `ASG_AMPLIFY_INTERJECTIONS=false`; observe via
 `asg_amplified_interjections_total`.
 
+### Long sessions: tools invoked with "invalid tool parameters" (InputValidationError)
+
+**Symptom**: deep into a large session (context past `CWG_TRIGGER_TOKENS`),
+the model starts calling tools with input
+`{"cleared_by_proxy": "tool input removed to fit the model context window"}`
+and Claude Code rejects every call ("required parameter ... is missing /
+unexpected parameter cleared_by_proxy").
+
+**Root cause**: `context_window_guard` used to replace cleared historical
+`tool_use` inputs with that stub dict. With hundreds of cleared blocks in
+context, the backend model learns the stub as the calling convention and
+imitates it for new calls. Fixed: trimmed inputs now keep their real
+parameter keys and silently truncate oversized values, so every example the
+model sees stays valid-shaped. The errors are self-healing (the validation
+error feeds back and the model retries), but the wasted turns disappear after
+updating the plugin and restarting the proxy.
+
 ### Streams end with "API Error: Connection closed mid-response"
 
 The guard synthesizes terminal events when the upstream ends a stream early,
