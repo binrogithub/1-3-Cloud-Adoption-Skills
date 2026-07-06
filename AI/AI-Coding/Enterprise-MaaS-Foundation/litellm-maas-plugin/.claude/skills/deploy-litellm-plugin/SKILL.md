@@ -79,6 +79,34 @@ server/install-litellm-plugin.sh --uninstall   # removes mount + callback, resta
 
 or restore the `.bak.<ts>` files and restart. The plugin is stateless.
 
+## Known display quirk: WebSearch shows "Did 0 searches"
+
+On this gateway, a Claude Code `WebSearch` call renders like:
+
+```
+Web Search("<query>")
+  ⎿  Did 0 searches in 34s
+```
+
+**This is cosmetic — the search worked.** Claude Code's counter tallies
+server-side `web_search_tool_result` events, which only Anthropic's own
+hosted search produces. This gateway fulfills searches differently:
+`anthropic_stream_guard` strips the `web_search` server tool (the GLM
+backend rejects it with a 400, see `asg_server_tools_stripped_total`), a
+search hook injects real engine results into the prompt, and the model
+returns the findings as ordinary text in the tool result. The content
+reaches the session; only the counter reads zero.
+
+How to confirm results were delivered: the tool result body contains
+"Web search results for query: ..." with substantive content, and the
+proxy logs show the injection (`docker logs <CONTAINER> | grep -i
+search`).
+
+**Do not "fix" this.** Making the counter count would require
+synthesizing fake `server_tool_use` / `web_search_tool_result` SSE
+events for searches the backend never performed — protocol risk for a
+purely cosmetic gain.
+
 ## Gotchas
 
 - The callback class must define its hooks directly (LiteLLM checks
