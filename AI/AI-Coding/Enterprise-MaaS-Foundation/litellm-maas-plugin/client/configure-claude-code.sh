@@ -9,6 +9,10 @@ set -euo pipefail
 # Claude Code regardless of shell state) and, optionally, a managed export
 # block into a shell profile.
 #
+# --restore undoes all of the above and returns Claude Code to Anthropic's
+# API. Your claude.ai login (OAuth credentials) is stored separately and is
+# never touched by this script, so it survives switching in both directions.
+#
 # No client-side proxy, router, or adapter is installed.
 
 DEFAULT_BASE_URL="http://127.0.0.1:4000"
@@ -24,6 +28,18 @@ WRITE_SETTINGS=1
 PRINT_ENV=0
 VERIFY=0
 PIN_AUTH_TOKEN=0
+RESTORE=0
+
+# Every env var this script may write; --restore removes exactly this set.
+MANAGED_VARS=(
+  ANTHROPIC_BASE_URL
+  ANTHROPIC_API_KEY
+  ANTHROPIC_AUTH_TOKEN
+  ANTHROPIC_MODEL
+  ANTHROPIC_DEFAULT_HAIKU_MODEL
+  ANTHROPIC_SMALL_FAST_MODEL
+  CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC
+)
 
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
@@ -32,6 +48,7 @@ usage() {
 Usage:
   configure-claude-code.sh <api-key> [options]
   configure-claude-code.sh --api-key KEY [options]
+  configure-claude-code.sh --restore [--profile FILE] [--no-settings]
 
 Options:
   --api-key KEY   LiteLLM virtual key for this client (required).
@@ -52,6 +69,13 @@ Options:
                   Code). Side effect: Claude Code shows a harmless
                   "Both ANTHROPIC_AUTH_TOKEN and ANTHROPIC_API_KEY set"
                   notice.
+  --restore       Switch back to Anthropic's API: remove the env vars this
+                  script wrote from ~/.claude/settings.json and, with
+                  --profile FILE, delete the managed export block from that
+                  profile. No API key needed. Your claude.ai login is never
+                  touched. Combine with --print-env to print the matching
+                  `unset` commands for the current shell. Restart Claude
+                  Code afterwards.
   -h, --help      Show this help.
 EOF
 }
@@ -77,11 +101,77 @@ while [[ $# -gt 0 ]]; do
     --print-env) PRINT_ENV=1; shift ;;
     --verify)    VERIFY=1; shift ;;
     --pin-auth-token) PIN_AUTH_TOKEN=1; shift ;;
+    --restore)   RESTORE=1; shift ;;
     -h|--help)   usage; exit 0 ;;
     -*)          die "unknown option: $1" ;;
     *)           [[ -z "$API_KEY" ]] || die "unexpected argument: $1"; API_KEY="$1"; shift ;;
   esac
 done
+
+# --- restore mode: undo everything this script writes, then exit
+if [[ "$RESTORE" == "1" ]]; then
+  [[ -z "$API_KEY" ]] || die "--restore takes no API key"
+  [[ "$VERIFY" == "0" ]] || die "--restore cannot be combined with --verify"
+  [[ "$PIN_AUTH_TOKEN" == "0" ]] || die "--restore cannot be combined with --pin-auth-token"
+
+  if [[ "$PRINT_ENV" == "1" ]]; then
+    printf 'unset %s\n' "${MANAGED_VARS[@]}"
+    exit 0
+  fi
+
+  if [[ "$WRITE_SETTINGS" == "1" ]]; then
+    command -v python3 >/dev/null 2>&1 || die "python3 is required to update ~/.claude/settings.json (use --no-settings to skip)"
+    SETTINGS_FILE="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
+    if [[ -f "$SETTINGS_FILE" ]]; then
+      ASG_VARS="${MANAGED_VARS[*]}" SETTINGS_FILE="$SETTINGS_FILE" python3 - <<'PY'
+import json, os, time
+path = os.environ["SETTINGS_FILE"]
+with open(path) as f:
+    data = json.load(f)
+backup = f"{path}.bak.{time.strftime('%Y%m%d%H%M%S')}"
+with open(backup, "w") as f:
+    json.dump(data, f, indent=2)
+print(f"Backup written: {backup}")
+env = data.get("env", {})
+removed = [v for v in os.environ["ASG_VARS"].split() if env.pop(v, None) is not None]
+if not env:
+    data.pop("env", None)
+with open(path, "w") as f:
+    json.dump(data, f, indent=2)
+if removed:
+    print(f"Updated: {path} (removed: {', '.join(removed)})")
+else:
+    print(f"No gateway settings found in {path}; nothing to remove.")
+PY
+    else
+      echo "No $SETTINGS_FILE; nothing to remove."
+    fi
+  fi
+
+  if [[ -n "$PROFILE" ]]; then
+    case "$PROFILE" in "~") PROFILE="$HOME" ;; "~/"*) PROFILE="$HOME/${PROFILE#\~/}" ;; esac
+    if [[ -f "$PROFILE" ]] && grep -qxF "$MANAGED_BEGIN" "$PROFILE"; then
+      backup="$PROFILE.bak.$(date +%Y%m%d%H%M%S)"
+      cp "$PROFILE" "$backup"
+      echo "Backup written: $backup"
+      tmp="$(mktemp)"
+      awk -v b="$MANAGED_BEGIN" -v e="$MANAGED_END" '$0==b{s=1;next} $0==e{s=0;next} s!=1{print}' "$PROFILE" > "$tmp"
+      install -m 600 "$tmp" "$PROFILE"
+      rm -f "$tmp"
+      echo "Updated: $PROFILE (managed block removed)"
+    else
+      echo "No managed block in ${PROFILE}; nothing to remove."
+    fi
+  fi
+
+  echo
+  echo "Claude Code restored to Anthropic's API (your claude.ai login was never touched)."
+  echo "If a shell still exports the gateway variables, start a fresh login shell or run:"
+  echo "  $(printf 'unset %s' "${MANAGED_VARS[*]}")"
+  echo
+  echo "Restart any open Claude Code session for the change to take effect."
+  exit 0
+fi
 
 [[ -n "$API_KEY" ]] || { usage >&2; die "API key is required"; }
 BASE_URL="${BASE_URL%/}"
