@@ -51,7 +51,17 @@ The switch is reversible at any time — see
    | `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | `1` | skip telemetry calls to anthropic.com |
    | `ANTHROPIC_AUTH_TOKEN` | (only with `--pin-auth-token`) | outranks `ANTHROPIC_API_KEY`; pin it on hosts where legacy proxies/wrappers may have exported a stale token. Causes a harmless "Both ... set" notice |
 
-2. Optionally (`--profile ~/.bashrc`) an idempotent managed export block for
+2. `~/.claude.json` → the API key is **pre-approved** in
+   `customApiKeyResponses.approved` (skip with `--no-approve`). Claude Code
+   does not adopt `ANTHROPIC_API_KEY` just because it is set: the key must be
+   approved via the "Detected a custom API key … use it?" startup prompt, and
+   with an active claude.ai login and no approval Claude Code silently keeps
+   sending its claude.ai **OAuth token** — which the gateway rejects with
+   `401` on every request. The script writes the same approval record a "Yes"
+   answer would (the key's last 20 characters). Note: `/logout` clears all
+   approvals; re-run the script after logging out.
+
+3. Optionally (`--profile ~/.bashrc`) an idempotent managed export block for
    shells and scripts that read env vars directly.
 
 Every modified file gets a timestamped `.bak.*` backup.
@@ -64,6 +74,8 @@ Every modified file gets a timestamped `.bak.*` backup.
 --model NAME     model alias (default claude-opus-4-6)
 --profile FILE   also write a managed export block to a shell profile
 --no-settings    skip settings.json (exports only)
+--no-approve     do not pre-approve the key in ~/.claude.json (you will have
+                 to answer "Yes" to the API-key prompt at next launch)
 --print-env      print export commands, write nothing
 --verify         verify /v1/messages and structured tool-call capability
 --restore        switch back to Anthropic's API (see below)
@@ -78,9 +90,11 @@ Every modified file gets a timestamped `.bak.*` backup.
 | `404 ... /responses ... APIG.0101` | gateway missing the chat-completions routing flag / plugin | admin: run `server/install-litellm-plugin.sh` |
 | works at low effort, breaks at `/effort max` | gateway missing the stream-fix plugin | admin: run `server/install-litellm-plugin.sh` |
 | tool calls print raw `<tool_call>...` text and no tools execute | backend endpoint is not parsing function/tool calls | admin: enable OpenAI-compatible function calling on MaaS, or start vLLM with `--enable-auto-tool-choice` and the matching `--tool-call-parser`; confirm with `--verify` |
+| every request 401s; gateway logs show `POST /v1/messages?beta=true` | session is still authenticating with the claude.ai **OAuth token**, not the virtual key — the key was never approved (`customApiKeyResponses` empty/null in `~/.claude.json`), often after a `/logout` cleared approvals or after configuring with `--no-approve` | re-run this script (it pre-approves the key), or start `claude` and answer **Yes** to the "Detected a custom API key" prompt; verify with `/status` and expect `200` in `docker logs -f litellm_proxy` |
 | old session still failing after configure | env captured at session start | fully exit Claude Code and start it again |
 | 401 with a non-`sk-` key in gateway logs | stale `ANTHROPIC_AUTH_TOKEN` exported in a long-running shell (legacy wrapper) | log out of that shell and back in, or re-run this script with `--pin-auth-token` |
 | "Both ANTHROPIC_AUTH_TOKEN and ANTHROPIC_API_KEY set" notice | `--pin-auth-token` was used, or the shell exports a stale AUTH_TOKEN | harmless if both hold the same key; to silence it, start a fresh login shell and configure without `--pin-auth-token` |
+| gateway container logs show requests from the machine's own **public** IP | Docker routes host-originated traffic through the host's primary interface | not external probing — expected for local clients; check the request path/key to identify the caller |
 
 ## Switching back to Anthropic (uninstall)
 
@@ -96,10 +110,11 @@ this script, so it survives switching in both directions.
 Then **restart any open Claude Code session** (`exit`, then `claude`).
 
 `--restore` removes exactly the variables listed under
-[What the script writes](#what-the-script-writes) from `~/.claude/settings.json`
-and, with `--profile`, deletes the managed export block from that shell
-profile. Other settings and env vars are left untouched, and each modified
-file gets a timestamped `.bak.*` backup first. Running it again is a no-op.
+[What the script writes](#what-the-script-writes) from `~/.claude/settings.json`,
+revokes the gateway key's approval entry in `~/.claude.json`, and, with
+`--profile`, deletes the managed export block from that shell profile. Other
+settings and env vars are left untouched, and each modified file gets a
+timestamped `.bak.*` backup first. Running it again is a no-op.
 
 If a long-running shell still exports the gateway variables, start a fresh
 login shell, or unset them in place:
