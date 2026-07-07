@@ -33,6 +33,9 @@ Then **restart any open Claude Code session** (`exit`, then `claude`).
 The API key is the only required input. On the gateway host itself,
 `--base-url` can be omitted (defaults to `http://127.0.0.1:4000`).
 
+The switch is reversible at any time — see
+[Switching back to Anthropic](#switching-back-to-anthropic-uninstall).
+
 ## What the script writes
 
 1. `~/.claude/settings.json` → `env` block (authoritative; read by Claude Code
@@ -63,6 +66,7 @@ Every modified file gets a timestamped `.bak.*` backup.
 --no-settings    skip settings.json (exports only)
 --print-env      print export commands, write nothing
 --verify         verify /v1/messages and structured tool-call capability
+--restore        switch back to Anthropic's API (see below)
 ```
 
 ## Troubleshooting
@@ -78,7 +82,36 @@ Every modified file gets a timestamped `.bak.*` backup.
 | 401 with a non-`sk-` key in gateway logs | stale `ANTHROPIC_AUTH_TOKEN` exported in a long-running shell (legacy wrapper) | log out of that shell and back in, or re-run this script with `--pin-auth-token` |
 | "Both ANTHROPIC_AUTH_TOKEN and ANTHROPIC_API_KEY set" notice | `--pin-auth-token` was used, or the shell exports a stale AUTH_TOKEN | harmless if both hold the same key; to silence it, start a fresh login shell and configure without `--pin-auth-token` |
 
-## Uninstall
+## Switching back to Anthropic (uninstall)
 
-Remove the `env` block from `~/.claude/settings.json` (or restore a `.bak.*`
-backup) and delete the managed block from your shell profile.
+The gateway switch is fully reversible. Your claude.ai login (OAuth
+credentials) is stored separately from `settings.json` and is never touched by
+this script, so it survives switching in both directions.
+
+```bash
+./configure-claude-code.sh --restore                    # settings.json only
+./configure-claude-code.sh --restore --profile ~/.bashrc # also remove the export block
+```
+
+Then **restart any open Claude Code session** (`exit`, then `claude`).
+
+`--restore` removes exactly the variables listed under
+[What the script writes](#what-the-script-writes) from `~/.claude/settings.json`
+and, with `--profile`, deletes the managed export block from that shell
+profile. Other settings and env vars are left untouched, and each modified
+file gets a timestamped `.bak.*` backup first. Running it again is a no-op.
+
+If a long-running shell still exports the gateway variables, start a fresh
+login shell, or unset them in place:
+
+```bash
+eval "$(./configure-claude-code.sh --restore --print-env)"
+```
+
+To switch back to the gateway later, just re-run the script with your virtual
+key as in [Quick start](#quick-start). You can flip between Anthropic and the
+gateway as often as you like.
+
+Manual alternative: remove the `env` block from `~/.claude/settings.json` (or
+restore a `.bak.*` backup) and delete the managed block from your shell
+profile.
