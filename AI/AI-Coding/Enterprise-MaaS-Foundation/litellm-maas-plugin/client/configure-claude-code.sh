@@ -29,6 +29,7 @@ PRINT_ENV=0
 VERIFY=0
 PIN_AUTH_TOKEN=0
 RESTORE=0
+APPROVE=1
 
 # Every env var this script may write; --restore removes exactly this set.
 MANAGED_VARS=(
@@ -69,6 +70,13 @@ Options:
                   Code). Side effect: Claude Code shows a harmless
                   "Both ANTHROPIC_AUTH_TOKEN and ANTHROPIC_API_KEY set"
                   notice.
+  --no-approve    Do not touch ~/.claude.json. By default the script
+                  pre-approves the API key there (customApiKeyResponses),
+                  because with an active claude.ai login Claude Code ignores
+                  an unapproved ANTHROPIC_API_KEY and keeps sending its OAuth
+                  token to the gateway, which answers 401. With this flag you
+                  must answer "Yes" yourself when Claude Code asks about the
+                  detected API key at startup.
   --restore       Switch back to Anthropic's API: remove the env vars this
                   script wrote from ~/.claude/settings.json and, with
                   --profile FILE, delete the managed export block from that
@@ -101,6 +109,7 @@ while [[ $# -gt 0 ]]; do
     --print-env) PRINT_ENV=1; shift ;;
     --verify)    VERIFY=1; shift ;;
     --pin-auth-token) PIN_AUTH_TOKEN=1; shift ;;
+    --no-approve) APPROVE=0; shift ;;
     --restore)   RESTORE=1; shift ;;
     -h|--help)   usage; exit 0 ;;
     -*)          die "unknown option: $1" ;;
@@ -119,9 +128,17 @@ if [[ "$RESTORE" == "1" ]]; then
     exit 0
   fi
 
+  # Recover the gateway key before it is removed, so its approval entry in
+  # ~/.claude.json can be revoked as well (see --no-approve).
+  GATEWAY_KEY="${ANTHROPIC_API_KEY:-}"
+  SETTINGS_FILE="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
+  if [[ -f "$SETTINGS_FILE" ]] && command -v python3 >/dev/null 2>&1; then
+    key_from_settings=$(SETTINGS_FILE="$SETTINGS_FILE" python3 -c 'import json,os; print(json.load(open(os.environ["SETTINGS_FILE"])).get("env",{}).get("ANTHROPIC_API_KEY",""))' 2>/dev/null || true)
+    [[ -n "$key_from_settings" ]] && GATEWAY_KEY="$key_from_settings"
+  fi
+
   if [[ "$WRITE_SETTINGS" == "1" ]]; then
     command -v python3 >/dev/null 2>&1 || die "python3 is required to update ~/.claude/settings.json (use --no-settings to skip)"
-    SETTINGS_FILE="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
     if [[ -f "$SETTINGS_FILE" ]]; then
       ASG_VARS="${MANAGED_VARS[*]}" SETTINGS_FILE="$SETTINGS_FILE" python3 - <<'PY'
 import json, os, time
@@ -162,6 +179,34 @@ PY
     else
       echo "No managed block in ${PROFILE}; nothing to remove."
     fi
+  fi
+
+  # Revoke the key's approval entry so a later "claude" launch with some other
+  # ANTHROPIC_API_KEY asks again instead of silently reusing a stale approval.
+  CLAUDE_JSON="${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"
+  if [[ "$APPROVE" == "1" && -n "$GATEWAY_KEY" && -f "$CLAUDE_JSON" ]] && command -v python3 >/dev/null 2>&1; then
+    ASG_API_KEY="$GATEWAY_KEY" CLAUDE_JSON="$CLAUDE_JSON" python3 - <<'PY'
+import json, os, time
+path = os.environ["CLAUDE_JSON"]
+with open(path) as f:
+    data = json.load(f)
+# Claude Code identifies an approved custom API key by its last 20 characters.
+tail = os.environ["ASG_API_KEY"][-20:]
+resp = data.get("customApiKeyResponses") or {}
+approved = resp.get("approved") or []
+if tail in approved:
+    backup = f"{path}.bak.{time.strftime('%Y%m%d%H%M%S')}"
+    with open(backup, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"Backup written: {backup}")
+    resp = {**resp, "approved": [k for k in approved if k != tail]}
+    data["customApiKeyResponses"] = resp
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"Updated: {path} (gateway key approval revoked)")
+else:
+    print(f"No approval entry for the gateway key in {path}; nothing to revoke.")
+PY
   fi
 
   echo
@@ -231,6 +276,49 @@ with open(path, "w") as f:
     json.dump(data, f, indent=2)
 print(f"Updated: {path}")
 PY
+fi
+
+# --- pre-approve the key in ~/.claude.json
+# Claude Code does not adopt ANTHROPIC_API_KEY just because it is set: the key
+# must be approved (the "Detected a custom API key ... use it?" prompt). With
+# an active claude.ai login and no approval, Claude Code keeps sending its
+# OAuth token, which the gateway rejects with 401 on every request. Approval
+# is recorded in ~/.claude.json as the key's last 20 characters in
+# customApiKeyResponses.approved; we write the same record the "Yes" answer
+# would. Note: /logout clears all approvals, so re-run this script after a
+# logout.
+if [[ "$APPROVE" == "1" ]]; then
+  CLAUDE_JSON="${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"
+  if [[ -f "$CLAUDE_JSON" ]] && command -v python3 >/dev/null 2>&1; then
+    ASG_API_KEY="$API_KEY" CLAUDE_JSON="$CLAUDE_JSON" python3 - <<'PY'
+import json, os, time
+path = os.environ["CLAUDE_JSON"]
+with open(path) as f:
+    data = json.load(f)
+tail = os.environ["ASG_API_KEY"][-20:]
+resp = data.get("customApiKeyResponses") or {}
+approved = [k for k in (resp.get("approved") or []) if k != tail] + [tail]
+rejected = [k for k in (resp.get("rejected") or []) if k != tail]
+if resp.get("approved") != approved or resp.get("rejected") != rejected:
+    backup = f"{path}.bak.{time.strftime('%Y%m%d%H%M%S')}"
+    with open(backup, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"Backup written: {backup}")
+    data["customApiKeyResponses"] = {**resp, "approved": approved, "rejected": rejected}
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"Updated: {path} (API key pre-approved)")
+else:
+    print(f"API key already approved in {path}")
+if data.get("oauthAccount"):
+    print("Note: this machine has an active claude.ai login. The approval above")
+    print("makes Claude Code use the gateway key instead of the claude.ai OAuth")
+    print("token (which the gateway would reject with 401). Verify with /status.")
+PY
+  else
+    echo "Note: no ${CLAUDE_JSON} yet (Claude Code never started?). At first"
+    echo "launch, answer Yes when asked about the detected ANTHROPIC_API_KEY."
+  fi
 fi
 
 # --- optional shell profile managed block
