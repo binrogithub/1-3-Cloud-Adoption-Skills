@@ -1,0 +1,14 @@
+{
+  "model": "claude-sonnet-4-6-backend",
+  "messages": [
+    {
+      "role": "user",
+      "content": "搜索今天 LiteLLM Claude Code 的最新能力，只列两点。"
+    }
+  ],
+  "metadata": {
+    "client": "claude-code",
+    "request_kind": "search",
+    "capability_mode": "backend_fallback"
+  }
+}
