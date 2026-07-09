@@ -17,9 +17,12 @@ Claude Code #1..N ──/v1/messages──► LiteLLM :4000 ──/chat/completi
 | [`client/configure-claude-code.sh`](client/configure-claude-code.sh) | Client setup script — input: a LiteLLM virtual API key |
 | [`client/README.md`](client/README.md) | Client-side documentation |
 | [`litellm_plugins/anthropic_stream_guard/`](litellm_plugins/anthropic_stream_guard/) | Server-side LiteLLM plugin (custom callback, no core patches) |
+| [`litellm_plugins/cc_glm52_guard/`](litellm_plugins/cc_glm52_guard/) | GLM-5.2 smart routing plugin for virtual coding models |
 | [`server/install-litellm-plugin.sh`](server/install-litellm-plugin.sh) | Plugin installer for docker-compose LiteLLM deployments |
 | [`server/README.md`](server/README.md) | Server-side documentation |
 | [`docs/PRD-anthropic-stream-guard.md`](docs/PRD-anthropic-stream-guard.md) | PRD / root-cause analysis for the plugin |
+| [`docs/PRD-smart-routing.md`](docs/PRD-smart-routing.md) | PRD for GLM-5.2 / Opus / Vision smart routing |
+| [`docs/EPICS-smart-routing.md`](docs/EPICS-smart-routing.md) | Epic breakdown for commercial smart routing delivery |
 | [`tests/live_smoke.py`](tests/live_smoke.py) | Live smoke test (text / 185K context / image / search) |
 | [`.claude/skills/deploy-litellm-plugin/`](.claude/skills/deploy-litellm-plugin/SKILL.md) | Claude Code skill: guided plugin deploy / verify / rollback |
 
@@ -133,8 +136,9 @@ the gateway while Claude Code sessions are active. The
 `asg_synthesized_terminations_total` / `asg_upstream_stream_errors_total`
 counters show how often upstream truncation is being repaired.
 
-## Legacy
+## Design History
 
-`litellm_plugins/cc_glm52_guard/`, `docs/PRD.md`, `docs/EPICS.md`, and the
-`tests/test_*.py` unit tests belong to an earlier adapter-based design and are
-kept for reference only; they are not part of the current deployment.
+`docs/PRD.md` and `docs/EPICS.md` describe the earlier Claude Code
+GLM-5.2 service-side adapter plan. The current smart-routing product
+definition is `docs/PRD-smart-routing.md` and `docs/EPICS-smart-routing.md`.
+The `cc_glm52_guard` package is active for the smart-routing contract tests.

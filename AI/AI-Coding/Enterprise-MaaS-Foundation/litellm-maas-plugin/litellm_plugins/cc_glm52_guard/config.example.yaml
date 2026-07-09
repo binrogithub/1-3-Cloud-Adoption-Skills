@@ -2,6 +2,48 @@
 # This file intentionally contains no real API keys.
 
 model_list:
+  - model_name: coding-auto
+    litellm_params:
+      model: openai/glm-5.2
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
+    model_info:
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+
+  - model_name: meli-coding-fast
+    litellm_params:
+      model: openai/glm-5.2
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
+    model_info:
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+
+  - model_name: meli-coding-deep
+    litellm_params:
+      model: anthropic/claude-opus-4.8
+      api_key: os.environ/OPUS_48_API_KEY
+
+  - model_name: meli-coding-review
+    litellm_params:
+      model: openai/glm-5.2
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
+    model_info:
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+
+  - model_name: meli-coding-vision
+    litellm_params:
+      model: openrouter/openai/gpt-4o
+      api_base: https://openrouter.ai/api/v1
+      api_key: os.environ/OpenRouter_API_KEY
+    model_info:
+      supports_vision: true
+      max_input_tokens: 128000
+      max_output_tokens: 16384
+
   - model_name: glm-5.2
     litellm_params:
       model: openai/glm-5.2
@@ -56,6 +98,11 @@ model_list:
       max_input_tokens: 192000
       max_output_tokens: 128000
 
+  - model_name: opus-4.8
+    litellm_params:
+      model: anthropic/claude-opus-4.8
+      api_key: os.environ/OPUS_48_API_KEY
+
   - model_name: opus-summary
     litellm_params:
       model: anthropic/claude-opus-4.8
@@ -77,17 +124,65 @@ litellm_settings:
     - cc_glm52_guard.proxy_handler_instance
 
 router_settings:
+  routing_strategy: simple-shuffle
   enable_pre_call_checks: true
+  num_retries: 3
+  max_fallbacks: 2
+  cooldown_time: 30
+  allowed_fails: 3
+  fallbacks:
+    - coding-auto:
+        - opus-4.8
+    - meli-coding-auto:
+        - opus-4.8
+    - meli-coding-fast:
+        - opus-4.8
+    - meli-coding-review:
+        - opus-4.8
+    - glm-5.2:
+        - opus-4.8
+    - claude-opus-4-6:
+        - opus-4.8
+    - claude-opus-4-6-backend:
+        - opus-4.8
+  context_window_fallbacks:
+    - coding-auto:
+        - opus-4.8
+    - meli-coding-auto:
+        - opus-4.8
+    - meli-coding-fast:
+        - opus-4.8
+    - meli-coding-review:
+        - opus-4.8
+    - glm-5.2:
+        - opus-4.8
+    - claude-opus-4-6:
+        - opus-4.8
+    - claude-opus-4-6-backend:
+        - opus-4.8
 
 general_settings:
   context_management_summary_model: opus-summary
 
 # Runtime environment controls:
 # CC_GLM52_EXECUTION_MODEL=glm-5.2
+# CC_GLM52_PREMIUM_MODEL=opus-4.8
 # CC_GLM52_VISION_MODEL=vision-openrouter
 # CC_GLM52_SUMMARY_MODEL=opus-summary
+# CC_GLM52_DIRECT_LIMIT=160000
+# CC_GLM52_MAX_LIMIT=196000
 # CC_GLM52_SOFT_LIMIT=180000
 # CC_GLM52_COMPACT_TRIGGER=150000
 # CC_GLM52_CLEAR_TOOL_TRIGGER=100000
 # CC_GLM52_SEARCH_MODE=native
 # CC_GLM52_CAPABILITY_MODE=frontend_capable
+# CC_GLM52_GLM_RELATIVE_COST=0.22
+# CC_GLM52_PREMIUM_RELATIVE_COST=1.0
+# CC_GLM52_VISION_RELATIVE_COST=1.0
+# CC_GLM52_SWITCH_COOLDOWN_TURNS=3
+# CC_GLM52_PREMIUM_STICKY_TURNS=5
+# CC_GLM52_MAX_SWITCHES_PER_SESSION=2
+# CC_GLM52_GLM_DOWNGRADE_SUCCESS_STREAK=2
+# CC_GLM52_SEMANTIC_ROUTER_ENABLED=false
+# CC_GLM52_SEMANTIC_ROUTER_ENCODER=huggingface
+# CC_GLM52_SEMANTIC_ROUTER_HF_MODEL=intfloat/multilingual-e5-small
