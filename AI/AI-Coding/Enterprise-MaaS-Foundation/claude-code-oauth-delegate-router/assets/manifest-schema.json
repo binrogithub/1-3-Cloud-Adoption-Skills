@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "oauth-delegate-router workflow manifest (PRD §6.3 W2)",
+  "type": "object",
+  "required": ["workflow", "mode"],
+  "properties": {
+    "workflow": {"type": "string"},
+    "mode": {"enum": ["fanout", "suborchestrate"]},
+    "items": {"type": "array", "items": {"type": "object", "properties": {"scope": {"type": "array", "items": {"type": "string"}}}}, "description": "fanout only; scopes must be disjoint"},
+    "brief_template": {"type": "object", "description": "brief with ${key} placeholders substituted from each item"},
+    "brief": {"type": "object", "description": "suborchestrate only: the whole-workflow brief (include stage gates)"},
+    "concurrency": {"type": "integer", "default": 3},
+    "verify_cmd": {"type": "string", "description": "aggregate verification after all items"},
+    "isolation": {"enum": ["disjoint"], "default": "disjoint", "description": "v1: disjoint scopes enforced; worktree mode is a v2 item"}
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "oauth-delegate-router brief (PRD §6.2)",
+  "type": "object",
+  "required": ["task_type", "goal"],
+  "properties": {
+    "task_type": {"type": "string", "examples": ["unit_test_generation", "documentation", "ci_auto_fix", "code_generation", "batch_refactor", "pr_review", "workflow_suborchestration"]},
+    "goal": {"type": "string", "description": "self-contained; delegate sees nothing of the session"},
+    "scope": {"type": "array", "items": {"type": "string"}},
+    "constraints": {"type": "array", "items": {"type": "string"}},
+    "acceptance": {"type": "string", "description": "shell command; exit 0 = success (authoritative)"},
+    "context_notes": {"type": "string"},
+    "max_attempts": {"type": "integer", "default": 2},
+    "previous_failure": {"type": "object", "description": "auto-appended by the runner on retry"}
+  }
+}

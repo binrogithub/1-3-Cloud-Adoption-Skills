@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""oauth-delegate-router C2: run one execution-class brief on claude-glm.
+
+Usage:
+  delegate '<brief-json>'
+  delegate --file brief.json [--cwd DIR]
+
+Brief schema: assets/brief-schema.json. Result JSON on stdout (PRD §6.2).
+Exit codes: 0 success, 2 needs_escalation, 1 usage/infra error.
+Audit: one JSONL record per attempt in $DELEGATE_AUDIT.
+"""
+import json, os, re, subprocess, sys, time, uuid
+
+AUDIT = os.environ.get("DELEGATE_AUDIT") or os.path.expanduser("~/.claude-hybrid/route-audit.jsonl")
+TIMEOUT = int(os.environ.get("DELEGATE_TIMEOUT_S", "1800"))
+ALLOWED_TOOLS = os.environ.get(
+    "DELEGATE_ALLOWED_TOOLS", "Bash,Read,Edit,Write,Glob,Grep,TodoWrite"
+)
+CLAUDE_GLM = os.environ.get("DELEGATE_CLIENT", "claude-glm")
+
+PROTOCOL = """You are an execution agent working headlessly in the current directory.
+Complete the TASK BRIEF below. Rules:
+- Do the work with tools; verify against the acceptance command yourself before finishing.
+- Stay strictly inside the scope paths. Do not touch other files.
+- Your FINAL message must be ONLY a JSON object (no prose, no fences):
+  {"status":"success|failure","summary":"<=2 sentences",
+   "files_changed":["path",...],"verification":"what you ran and its result"}
+
+TASK BRIEF:
+"""
+
+
+def audit(rec):
+    os.makedirs(os.path.dirname(AUDIT), exist_ok=True)
+    with open(AUDIT, "a") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+
+def extract_report(text):
+    # last {...} block in the agent's final text
+    m = None
+    for m in re.finditer(r"\{.*\}", text, re.S):
+        pass
+    if m:
+        try:
+            return json.loads(m.group(0))
+        except Exception:
+            pass
+    return {"status": "unknown", "summary": text[-400:], "files_changed": []}
+
+
+def run_attempt(brief, cwd, attempt):
+    prompt = PROTOCOL + json.dumps(brief, ensure_ascii=False, indent=1)
+    t0 = time.time()
+    try:
+        p = subprocess.run(
+            [CLAUDE_GLM, "-p", prompt, "--output-format", "json",
+             "--permission-mode", "acceptEdits", "--allowedTools", ALLOWED_TOOLS],
+            capture_output=True, text=True, cwd=cwd, timeout=TIMEOUT,
+        )
+        out = json.loads(p.stdout) if p.stdout.strip() else {}
+    except subprocess.TimeoutExpired:
+        return {"status": "failure", "summary": f"delegate timeout {TIMEOUT}s",
+                "files_changed": []}, {}, time.time() - t0
+    except json.JSONDecodeError:
+        out = {"result": p.stdout}
+    report = extract_report(out.get("result") or "")
+    usage = out.get("usage") or {}
+    report["_session"] = out.get("session_id")
+    if out.get("is_error"):
+        report["status"] = "failure"
+    return report, usage, time.time() - t0
+
+
+def check_acceptance(brief, cwd):
+    cmd = brief.get("acceptance")
+    if not cmd:
+        return None, ""
+    p = subprocess.run(["bash", "-c", cmd], capture_output=True, text=True,
+                       cwd=cwd, timeout=600)
+    return p.returncode == 0, (p.stdout + p.stderr)[-800:]
+
+
+def main():
+    args = sys.argv[1:]
+    cwd = os.getcwd()
+    if "--cwd" in args:
+        i = args.index("--cwd"); cwd = args[i + 1]; del args[i:i + 2]
+    if args and args[0] == "--file":
+        brief = json.load(open(args[1]))
+    elif args:
+        brief = json.loads(args[0])
+    else:
+        sys.exit(__doc__)
+    brief.setdefault("attempt", 1)
+    max_attempts = int(brief.get("max_attempts", 2))
+    task_id = brief.get("task_id") or uuid.uuid4().hex[:8]
+
+    result = None
+    for attempt in range(1, max_attempts + 1):
+        brief["attempt"] = attempt
+        report, usage, dur = run_attempt(brief, cwd, attempt)
+        ok, evidence = check_acceptance(brief, cwd)
+        status = ("success" if ok else "failure") if ok is not None \
+            else ("success" if report.get("status") == "success" else "failure")
+        audit({"ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "task_id": task_id,
+               "task_type": brief.get("task_type"), "route": "glm",
+               "attempt": attempt, "outcome": status, "duration_s": round(dur, 1),
+               "tokens_in": usage.get("input_tokens"),
+               "tokens_out": usage.get("output_tokens"),
+               "session": report.get("_session"),
+               "workflow": brief.get("workflow")})
+        result = {"status": status, "summary": report.get("summary", ""),
+                  "files_changed": report.get("files_changed", []),
+                  "verification": {"cmd": brief.get("acceptance"),
+                                   "passed": ok, "evidence_tail": evidence[-300:]},
+                  "glm_session": report.get("_session"),
+                  "attempts": attempt, "duration_s": round(dur, 1),
+                  "tokens": {"in": usage.get("input_tokens"),
+                             "out": usage.get("output_tokens")}}
+        if status == "success":
+            break
+        # feed failure evidence into the retry (PRD §7.1)
+        brief["previous_failure"] = {"attempt": attempt,
+                                     "summary": report.get("summary", "")[:300],
+                                     "acceptance_output": evidence}
+    if result["status"] != "success":
+        result["status"] = "needs_escalation"
+        audit({"ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "task_id": task_id,
+               "task_type": brief.get("task_type"), "route": "premium",
+               "attempt": max_attempts, "outcome": "escalated",
+               "fallback_reason": "failed_twice", "workflow": brief.get("workflow")})
+    print(json.dumps(result, ensure_ascii=False, indent=1))
+    sys.exit(0 if result["status"] == "success" else 2)
+
+
+if __name__ == "__main__":
+    main()
