@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+"""oauth-delegate-router C7: fan-out workflow runner (PRD §6.3 W2).
+
+Usage:
+  workflow '<manifest-json>'
+  workflow --file manifest.json [--cwd DIR]
+
+Manifest schema: assets/manifest-schema.json. Modes:
+  fanout          items[] run as parallel `delegate` calls (disjoint scopes enforced)
+  suborchestrate  single brief delegated whole; the claude-glm session plans its
+                  own agents (W1) — items[] not used
+
+Aggregate report JSON on stdout; per-item results in $WF_DIR/<run>/items.jsonl.
+Exit: 0 all green, 2 premium remainder present, 3 remainder >30% (abort/reclassify).
+"""
+import concurrent.futures as cf
+import copy, json, os, subprocess, sys, time, uuid
+
+DELEGATE = os.environ.get("WORKFLOW_DELEGATE", "delegate")
+WF_DIR = os.environ.get("WORKFLOW_DIR") or os.path.expanduser("~/.claude-hybrid/workflows")
+
+
+def render(node, item):
+    if isinstance(node, str):
+        for k, v in item.items():
+            node = node.replace("${%s}" % k,
+                                v if isinstance(v, str) else json.dumps(v))
+        return node
+    if isinstance(node, list):
+        return [render(x, item) for x in node]
+    if isinstance(node, dict):
+        return {k: render(v, item) for k, v in node.items()}
+    return node
+
+
+def main():
+    args = sys.argv[1:]
+    cwd = os.getcwd()
+    if "--cwd" in args:
+        i = args.index("--cwd"); cwd = args[i + 1]; del args[i:i + 2]
+    if args and args[0] == "--file":
+        mf = json.load(open(args[1]))
+    elif args:
+        mf = json.loads(args[0])
+    else:
+        sys.exit(__doc__)
+
+    run_id = f"{mf.get('workflow','wf')}-{time.strftime('%m%d-%H%M%S')}"
+    run_dir = os.path.join(WF_DIR, run_id)
+    os.makedirs(run_dir, exist_ok=True)
+    mode = mf.get("mode", "fanout")
+
+    if mode == "suborchestrate":
+        brief = dict(mf["brief"], workflow=run_id, task_type=mf.get(
+            "brief", {}).get("task_type", "workflow_suborchestration"))
+        p = subprocess.run([DELEGATE, json.dumps(brief), "--cwd", cwd],
+                           capture_output=True, text=True)
+        print(p.stdout)
+        sys.exit(p.returncode)
+
+    items = mf["items"]
+    # isolation: disjoint scopes are mandatory in v1 (PRD §6.3 W2)
+    seen = {}
+    for n, it in enumerate(items):
+        for path in it.get("scope", []):
+            if path in seen:
+                sys.exit(f"refused: scope '{path}' appears in items "
+                         f"{seen[path]} and {n} — scopes must be disjoint")
+            seen[path] = n
+
+    conc = int(mf.get("concurrency", 3))
+    results = []
+
+    def run_item(idx_item):
+        idx, item = idx_item
+        brief = render(copy.deepcopy(mf["brief_template"]), item)
+        brief.update(workflow=run_id, task_id=f"{run_id}-i{idx}")
+        p = subprocess.run([DELEGATE, json.dumps(brief), "--cwd", cwd],
+                           capture_output=True, text=True)
+        try:
+            res = json.loads(p.stdout)
+        except json.JSONDecodeError:
+            res = {"status": "needs_escalation",
+                   "summary": (p.stdout + p.stderr)[-300:]}
+        res["item"] = idx
+        res["scope"] = item.get("scope")
+        return res
+
+    t0 = time.time()
+    with cf.ThreadPoolExecutor(max_workers=conc) as ex:
+        for res in ex.map(run_item, enumerate(items)):
+            results.append(res)
+            with open(os.path.join(run_dir, "items.jsonl"), "a") as f:
+                f.write(json.dumps(res, ensure_ascii=False) + "\n")
+
+    if mf.get("verify_cmd"):
+        v = subprocess.run(["bash", "-c", mf["verify_cmd"]],
+                           capture_output=True, text=True, cwd=cwd)
+        final_verify = {"cmd": mf["verify_cmd"], "passed": v.returncode == 0,
+                        "tail": (v.stdout + v.stderr)[-500:]}
+    else:
+        final_verify = None
+
+    remainder = [r for r in results if r["status"] != "success"]
+    report = {"workflow": run_id, "mode": mode, "items": len(items),
+              "succeeded": len(items) - len(remainder),
+              "premium_remainder": [{"item": r["item"], "scope": r["scope"],
+                                     "summary": r.get("summary", "")[:200]}
+                                    for r in remainder],
+              "final_verify": final_verify,
+              "duration_s": round(time.time() - t0, 1),
+              "run_dir": run_dir}
+    print(json.dumps(report, ensure_ascii=False, indent=1))
+    ratio = len(remainder) / max(len(items), 1)
+    sys.exit(0 if not remainder else (3 if ratio > 0.30 else 2))
+
+
+if __name__ == "__main__":
+    main()
