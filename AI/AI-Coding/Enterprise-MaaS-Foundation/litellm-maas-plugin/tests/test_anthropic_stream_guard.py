@@ -372,6 +372,24 @@ assert _rec.n==1, f"TOOL_MARKUP should increment once per stream, got {_rec.n}"
 _cbmod.TOOL_MARKUP=_old_markup
 print("T21 dict-mode unparsed tool markup detected without rewrite: PASS")
 
+# T21b tool-bearing requests can be proactively routed to a reliable model.
+_old_tool_model = _cbmod.TOOL_MODEL
+_old_reroutes = _cbmod.TOOL_MODEL_REROUTES
+_rec = _Rec()
+_cbmod.TOOL_MODEL = "claude-opus-4.8"
+_cbmod.TOOL_MODEL_REROUTES = _rec
+req = {"model": "claude-opus-4-6", "tools": [{"name": "Read"}]}
+asyncio.run(proxy_handler_instance.async_pre_call_hook(None, None, req, None))
+assert req["model"] == "claude-opus-4.8", req
+assert _rec.n == 1, _rec.n
+req = {"model": "claude-opus-4-6", "messages": []}
+asyncio.run(proxy_handler_instance.async_pre_call_hook(None, None, req, None))
+assert req["model"] == "claude-opus-4-6", req
+assert _rec.n == 1, _rec.n
+_cbmod.TOOL_MODEL = _old_tool_model
+_cbmod.TOOL_MODEL_REROUTES = _old_reroutes
+print("T21b reliable tool-model routing: PASS")
+
 # T22 queued mid-task user message (#115): re-surfaced as top-level text
 from callback import amplify_user_interjections, AMPLIFIED_HEADER
 REMINDER = ("<system-reminder>\nThe user sent the following message: "

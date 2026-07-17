@@ -55,6 +55,43 @@ def test_deep_virtual_model_routes_to_premium(plugin_module):
     assert transformed["metadata"]["cc_glm52_guard"]["route_reason"] == "virtual_deep"
 
 
+def test_configured_reliable_tool_model_routes_client_tools_to_premium(
+    plugin_module, monkeypatch
+):
+    monkeypatch.setenv("CC_GLM52_RELIABLE_TOOL_MODEL", EXPECTED_PREMIUM)
+    guard = plugin_module.CCGLM52Guard(plugin_module.GuardConfig())
+    request_body = load_fixture("text_request.json")
+    request_body["model"] = "coding-auto"
+    request_body["tools"] = [{"name": "Read", "input_schema": {"type": "object"}}]
+
+    import asyncio
+    transformed = asyncio.run(
+        guard.async_pre_call_hook(None, None, request_body, "anthropic_messages")
+    )
+
+    assert route_model(transformed) == EXPECTED_PREMIUM
+    audit = transformed["metadata"]["cc_glm52_guard"]
+    assert audit["route_reason"] == "reliable_tool_model"
+
+
+def test_reliable_tool_model_does_not_reroute_tool_free_request(
+    plugin_module, monkeypatch
+):
+    monkeypatch.setenv("CC_GLM52_RELIABLE_TOOL_MODEL", EXPECTED_PREMIUM)
+    guard = plugin_module.CCGLM52Guard(plugin_module.GuardConfig())
+    request_body = load_fixture("text_request.json")
+    request_body["model"] = "coding-auto"
+    request_body.pop("tools", None)
+    request_body["metadata"]["task_type"] = "unit_test_generation"
+
+    import asyncio
+    transformed = asyncio.run(
+        guard.async_pre_call_hook(None, None, request_body, "anthropic_messages")
+    )
+
+    assert route_model(transformed) == EXPECTED_GLM
+
+
 def test_review_high_risk_routes_to_premium(plugin_module):
     request_body = load_fixture("text_request.json")
     request_body["model"] = "meli-coding-review"

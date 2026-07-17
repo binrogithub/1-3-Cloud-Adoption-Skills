@@ -43,6 +43,8 @@ Env:
                                   (web_search etc.) the backend cannot run
                                   (default true)
   ASG_MAX_PARSE_BYTES=262144      max SSE event size that will be parsed
+  ASG_TOOL_MODEL=                  optional reliable model alias for requests
+                                  that declare client-side tools (default empty)
 
 Prometheus metrics (exported via the proxy /metrics endpoint):
   asg_retyped_blocks_total      first-block type corrections
@@ -77,6 +79,7 @@ INDEXED_EVENTS = {"content_block_start", "content_block_delta", "content_block_s
 THINKING_DELTAS = {"thinking_delta", "signature_delta"}
 BLOCK_FAMILIES = {"thinking", "text", "tool_use"}
 TOOL_MARKUP_PREFIX = b"<tool_call"
+TOOL_MODEL = os.getenv("ASG_TOOL_MODEL", "").strip()
 
 STRIP_THINKING = os.getenv("ASG_STRIP_THINKING", "true").strip().lower() != "false"
 STRIPPED_REQUEST_KEYS = ("thinking", "reasoning", "reasoning_effort")
@@ -157,6 +160,10 @@ try:
         "Anthropic server-tool entries removed before the OpenAI-compatible "
         "backend (GLM/MaaS rejects them with a 'tools' validation error)",
     )
+    TOOL_MODEL_REROUTES = _Counter(
+        "asg_tool_model_reroutes_total",
+        "tool-bearing requests rerouted to the configured reliable model",
+    )
 except Exception:  # duplicate registration, missing dep, ...
 
     class _Noop:
@@ -165,7 +172,9 @@ except Exception:  # duplicate registration, missing dep, ...
 
     RETYPED = SYNTHESIZED = PARSE_ERRORS = OVERSIZE = SYNTH_TERM = (
         UPSTREAM_ERRORS
-    ) = TOOL_MARKUP = INTERJECTIONS = SERVER_TOOLS_STRIPPED = _Noop()
+    ) = TOOL_MARKUP = INTERJECTIONS = SERVER_TOOLS_STRIPPED = (
+        TOOL_MODEL_REROUTES
+    ) = _Noop()
 
 # ---- byte-level fast path (I6) --------------------------------------------
 _DELTA_PREFIX = b"event: content_block_delta"
@@ -489,6 +498,20 @@ class AnthropicStreamGuard(CustomLogger):
                     "[anthropic_stream_guard] %s while stripping server "
                     "tools (request passed through)",
                     type(err).__name__,
+                )
+        # A streaming response that contains malformed tool markup is too late
+        # to retry safely. Opt-in routing avoids the unreliable backend before
+        # dispatch while leaving ordinary, tool-free requests unchanged.
+        if TOOL_MODEL and isinstance(data, dict) and _request_has_tools(data):
+            current_model = str(data.get("model") or "")
+            if current_model != TOOL_MODEL:
+                data["model"] = TOOL_MODEL
+                TOOL_MODEL_REROUTES.inc()
+                verbose_proxy_logger.warning(
+                    "[anthropic_stream_guard] rerouted tool-bearing request "
+                    "from %s to configured reliable tool model %s",
+                    current_model,
+                    TOOL_MODEL,
                 )
         if AMPLIFY_INTERJECTIONS and isinstance(data, dict):
             try:
