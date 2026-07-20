@@ -32,6 +32,7 @@ DEFAULT_GLM_DOWNGRADE_SUCCESS_STREAK = 2
 DEFAULT_SEMANTIC_ROUTER_ENABLED = False
 DEFAULT_SEMANTIC_ROUTER_ENCODER = "huggingface"
 DEFAULT_SEMANTIC_ROUTER_HF_MODEL = "intfloat/multilingual-e5-small"
+DEFAULT_RELIABLE_TOOL_MODEL = ""
 
 EXECUTION_ALIASES = {
     "claude-opus-4-6",
@@ -300,6 +301,9 @@ class GuardConfig:
         self.premium_model = _env_str("CC_GLM52_PREMIUM_MODEL", DEFAULT_PREMIUM_MODEL)
         self.vision_model = _env_str("CC_GLM52_VISION_MODEL", DEFAULT_VISION_MODEL)
         self.summary_model = _env_str("CC_GLM52_SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL)
+        self.reliable_tool_model = _env_str(
+            "CC_GLM52_RELIABLE_TOOL_MODEL", DEFAULT_RELIABLE_TOOL_MODEL
+        )
         self.soft_limit = _env_int("CC_GLM52_SOFT_LIMIT", DEFAULT_SOFT_LIMIT)
         self.glm_direct_limit = _env_int(
             "CC_GLM52_DIRECT_LIMIT", DEFAULT_GLM_DIRECT_LIMIT
@@ -476,6 +480,13 @@ class CCGLM52Guard(CustomLogger):
             decision.update(
                 internal_route_model=self.config.vision_model,
                 route_reason="image_content",
+            )
+            return stabilize_route_decision(data, decision, self.config)
+
+        if self.config.reliable_tool_model and has_client_tools(data):
+            decision.update(
+                internal_route_model=self.config.reliable_tool_model,
+                route_reason="reliable_tool_model",
             )
             return stabilize_route_decision(data, decision, self.config)
 
@@ -676,6 +687,7 @@ def keep_previous_model(
 
 def hard_route_reason(route_reason: Any) -> bool:
     return route_reason in {
+        "reliable_tool_model",
         "image_content",
         "virtual_vision",
         "virtual_deep",
@@ -1401,6 +1413,20 @@ def litellm_web_search_tool() -> Dict[str, Any]:
 def has_image_content(data: Dict[str, Any]) -> bool:
     for content in iter_content_values(data):
         if content_has_image(content):
+            return True
+    return False
+
+
+def has_client_tools(data: Dict[str, Any]) -> bool:
+    """Return true for executable client tools, excluding server-side tools."""
+    tools = data.get("tools")
+    if not isinstance(tools, list):
+        return False
+    for tool in tools:
+        if not isinstance(tool, dict):
+            continue
+        tool_type = str(tool.get("type") or "")
+        if tool.get("name") or tool_type in {"function", "custom"}:
             return True
     return False
 

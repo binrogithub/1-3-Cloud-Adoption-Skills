@@ -19,6 +19,9 @@ clients when the backend is an OpenAI-compatible reasoning model whose
   logs one redacted warning when a tools request streams raw `<tool_call`
   markup as visible text. The guard intentionally does not rewrite improvised
   model markup; fix the backend endpoint so it returns structured tool calls.
+- **Reliable tool lane (opt-in)**: set `ASG_TOOL_MODEL` to a model alias with
+  native function calling. Requests declaring client tools are routed there
+  before dispatch; tool-free requests remain on the original model.
 
 Install, configuration requirements, verification, and rollback:
 see [`../../server/README.md`](../../server/README.md).
@@ -77,4 +80,5 @@ Alerting suggestions: page when `asg_parse_errors_total` rate stays above zero
 stops increasing while traffic is nonzero (upstream fixed - plugin can be
 retired).
 
-Env: `ASG_STRIP_THINKING` (default true), `ASG_MAX_PARSE_BYTES` (default 262144).
+Env: `ASG_STRIP_THINKING` (default true), `ASG_MAX_PARSE_BYTES` (default
+262144), `ASG_TOOL_MODEL` (default empty/disabled).
