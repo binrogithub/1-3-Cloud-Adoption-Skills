@@ -1,0 +1,8 @@
+apiVersion: v2
+name: nginx-demo
+description: Nginx demo app compatible with Huawei Cloud CCE
+type: application
+version: 0.1.0
+appVersion: "1.27"
+maintainers:
+  - name: local-dev

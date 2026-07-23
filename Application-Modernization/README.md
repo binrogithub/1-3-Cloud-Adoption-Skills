@@ -8,6 +8,7 @@ This domain contains Level 2 use cases for application-oriented Huawei Cloud ado
 - [Application Migration](./Application-Migration/README.md): Analyze applications, dependencies, and transformation paths for moving workloads to Huawei Cloud.
 - [VMware Migration](./VMware-Migration/README.md): Migrate VMware-based workloads and redesign target architectures where needed.
 - [VM to Container](./VM-to-Container/README.md): Identify containerization opportunities and define Kubernetes or CaaS target patterns.
+- [Container Migration](./Container-Migration/README.md): Migrate containerized workloads from local environments to CCE and between CCE clusters across regions.
 - [DotNet Application Migration](./DotNet-Application-Migration/README.md): Modernize .NET and Windows workloads toward current runtime and cloud-native patterns.
 - [SAP on Cloud](./SAP-on-Cloud/README.md): Move SAP landscapes to cloud with attention to performance, high availability, backup, and DR.
 - [Workspace and Virtual Desktop](./Workspace-and-Virtual-Desktop/README.md): Design virtual desktop and workspace solutions for secure and productive remote access.

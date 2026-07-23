@@ -1,0 +1,15 @@
+controller:
+  kind: DaemonSet
+  hostNetwork: false
+  service:
+    type: LoadBalancer
+    annotations:
+      kubernetes.io/elb.id: "REPLACE_WITH_ELB_ID"
+  ingressClassResource:
+    default: true
+  metrics:
+    enabled: false
+  admissionWebhooks:
+    enabled: false
+defaultBackend:
+  enabled: false

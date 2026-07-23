@@ -1,0 +1,82 @@
+replicaCount: 2
+
+image:
+  repository: swr.REGION.myhuaweicloud.com/SWR_NAMESPACE/IMAGE_NAME
+  tag: "IMAGE_TAG"
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - host: REPLACE_WITH_HOSTNAME
+      paths:
+        - path: /
+          pathType: Prefix
+
+persistence:
+  enabled: false
+  # For single-replica deployments with EVS:
+  # enabled: true
+  # storageClass: csi-disk
+  # accessMode: ReadWriteOnce
+  # size: 10Gi
+  #
+  # For multi-replica deployments with SFS:
+  # enabled: true
+  # storageClass: csi-nas
+  # accessMode: ReadWriteMany
+  # size: 10Gi
+
+configmap:
+  data:
+    index.html: |
+      <!DOCTYPE html>
+      <html>
+      <head><title>CCE Migrated App</title></head>
+      <body>
+      <h1>Hello from Huawei Cloud CCE!</h1>
+      <p>Migrated from local Kind cluster.</p>
+      </body>
+      </html>
+
+secret:
+  data:
+    API_KEY: REPLACE_WITH_BASE64_API_KEY
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: 80
+  initialDelaySeconds: 10
+  periodSeconds: 15
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: 80
+  initialDelaySeconds: 5
+  periodSeconds: 10

@@ -1,0 +1,13 @@
+controller:
+  image:
+    tag: v1.12.1
+    digest: ""
+  admissionWebhooks:
+    patch:
+      image:
+        tag: v1.6.9
+        digest: ""
+  nodeSelector:
+    ingress-ready: "true"
+  hostNetwork: true
+  kind: DaemonSet

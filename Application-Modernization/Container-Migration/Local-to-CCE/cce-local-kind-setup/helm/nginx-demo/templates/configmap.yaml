@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "nginx-demo.fullname" . }}-config
+  labels:
+    {{- include "nginx-demo.labels" . | nindent 4 }}
+data:
+  {{- toYaml .Values.configmap.data | nindent 2 }}
