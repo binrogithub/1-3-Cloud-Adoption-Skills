@@ -1,0 +1,25 @@
+# MSI Batch Installer Configuration
+# =================================
+
+# UI mode for msiexec:
+#   silent - fully silent, no UI (/qn)
+#   basic  - basic UI, progress bar only (/qb)
+#   full   - full installer UI (no flag)
+ui_mode: silent
+
+# Suppress reboot after installation (/norestart)
+no_reboot: true
+
+# Log directory for MSI verbose logs
+# null = default (%TEMP%\msi-install-logs)
+log_dir: null
+
+# Continue to next MSI even if one fails
+continue_on_error: true
+
+# MSI public properties to pass on the command line
+# Example:
+#   properties:
+#     ACCEPT_EULA: "1"
+#     INSTALLDIR: "C:\\Program Files\\MyApp"
+properties: {}
