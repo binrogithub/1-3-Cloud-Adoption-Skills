@@ -1,0 +1,60 @@
+{
+  "validation_queries_version": "0.1",
+  "migration_id": "customer_status_pipeline_simple",
+  "runtime": "DLI",
+  "queries": [
+    {
+      "id": "raw_customers_count",
+      "type": "TABLE_COUNT",
+      "object_name": "RAW_CUSTOMERS",
+      "sql": "SELECT COUNT(*) AS actual_value FROM demo_migration.raw_customers",
+      "expected": 6
+    },
+    {
+      "id": "silver_customers_count",
+      "type": "TABLE_COUNT",
+      "object_name": "SILVER_CUSTOMERS",
+      "sql": "SELECT COUNT(*) AS actual_value FROM demo_migration.silver_customers",
+      "expected": 6
+    },
+    {
+      "id": "gold_customer_status_count",
+      "type": "TABLE_COUNT",
+      "object_name": "GOLD_CUSTOMER_STATUS",
+      "sql": "SELECT COUNT(*) AS actual_value FROM demo_migration.gold_customer_status",
+      "expected": 2
+    },
+    {
+      "id": "task_audit_success_count",
+      "type": "TABLE_COUNT",
+      "object_name": "TASK_AUDIT_SUCCESS",
+      "sql": "SELECT COUNT(*) AS actual_value FROM demo_migration.task_audit WHERE status = 'SUCCESS'",
+      "expected": ">=1"
+    },
+    {
+      "id": "aggregate_active",
+      "type": "AGGREGATE_CHECK",
+      "object_name": "ACTIVE",
+      "sql": "SELECT customer_count FROM demo_migration.gold_customer_status WHERE customer_status = 'ACTIVE'",
+      "expected": {
+        "customer_count": 4
+      }
+    },
+    {
+      "id": "aggregate_inactive",
+      "type": "AGGREGATE_CHECK",
+      "object_name": "INACTIVE",
+      "sql": "SELECT customer_count FROM demo_migration.gold_customer_status WHERE customer_status = 'INACTIVE'",
+      "expected": {
+        "customer_count": 2
+      }
+    },
+    {
+      "id": "final_equivalence",
+      "type": "FINAL_EQUIVALENCE",
+      "object_name": "SNOWFLAKE_TO_DATAARTS",
+      "sql": "SELECT 'EQUIVALENT' AS actual_value",
+      "expected": "EQUIVALENT"
+    }
+  ]
+}

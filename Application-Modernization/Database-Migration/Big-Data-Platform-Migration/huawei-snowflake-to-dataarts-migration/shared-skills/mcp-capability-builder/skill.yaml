@@ -1,0 +1,27 @@
+name: mcp-capability-builder
+version: 1.0.0
+category: shared
+status: READY_WITH_WARNINGS
+risk_level: low
+requires_explicit_approval: false
+
+scenario:
+  input: capability_gap_report
+  output: mcp_extension_or_new_mcp_scaffold
+  constraints:
+    - no_cloud_operations
+    - no_auto_activation
+    - manual_review_required
+
+mcps:
+  required: []
+  optional: []
+
+outputs:
+  - gap-analysis
+  - tool-contract
+  - mcp-scaffold
+  - tests
+  - security-review
+  - integration-instructions
+  - promotion-checklist

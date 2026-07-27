@@ -1,0 +1,16 @@
+{
+  "task_name": "pg-ecs-to-rds-cross-region",
+  "source_region": "la-south-2",
+  "target_region": "cn-north-4",
+  "source_endpoint": "110.238.67.209",
+  "source_port": 5432,
+  "source_database": "demodb",
+  "source_username": "drs_replication",
+  "target_rds_id": "82a6795906de4c6db33e1c0e96594840in03",
+  "target_database": "demodb",
+  "network_type": "Public Network",
+  "sync_mode": "Full + Incremental",
+  "known_existing_task_name": "pg-ecs-to-rds-cross-region",
+  "known_drs_eip": "124.70.109.210",
+  "default_creation_strategy": "ask_if_matching_exists"
+}

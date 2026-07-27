@@ -1,0 +1,11 @@
+node_modules/
+workspaces/
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+tfplan
+tfplan.json
+.venv/
+
+.playwright-mcp/

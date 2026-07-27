@@ -1,0 +1,49 @@
+{
+  "validation_plan_version": "0.1",
+  "migration_id": "orders_pipeline_simple",
+  "expected_runtime_status": "PASS",
+  "expected_final_equivalence": "EQUIVALENT",
+  "checks": [
+    {
+      "type": "PIPELINE_READY",
+      "object_name": "SNOWFLAKE_TASK_GRAPH_TO_DATAARTS_DAG",
+      "expected": "PASS"
+    },
+    {
+      "type": "TABLE_COUNT",
+      "object_name": "RAW_ORDERS",
+      "expected": 5
+    },
+    {
+      "type": "TABLE_COUNT",
+      "object_name": "SILVER_ORDERS",
+      "expected": 5
+    },
+    {
+      "type": "TABLE_COUNT",
+      "object_name": "GOLD_DAILY_SALES",
+      "expected": 2
+    },
+    {
+      "type": "TABLE_COUNT",
+      "object_name": "TASK_AUDIT_SUCCESS",
+      "expected": ">=1"
+    },
+    {
+      "type": "AGGREGATE_CHECK",
+      "object_name": "2026-06-20",
+      "expected": {
+        "order_count": 2,
+        "total_amount": 420.50
+      }
+    },
+    {
+      "type": "AGGREGATE_CHECK",
+      "object_name": "2026-06-21",
+      "expected": {
+        "order_count": 3,
+        "total_amount": 630.34
+      }
+    }
+  ]
+}

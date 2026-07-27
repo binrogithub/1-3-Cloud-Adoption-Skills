@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Skill Manifest",
+  "type": "object",
+  "required": ["name", "version", "category", "status", "risk_level", "requires_explicit_approval"],
+  "properties": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*[a-z0-9]$" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "category": { "type": "string", "enum": ["migration", "shared", "validation", "discovery"] },
+    "status": { "type": "string", "enum": ["READY", "READY_WITH_WARNINGS", "PARTIAL", "EXPERIMENTAL", "DRAFT", "BLOCKED"] },
+    "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+    "requires_explicit_approval": { "type": "boolean" },
+    "scenario": { "type": "object" },
+    "mcps": { "type": "object" },
+    "capability_gap": { "type": "object" },
+    "phases": { "type": "array" },
+    "outputs": { "type": "array", "items": { "type": "string" } }
+  }
+}

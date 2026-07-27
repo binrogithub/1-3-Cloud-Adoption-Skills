@@ -1,0 +1,138 @@
+required_mcps:
+  - name: huaweicloud-drs
+    version: "1.0.0"
+    path: ../../../shared-mcps/huaweicloud-drs
+    runtime: node
+    entry_point: server.mjs
+    transport: stdio
+    tools:
+      - name: drs_read_context
+        used: true
+        access: read_only
+        approval_required: false
+        description: "Read current DRS console state"
+      - name: drs_list_tasks
+        used: true
+        access: read_only
+        approval_required: false
+        description: "List DRS tasks with optional filters"
+      - name: drs_find_matching_tasks
+        used: true
+        access: read_only
+        approval_required: false
+        description: "Classify existing tasks as EXACT_MATCH, PARTIAL_MATCH, etc."
+      - name: drs_select_or_create_task
+        used: true
+        access: write
+        approval_required: true
+        description: "Select existing or create new DRS task"
+      - name: drs_create_postgresql_full_incremental_task
+        used: true
+        access: write
+        approval_required: true
+        description: "Create PostgreSQL Full+Incremental DRS task"
+      - name: drs_continue_existing_task
+        used: true
+        access: read_only
+        approval_required: false
+        description: "Open and continue an existing task"
+      - name: drs_capture_replication_instance_eip
+        used: true
+        access: read_only
+        approval_required: false
+        description: "Read DRS replication instance EIP"
+      - name: drs_generate_source_access_plan
+        used: true
+        access: read_only
+        approval_required: false
+        description: "Generate SG rules and pg_hba.conf entries"
+      - name: drs_run_connection_test
+        used: true
+        access: read_only
+        approval_required: false
+        description: "Run source and target connection test"
+      - name: drs_run_precheck
+        used: true
+        access: read_only
+        approval_required: false
+        description: "Run DRS pre-check"
+      - name: drs_start_task
+        used: true
+        access: write
+        approval_required: true
+        description: "Start DRS task (requires explicit_approval)"
+      - name: drs_get_task_status
+        used: true
+        access: read_only
+        approval_required: false
+        description: "Get current task status and progress"
+      - name: drs_generate_report
+        used: true
+        access: read_only
+        approval_required: false
+        description: "Generate non-sensitive migration report"
+    tools_not_used: []
+    write_operations:
+      - drs_select_or_create_task
+      - drs_create_postgresql_full_incremental_task
+      - drs_start_task
+    validation_status: VERIFIED_FROM_CODE
+
+optional_mcps:
+  - name: huaweicloud-pricing
+    version: "0.1.0"
+    path: ../../../shared-mcps/huaweicloud-pricing
+    runtime: node
+    entry_point: server.mjs
+    transport: stdio
+    tools_used:
+      - EstimateTemplateOnDemandPrice
+      - EstimateTemplatePeriodPrice
+    tools_not_used:
+      - QueryCloudServiceTypes
+      - QueryResourceTypes
+      - QueryServiceResources
+      - QueryUsageTypes
+      - QueryMeasurementUnits
+      - QueryElbFlavors
+      - QueryElbAvailabilityZones
+      - QueryRdsFlavors
+      - QueryRdsStorageTypes
+      - QueryEcsFlavors
+      - QueryEvsVolumeTypes
+      - PricingHealthCheck
+      - ListPricingTemplates
+      - ExplainRequiredTemplate
+      - EstimateArchitectureCostDraft
+      - EstimateArchitectureOnDemandPrice
+      - EstimateArchitecturePeriodPrice
+      - QueryOnDemandPrice
+      - QueryPeriodPrice
+      - RenderProductInfosFromTemplate
+      - PricingProductInfoGuide
+      - EvaluateEcsFlavorAvailability
+      - FindEcsFlavorCandidates
+    write_operations: []
+    validation_status: VERIFIED_FROM_CODE
+
+  - name: huaweicloud-ticket
+    version: "0.1.0"
+    path: ../../../shared-mcps/huaweicloud-ticket
+    runtime: node
+    entry_point: server.mjs
+    transport: stdio
+    tools_used:
+      - prepare_ticket
+      - create_ticket
+    tools_not_used:
+      - init_session
+      - list_service_categories
+      - list_issue_categories
+      - get_ticket_form_schema
+      - list_regions
+      - list_severities
+      - check_create_privilege
+      - list_tickets
+    write_operations:
+      - create_ticket
+    validation_status: VERIFIED_FROM_CODE

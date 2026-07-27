@@ -1,0 +1,78 @@
+-- Golden Case: orders_pipeline_simple
+-- Source system: Snowflake Task Graph
+-- Logical flow:
+-- RAW_ORDERS -> SILVER_ORDERS -> GOLD_DAILY_SALES -> TASK_AUDIT
+
+-- Task: T_LOAD_SILVER_ORDERS
+-- Source behavior:
+--   Reads RAW_ORDERS.
+--   Filters ORDER_AMOUNT > 0.
+--   Original Snowflake operation: MERGE into SILVER_ORDERS.
+-- Demo-safe target strategy:
+--   Converted to DLI full-refresh pattern for static validation dataset.
+--   This is NOT a universal production replacement for Snowflake MERGE.
+
+CREATE OR REPLACE TASK T_LOAD_SILVER_ORDERS
+AS
+MERGE INTO SILVER_ORDERS tgt
+USING (
+  SELECT
+    ORDER_ID,
+    CUSTOMER_ID,
+    ORDER_DATE,
+    ORDER_AMOUNT
+  FROM RAW_ORDERS
+  WHERE ORDER_AMOUNT > 0
+) src
+ON tgt.ORDER_ID = src.ORDER_ID
+WHEN MATCHED THEN UPDATE SET
+  CUSTOMER_ID = src.CUSTOMER_ID,
+  ORDER_DATE = src.ORDER_DATE,
+  ORDER_AMOUNT = src.ORDER_AMOUNT
+WHEN NOT MATCHED THEN INSERT (
+  ORDER_ID,
+  CUSTOMER_ID,
+  ORDER_DATE,
+  ORDER_AMOUNT
+)
+VALUES (
+  src.ORDER_ID,
+  src.CUSTOMER_ID,
+  src.ORDER_DATE,
+  src.ORDER_AMOUNT
+);
+
+-- Task: T_BUILD_GOLD_DAILY_SALES
+-- Source behavior:
+--   Reads SILVER_ORDERS.
+--   Aggregates by ORDER_DATE.
+--   Original Snowflake operation: CREATE OR REPLACE TABLE AS SELECT.
+
+CREATE OR REPLACE TASK T_BUILD_GOLD_DAILY_SALES
+AFTER T_LOAD_SILVER_ORDERS
+AS
+CREATE OR REPLACE TABLE GOLD_DAILY_SALES AS
+SELECT
+  ORDER_DATE,
+  COUNT(*) AS ORDER_COUNT,
+  SUM(ORDER_AMOUNT) AS TOTAL_AMOUNT
+FROM SILVER_ORDERS
+GROUP BY ORDER_DATE;
+
+-- Task: T_AUDIT_PIPELINE
+-- Source behavior:
+--   Inserts SUCCESS audit record after GOLD table is built.
+
+CREATE OR REPLACE TASK T_AUDIT_PIPELINE
+AFTER T_BUILD_GOLD_DAILY_SALES
+AS
+INSERT INTO TASK_AUDIT (
+  PIPELINE_NAME,
+  STATUS,
+  CREATED_AT
+)
+VALUES (
+  'SNOWFLAKE_TASK_GRAPH_TO_DATAARTS_DAG',
+  'SUCCESS',
+  CURRENT_TIMESTAMP()
+);

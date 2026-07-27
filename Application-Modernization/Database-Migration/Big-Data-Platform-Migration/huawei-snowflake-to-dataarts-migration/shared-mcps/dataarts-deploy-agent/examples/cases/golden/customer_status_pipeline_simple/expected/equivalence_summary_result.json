@@ -1,0 +1,6 @@
+{
+  "status": "NOT_EXECUTED",
+  "migration_id": "customer_status_pipeline_simple",
+  "equivalence_confirmed": false,
+  "note": "Golden package defined but not runtime-confirmed yet."
+}

@@ -1,0 +1,86 @@
+{
+  "status": "EQUIVALENT",
+  "job_name": "snowflake_to_dataarts_demo_live_20260623_165151",
+  "run_id": "run_20260623165224._7389f062",
+  "instance_id": "1312764",
+  "runtime_validation": "PASS",
+  "final_equivalence": "EQUIVALENT",
+  "equivalence_confirmed": true,
+  "table_rows": [
+    {
+      "VALIDATION_TYPE": "PIPELINE_READY",
+      "OBJECT_NAME": "SNOWFLAKE_TASK_GRAPH_TO_DATAARTS_DAG",
+      "SNOWFLAKE_EXPECTED": "PASS",
+      "DATAARTS_DLI_ACTUAL": "PASS",
+      "STATUS": "PASS",
+      "DETAIL": "Snowflake Task Graph was converted to a DataArts/DLI runtime-safe DAG and executed successfully."
+    },
+    {
+      "VALIDATION_TYPE": "TABLE_COUNT",
+      "OBJECT_NAME": "RAW_ORDERS",
+      "SNOWFLAKE_EXPECTED": "5",
+      "DATAARTS_DLI_ACTUAL": "5",
+      "STATUS": "PASS",
+      "DETAIL": "raw_orders row count: expected=5, actual=5"
+    },
+    {
+      "VALIDATION_TYPE": "TABLE_COUNT",
+      "OBJECT_NAME": "SILVER_ORDERS",
+      "SNOWFLAKE_EXPECTED": "5",
+      "DATAARTS_DLI_ACTUAL": "5",
+      "STATUS": "PASS",
+      "DETAIL": "silver_orders row count: expected=5, actual=5"
+    },
+    {
+      "VALIDATION_TYPE": "TABLE_COUNT",
+      "OBJECT_NAME": "GOLD_DAILY_SALES",
+      "SNOWFLAKE_EXPECTED": "2",
+      "DATAARTS_DLI_ACTUAL": "2",
+      "STATUS": "PASS",
+      "DETAIL": "gold_daily_sales row count: expected=2, actual=2"
+    },
+    {
+      "VALIDATION_TYPE": "TABLE_COUNT",
+      "OBJECT_NAME": "TASK_AUDIT_SUCCESS",
+      "SNOWFLAKE_EXPECTED": ">=1",
+      "DATAARTS_DLI_ACTUAL": "1",
+      "STATUS": "PASS",
+      "DETAIL": "task_audit SUCCESS count: expected>=1, actual=1"
+    },
+    {
+      "VALIDATION_TYPE": "AGGREGATE_CHECK",
+      "OBJECT_NAME": "2026-06-20",
+      "SNOWFLAKE_EXPECTED": "order_count=2,total_amount=420.50",
+      "DATAARTS_DLI_ACTUAL": "order_count=2,total_amount=420.5",
+      "STATUS": "PASS",
+      "DETAIL": "2026-06-20: expected order_count=2,total_amount=420.50; actual order_count=2,total_amount=420.5"
+    },
+    {
+      "VALIDATION_TYPE": "AGGREGATE_CHECK",
+      "OBJECT_NAME": "2026-06-21",
+      "SNOWFLAKE_EXPECTED": "order_count=3,total_amount=630.34",
+      "DATAARTS_DLI_ACTUAL": "order_count=3,total_amount=630.34",
+      "STATUS": "PASS",
+      "DETAIL": "2026-06-21: expected order_count=3,total_amount=630.34; actual order_count=3,total_amount=630.34"
+    },
+    {
+      "VALIDATION_TYPE": "FINAL_EQUIVALENCE",
+      "OBJECT_NAME": "SNOWFLAKE_TO_DATAARTS",
+      "SNOWFLAKE_EXPECTED": "EQUIVALENT",
+      "DATAARTS_DLI_ACTUAL": "EQUIVALENT",
+      "STATUS": "PASS",
+      "DETAIL": "DataArts/DLI output is functionally equivalent to the Snowflake result."
+    }
+  ],
+  "safety": {
+    "no_publish": true,
+    "no_start": true,
+    "no_delete": true,
+    "no_update": true,
+    "no_overwrite": true,
+    "only_run_immediate_for_execution": true,
+    "no_secrets_printed": true
+  },
+  "timestamp": "2026-06-23T16:56:55.503Z",
+  "no_secrets_included": true
+}

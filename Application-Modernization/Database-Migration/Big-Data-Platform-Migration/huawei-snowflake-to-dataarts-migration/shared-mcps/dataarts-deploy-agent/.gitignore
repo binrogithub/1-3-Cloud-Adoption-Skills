@@ -1,0 +1,4 @@
+.env.dataarts
+out/
+node_modules/
+*.log

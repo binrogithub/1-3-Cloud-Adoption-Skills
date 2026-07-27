@@ -1,0 +1,20 @@
+{
+  "supported_services": ["vpc", "subnet", "security_group", "ecs", "elb", "eip", "elb_backend_attachment", "rds_mysql", "obs"],
+  "phase1_services": ["vpc", "subnet", "security_group", "ecs", "elb", "eip"],
+  "phase2_services": ["vpc", "subnet", "security_group", "ecs", "elb", "eip", "elb_backend_attachment", "rds_mysql", "obs"],
+  "terraform_provider": {
+    "source": "huaweicloud/huaweicloud",
+    "version": "~> 1.70"
+  },
+  "forbidden_commands": ["terraform apply", "terraform destroy"],
+  "forbidden_env_vars": ["HW_ACCESS_KEY", "HW_SECRET_KEY", "OS_ACCESS_KEY", "OS_SECRET_KEY"],
+  "sensitive_patterns": [
+    "access_key",
+    "secret_key",
+    "password",
+    "token",
+    "credential",
+    "AK",
+    "SK"
+  ]
+}

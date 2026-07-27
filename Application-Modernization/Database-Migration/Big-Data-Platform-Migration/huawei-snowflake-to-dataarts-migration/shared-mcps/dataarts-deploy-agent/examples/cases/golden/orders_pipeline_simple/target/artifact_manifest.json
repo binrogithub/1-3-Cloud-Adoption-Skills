@@ -1,0 +1,61 @@
+{
+  "manifest_version": "0.1",
+  "migration_id": "orders_pipeline_simple",
+  "source_type": "snowflake_task_graph",
+  "target": {
+    "orchestrator": "DATAARTS_FACTORY",
+    "runtime": "DLI",
+    "node_type": "DLISQL"
+  },
+  "runtime_policy": {
+    "single_statement_per_node": true,
+    "allow_full_refresh": true,
+    "full_refresh_reason": "Demo-safe conversion for static validation dataset. Not a universal production replacement for Snowflake MERGE.",
+    "requires_runtime_validation": true
+  },
+  "nodes": [
+    {
+      "id": "drop_silver_orders",
+      "name": "drop_silver_orders",
+      "type": "DLISQL",
+      "sql_file": "sql/01_drop_silver_orders.sql",
+      "depends_on": []
+    },
+    {
+      "id": "create_silver_orders",
+      "name": "create_silver_orders",
+      "type": "DLISQL",
+      "sql_file": "sql/02_create_silver_orders.sql",
+      "depends_on": ["drop_silver_orders"]
+    },
+    {
+      "id": "drop_gold_daily_sales",
+      "name": "drop_gold_daily_sales",
+      "type": "DLISQL",
+      "sql_file": "sql/03_drop_gold_daily_sales.sql",
+      "depends_on": ["create_silver_orders"]
+    },
+    {
+      "id": "create_gold_daily_sales",
+      "name": "create_gold_daily_sales",
+      "type": "DLISQL",
+      "sql_file": "sql/04_create_gold_daily_sales.sql",
+      "depends_on": ["drop_gold_daily_sales"]
+    },
+    {
+      "id": "audit_pipeline",
+      "name": "audit_pipeline",
+      "type": "DLISQL",
+      "sql_file": "sql/05_audit_pipeline.sql",
+      "depends_on": ["create_gold_daily_sales"]
+    }
+  ],
+  "safety": {
+    "no_publish": true,
+    "no_start": true,
+    "no_delete": true,
+    "no_update": true,
+    "no_overwrite": true,
+    "only_run_immediate_for_execution": true
+  }
+}

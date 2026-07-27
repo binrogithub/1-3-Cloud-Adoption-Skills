@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Dependencies",
+  "type": "object",
+  "required": ["required_mcps"],
+  "properties": {
+    "required_mcps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "path", "tools"],
+        "properties": {
+          "name": { "type": "string" },
+          "version": { "type": "string" },
+          "path": { "type": "string" },
+          "runtime": { "type": "string" },
+          "entry_point": { "type": "string" },
+          "transport": { "type": "string" },
+          "tools": { "type": "array" },
+          "tools_not_used": { "type": "array" },
+          "write_operations": { "type": "array" },
+          "validation_status": { "type": "string" }
+        }
+      }
+    },
+    "optional_mcps": {
+      "type": "array",
+      "items": { "type": "object" }
+    }
+  }
+}

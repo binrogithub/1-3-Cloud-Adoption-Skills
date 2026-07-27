@@ -1,0 +1,1 @@
+INSERT INTO demo_migration.raw_orders (order_id, customer_id, order_date, order_amount) VALUES (1, 101, '2026-06-20', 200.00), (2, 102, '2026-06-20', 220.50), (3, 103, '2026-06-21', 100.00), (4, 104, '2026-06-21', 230.34), (5, 105, '2026-06-21', 300.00);

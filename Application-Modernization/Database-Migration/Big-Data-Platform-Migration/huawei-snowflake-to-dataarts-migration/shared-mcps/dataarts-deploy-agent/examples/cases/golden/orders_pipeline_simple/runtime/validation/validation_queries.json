@@ -1,0 +1,62 @@
+{
+  "validation_queries_version": "0.1",
+  "migration_id": "orders_pipeline_simple",
+  "runtime": "DLI",
+  "queries": [
+    {
+      "id": "raw_orders_count",
+      "type": "TABLE_COUNT",
+      "object_name": "RAW_ORDERS",
+      "sql": "SELECT COUNT(*) AS actual_value FROM demo_migration.raw_orders",
+      "expected": 5
+    },
+    {
+      "id": "silver_orders_count",
+      "type": "TABLE_COUNT",
+      "object_name": "SILVER_ORDERS",
+      "sql": "SELECT COUNT(*) AS actual_value FROM demo_migration.silver_orders",
+      "expected": 5
+    },
+    {
+      "id": "gold_daily_sales_count",
+      "type": "TABLE_COUNT",
+      "object_name": "GOLD_DAILY_SALES",
+      "sql": "SELECT COUNT(*) AS actual_value FROM demo_migration.gold_daily_sales",
+      "expected": 2
+    },
+    {
+      "id": "task_audit_success_count",
+      "type": "TABLE_COUNT",
+      "object_name": "TASK_AUDIT_SUCCESS",
+      "sql": "SELECT COUNT(*) AS actual_value FROM demo_migration.task_audit WHERE status = 'SUCCESS'",
+      "expected": ">=1"
+    },
+    {
+      "id": "aggregate_2026_06_20",
+      "type": "AGGREGATE_CHECK",
+      "object_name": "2026-06-20",
+      "sql": "SELECT order_count, total_amount FROM demo_migration.gold_daily_sales WHERE order_date = '2026-06-20'",
+      "expected": {
+        "order_count": 2,
+        "total_amount": 420.50
+      }
+    },
+    {
+      "id": "aggregate_2026_06_21",
+      "type": "AGGREGATE_CHECK",
+      "object_name": "2026-06-21",
+      "sql": "SELECT order_count, total_amount FROM demo_migration.gold_daily_sales WHERE order_date = '2026-06-21'",
+      "expected": {
+        "order_count": 3,
+        "total_amount": 630.34
+      }
+    },
+    {
+      "id": "final_equivalence",
+      "type": "FINAL_EQUIVALENCE",
+      "object_name": "SNOWFLAKE_TO_DATAARTS",
+      "sql": "SELECT 'EQUIVALENT' AS actual_value",
+      "expected": "EQUIVALENT"
+    }
+  ]
+}

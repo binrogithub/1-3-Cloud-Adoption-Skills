@@ -7,6 +7,7 @@ Migrate relational databases to Huawei Cloud managed database services (RDS, Gau
 | Skill | Source → Target | Tool | Description |
 |-------|----------------|------|-------------|
 | [huaweicloud-drs-migration](./huaweicloud-drs-migration/SKILL.md) | External DB → RDS | DRS | Migrate databases using Data Replication Service with full+incremental replication, Terraform automation, and zero-downtime cutover. |
+| [PostgreSQL ECS to RDS DRS Cross-Region](./huawei-postgresql-ecs-to-rds-drs-cross-region/skills/huawei-postgresql-ecs-to-rds-drs-cross-region/SKILL.md) | PostgreSQL on ECS → RDS (cross-region) | DRS | Orchestrate migration of self-managed PostgreSQL on ECS to Huawei Cloud RDS using DRS Full+Incremental, cross-region. Self-contained package with MCPs. |
 | [GaussDB Adaptation](./GaussDB-Adaptation-Skill/SKILL.md) | SQL Server/PostgreSQL → GaussDB | Manual | Adapt SQL dialect, driver, and bulk loading patterns for GaussDB (openGauss-based). Covers real production port landmines. |
 | [Oracle to PostgreSQL 17](./Oracle-To-PostgreSQL-migration-skill/SKILL.md) | Oracle → PostgreSQL 17 | Manual | Convert Oracle SQL dialect to PostgreSQL 17 dialect. Language/framework agnostic with pattern scanning and transformation. |
 | [SQL Server Babelfish Demo](./SQLServer-postgreSQL-babelfish-finance-demo/SKILL.md) | SQL Server → PostgreSQL | Babelfish | Migrate SQL Server workloads to PostgreSQL through Babelfish with TDS protocol compatibility. Finance demo with parity validation. |

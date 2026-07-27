@@ -1,0 +1,91 @@
+mcps:
+  - name: huaweicloud-pricing
+    type: shared
+    version: "0.1.0"
+    runtime: node
+    entry_point: server.mjs
+    transport: stdio
+    path: shared-mcps/huaweicloud-pricing
+    tools_total: 25
+    tools_read_only: 25
+    tools_write: 0
+    risk: none
+    status: READY
+    consumer_skills:
+      - huawei-cce-cross-region-velero-migration
+      - huawei-postgresql-ecs-to-rds-drs-cross-region
+      - huawei-snowflake-to-dataarts-migration
+
+  - name: huaweicloud-deploy
+    type: shared
+    version: "0.1.0"
+    runtime: node
+    entry_point: server.mjs
+    transport: stdio
+    path: shared-mcps/huaweicloud-deploy
+    tools_total: 4
+    tools_read_only: 3
+    tools_write: 1
+    risk: low
+    status: READY
+    consumer_skills:
+      - huawei-cce-cross-region-velero-migration
+
+  - name: huaweicloud-drs
+    type: shared
+    version: "1.0.0"
+    runtime: node
+    entry_point: server.mjs
+    transport: stdio
+    path: shared-mcps/huaweicloud-drs
+    tools_total: 13
+    tools_read_only: 10
+    tools_write: 3
+    risk: high
+    status: READY
+    consumer_skills:
+      - huawei-postgresql-ecs-to-rds-drs-cross-region
+
+  - name: huaweicloud-ticket
+    type: shared
+    version: "0.1.0"
+    runtime: node
+    entry_point: server.mjs
+    transport: stdio
+    path: shared-mcps/huaweicloud-ticket
+    tools_total: 10
+    tools_read_only: 8
+    tools_write: 2
+    risk: medium
+    status: READY
+    consumer_skills:
+      - huawei-cce-cross-region-velero-migration
+      - huawei-postgresql-ecs-to-rds-drs-cross-region
+      - huawei-snowflake-to-dataarts-migration
+
+  - name: dataarts-deploy-agent
+    type: shared
+    version: "0.2.0"
+    runtime: node
+    entry_point: mcp-server.mjs
+    transport: stdio
+    path: shared-mcps/dataarts-deploy-agent
+    tools_total: 6
+    tools_read_only: 4
+    tools_write: 2
+    risk: medium
+    status: PARTIAL
+    consumer_skills:
+      - huawei-snowflake-to-dataarts-migration
+
+integrations:
+  - name: playwright
+    type: external
+    version: "0.0.78"
+    runtime: npx
+    entry_point: "@playwright/mcp@0.0.78"
+    transport: stdio
+    path: integrations/playwright
+    status: PINNED
+    consumer_mcps:
+      - huaweicloud-drs

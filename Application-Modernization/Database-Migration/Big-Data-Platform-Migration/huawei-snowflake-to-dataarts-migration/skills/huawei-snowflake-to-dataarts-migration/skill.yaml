@@ -1,0 +1,105 @@
+name: huawei-snowflake-to-dataarts-migration
+version: 1.0.0
+category: migration
+status: PARTIAL
+risk_level: medium
+requires_explicit_approval: true
+
+scenario:
+  source: snowflake
+  target: dataarts-factory-dli
+  topology: external-to-huaweicloud
+  mechanism: artifact-based-sql-adaptation
+  scope: demo-poc
+
+mcps:
+  required:
+    - dataarts-deploy-agent
+  optional:
+    - huaweicloud-pricing
+    - huaweicloud-ticket
+    - playwright
+
+capability_gap:
+  builder_skill: mcp-capability-builder
+  allow_new_mcp_scaffolding: true
+  allow_live_activation: false
+  require_manual_review: true
+  known_gaps:
+    - id: GAP-DA-001
+      description: "No automated Snowflake source extraction"
+      phase: discovery
+      decision: MANUAL_STEP
+    - id: GAP-DA-002
+      description: "No automated schema mapping"
+      phase: architecture_validation
+      decision: MANUAL_STEP
+    - id: GAP-DA-003
+      description: "No automated SQL compatibility analysis"
+      phase: architecture_validation
+      decision: MANUAL_STEP
+    - id: GAP-DA-004
+      description: "No production migration flow"
+      phase: execution
+      decision: NOT_REQUIRED
+    - id: GAP-DA-005
+      description: "No automated rollback of DataArts resources"
+      phase: rollback
+      decision: MANUAL_STEP
+    - id: GAP-DA-006
+      description: "No incremental/delta migration support"
+      phase: execution
+      decision: NOT_REQUIRED
+
+phases:
+  - name: discovery
+    automation: AUTOMATED
+    mcp_tools_used:
+      - dataarts-deploy-agent:snowflake_dataarts_demo_plan
+      - dataarts-deploy-agent:snowflake_dataarts_demo_status
+  - name: architecture_validation
+    automation: ASSISTED
+    mcp_tools_used:
+      - dataarts-deploy-agent:snowflake_dataarts_demo_plan
+  - name: readiness
+    automation: ASSISTED
+    mcp_tools_used:
+      - dataarts-deploy-agent:snowflake_dataarts_demo_status
+  - name: plan_generation
+    automation: AUTOMATED
+    mcp_tools_used:
+      - dataarts-deploy-agent:snowflake_dataarts_demo_plan
+  - name: approval
+    automation: MANUAL
+    mcp_tools_used: []
+  - name: execution
+    automation: ASSISTED
+    mcp_tools_used:
+      - dataarts-deploy-agent:snowflake_dataarts_demo_run
+      - dataarts-deploy-agent:snowflake_dataarts_demo_start
+      - dataarts-deploy-agent:snowflake_dataarts_demo_status
+  - name: validation
+    automation: AUTOMATED
+    mcp_tools_used:
+      - dataarts-deploy-agent:snowflake_dataarts_demo_status
+      - dataarts-deploy-agent:snowflake_dataarts_demo_equivalence_summary
+      - dataarts-deploy-agent:snowflake_dataarts_demo_last_report
+  - name: cutover
+    automation: NOT_IMPLEMENTED
+    mcp_tools_used: []
+  - name: rollback
+    automation: MANUAL
+    mcp_tools_used:
+      - dataarts-deploy-agent:snowflake_dataarts_demo_status
+  - name: closure
+    automation: AUTOMATED
+    mcp_tools_used:
+      - dataarts-deploy-agent:snowflake_dataarts_demo_last_report
+      - dataarts-deploy-agent:snowflake_dataarts_demo_equivalence_summary
+
+outputs:
+  - migration-plan
+  - execution-status
+  - equivalence-summary
+  - demo-report
+  - validation-results

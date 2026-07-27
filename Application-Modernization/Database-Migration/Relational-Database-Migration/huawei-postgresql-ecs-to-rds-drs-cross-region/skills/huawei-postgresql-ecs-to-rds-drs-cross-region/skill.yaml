@@ -1,0 +1,120 @@
+name: huawei-postgresql-ecs-to-rds-drs-cross-region
+version: 1.0.0
+category: migration
+status: READY_WITH_WARNINGS
+risk_level: high
+requires_explicit_approval: true
+
+scenario:
+  source: self-managed-postgresql-on-ecs
+  target: rds-for-postgresql
+  topology: cross-region
+  mechanism: drs-full-incremental
+  network: public-internet-eip
+
+mcps:
+  required:
+    - huaweicloud-drs
+  optional:
+    - huaweicloud-pricing
+    - huaweicloud-ticket
+
+capability_gap:
+  builder_skill: mcp-capability-builder
+  allow_new_mcp_scaffolding: true
+  allow_live_activation: false
+  require_manual_review: true
+  known_gaps:
+    - id: GAP-PG-001
+      description: "No MCP tool for PostgreSQL configuration validation"
+      phase: architecture_validation
+      decision: MANUAL_STEP
+    - id: GAP-PG-002
+      description: "No MCP tool for PostgreSQL extension compatibility check"
+      phase: architecture_validation
+      decision: MANUAL_STEP
+    - id: GAP-PG-003
+      description: "No MCP tool for DRS task stop/termination"
+      phase: rollback
+      decision: MANUAL_STEP
+    - id: GAP-PG-004
+      description: "VPN connectivity OUT_OF_SCOPE_FOR_THIS_SCENARIO — public EIP architecture is intentional"
+      phase: execution
+      decision: NOT_REQUIRED
+    - id: GAP-PG-005
+      description: "No MCP tool for application connection string update"
+      phase: cutover
+      decision: MANUAL_STEP
+    - id: GAP-PG-006
+      description: "No MCP tool for DDL comparison"
+      phase: validation
+      decision: MANUAL_STEP
+    - id: GAP-PG-007
+      description: "No MCP tool for row count validation"
+      phase: validation
+      decision: MANUAL_STEP
+
+phases:
+  - name: discovery
+    automation: AUTOMATED
+    mcp_tools_used:
+      - huaweicloud-drs:drs_read_context
+      - huaweicloud-drs:drs_list_tasks
+      - huaweicloud-drs:drs_find_matching_tasks
+  - name: architecture_validation
+    automation: AUTOMATED
+    mcp_tools_used:
+      - huaweicloud-drs:drs_read_context
+  - name: readiness
+    automation: ASSISTED
+    mcp_tools_used:
+      - huaweicloud-drs:drs_generate_source_access_plan
+      - huaweicloud-drs:drs_run_connection_test
+      - huaweicloud-drs:drs_run_precheck
+  - name: plan_generation
+    automation: AUTOMATED
+    mcp_tools_used:
+      - huaweicloud-drs:drs_read_context
+      - huaweicloud-drs:drs_list_tasks
+  - name: approval
+    automation: MANUAL
+    mcp_tools_used: []
+  - name: execution
+    automation: ASSISTED
+    mcp_tools_used:
+      - huaweicloud-drs:drs_select_or_create_task
+      - huaweicloud-drs:drs_create_postgresql_full_incremental_task
+      - huaweicloud-drs:drs_capture_replication_instance_eip
+      - huaweicloud-drs:drs_run_connection_test
+      - huaweicloud-drs:drs_run_precheck
+      - huaweicloud-drs:drs_start_task
+      - huaweicloud-drs:drs_get_task_status
+  - name: validation
+    automation: ASSISTED
+    mcp_tools_used:
+      - huaweicloud-drs:drs_get_task_status
+      - huaweicloud-drs:drs_generate_report
+  - name: cutover
+    automation: MANUAL
+    mcp_tools_used:
+      - huaweicloud-drs:drs_get_task_status
+  - name: rollback
+    automation: MANUAL
+    mcp_tools_used: []
+  - name: closure
+    automation: AUTOMATED
+    mcp_tools_used:
+      - huaweicloud-drs:drs_generate_report
+
+outputs:
+  - discovery-report
+  - architecture-validation-report
+  - source-access-plan
+  - readiness-report
+  - migration-plan
+  - drs-task-config
+  - execution-log
+  - validation-report
+  - drs-report
+  - rollback-plan
+  - final-report

@@ -10,6 +10,7 @@ Migrate big data platforms and data warehouses to Huawei Cloud managed services 
 | [Databricks to Huawei Cloud](./Databricks-to-Huawei-Cloud-Skill/SKILL.md) | Databricks → MRS/OBS | Migrate notebooks, tables, SQL warehouse flows, and Spark pipelines to OBS + MRS Spark with open-format export and functional parity testing. |
 | [Databricks to MRS Hudi Demo](./databricks-to-huawei-mrs-hudi-demo/SKILL.md) | Databricks CDC/Delta → MRS+Hudi | Migrate Databricks CDC/Delta workflows to MRS + OBS + Apache Hudi with synthetic data generation and smoke validation. |
 | [Teradata to Huawei DWS](./Teradata-to-Huawei-DWS-Skill/SKILL.md) | Teradata → DWS | Migrate Teradata to DWS with source simulation, schema migration, CSV loading, report parity, optimization, and OBS parallel load templates. |
+| [Snowflake to DataArts](./huawei-snowflake-to-dataarts-migration/skills/huawei-snowflake-to-dataarts-migration/SKILL.md) | Snowflake → DataArts (DLI+Factory) | Orchestrate migration of data pipelines and SQL workloads from Snowflake to Huawei Cloud DataArts. Self-contained package with MCPs. |
 
 ## Target Services
 
@@ -18,6 +19,7 @@ Migrate big data platforms and data warehouses to Huawei Cloud managed services 
 | **MRS** (MapReduce Service) | Big data platform | Managed Hadoop/Spark/Hive/HBase/Flink/Hudi clusters |
 | **DWS** (Data Warehouse Service) | Data warehouse | Managed PostgreSQL-based warehouse, compatible with Teradata/Oracle |
 | **OBS** (Object Storage Service) | Object storage | Data lake storage layer for MRS and DWS |
+| **DataArts** (DataArts Studio) | Data pipeline | Factory + DLI for SQL-based data lake analytics and pipeline orchestration |
 
 ## Related
 

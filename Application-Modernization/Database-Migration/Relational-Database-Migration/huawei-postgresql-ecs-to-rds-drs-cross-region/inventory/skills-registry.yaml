@@ -1,0 +1,79 @@
+skills:
+  - name: huawei-cce-cross-region-velero-migration
+    version: 1.0.0
+    category: migration
+    status: EXPERIMENTAL
+    risk_level: high
+    requires_explicit_approval: true
+    path: skills/huawei-cce-cross-region-velero-migration
+    required_mcps:
+      - huaweicloud-deploy
+    optional_mcps:
+      - huaweicloud-pricing
+      - huaweicloud-ticket
+      - playwright
+    automation_summary:
+      automated: 0
+      assisted: 4
+      manual: 5
+      not_implemented: 1
+    capability_gaps: 7
+    tests: local_validation_only
+
+  - name: huawei-postgresql-ecs-to-rds-drs-cross-region
+    version: 1.0.0
+    category: migration
+    status: READY_WITH_WARNINGS
+    risk_level: high
+    requires_explicit_approval: true
+    path: skills/huawei-postgresql-ecs-to-rds-drs-cross-region
+    required_mcps:
+      - huaweicloud-drs
+    optional_mcps:
+      - huaweicloud-pricing
+      - huaweicloud-ticket
+    automation_summary:
+      automated: 4
+      assisted: 3
+      manual: 3
+      not_implemented: 0
+    capability_gaps: 7
+    tests: 58_tests_8_suites
+
+  - name: huawei-snowflake-to-dataarts-migration
+    version: 1.0.0
+    category: migration
+    status: PARTIAL
+    risk_level: medium
+    requires_explicit_approval: true
+    path: skills/huawei-snowflake-to-dataarts-migration
+    required_mcps:
+      - dataarts-deploy-agent
+    optional_mcps:
+      - huaweicloud-pricing
+      - huaweicloud-ticket
+      - playwright
+    automation_summary:
+      automated: 4
+      assisted: 3
+      manual: 2
+      not_implemented: 1
+    capability_gaps: 6
+    tests: golden_package_validated
+
+  - name: mcp-capability-builder
+    version: 1.0.0
+    category: shared
+    status: READY_WITH_WARNINGS
+    risk_level: low
+    requires_explicit_approval: false
+    path: shared-skills/mcp-capability-builder
+    required_mcps: []
+    optional_mcps: []
+    automation_summary:
+      automated: 7
+      assisted: 2
+      manual: 1
+      not_implemented: 0
+    capability_gaps: 0
+    tests: design_only

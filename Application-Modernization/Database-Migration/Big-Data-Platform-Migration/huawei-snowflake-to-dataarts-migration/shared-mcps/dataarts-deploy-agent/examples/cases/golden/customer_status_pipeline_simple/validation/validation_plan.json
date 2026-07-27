@@ -1,0 +1,52 @@
+{
+  "validation_plan_version": "0.1",
+  "migration_id": "customer_status_pipeline_simple",
+  "expected_runtime_status": "PASS",
+  "expected_final_equivalence": "EQUIVALENT",
+  "checks": [
+    {
+      "type": "PIPELINE_READY",
+      "object_name": "CUSTOMER_STATUS_PIPELINE",
+      "expected": "PASS"
+    },
+    {
+      "type": "TABLE_COUNT",
+      "object_name": "RAW_CUSTOMERS",
+      "expected": 6
+    },
+    {
+      "type": "TABLE_COUNT",
+      "object_name": "SILVER_CUSTOMERS",
+      "expected": 6
+    },
+    {
+      "type": "TABLE_COUNT",
+      "object_name": "GOLD_CUSTOMER_STATUS",
+      "expected": 2
+    },
+    {
+      "type": "TABLE_COUNT",
+      "object_name": "TASK_AUDIT_SUCCESS",
+      "expected": ">=1"
+    },
+    {
+      "type": "AGGREGATE_CHECK",
+      "object_name": "ACTIVE",
+      "expected": {
+        "customer_count": 4
+      }
+    },
+    {
+      "type": "AGGREGATE_CHECK",
+      "object_name": "INACTIVE",
+      "expected": {
+        "customer_count": 2
+      }
+    },
+    {
+      "type": "FINAL_EQUIVALENCE",
+      "object_name": "SNOWFLAKE_TO_DATAARTS",
+      "expected": "EQUIVALENT"
+    }
+  ]
+}

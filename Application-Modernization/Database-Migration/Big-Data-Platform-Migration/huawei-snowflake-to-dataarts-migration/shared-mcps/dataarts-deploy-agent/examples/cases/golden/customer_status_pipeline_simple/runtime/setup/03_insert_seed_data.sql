@@ -1,0 +1,1 @@
+INSERT INTO demo_migration.raw_customers (customer_id, customer_name, active_flag) VALUES (1, 'Alice', 'Y'), (2, 'Bob', 'Y'), (3, 'Charlie', 'Y'), (4, 'Diana', 'Y'), (5, 'Eve', 'N'), (6, 'Frank', 'N');
