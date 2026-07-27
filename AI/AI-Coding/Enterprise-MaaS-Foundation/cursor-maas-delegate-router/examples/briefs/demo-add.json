@@ -1,0 +1,12 @@
+{
+  "goal": "Implement demo/calc.py add(a, b) so demo/test_calc.py passes. Keep the module docstring.",
+  "files": ["demo/calc.py", "demo/test_calc.py"],
+  "acceptance": "python -m pytest demo/test_calc.py -q exits 0",
+  "accept_cmd": "python -m pytest demo/test_calc.py -q",
+  "constraints": [
+    "Only modify demo/calc.py unless a tiny fix in the test is required",
+    "No third-party deps beyond pytest",
+    "Return full file content in file_writes"
+  ],
+  "max_attempts": 2
+}

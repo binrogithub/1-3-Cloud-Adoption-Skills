@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cursor-maas-brief",
+  "title": "DelegateBrief",
+  "type": "object",
+  "required": ["goal", "files", "acceptance"],
+  "properties": {
+    "goal": { "type": "string", "minLength": 1 },
+    "files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 0
+    },
+    "acceptance": { "type": "string", "minLength": 1 },
+    "constraints": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "context": {
+      "type": "string",
+      "default": "",
+      "description": "Use VISION_SUMMARY: or DOC_TEXT: prefixes after multimodal/PDF preprocess. Never put raw image bytes here."
+    },
+    "accept_cmd": {
+      "type": "string",
+      "description": "Optional shell command run after file_writes; must exit 0 for success"
+    },
+    "max_attempts": { "type": "integer", "minimum": 1, "maximum": 5, "default": 2 }
+  },
+  "additionalProperties": false
+}

@@ -43,6 +43,12 @@ does not hold — `claude-glm` is self-contained.
 ## Other entries in this directory
 
 - `LiteLLM-Huawei-MaaS-Proxy` — the shared LiteLLM proxy both skills build on.
+- `claude-code-oauth-delegate-router` — task-level hybrid for Claude Code (OAuth
+  orchestrator + `delegate`/`workflow` to GLM); closest conceptual sibling to the
+  Cursor entry below.
+- `cursor-maas-delegate-router` — **USER-GLOBAL** task-level hybrid for Cursor:
+  subscription/premium Agent orchestrates; MaaS GLM executes via `delegate.py`
+  (Rules + Hooks under `~/.cursor/`, all workspaces).
 - `codex-maas-hybrid-router`, `codex-huawei-maas`, `copilot-huawei-maas`,
   `codearts-huawei-maas`, `CSS-Code-Search-MCP` — sibling integrations for
   other clients; unrelated to the two Claude Code entries above.
