@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import ssl
+import sys
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -44,6 +46,22 @@ DEFAULT_BASE = "https://api-ap-southeast-1.modelarts-maas.com/openai/v1"
 DEFAULT_MODEL = "glm-5.1"
 DEFAULT_CODE_ROUTE = "maas_glm"
 DEFAULT_ROUTE_PRIORITY = "maas_over_cursor"
+
+
+def is_under_root(path: Path, root: Path) -> bool:
+    """True only when path is root or inside root after resolving symlinks."""
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def python_hook_command(script_path: str) -> str:
+    """Use the installer interpreter so hooks work where python is absent."""
+    exe = sys.executable or ("python" if os.name == "nt" else "python3")
+    quoted = f'"{exe}"' if os.name == "nt" else shlex.quote(exe)
+    return f"{quoted} {script_path}"
 
 
 def utc_now() -> str:
@@ -227,8 +245,8 @@ def install_user_global_hooks() -> Path:
     hooks = data["hooks"]
 
     # Relative to ~/.cursor/ per Cursor user-hook docs
-    submit_cmd = "python ./hooks/maas-route-hint.py"
-    session_cmd = "python ./hooks/maas-session-start.py"
+    submit_cmd = python_hook_command("./hooks/maas-route-hint.py")
+    session_cmd = python_hook_command("./hooks/maas-session-start.py")
 
     before = [e for e in (hooks.get("beforeSubmitPrompt") or []) if not _is_our_hook_entry(e)]
     before.append(

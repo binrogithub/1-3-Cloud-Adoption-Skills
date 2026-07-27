@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import audit, chat_completion  # noqa: E402
+from _common import audit, chat_completion, is_under_root  # noqa: E402
 
 
 SYSTEM = """You are an execution worker that edits files via JSON only.
@@ -43,15 +43,36 @@ def validate_brief(brief: dict[str, Any]) -> None:
     for key in ("goal", "files", "acceptance"):
         if key not in brief:
             raise SystemExit(f"brief missing required field: {key}")
+    if not isinstance(brief["goal"], str) or not brief["goal"].strip():
+        raise SystemExit("brief.goal must be a non-empty string")
     if not isinstance(brief["files"], list):
         raise SystemExit("brief.files must be an array")
+    if any(not isinstance(item, str) for item in brief["files"]):
+        raise SystemExit("brief.files entries must be strings")
+    if not isinstance(brief["acceptance"], str) or not brief["acceptance"].strip():
+        raise SystemExit("brief.acceptance must be a non-empty string")
+    if "constraints" in brief and (
+        not isinstance(brief["constraints"], list)
+        or any(not isinstance(item, str) for item in brief["constraints"])
+    ):
+        raise SystemExit("brief.constraints must be an array of strings")
+    if "context" in brief and not isinstance(brief["context"], str):
+        raise SystemExit("brief.context must be a string")
+    if "accept_cmd" in brief and not isinstance(brief["accept_cmd"], str):
+        raise SystemExit("brief.accept_cmd must be a string")
+    try:
+        max_attempts = int(brief.get("max_attempts") or 2)
+    except (TypeError, ValueError) as e:
+        raise SystemExit("brief.max_attempts must be an integer") from e
+    if not 1 <= max_attempts <= 5:
+        raise SystemExit("brief.max_attempts must be between 1 and 5")
 
 
 def _read_workspace_files(root: Path, files: list[str]) -> dict[str, str]:
     out: dict[str, str] = {}
     for rel in files:
         path = (root / rel).resolve()
-        if not str(path).startswith(str(root.resolve())):
+        if not is_under_root(path, root):
             continue
         if path.is_file():
             out[rel] = path.read_text(encoding="utf-8")
@@ -68,7 +89,7 @@ def _apply_file_writes(root: Path, writes: list[Any]) -> list[str]:
         if not isinstance(rel, str) or not isinstance(content, str):
             continue
         path = (root / rel).resolve()
-        if not str(path).startswith(str(root.resolve())):
+        if not is_under_root(path, root):
             continue
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8", newline="\n")

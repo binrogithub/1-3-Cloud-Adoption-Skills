@@ -7,7 +7,7 @@ description: >-
   输出代码, tests, docs, CI) MUST use delegate.py → Huawei MaaS GLM — user need
   not name this skill. Plan in chat, then delegate; do not Write app source
   locally. Priority over Cursor Task routing. Premium stay: hard debug, security,
-  vision. Pair with cursor-huawei-maas-glm / LiteLLM-Huawei-MaaS-Proxy. Part of
+  vision. Pair with Cursor Models UI or LiteLLM-Huawei-MaaS-Proxy. Part of
   Enterprise-MaaS-Foundation.
 ---
 

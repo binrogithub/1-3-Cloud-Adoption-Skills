@@ -17,6 +17,7 @@ from _common import (  # noqa: E402
     USER_HOOKS_DIR,
     USER_HOOKS_JSON,
     install_user_global_hooks,
+    python_hook_command,
     write_memory_file,
     write_user_rule_from_policy,
 )
@@ -68,13 +69,13 @@ def merge_project_hooks(hooks_path: Path) -> None:
 
     hooks["beforeSubmitPrompt"] = scrub(hooks.get("beforeSubmitPrompt") or []) + [
         {
-            "command": "python .cursor/hooks/maas-route-hint.py",
+            "command": python_hook_command(".cursor/hooks/maas-route-hint.py"),
             "metadata": {"id": "maas-delegate-router"},
         }
     ]
     hooks["sessionStart"] = scrub(hooks.get("sessionStart") or []) + [
         {
-            "command": "python .cursor/hooks/maas-session-start.py",
+            "command": python_hook_command(".cursor/hooks/maas-session-start.py"),
             "metadata": {"id": "maas-session-start"},
         }
     ]

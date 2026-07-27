@@ -77,14 +77,13 @@ def main() -> int:
         print("VERIFY FAIL: unexpected delegate status")
         return 1
 
-    # Connectivity is the hard gate; smoke may escalate if model ignores JSON schema
     if result.get("status") == "success":
         print("VERIFY PASS (connectivity + delegate smoke)")
         return 0
 
-    print("VERIFY PASS (connectivity OK; delegate smoke non-success — check model JSON fidelity)")
+    print("VERIFY FAIL: delegate smoke non-success")
     print(f"delegate_status={result.get('status')}")
-    return 0
+    return 1
 
 
 if __name__ == "__main__":

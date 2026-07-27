@@ -39,6 +39,38 @@ def assert_disjoint(items: list[dict[str, Any]]) -> None:
             seen[key] = item_id
 
 
+def validate_manifest(manifest: dict[str, Any]) -> None:
+    items = manifest.get("items") or []
+    if not isinstance(items, list) or not items:
+        raise SystemExit("manifest.items empty")
+    try:
+        concurrency = int(manifest.get("concurrency") or 3)
+    except (TypeError, ValueError) as e:
+        raise SystemExit("manifest.concurrency must be an integer") from e
+    if not 1 <= concurrency <= 16:
+        raise SystemExit("manifest.concurrency must be between 1 and 16")
+    for idx, item in enumerate(items):
+        if not isinstance(item, dict):
+            raise SystemExit(f"manifest.items[{idx}] must be an object")
+        for key in ("goal", "files", "acceptance"):
+            if key not in item:
+                raise SystemExit(f"manifest.items[{idx}] missing required field: {key}")
+        if not isinstance(item["goal"], str) or not item["goal"].strip():
+            raise SystemExit(f"manifest.items[{idx}].goal must be a non-empty string")
+        if not isinstance(item["files"], list) or any(
+            not isinstance(path, str) for path in item["files"]
+        ):
+            raise SystemExit(f"manifest.items[{idx}].files must be an array of strings")
+        if not isinstance(item["acceptance"], str) or not item["acceptance"].strip():
+            raise SystemExit(f"manifest.items[{idx}].acceptance must be a non-empty string")
+        try:
+            max_attempts = int(item.get("max_attempts") or 2)
+        except (TypeError, ValueError) as e:
+            raise SystemExit(f"manifest.items[{idx}].max_attempts must be an integer") from e
+        if not 1 <= max_attempts <= 5:
+            raise SystemExit(f"manifest.items[{idx}].max_attempts must be between 1 and 5")
+
+
 def run_item(item: dict[str, Any]) -> dict[str, Any]:
     brief = {
         "goal": item["goal"],
@@ -68,42 +100,86 @@ def run_item(item: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def summarize_results(
+    *,
+    workflow_id: str,
+    total_items: int,
+    results: list[dict[str, Any]],
+    aborted: bool,
+) -> dict[str, Any]:
+    success = [r for r in results if r.get("status") == "success"]
+    escalated = [r for r in results if r.get("status") == "needs_escalation"]
+    failed = [r for r in results if r.get("status") not in ("success", "needs_escalation")]
+    remainder_ratio = (len(escalated) + len(failed)) / max(total_items, 1)
+    return {
+        "workflow_id": workflow_id,
+        "total": len(results),
+        "total_items": total_items,
+        "success": len(success),
+        "needs_escalation": len(escalated),
+        "failed": len(failed),
+        "remainder_ratio": round(remainder_ratio, 3),
+        "abort_reclassify_premium": aborted or remainder_ratio > 0.30,
+        "results": results,
+    }
+
+
+def execute_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
+    validate_manifest(manifest)
+    items = manifest["items"]
+    assert_disjoint(items)
+
+    workflow_id = manifest.get("workflow_id") or str(uuid.uuid4())
+    concurrency = int(manifest.get("concurrency") or 3)
+    total_items = len(items)
+    results: list[dict[str, Any]] = []
+    next_index = 0
+    aborted = False
+
+    with ThreadPoolExecutor(max_workers=concurrency) as pool:
+        futures = {}
+        while next_index < total_items and len(futures) < concurrency:
+            item = items[next_index]
+            futures[pool.submit(run_item, item)] = item
+            next_index += 1
+
+        while futures:
+            for fut in as_completed(list(futures)):
+                futures.pop(fut)
+                results.append(fut.result())
+
+                remainder_count = len(
+                    [r for r in results if r.get("status") != "success"]
+                )
+                if remainder_count / max(total_items, 1) > 0.30:
+                    aborted = True
+                    break
+
+                while next_index < total_items and len(futures) < concurrency:
+                    item = items[next_index]
+                    futures[pool.submit(run_item, item)] = item
+                    next_index += 1
+                break
+            if aborted:
+                for fut in futures:
+                    fut.cancel()
+                break
+
+    return summarize_results(
+        workflow_id=workflow_id,
+        total_items=total_items,
+        results=results,
+        aborted=aborted,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", default=None)
     parser.add_argument("--manifest-file", default=None)
     args = parser.parse_args()
 
-    manifest = load_manifest(args)
-    items = manifest.get("items") or []
-    if not items:
-        raise SystemExit("manifest.items empty")
-    assert_disjoint(items)
-
-    workflow_id = manifest.get("workflow_id") or str(uuid.uuid4())
-    concurrency = int(manifest.get("concurrency") or 3)
-
-    results: list[dict[str, Any]] = []
-    with ThreadPoolExecutor(max_workers=concurrency) as pool:
-        futures = {pool.submit(run_item, item): item for item in items}
-        for fut in as_completed(futures):
-            results.append(fut.result())
-
-    success = [r for r in results if r.get("status") == "success"]
-    escalated = [r for r in results if r.get("status") == "needs_escalation"]
-    failed = [r for r in results if r.get("status") not in ("success", "needs_escalation")]
-    remainder_ratio = (len(escalated) + len(failed)) / max(len(results), 1)
-
-    out = {
-        "workflow_id": workflow_id,
-        "total": len(results),
-        "success": len(success),
-        "needs_escalation": len(escalated),
-        "failed": len(failed),
-        "remainder_ratio": round(remainder_ratio, 3),
-        "abort_reclassify_premium": remainder_ratio > 0.30,
-        "results": results,
-    }
+    out = execute_manifest(load_manifest(args))
     audit({"type": "workflow", **{k: out[k] for k in out if k != "results"}})
     print(json.dumps(out, ensure_ascii=False, indent=2))
     if out["abort_reclassify_premium"]:

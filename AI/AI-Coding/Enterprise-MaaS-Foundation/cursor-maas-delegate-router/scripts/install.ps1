@@ -30,6 +30,18 @@ $hooksDir = Join-Path $HOME ".cursor\hooks"
 $hookAssetRoute = Join-Path $skillRoot "assets\hooks\route_hint.py"
 $hookAssetSession = Join-Path $skillRoot "assets\hooks\maas-session-start.py"
 
+function Resolve-PythonHookCommand([string]$ScriptPath) {
+  foreach ($candidate in @("python", "python3", "py")) {
+    $cmd = Get-Command $candidate -ErrorAction SilentlyContinue
+    if ($cmd) {
+      $source = $cmd.Source
+      if ($source -match '\s') { $source = '"' + $source + '"' }
+      return "$source $ScriptPath"
+    }
+  }
+  return "python $ScriptPath"
+}
+
 New-Item -ItemType Directory -Force -Path $bin | Out-Null
 if (-not (Test-Path $audit)) { New-Item -ItemType File -Path $audit | Out-Null }
 
@@ -96,11 +108,11 @@ if ($WithHook) {
 
   # Relative commands: Cursor runs user hooks with cwd = ~/.cursor
   $submitEntry = [ordered]@{
-    command  = "python ./hooks/maas-route-hint.py"
+    command  = Resolve-PythonHookCommand "./hooks/maas-route-hint.py"
     metadata = @{ id = "maas-delegate-router" }
   }
   $sessionEntry = [ordered]@{
-    command  = "python ./hooks/maas-session-start.py"
+    command  = Resolve-PythonHookCommand "./hooks/maas-session-start.py"
     metadata = @{ id = "maas-session-start" }
   }
 

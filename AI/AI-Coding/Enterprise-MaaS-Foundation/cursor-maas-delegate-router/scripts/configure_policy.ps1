@@ -16,6 +16,18 @@ $memoryAsset = Join-Path $skillRoot "assets\orchestrator-memory.md"
 $hookAssetRoute = Join-Path $skillRoot "assets\hooks\route_hint.py"
 $hookAssetSession = Join-Path $skillRoot "assets\hooks\maas-session-start.py"
 
+function Resolve-PythonHookCommand([string]$ScriptPath) {
+  foreach ($candidate in @("python", "python3", "py")) {
+    $cmd = Get-Command $candidate -ErrorAction SilentlyContinue
+    if ($cmd) {
+      $source = $cmd.Source
+      if ($source -match '\s') { $source = '"' + $source + '"' }
+      return "$source $ScriptPath"
+    }
+  }
+  return "python $ScriptPath"
+}
+
 function Write-PolicyPair([string]$RulePath, [string]$MemoryPath) {
   New-Item -ItemType Directory -Force -Path (Split-Path $RulePath) | Out-Null
   New-Item -ItemType Directory -Force -Path (Split-Path $MemoryPath) | Out-Null
@@ -40,11 +52,11 @@ function Install-UserHooks {
   Copy-Item -Force $hookAssetSession (Join-Path $hooksDir "maas-session-start.py")
 
   $submitEntry = [ordered]@{
-    command  = "python ./hooks/maas-route-hint.py"
+    command  = Resolve-PythonHookCommand "./hooks/maas-route-hint.py"
     metadata = @{ id = "maas-delegate-router" }
   }
   $sessionEntry = [ordered]@{
-    command  = "python ./hooks/maas-session-start.py"
+    command  = Resolve-PythonHookCommand "./hooks/maas-session-start.py"
     metadata = @{ id = "maas-session-start" }
   }
 

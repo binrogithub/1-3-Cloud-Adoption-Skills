@@ -9,6 +9,10 @@ Inspired by
 [claude-code-oauth-delegate-router](https://github.com/binrogithub/1-3-Cloud-Adoption-Skills/tree/main/AI/AI-Coding/Enterprise-MaaS-Foundation/claude-code-oauth-delegate-router),
 adapted to Cursor Rules + Hooks (no Claude Code OAuth transport changes).
 
+## Skill Level
+
+**Level 1 — Validated by local installer, policy, hook, and delegate runner smoke tests.**
+
 ```
 User ──► Cursor Agent (subscription / premium) ──► plan / premium only
            │  USER-GLOBAL: ~/.cursor/rules + memory + hooks
@@ -23,7 +27,7 @@ User ──► Cursor Agent (subscription / premium) ──► plan / premium on
 | Intent | Use this skill? |
 |--------|-----------------|
 | Cursor plans; MaaS writes most code / tests / docs / batch | **Yes** |
-| Whole Cursor chat should be GLM (Override Base URL only) | No — see sibling `cursor-huawei-maas-glm` if present, or Cursor Models UI |
+| Whole Cursor chat should be GLM (Override Base URL only) | No — use Cursor Models UI with an OpenAI-compatible MaaS endpoint |
 | Claude Code OAuth hybrid | No — use `claude-code-oauth-delegate-router` |
 
 ## What “USER-GLOBAL” means
@@ -116,6 +120,6 @@ Removes USER-GLOBAL rule, memory, hooks, and launchers. Does not touch Cursor lo
 
 | Skill | Role |
 |-------|------|
-| `cursor-huawei-maas-glm` | Tier A: Cursor Models UI + endpoint verify |
+| Cursor Models UI | Tier A: whole-chat MaaS endpoint configuration |
 | `LiteLLM-Huawei-MaaS-Proxy` | Shared proxy if you route via `:4000` |
 | `claude-code-oauth-delegate-router` | Same idea for Claude Code |
