@@ -1,0 +1,6 @@
+pypdf>=4.0
+# Optional OCR / better PDF:
+# pymupdf>=1.24
+# pdfplumber>=0.11
+# pillow>=10.0
+# pytesseract>=0.3

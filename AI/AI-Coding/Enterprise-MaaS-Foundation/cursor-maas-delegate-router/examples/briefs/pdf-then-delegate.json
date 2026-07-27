@@ -1,0 +1,12 @@
+{
+  "goal": "Using only DOC_TEXT / VISION_SUMMARY in context, list acceptance criteria as a Markdown checklist file.",
+  "files": ["docs/acceptance-checklist.md"],
+  "acceptance": "docs/acceptance-checklist.md exists and has at least 3 checklist items derived from context",
+  "context": "DOC_TEXT: Replace this string with output from preprocess_doc.py (or a multimodal VISION_SUMMARY).",
+  "constraints": [
+    "Do not invent requirements absent from context",
+    "Return full file content in file_writes",
+    "If context still says VISION_NEEDED, fail with acceptance_met false"
+  ],
+  "max_attempts": 2
+}

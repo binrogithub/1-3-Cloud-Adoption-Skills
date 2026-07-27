@@ -1,0 +1,13 @@
+{
+  "goal": "Expand unit tests for demo/calc.py add(). Keep existing tests; add clear cases for zeros, positives, negatives, and larger ints. Do not change calc.py behavior unless a test proves a bug.",
+  "files": ["demo/calc.py", "demo/test_calc.py"],
+  "acceptance": "python -m pytest demo/test_calc.py -q exits 0 and there are at least 4 test functions or parametrized cases covering zero/positive/negative",
+  "accept_cmd": "python -m pytest demo/test_calc.py -q",
+  "constraints": [
+    "Prefer editing only demo/test_calc.py",
+    "Use pytest style (plain asserts or parametrize)",
+    "Return full file content in file_writes",
+    "Keep imports from demo.calc import add"
+  ],
+  "max_attempts": 2
+}
