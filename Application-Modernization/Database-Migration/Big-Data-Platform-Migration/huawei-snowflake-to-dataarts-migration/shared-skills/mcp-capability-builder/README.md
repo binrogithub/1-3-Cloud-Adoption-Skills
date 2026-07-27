@@ -1,21 +1,21 @@
 # mcp-capability-builder
 
-## Resumen
+## Summary
 
-Skill compartida que analiza gaps de capacidad encontrados por las skills de migración y prepara extensiones de MCP existentes o nuevos MCPs de forma controlada, sin ejecutar operaciones cloud ni activar automáticamente los resultados.
+Shared skill that analyzes capability gaps found by migration skills and prepares extensions to existing MCPs or new MCPs in a controlled manner, without executing cloud operations or automatically activating results.
 
-## Problema que resuelve
+## Problem it solves
 
-Las skills de migración pueden descubrir que los MCP actuales no cubren todas las capacidades requeridas. Esta skill proporciona un mecanismo controlado para cerrar esos gaps, ya sea extendiendo un MCP existente o creando uno nuevo, siempre con revisión manual antes de activación.
+Migration skills may discover that current MCPs do not cover all required capabilities. This skill provides a controlled mechanism to close those gaps, either by extending an existing MCP or creating a new one, always with manual review before activation.
 
-## Escenario soportado
+## Supported scenario
 
-- Una skill de migración reporta un capability gap
-- Se evalúan alternativas: herramienta existente, extensión, nuevo MCP, paso manual
-- Se genera un scaffold con pruebas y documentación
-- Se marca para revisión manual (nunca se activa automáticamente)
+- A migration skill reports a capability gap
+- Alternatives are evaluated: existing tool, extension, new MCP, manual step
+- A scaffold is generated with tests and documentation
+- It is marked for manual review (never activated automatically)
 
-## Arquitectura
+## Architecture
 
 ```
 Migration Skill → Gap Report → mcp-capability-builder → Analysis → Decision
@@ -37,69 +37,69 @@ Migration Skill → Gap Report → mcp-capability-builder → Analysis → Decis
                                                   Promotion (if approved)
 ```
 
-## MCP utilizados
+## MCPs used
 
-| MCP | Obligatorio | Propósito | Read/Write | Riesgo |
+| MCP | Required | Purpose | Read/Write | Risk |
 |---|---|---|---|---|
-| Ninguno | N/A | Operación local únicamente | N/A | None |
+| None | N/A | Local operation only | N/A | None |
 
-## Capacidades
+## Capabilities
 
-- Análisis de gaps de capacidad
-- Búsqueda de herramientas existentes equivalentes
-- Evaluación de extensiones de MCP
-- Diseño de contratos de tools
-- Generación de scaffolds de MCP
-- Generación de pruebas y mocks
-- Revisión de seguridad estática
-- Instrucciones de integración
+- Capability gap analysis
+- Search for equivalent existing tools
+- MCP extension evaluation
+- Tool contract design
+- MCP scaffold generation
+- Test and mock generation
+- Static security review
+- Integration instructions
 
-## Flujo general
+## General flow
 
-1. Recibir gap → 2. Buscar tools existentes → 3. Evaluar extensión → 4. Determinar si nuevo MCP → 5. Diseñar contrato → 6. Generar scaffold → 7. Crear tests → 8. Crear docs → 9. Security review → 10. Marcar para revisión
+1. Receive gap → 2. Search existing tools → 3. Evaluate extension → 4. Determine if new MCP → 5. Design contract → 6. Generate scaffold → 7. Create tests → 8. Create docs → 9. Security review → 10. Mark for review
 
-## Nivel de automatización
+## Automation level
 
-| Fase | Estado | Responsable |
+| Phase | Status | Responsible |
 |---|---|---|
-| Receive gap | AUTOMATED | Agente |
-| Search existing tools | AUTOMATED | Agente |
-| Evaluate extension | ASSISTED | Agente + Humano |
-| Determine new MCP | ASSISTED | Agente + Humano |
-| Design contract | AUTOMATED | Agente |
-| Generate scaffold | AUTOMATED | Agente |
-| Create tests | AUTOMATED | Agente |
-| Create docs | AUTOMATED | Agente |
-| Security review | AUTOMATED | Agente |
-| Mark for review | MANUAL | Humano |
+| Receive gap | AUTOMATED | Agent |
+| Search existing tools | AUTOMATED | Agent |
+| Evaluate extension | ASSISTED | Agent + Human |
+| Determine new MCP | ASSISTED | Agent + Human |
+| Design contract | AUTOMATED | Agent |
+| Generate scaffold | AUTOMATED | Agent |
+| Create tests | AUTOMATED | Agent |
+| Create docs | AUTOMATED | Agent |
+| Security review | AUTOMATED | Agent |
+| Mark for review | MANUAL | Human |
 
-## Prerrequisitos
+## Prerequisites
 
-- Ninguno (operación local)
+- None (local operation)
 
-## Entradas
+## Inputs
 
-- gap_id: ID del gap
-- skill_name: Skill solicitante
-- phase: Fase afectada
-- required_capability: Descripción de la capacidad requerida
-- evaluated_mcps: MCPs ya evaluados
+- gap_id: Gap ID
+- skill_name: Requesting skill
+- phase: Affected phase
+- required_capability: Description of the required capability
+- evaluated_mcps: MCPs already evaluated
 
-## Salidas
+## Outputs
 
 - gap-analysis.md
 - tool-contract.md
-- mcp-scaffold/ (si CREATE_NEW_MCP)
+- mcp-scaffold/ (if CREATE_NEW_MCP)
 - tests/
 - security-review.md
 - integration-instructions.md
 - promotion-checklist.md
 
-## Instalación
+## Installation
 
-No requiere instalación. Es una skill de análisis local.
+No installation required. This is a local analysis skill.
 
-## Configuración
+## Configuration
 
 ```json
 {
@@ -111,10 +111,10 @@ No requiere instalación. Es una skill de análisis local.
 }
 ```
 
-## Ejemplo seguro
+## Safe example
 
 ```
-# Invocado por una skill de migración
+# Invoked by a migration skill
 mcp-capability-builder({
   gap_id: "GAP-CCE-002",
   skill_name: "huawei-cce-cross-region-velero-migration",
@@ -123,56 +123,56 @@ mcp-capability-builder({
   evaluated_mcps: ["huaweicloud-deploy", "huaweicloud-pricing"]
 })
 
-# Resultado posible:
+# Possible result:
 # Decision: CREATE_NEW_MCP
 # New MCP: huaweicloud-velero
 # Status: DRAFT
 # Requires manual review before activation
 ```
 
-## Aprobaciones requeridas
+## Required approvals
 
-- Promoción de MCP generado a READY (requiere revisión manual)
-- Integración en configuración OpenCode (requiere acción manual)
+- Promotion of generated MCP to READY (requires manual review)
+- Integration into OpenCode configuration (requires manual action)
 
-## Validación
+## Validation
 
-- Verificar que no hay credenciales hardcodeadas
-- Verificar que no hay patrones 0.0.0.0/0
-- Verificar que operaciones write requieren aprobación
-- Verificar secret redaction en outputs
+- Verify no hardcoded credentials
+- Verify no 0.0.0.0/0 patterns
+- Verify write operations require approval
+- Verify secret redaction in outputs
 
 ## Rollback
 
-No aplica (no se ejecutan operaciones)
+Not applicable (no operations are executed)
 
-## Seguridad
+## Security
 
-- Nunca usa credenciales reales
-- Nunca llama servicios cloud
-- Nunca crea recursos
-- Nunca modifica infraestructura
-- Nunca activa MCPs automáticamente
-- Security review incluida en workflow
+- Never uses real credentials
+- Never calls cloud services
+- Never creates resources
+- Never modifies infrastructure
+- Never auto-activates MCPs
+- Security review included in workflow
 
-## Limitaciones
+## Limitations
 
-- No prueba MCPs generados contra servicios reales
-- Security review es estática
-- Integración testing debe hacerse manualmente
-- Promoción requiere juicio humano
+- Does not test generated MCPs against real services
+- Security review is static
+- Integration testing must be done manually
+- Promotion requires human judgment
 
-## Estado de madurez
+## Maturity status
 
 **READY_WITH_WARNINGS**
 
-La skill opera localmente sin riesgo cloud. Los MCPs generados requieren revisión manual.
+The skill operates locally without cloud risk. Generated MCPs require manual review.
 
-## Evidencia utilizada
+## Evidence used
 
-| Evidencia | Tipo |
+| Evidence | Type |
 |---|---|
-| Operación local sin acceso cloud | VERIFIED_FROM_DESIGN |
-| MCPs generados nunca auto-activados | VERIFIED_FROM_DESIGN |
-| Security review incluida | VERIFIED_FROM_DESIGN |
-| Código generado no probado contra servicios reales | INFERRED |
+| Local operation without cloud access | VERIFIED_FROM_DESIGN |
+| Generated MCPs never auto-activated | VERIFIED_FROM_DESIGN |
+| Security review included | VERIFIED_FROM_DESIGN |
+| Generated code not tested against real services | INFERRED |

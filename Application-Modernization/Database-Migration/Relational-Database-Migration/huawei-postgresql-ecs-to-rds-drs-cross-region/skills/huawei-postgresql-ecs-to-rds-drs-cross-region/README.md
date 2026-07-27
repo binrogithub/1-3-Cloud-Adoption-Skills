@@ -1,22 +1,22 @@
 # huawei-postgresql-ecs-to-rds-drs-cross-region
 
-## Resumen
+## Summary
 
-Skill para orquestar la migración de PostgreSQL autogestionado en ECS hacia Huawei Cloud RDS for PostgreSQL mediante DRS Full + Incremental, con origen y destino en regiones diferentes.
+Skill to orchestrate migration of self-managed PostgreSQL on ECS to Huawei Cloud RDS for PostgreSQL using DRS Full + Incremental, with source and target in different regions.
 
-## Problema que resuelve
+## Problem it solves
 
-Migrar bases de datos PostgreSQL de servidores autogestionados a RDS gestionado requiere coordinación de múltiples pasos: configuración del origen, creación de tarea DRS, pruebas de conectividad, pre-checks, sincronización full + incremental, validación y cutover. Sin orquestación, el proceso es propenso a errores de configuración y difícil de rastrear.
+Migrating PostgreSQL databases from self-managed servers to managed RDS requires coordination of multiple steps: source configuration, DRS task creation, connectivity tests, pre-checks, full + incremental synchronization, validation, and cutover. Without orchestration, the process is prone to configuration errors and difficult to track.
 
-## Escenario soportado
+## Supported scenario
 
-- **Origen**: PostgreSQL autogestionado en ECS (región A)
-- **Destino**: RDS for PostgreSQL (región B, diferente)
-- **Mecanismo**: DRS Full + Incremental (Real-Time Synchronization)
-- **Red**: Internet público vía EIP (arquitectura soportada; VPN OUT_OF_SCOPE_FOR_THIS_SCENARIO)
-- **Topología**: Cross-region
+- **Source**: Self-managed PostgreSQL on ECS (region A)
+- **Target**: RDS for PostgreSQL (region B, different)
+- **Mechanism**: DRS Full + Incremental (Real-Time Synchronization)
+- **Network**: Public Internet via EIP (supported architecture; VPN OUT_OF_SCOPE_FOR_THIS_SCENARIO)
+- **Topology**: Cross-region
 
-## Arquitectura
+## Architecture
 
 ```
 Source Region A                        Target Region B
@@ -35,70 +35,70 @@ Source Region A                        Target Region B
                                       └──────────────────┘
 ```
 
-## MCP utilizados
+## MCPs used
 
-| MCP | Obligatorio | Propósito | Read/Write | Riesgo |
+| MCP | Required | Purpose | Read/Write | Risk |
 |---|---|---|---|---|
-| huaweicloud-drs | Sí | Gestión de tareas DRS (crear, test, precheck, iniciar, monitorear) | Read + Write | High (write requiere approval) |
-| huaweicloud-pricing | No | Estimar costos de RDS destino | Read-only | None |
-| huaweicloud-ticket | No | Crear ticket de soporte si hay problemas | Read + Write | Medium |
+| huaweicloud-drs | Yes | DRS task management (create, test, precheck, start, monitor) | Read + Write | High (write requires approval) |
+| huaweicloud-pricing | No | Estimate target RDS costs | Read-only | None |
+| huaweicloud-ticket | No | Create support ticket if issues arise | Read + Write | Medium |
 
-## Capacidades
+## Capabilities
 
-- Descubrimiento de tareas DRS existentes
-- Detección de tareas duplicadas (EXACT_MATCH, PARTIAL_MATCH)
-- Generación de plan de acceso al origen (SG rules, pg_hba.conf)
-- Prueba de conectividad origen-destino
-- Pre-check DRS
-- Creación de tarea DRS Full + Incremental
-- Inicio de tarea DRS con aprobación explícita
-- Monitoreo de progreso de sincronización
-- Generación de reporte de migración
-- Guards de seguridad: CIDR /32, región, pre-check, duplicados
+- Discovery of existing DRS tasks
+- Duplicate task detection (EXACT_MATCH, PARTIAL_MATCH)
+- Source access plan generation (SG rules, pg_hba.conf)
+- Source-target connectivity test
+- DRS pre-check
+- DRS Full + Incremental task creation
+- DRS task start with explicit approval
+- Synchronization progress monitoring
+- Migration report generation
+- Safety guards: CIDR /32, region, pre-check, duplicates
 
-## Flujo general
+## General flow
 
 1. Discovery → 2. Architecture Validation → 3. Readiness → 4. Plan → 5. Approval → 6. Execution → 7. Validation → 8. Cutover → 9. Rollback (if needed) → 10. Closure
 
-## Nivel de automatización
+## Automation level
 
-| Fase | Estado | Responsable |
+| Phase | Status | Responsible |
 |---|---|---|
-| Discovery | AUTOMATED | Agente |
-| Architecture Validation | AUTOMATED | Agente |
-| Readiness and Prechecks | ASSISTED | Agente + Humano |
-| Plan Generation | AUTOMATED | Agente |
-| Approval | MANUAL | Humano |
-| Execution | ASSISTED | Agente + Humano |
-| Validation | ASSISTED | Agente + Humano |
-| Cutover | MANUAL | Humano |
-| Rollback | MANUAL | Humano |
-| Closure and Reporting | AUTOMATED | Agente |
+| Discovery | AUTOMATED | Agent |
+| Architecture Validation | AUTOMATED | Agent |
+| Readiness and Prechecks | ASSISTED | Agent + Human |
+| Plan Generation | AUTOMATED | Agent |
+| Approval | MANUAL | Human |
+| Execution | ASSISTED | Agent + Human |
+| Validation | ASSISTED | Agent + Human |
+| Cutover | MANUAL | Human |
+| Rollback | MANUAL | Human |
+| Closure and Reporting | AUTOMATED | Agent |
 
-## Prerrequisitos
+## Prerequisites
 
-- PostgreSQL en ECS con wal_level=logical, max_replication_slots>=1
-- Usuario de replicación configurado en PostgreSQL origen
-- RDS for PostgreSQL creado en región destino
-- Security Group del origen permite acceso PostgreSQL desde DRS EIP
-- pg_hba.conf configurado para usuario de replicación desde DRS EIP
-- huaweicloud-drs MCP configurado y operativo
-- Playwright instalado (requerido por huaweicloud-drs MCP)
+- PostgreSQL on ECS with wal_level=logical, max_replication_slots>=1
+- Replication user configured on source PostgreSQL
+- RDS for PostgreSQL created in target region
+- Source Security Group allows PostgreSQL access from DRS EIP
+- pg_hba.conf configured for replication user from DRS EIP
+- huaweicloud-drs MCP configured and operational
+- Playwright installed (required by huaweicloud-drs MCP)
 
-## Entradas
+## Inputs
 
-- source_region: Región del ECS origen (ej: la-south-2)
-- target_region: Región del RDS destino (ej: cn-north-4)
-- source_endpoint: IP/EIP del ECS origen
-- source_port: Puerto PostgreSQL origen (default: 5432)
-- source_database: Nombre de la base de datos origen
-- source_username: Usuario de replicación
-- target_rds_id: ID de la instancia RDS destino
-- target_database: Nombre de la base de datos destino
-- task_name: Nombre de la tarea DRS
-- source_security_group_id: ID del SG del ECS origen
+- source_region: Source ECS region (e.g., la-south-2)
+- target_region: Target RDS region (e.g., cn-north-4)
+- source_endpoint: IP/EIP of source ECS
+- source_port: Source PostgreSQL port (default: 5432)
+- source_database: Source database name
+- source_username: Replication user
+- target_rds_id: Target RDS instance ID
+- target_database: Target database name
+- task_name: DRS task name
+- source_security_group_id: Source ECS Security Group ID
 
-## Salidas
+## Outputs
 
 - discovery-report.md
 - architecture-validation-report.md
@@ -112,19 +112,19 @@ Source Region A                        Target Region B
 - rollback-plan.md
 - final-report.md
 
-## Instalación
+## Installation
 
 ```bash
-# Instalar huaweicloud-drs MCP
+# Install huaweicloud-drs MCP
 cd <INSTALLATION_ROOT>/shared-mcps/huaweicloud-drs
 npm install
 npx playwright install chromium
 
-# Verificar instalación
+# Verify installation
 node server.mjs --help
 ```
 
-## Configuración
+## Configuration
 
 ```json
 {
@@ -141,18 +141,18 @@ node server.mjs --help
 }
 ```
 
-## Uso con OpenCode o Hermes
+## Usage with OpenCode or Hermes
 
-1. Cargar la skill: `skill huawei-postgresql-ecs-to-rds-drs-cross-region`
-2. Seguir el workflow documentado en SKILL.md
-3. Las fases AUTOMATED serán ejecutadas por el agente
-4. Las fases ASSISTED requieren revisión humana
-5. Las fases MANUAL requieren ejecución humana
+1. Load the skill: `skill huawei-postgresql-ecs-to-rds-drs-cross-region`
+2. Follow the workflow documented in SKILL.md
+3. AUTOMATED phases will be executed by the agent
+4. ASSISTED phases require human review
+5. MANUAL phases require human execution
 
-## Ejemplo seguro
+## Safe example
 
 ```
-# Fase 1: Discovery
+# Phase 1: Discovery
 drs_list_tasks({ region: "cn-north-4", source_engine: "postgresql" })
 
 drs_find_matching_tasks({
@@ -164,7 +164,7 @@ drs_find_matching_tasks({
   target_region: "cn-north-4"
 })
 
-# Fase 3: Readiness
+# Phase 3: Readiness
 drs_generate_source_access_plan({
   drs_eip: "1.92.124.245",
   source_security_group_id: "sg-xxxxx",
@@ -176,7 +176,7 @@ drs_run_connection_test({ region: "cn-north-4", task_name: "pg-ecs-to-rds-migrat
 
 drs_run_precheck({ region: "cn-north-4", task_name: "pg-ecs-to-rds-migration" })
 
-# Fase 6: Execution (requires explicit_approval=true)
+# Phase 6: Execution (requires explicit_approval=true)
 drs_create_postgresql_full_incremental_task({
   task_name: "pg-ecs-to-rds-migration",
   target_region: "cn-north-4",
@@ -191,96 +191,96 @@ drs_start_task({
 })
 ```
 
-## Aprobaciones requeridas
+## Required approvals
 
-- Crear tarea DRS (explicit_approval=true)
-- Iniciar tarea DRS (explicit_approval=true)
-- Seleccionar tarea DRS existente (explicit_approval=true)
-- Aplicar cambios de acceso al origen (SG rules, pg_hba.conf)
-- Ejecutar cutover (redirigir conexiones de aplicación)
-- Ejecutar rollback
-- Eliminar recursos post-migración
+- Create DRS task (explicit_approval=true)
+- Start DRS task (explicit_approval=true)
+- Select existing DRS task (explicit_approval=true)
+- Apply source access changes (SG rules, pg_hba.conf)
+- Execute cutover (redirect application connections)
+- Execute rollback
+- Delete post-migration resources
 
-## Validación
+## Validation
 
-- DDL comparison: Estructura de tablas origen vs destino
-- Row count validation: Conteo de registros por tabla
-- Incremental test: Insertar dato en origen, verificar replicación a destino
+- DDL comparison: Source vs target table structure
+- Row count validation: Record count per table
+- Incremental test: Insert data in source, verify replication to target
 - Application smoke tests post-cutover
 
 ## Rollback
 
-1. Redirigir conexiones de aplicación a ECS origen
-2. Detener tarea DRS (consola manual)
-3. Verificar base de datos origen operativa
-4. Limpiar datos en RDS destino si es necesario
-5. Documentar razón de rollback
+1. Redirect application connections to source ECS
+2. Stop DRS task (manual console)
+3. Verify source database is operational
+4. Clean target RDS data if necessary
+5. Document rollback reason
 
-## Manejo de gaps de capacidad
+## Capability gap handling
 
-| Gap ID | Descripción | Decisión |
+| Gap ID | Description | Decision |
 |---|---|---|
-| GAP-PG-001 | No MCP tool para PostgreSQL config validation | MANUAL_STEP |
-| GAP-PG-002 | No MCP tool para extension compatibility | MANUAL_STEP |
-| GAP-PG-003 | No MCP tool para DRS task stop | MANUAL_STEP |
+| GAP-PG-001 | No MCP tool for PostgreSQL config validation | MANUAL_STEP |
+| GAP-PG-002 | No MCP tool for extension compatibility | MANUAL_STEP |
+| GAP-PG-003 | No MCP tool for DRS task stop | MANUAL_STEP |
 | GAP-PG-004 | VPN OUT_OF_SCOPE_FOR_THIS_SCENARIO | NOT_REQUIRED |
-| GAP-PG-005 | No MCP tool para app connection update | MANUAL_STEP |
-| GAP-PG-006 | No MCP tool para DDL comparison | MANUAL_STEP |
-| GAP-PG-007 | No MCP tool para row count validation | MANUAL_STEP |
+| GAP-PG-005 | No MCP tool for app connection update | MANUAL_STEP |
+| GAP-PG-006 | No MCP tool for DDL comparison | MANUAL_STEP |
+| GAP-PG-007 | No MCP tool for row count validation | MANUAL_STEP |
 
-## Pruebas
+## Testing
 
-- 58 tests en 8 test suites pasan [VERIFIED_FROM_TEST]
-- Safety guards: CIDR /32, región, pre-check, duplicados [VERIFIED_FROM_TEST]
+- 58 tests in 8 test suites pass [VERIFIED_FROM_TEST]
+- Safety guards: CIDR /32, region, pre-check, duplicates [VERIFIED_FROM_TEST]
 - Secret redaction verified [VERIFIED_FROM_TEST]
 - Connection test and pre-check verified [VERIFIED_FROM_TEST]
 - DRS task creation and start require explicit_approval [VERIFIED_FROM_CODE]
 
-## Seguridad
+## Security
 
-- CIDR /32 enforced para acceso PostgreSQL (no 0.0.0.0/0)
-- Source access plan generado para revisión antes de aplicar
-- Secrets redacted en reportes DRS
-- Public Internet exposure es un riesgo (mitigado por /32 CIDR)
-- VPN es OUT_OF_SCOPE_FOR_THIS_SCENARIO (arquitectura EIP es la intencional, seguridad mitigada por /32 CIDR)
-- Replication user debe tener permisos mínimos necesarios
+- CIDR /32 enforced for PostgreSQL access (no 0.0.0.0/0)
+- Source access plan generated for review before applying
+- Secrets redacted in DRS reports
+- Public Internet exposure is a risk (mitigated by /32 CIDR)
+- VPN is OUT_OF_SCOPE_FOR_THIS_SCENARIO (EIP architecture is intentional, security mitigated by /32 CIDR)
+- Replication user must have minimum required permissions
 
-## Limitaciones
+## Limitations
 
-- VPN fuera de alcance (arquitectura EIP es la soportada para este escenario)
-- Configuración PostgreSQL requiere SSH manual
-- DRS task stop requiere consola manual
-- DRS pricing BLOCKED en huaweicloud-pricing MCP
-- Actualización de connection strings es manual
-- DDL y row count validation son manuales
+- VPN out of scope (EIP architecture is the supported one for this scenario)
+- PostgreSQL configuration requires manual SSH
+- DRS task stop requires manual console
+- DRS pricing BLOCKED on huaweicloud-pricing MCP
+- Connection string update is manual
+- DDL and row count validation are manual
 
 ## Troubleshooting
 
-| Problema | Solución |
+| Problem | Solution |
 |---|---|
-| Connection test falla | Verificar SG rules, pg_hba.conf, PostgreSQL status, EIP |
-| Pre-check falla | Revisar items BLOCKING, resolver antes de iniciar |
-| Task creation falla | Verificar duplicados, parámetros, límites DRS |
-| Full sync lento | Verificar tamaño de datos, ancho de banda, tamaño instancia DRS |
-| Incremental lag alto | Verificar volumen de writes, ancho de banda, tamaño DRS |
-| Cutover falla | Revertir conexiones a origen inmediatamente |
+| Connection test fails | Verify SG rules, pg_hba.conf, PostgreSQL status, EIP |
+| Pre-check fails | Review BLOCKING items, resolve before starting |
+| Task creation fails | Verify duplicates, parameters, DRS limits |
+| Full sync slow | Verify data size, bandwidth, DRS instance size |
+| Incremental lag high | Verify write volume, bandwidth, DRS size |
+| Cutover fails | Revert connections to source immediately |
 
-## Estado de madurez
+## Maturity status
 
 **READY_WITH_WARNINGS**
 
-La mayoría de las operaciones DRS están automatizadas con safety guards. Las limitaciones principales son: VPN no implementado, configuración PostgreSQL manual, y DRS task stop manual.
+Most DRS operations are automated with safety guards. Main limitations: VPN not implemented, PostgreSQL configuration manual, and DRS task stop manual.
 
-## Evidencia utilizada
+## Evidence used
 
-| Evidencia | Tipo |
+| Evidence | Type |
 |---|---|
-| 13 DRS MCP tools disponibles | VERIFIED_FROM_CODE |
-| 3 write tools requieren explicit_approval | VERIFIED_FROM_CODE |
-| 58 tests pasan en 8 test suites | VERIFIED_FROM_TEST |
-| Safety guards implementados | VERIFIED_FROM_TEST |
-| 18-step runbook documentado | VERIFIED_FROM_DOCUMENTATION |
+| 13 DRS MCP tools available | VERIFIED_FROM_CODE |
+| 3 write tools require explicit_approval | VERIFIED_FROM_CODE |
+| 58 tests pass in 8 test suites | VERIFIED_FROM_TEST |
+| Safety guards implemented | VERIFIED_FROM_TEST |
+| 18-step runbook documented | VERIFIED_FROM_DOCUMENTATION |
 | VPN OUT_OF_SCOPE | VERIFIED_FROM_DESIGN |
 | DRS pricing BLOCKED | VERIFIED_FROM_DOCUMENTATION |
-| Source config validation requiere SSH | INFERRED |
-| DRS task stop requiere consola | NOT_VERIFIED |
+| Source config validation requires SSH | INFERRED |
+| DRS task stop requires console | NOT_VERIFIED |

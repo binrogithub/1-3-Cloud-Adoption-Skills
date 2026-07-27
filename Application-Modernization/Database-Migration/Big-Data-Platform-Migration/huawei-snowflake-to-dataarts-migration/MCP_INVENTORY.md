@@ -1,6 +1,6 @@
 # MCP Inventory
 
-| MCP | Tipo | Skills consumidoras | Tools | Read/Write | Estado | Ruta |
+| MCP | Type | Consumer skills | Tools | Read/Write | Status | Path |
 |---|---|---|---|---|---|---|
 | huaweicloud-pricing | shared | CCE, PG, DA (optional) | 25 | 25R/0W | READY | shared-mcps/huaweicloud-pricing |
 | huaweicloud-deploy | shared | CCE (required) | 4 | 3R/1W | READY | shared-mcps/huaweicloud-deploy |

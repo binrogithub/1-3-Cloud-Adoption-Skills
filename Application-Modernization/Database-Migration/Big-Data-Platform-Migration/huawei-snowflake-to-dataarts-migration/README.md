@@ -1,44 +1,44 @@
 # Huawei Cloud Migration Skills
 
-## Propósito
+## Purpose
 
-Biblioteca organizada por skills de migración para Huawei Cloud. Cada skill representa un escenario completo de migración, orquesta uno o varios MCP, y documenta claramente sus capacidades, limitaciones y gaps.
+Organized library of migration skills for Huawei Cloud. Each skill represents a complete migration scenario, orchestrates one or more MCPs, and clearly documents its capabilities, limitations, and gaps.
 
-La unidad funcional principal es la **skill de migración**, no el MCP individual.
+The primary functional unit is the **migration skill**, not the individual MCP.
 
-## Arquitectura
+## Architecture
 
 ```
 huawei-cloud-migration-skills-handoff/
-├── skills/              # Skills de migración (unidad principal)
-├── shared-skills/       # Skills compartidas (mcp-capability-builder)
-├── shared-mcps/         # MCP compartidos (referencias)
-├── integrations/        # Integraciones externas (Playwright)
-├── shared/              # Documentación, schemas, templates compartidos
-├── inventory/           # Registros y matrices de dependencia
-└── reports/             # Reportes de análisis y validación
+├── skills/              # Migration skills (primary unit)
+├── shared-skills/       # Shared skills (mcp-capability-builder)
+├── shared-mcps/         # Shared MCPs (references)
+├── integrations/        # External integrations (Playwright)
+├── shared/              # Shared documentation, schemas, templates
+├── inventory/           # Dependency registries and matrices
+└── reports/             # Analysis and validation reports
 ```
 
-## Catálogo de skills
+## Skills catalog
 
-| Skill | Escenario | MCP principal | Riesgo | Madurez |
+| Skill | Scenario | Primary MCP | Risk | Maturity |
 |---|---|---|---|---|
-| huawei-cce-cross-region-velero-migration | CCE cross-region con Velero | huaweicloud-deploy | High | EXPERIMENTAL |
-| huawei-postgresql-ecs-to-rds-drs-cross-region | PostgreSQL ECS→RDS con DRS | huaweicloud-drs | High | READY_WITH_WARNINGS |
+| huawei-cce-cross-region-velero-migration | CCE cross-region with Velero | huaweicloud-deploy | High | EXPERIMENTAL |
+| huawei-postgresql-ecs-to-rds-drs-cross-region | PostgreSQL ECS→RDS with DRS | huaweicloud-drs | High | READY_WITH_WARNINGS |
 | huawei-snowflake-to-dataarts-migration | Snowflake→DataArts | dataarts-deploy-agent | Medium | PARTIAL |
-| mcp-capability-builder | Análisis de gaps y generación de MCP | Ninguno | Low | READY_WITH_WARNINGS |
+| mcp-capability-builder | Gap analysis and MCP generation | None | Low | READY_WITH_WARNINGS |
 
-## Cómo funciona una skill
+## How a skill works
 
-1. Una skill se carga en el agente (OpenCode/Hermes)
-2. El agente lee SKILL.md para instrucciones operativas
-3. El agente lee skill.yaml para configuración
-4. El agente verifica que los MCP requeridos estén disponibles
-5. El agente sigue el workflow fase por fase
-6. Cada fase clasifica su nivel de automatización
-7. Los gaps de capacidad se documentan y manejan explícitamente
+1. A skill is loaded into the agent (OpenCode/Hermes)
+2. The agent reads SKILL.md for operational instructions
+3. The agent reads skill.yaml for configuration
+4. The agent verifies that required MCPs are available
+5. The agent follows the workflow phase by phase
+6. Each phase classifies its automation level
+7. Capability gaps are documented and handled explicitly
 
-## Relación entre skills y MCP
+## Relationship between skills and MCPs
 
 | Skill | Pricing | Deploy | DRS | Ticket | DataArts | Playwright |
 |---|---|---|---|---|---|---|
@@ -49,70 +49,70 @@ huawei-cloud-migration-skills-handoff/
 
 ## Capability gap workflow
 
-1. Skill identifica un gap durante una fase
-2. Gap se documenta con ID, fase, capacidad requerida
-3. Se invoca mcp-capability-builder para análisis
-4. Decisión: USE_EXISTING_TOOL, EXTEND_EXISTING_MCP, CREATE_NEW_MCP, MANUAL_STEP
-5. Si se genera un MCP: marcado como DRAFT, requiere revisión manual
-6. Nunca se activa automáticamente
+1. Skill identifies a gap during a phase
+2. Gap is documented with ID, phase, required capability
+3. mcp-capability-builder is invoked for analysis
+4. Decision: USE_EXISTING_TOOL, EXTEND_EXISTING_MCP, CREATE_NEW_MCP, MANUAL_STEP
+5. If an MCP is generated: marked as DRAFT, requires manual review
+6. Never activated automatically
 
-## Cómo generar un MCP faltante
+## How to generate a missing MCP
 
-1. Identificar el gap real (no solo un nombre diferente)
-2. Invocar mcp-capability-builder con los detalles del gap
-3. Revisar el scaffold generado
-4. Ejecutar pruebas locales
-5. Completar la implementación
-6. Revisión de seguridad
-7. Promover de DRAFT → EXPERIMENTAL → READY_FOR_REVIEW → READY
+1. Identify the real gap (not just a different name)
+2. Invoke mcp-capability-builder with the gap details
+3. Review the generated scaffold
+4. Run local tests
+5. Complete the implementation
+6. Security review
+7. Promote from DRAFT → EXPERIMENTAL → READY_FOR_REVIEW → READY
 
-## Instalación
+## Installation
 
-Ver [shared/docs/installation.md](shared/docs/installation.md)
+See [shared/docs/installation.md](shared/docs/installation.md)
 
-## Configuración
+## Configuration
 
-Ver [shared/docs/opencode-integration.md](shared/docs/opencode-integration.md)
+See [shared/docs/opencode-integration.md](shared/docs/opencode-integration.md)
 
-## Uso con OpenCode
+## Usage with OpenCode
 
 ```bash
-# Cargar una skill
+# Load a skill
 skill huawei-postgresql-ecs-to-rds-drs-cross-region
 
-# Seguir el workflow guiado por el agente
+# Follow the agent-guided workflow
 ```
 
-## Uso con Hermes
+## Usage with Hermes
 
-Similar a OpenCode. Cargar la skill y seguir el workflow.
+Similar to OpenCode. Load the skill and follow the workflow.
 
-## Pruebas
+## Testing
 
-Ver [reports/test-report.md](reports/test-report.md)
+See [reports/test-report.md](reports/test-report.md)
 
-## Seguridad
+## Security
 
-Ver [SECURITY.md](SECURITY.md) y [shared/docs/security-guidelines.md](shared/docs/security-guidelines.md)
+See [SECURITY.md](SECURITY.md) and [shared/docs/security-guidelines.md](shared/docs/security-guidelines.md)
 
-## Publicación en Git
+## Publishing to Git
 
-1. Crear repositorio Git
-2. Copiar contenido del ZIP al repositorio
-3. Verificar que no hay secrets (ver security-scan-report.md)
-4. Commit inicial
-5. Configurar CI/CD para validación de skills
+1. Create a Git repository
+2. Copy the ZIP contents to the repository
+3. Verify no secrets are present (see security-scan-report.md)
+4. Initial commit
+5. Set up CI/CD for skill validation
 
-## Limitaciones
+## Limitations
 
-- CCE cross-region Velero: EXPERIMENTAL (la mayoría de fases son manuales)
-- Snowflake→DataArts: PARTIAL (solo demo/POC flow)
-- DRS VPN: NOT_IMPLEMENTED (solo Internet público)
-- DRS pricing: BLOCKED en huaweicloud-pricing MCP
+- CCE cross-region Velero: EXPERIMENTAL (most phases are manual)
+- Snowflake→DataArts: PARTIAL (demo/POC flow only)
+- DRS VPN: NOT_IMPLEMENTED (public Internet only)
+- DRS pricing: BLOCKED on huaweicloud-pricing MCP
 
-## Estado de los escenarios
+## Scenario status
 
-| Escenario | Madurez | Fases automatizadas | Gaps |
+| Scenario | Maturity | Automated phases | Gaps |
 |---|---|---|---|
 | CCE cross-region Velero | EXPERIMENTAL | 0/10 | 7 |
 | PostgreSQL ECS→RDS DRS | READY_WITH_WARNINGS | 4/10 | 7 |

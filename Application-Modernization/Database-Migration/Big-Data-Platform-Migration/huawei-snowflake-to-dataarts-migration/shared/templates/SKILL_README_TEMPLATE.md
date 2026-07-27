@@ -1,57 +1,57 @@
 # <skill-name>
 
-## Resumen
+## Summary
 
-## Problema que resuelve
+## Problem it solves
 
-## Escenario soportado
+## Supported scenario
 
-## Arquitectura
+## Architecture
 
-## MCP utilizados
+## MCPs used
 
-| MCP | Obligatorio | Propósito | Read/Write | Riesgo |
+| MCP | Required | Purpose | Read/Write | Risk |
 |---|---|---|---|---|
 
-## Capacidades
+## Capabilities
 
-## Flujo general
+## General flow
 
-## Nivel de automatización
+## Automation level
 
-| Fase | Estado | Responsable |
+| Phase | Status | Responsible |
 |---|---|---|
 
-## Prerrequisitos
+## Prerequisites
 
-## Entradas
+## Inputs
 
-## Salidas
+## Outputs
 
-## Instalación
+## Installation
 
-## Configuración
+## Configuration
 
-## Uso con OpenCode o Hermes
+## Usage with OpenCode or Hermes
 
-## Ejemplo seguro
+## Safe example
 
-## Aprobaciones requeridas
+## Required approvals
 
-## Validación
+## Validation
 
 ## Rollback
 
-## Manejo de gaps de capacidad
+## Capability gap handling
 
-## Pruebas
+## Testing
 
-## Seguridad
+## Security
 
-## Limitaciones
+## Limitations
 
 ## Troubleshooting
 
-## Estado de madurez
+## Maturity status
 
-## Evidencia utilizada
+## Evidence used

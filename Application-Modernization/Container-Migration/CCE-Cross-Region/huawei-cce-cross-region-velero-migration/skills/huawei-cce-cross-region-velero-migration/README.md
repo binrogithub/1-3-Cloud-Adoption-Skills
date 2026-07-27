@@ -1,22 +1,22 @@
 # huawei-cce-cross-region-velero-migration
 
-## Resumen
+## Summary
 
-Skill para orquestar la migración de cargas de trabajo Kubernetes entre clústeres Huawei Cloud CCE ubicados en regiones diferentes, utilizando Velero como mecanismo de backup y restore.
+Skill to orchestrate migration of Kubernetes workloads between Huawei Cloud CCE clusters located in different regions, using Velero as the backup and restore mechanism.
 
-## Problema que resuelve
+## Problem it solves
 
-Las migraciones de cargas Kubernetes entre regiones de Huawei Cloud requieren coordinación de múltiples componentes: namespaces, deployments, services, ingress, configmaps, secrets, PVCs, storage classes, load balancers, EIPs, DNS y repositorios de imágenes. Sin orquestación, el proceso es propenso a errores y difícil de rastrear.
+Migrating Kubernetes workloads between Huawei Cloud regions requires coordination of multiple components: namespaces, deployments, services, ingress, configmaps, secrets, PVCs, storage classes, load balancers, EIPs, DNS, and image repositories. Without orchestration, the process is error-prone and difficult to track.
 
-## Escenario soportado
+## Supported scenario
 
-- **Origen**: Clúster CCE en región A
-- **Destino**: Clúster CCE en región B (región diferente)
-- **Mecanismo**: Velero backup + restore
-- **Almacenamiento**: OBS como repositorio de backup
-- **Topología**: Cross-region
+- **Source**: CCE cluster in region A
+- **Target**: CCE cluster in region B (different region)
+- **Mechanism**: Velero backup + restore
+- **Storage**: OBS as backup repository
+- **Topology**: Cross-region
 
-## Arquitectura
+## Architecture
 
 ```
 Source Region A                    Target Region B
@@ -33,93 +33,93 @@ Source Region A                    Target Region B
                                    └──────────────┘
 ```
 
-Componentes adicionales que requieren migración manual:
-- Load Balancers (ELB) → recrear en región destino
-- EIPs → asignar nuevos en región destino
-- DNS → actualizar registros
-- Image repos → replicar o configurar acceso cross-region
-- StorageClasses → mapear entre CSI drivers de cada región
+Additional components requiring manual migration:
+- Load Balancers (ELB) → recreate in target region
+- EIPs → allocate new ones in target region
+- DNS → update records
+- Image repos → replicate or configure cross-region access
+- StorageClasses → map between CSI drivers of each region
 
-## MCP utilizados
+## MCPs used
 
-| MCP | Obligatorio | Propósito | Read/Write | Riesgo |
+| MCP | Required | Purpose | Read/Write | Risk |
 |---|---|---|---|---|
-| huaweicloud-deploy | Sí | Generar Terraform para infraestructura destino | Read + Write (local .tf) | Low (apply bloqueado) |
-| huaweicloud-pricing | No | Estimar costos de infraestructura destino | Read-only | None |
-| huaweicloud-ticket | No | Crear ticket de soporte si hay problemas | Read + Write | Medium |
-| playwright | No | Automación de consola si se requiere | Read + Write | Medium |
+| huaweicloud-deploy | Yes | Generate Terraform for target infrastructure | Read + Write (local .tf) | Low (apply blocked) |
+| huaweicloud-pricing | No | Estimate target infrastructure costs | Read-only | None |
+| huaweicloud-ticket | No | Create support ticket if issues arise | Read + Write | Medium |
+| playwright | No | Console automation if required | Read + Write | Medium |
 
-## Capacidades
+## Capabilities
 
-- Descubrimiento de recursos Kubernetes del clúster origen
-- Validación de compatibilidad entre versiones de Kubernetes
-- Generación de Terraform para infraestructura destino
-- Generación de comandos Velero backup/restore
-- Plan de migración de DNS, Load Balancers e imágenes
-- Procedimiento de rollback documentado
+- Kubernetes resource discovery from source cluster
+- Kubernetes version compatibility validation
+- Terraform generation for target infrastructure
+- Velero backup/restore command generation
+- DNS, Load Balancer, and image migration plan
+- Documented rollback procedure
 
-## Flujo general
+## General flow
 
 1. Discovery → 2. Architecture Validation → 3. Readiness → 4. Plan → 5. Approval → 6. Execution → 7. Validation → 8. Cutover → 9. Rollback (if needed) → 10. Closure
 
-## Nivel de automatización
+## Automation level
 
-| Fase | Estado | Responsable |
+| Phase | Status | Responsible |
 |---|---|---|
-| Discovery | ASSISTED | Agente + Humano |
-| Architecture Validation | ASSISTED | Agente + Humano |
-| Readiness and Prechecks | MANUAL | Humano |
-| Plan Generation | ASSISTED | Agente + Humano |
-| Approval | MANUAL | Humano |
-| Execution | MANUAL | Humano |
-| Validation | MANUAL | Humano |
-| Cutover | MANUAL | Humano |
-| Rollback | MANUAL | Humano |
-| Closure and Reporting | ASSISTED | Agente + Humano |
+| Discovery | ASSISTED | Agent + Human |
+| Architecture Validation | ASSISTED | Agent + Human |
+| Readiness and Prechecks | MANUAL | Human |
+| Plan Generation | ASSISTED | Agent + Human |
+| Approval | MANUAL | Human |
+| Execution | MANUAL | Human |
+| Validation | MANUAL | Human |
+| Cutover | MANUAL | Human |
+| Rollback | MANUAL | Human |
+| Closure and Reporting | ASSISTED | Agent + Human |
 
-## Prerrequisitos
+## Prerequisites
 
-- Huawei Cloud CCE cluster en región origen con Velero instalado
-- Huawei Cloud CCE cluster en región destino con Velero instalado
-- OBS bucket accesible desde ambas regiones
-- IAM credentials con permisos para Velero (OBS read/write, CCE admin)
-- kubectl configurado para ambos clústeres
-- Velero CLI instalado
-- Conectividad de red entre regiones (Internet o VPN/Direct Connect)
-- huaweicloud-deploy MCP configurado
+- Huawei Cloud CCE cluster in source region with Velero installed
+- Huawei Cloud CCE cluster in target region with Velero installed
+- OBS bucket accessible from both regions
+- IAM credentials with permissions for Velero (OBS read/write, CCE admin)
+- kubectl configured for both clusters
+- Velero CLI installed
+- Network connectivity between regions (Internet or VPN/Direct Connect)
+- huaweicloud-deploy MCP configured
 
-## Entradas
+## Inputs
 
-- source_cluster_id: ID del clúster CCE origen
-- source_region: Región del clúster origen (ej: cn-north-4)
-- target_region: Región del clúster destino (ej: la-north-2)
-- namespaces: Lista de namespaces a migrar
-- obs_bucket: Bucket OBS para backups de Velero
-- kubernetes_version_source: Versión K8s del origen
-- kubernetes_version_target: Versión K8s del destino
+- source_cluster_id: Source CCE cluster ID
+- source_region: Source cluster region (e.g., cn-north-4)
+- target_region: Target cluster region (e.g., la-north-2)
+- namespaces: List of namespaces to migrate
+- obs_bucket: OBS bucket for Velero backups
+- kubernetes_version_source: Source K8s version
+- kubernetes_version_target: Target K8s version
 
-## Salidas
+## Outputs
 
 - discovery-report.md
 - architecture-validation-report.md
 - readiness-report.md
 - migration-plan.md
-- terraform/ (archivos .tf para infra destino)
+- terraform/ (.tf files for target infra)
 - execution-log.md
 - validation-report.md
 - rollback-plan.md
 - final-report.md
 
-## Instalación
+## Installation
 
 ```bash
-# Configurar huaweicloud-deploy MCP
-# Ver shared/docs/installation.md para instrucciones detalladas
+# Configure huaweicloud-deploy MCP
+# See shared/docs/installation.md for detailed instructions
 ```
 
-## Configuración
+## Configuration
 
-Configurar en opencode.json:
+Configure in opencode.json:
 
 ```json
 {
@@ -136,17 +136,17 @@ Configurar en opencode.json:
 }
 ```
 
-## Uso con OpenCode o Hermes
+## Usage with OpenCode or Hermes
 
-1. Cargar la skill: `skill huawei-cce-cross-region-velero-migration`
-2. Seguir el workflow documentado en SKILL.md
-3. Las fases ASSISTED serán guiadas por el agente
-4. Las fases MANUAL requieren ejecución humana
+1. Load the skill: `skill huawei-cce-cross-region-velero-migration`
+2. Follow the workflow documented in SKILL.md
+3. ASSISTED phases will be guided by the agent
+4. MANUAL phases require human execution
 
-## Ejemplo seguro
+## Safe example
 
 ```
-# Fase 4: Generar Terraform para infraestructura destino
+# Phase 4: Generate Terraform for target infrastructure
 GenerateTerraformFromArchitecture({
   "architecture": {
     "architecture_id": "cce-target-infra",
@@ -160,102 +160,102 @@ GenerateTerraformFromArchitecture({
   }
 })
 
-# Validar Terraform generado
+# Validate generated Terraform
 ValidateTerraformConfiguration({"architecture_id": "cce-target-infra"})
 
-# Preview de cambios
+# Preview changes
 RunTerraformPlan({"architecture_id": "cce-target-infra"})
 ```
 
-## Aprobaciones requeridas
+## Required approvals
 
-- Aprobación del plan de migración completo
-- Aprobación de terraform apply (ejecución manual fuera del MCP)
-- Aprobación de Velero backup (modifica datos en OBS)
-- Aprobación de Velero restore (modifica estado del clúster destino)
-- Aprobación de cutover DNS (redirige tráfico)
-- Aprobación de rollback (si es necesario)
+- Approval of the complete migration plan
+- Approval of terraform apply (manual execution outside the MCP)
+- Approval of Velero backup (modifies data in OBS)
+- Approval of Velero restore (modifies target cluster state)
+- Approval of DNS cutover (redirects traffic)
+- Approval of rollback (if needed)
 
-## Validación
+## Validation
 
-- Verificar que los Deployments estén running en el destino
-- Verificar Services accesibles
-- Verificar Ingress configurado
-- Verificar PVCs bound en región destino
-- Comparar conteos de recursos origen vs destino
-- Ejecutar smoke tests de aplicación
+- Verify Deployments are running in the target
+- Verify Services are accessible
+- Verify Ingress is configured
+- Verify PVCs are bound in target region
+- Compare resource counts source vs target
+- Run application smoke tests
 
 ## Rollback
 
-1. Revertir DNS a clúster origen
-2. Restaurar tráfico en clúster origen
-3. Limpiar recursos en clúster destino
-4. Destruir infraestructura destino (terraform destroy manual)
-5. Documentar lecciones aprendidas
+1. Revert DNS to source cluster
+2. Restore traffic to source cluster
+3. Clean up resources in target cluster
+4. Destroy target infrastructure (manual terraform destroy)
+5. Document lessons learned
 
-## Manejo de gaps de capacidad
+## Capability gap handling
 
-Los siguientes gaps requieren atención:
+The following gaps require attention:
 
-| Gap ID | Descripción | Decisión |
+| Gap ID | Description | Decision |
 |---|---|---|
-| GAP-CCE-001 | No MCP tool para CCE discovery | MANUAL_STEP |
-| GAP-CCE-002 | No MCP tool para Velero operations | MANUAL_STEP |
-| GAP-CCE-003 | No MCP tool para K8s version validation | MANUAL_STEP |
-| GAP-CCE-004 | No MCP tool para StorageClass mapping | MANUAL_STEP |
-| GAP-CCE-005 | No MCP tool para DNS migration | MANUAL_STEP |
-| GAP-CCE-006 | No MCP tool para ELB/EIP migration | MANUAL_STEP |
+| GAP-CCE-001 | No MCP tool for CCE discovery | MANUAL_STEP |
+| GAP-CCE-002 | No MCP tool for Velero operations | MANUAL_STEP |
+| GAP-CCE-003 | No MCP tool for K8s version validation | MANUAL_STEP |
+| GAP-CCE-004 | No MCP tool for StorageClass mapping | MANUAL_STEP |
+| GAP-CCE-005 | No MCP tool for DNS migration | MANUAL_STEP |
+| GAP-CCE-006 | No MCP tool for ELB/EIP migration | MANUAL_STEP |
 | GAP-CCE-007 | CCE not in deploy MCP supported services | EXTEND_EXISTING_MCP |
 
-## Pruebas
+## Testing
 
-- Validar que SKILL.md existe y es válido
-- Validar que skill.yaml es válido
-- Validar que los MCP referenciados existen
-- Validar que las tools mencionadas existen en los MCP
-- Validar que no se mencionan tools inexistentes
-- Las pruebas de ejecución requieren clústeres CCE reales (SKIPPED_CLOUD_SIDE_EFFECT)
+- Validate that SKILL.md exists and is valid
+- Validate that skill.yaml is valid
+- Validate that referenced MCPs exist
+- Validate that mentioned tools exist in the MCPs
+- Validate that no non-existent tools are mentioned
+- Execution tests require real CCE clusters (SKIPPED_CLOUD_SIDE_EFFECT)
 
-## Seguridad
+## Security
 
-- Secrets de Kubernetes se migran sin encriptación adicional por Velero (configurar encryption)
-- IAM credentials para OBS deben tener permisos mínimos necesarios
-- No ejecutar terraform apply desde el MCP (bloqueado por diseño)
-- No exponer EIPs públicamente innecesariamente
-- Documentar todas las operaciones con timestamps
+- Kubernetes secrets are migrated without additional encryption by Velero (configure encryption)
+- IAM credentials for OBS must have minimum required permissions
+- Do not run terraform apply from the MCP (blocked by design)
+- Do not expose EIPs publicly unnecessarily
+- Document all operations with timestamps
 
-## Limitaciones
+## Limitations
 
-- CCE no está soportado por huaweicloud-deploy MCP
-- Velero no tiene automatización MCP
-- La mayoría de fases son MANUALES
-- PVCs cross-region requieren mapeo manual de StorageClasses
-- Load Balancers deben recrearse en región destino
-- EIPs son region-specific
-- Versión Kubernetes debe ser compatible entre regiones
+- CCE is not supported by huaweicloud-deploy MCP
+- Velero has no MCP automation
+- Most phases are MANUAL
+- Cross-region PVCs require manual StorageClass mapping
+- Load Balancers must be recreated in target region
+- EIPs are region-specific
+- Kubernetes version must be compatible between regions
 
 ## Troubleshooting
 
-| Problema | Solución |
+| Problem | Solution |
 |---|---|
-| Velero backup falla | Verificar OBS connectivity, IAM permissions, disk space |
-| Velero restore falla | Verificar resource compatibility, StorageClass mapping, PVC availability |
-| Terraform validation falla | Revisar architecture JSON, servicios soportados |
-| Target cluster sin capacidad | Escalar node pools antes del restore |
-| DNS no resuelve | Verificar DNS propagation, TTL, fallback a source |
+| Velero backup fails | Verify OBS connectivity, IAM permissions, disk space |
+| Velero restore fails | Verify resource compatibility, StorageClass mapping, PVC availability |
+| Terraform validation fails | Review architecture JSON, supported services |
+| Target cluster lacks capacity | Scale node pools before restore |
+| DNS does not resolve | Verify DNS propagation, TTL, fallback to source |
 
-## Estado de madurez
+## Maturity status
 
 **EXPERIMENTAL**
 
-La migración CCE cross-region con Velero está documentada pero no implementada en el MCP actual. La mayoría de las fases requieren ejecución manual.
+CCE cross-region migration with Velero is documented but not implemented in the current MCP. Most phases require manual execution.
 
-## Evidencia utilizada
+## Evidence used
 
-| Evidencia | Tipo |
+| Evidence | Type |
 |---|---|
-| CCE Velero use-case documentado como NOT_IMPLEMENTED | VERIFIED_FROM_DOCUMENTATION |
-| huaweicloud-deploy no soporta CCE | VERIFIED_FROM_CODE |
-| No existe Velero MCP tool | VERIFIED_FROM_CODE |
-| terraform apply bloqueado en deploy MCP | VERIFIED_FROM_CODE |
-| 7/10 fases son MANUAL o NOT_IMPLEMENTED | INFERRED |
+| CCE Velero use-case documented as NOT_IMPLEMENTED | VERIFIED_FROM_DOCUMENTATION |
+| huaweicloud-deploy does not support CCE | VERIFIED_FROM_CODE |
+| No Velero MCP tool exists | VERIFIED_FROM_CODE |
+| terraform apply blocked in deploy MCP | VERIFIED_FROM_CODE |
+| 7/10 phases are MANUAL or NOT_IMPLEMENTED | INFERRED |

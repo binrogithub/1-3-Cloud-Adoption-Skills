@@ -1,21 +1,21 @@
 # huawei-snowflake-to-dataarts-migration
 
-## Resumen
+## Summary
 
-Skill para orquestar o asistir la migración desde Snowflake hacia Huawei Cloud DataArts (Factory + DLI), utilizando el dataarts-deploy-agent MCP para generación de planes, ejecución y validación de equivalencia.
+Skill to orchestrate or assist migration from Snowflake to Huawei Cloud DataArts (Factory + DLI), using the dataarts-deploy-agent MCP for plan generation, execution, and equivalence validation.
 
-## Problema que resuelve
+## Problem it solves
 
-Migrar cargas de trabajo analíticas desde Snowflake a Huawei Cloud DataArts requiere adaptación de SQL, mapeo de schemas, creación de jobs en DataArts Factory, ejecución en DLI, y validación de equivalencia de resultados. Sin orquestación, el proceso es manual y propenso a inconsistencias.
+Migrating analytical workloads from Snowflake to Huawei Cloud DataArts requires SQL adaptation, schema mapping, DataArts Factory job creation, DLI execution, and result equivalence validation. Without orchestration, the process is manual and prone to inconsistencies.
 
-## Escenario soportado
+## Supported scenario
 
-- **Origen**: Snowflake (SQL tasks, task graphs, schemas)
-- **Destino**: Huawei Cloud DataArts Factory + DLI
-- **Mecanismo**: Artifact-based migration con SQL adaptation
-- **Alcance actual**: Demo/POC flow (one-shot)
+- **Source**: Snowflake (SQL tasks, task graphs, schemas)
+- **Target**: Huawei Cloud DataArts Factory + DLI
+- **Mechanism**: Artifact-based migration with SQL adaptation
+- **Current scope**: Demo/POC flow (one-shot)
 
-## Arquitectura
+## Architecture
 
 ```
 Snowflake                          Huawei Cloud
@@ -36,16 +36,16 @@ Snowflake                          Huawei Cloud
 
 Adapters available: legacy-demo, native-dli, koocli, runtime-engine
 
-## MCP utilizados
+## MCPs used
 
-| MCP | Obligatorio | Propósito | Read/Write | Riesgo |
+| MCP | Required | Purpose | Read/Write | Risk |
 |---|---|---|---|---|
-| dataarts-deploy-agent | Sí | Plan, ejecutar, monitorear y validar migración Snowflake→DataArts | Read + Write | Medium (write requiere confirm) |
-| huaweicloud-pricing | No | Estimar costos de DataArts/DLI | Read-only | None |
-| huaweicloud-ticket | No | Crear ticket de soporte | Read + Write | Medium |
-| playwright | No | Automación de consola | Read + Write | Medium |
+| dataarts-deploy-agent | Yes | Plan, execute, monitor, and validate Snowflake→DataArts migration | Read + Write | Medium (write requires confirm) |
+| huaweicloud-pricing | No | Estimate DataArts/DLI costs | Read-only | None |
+| huaweicloud-ticket | No | Create support ticket | Read + Write | Medium |
+| playwright | No | Console automation | Read + Write | Medium |
 
-## Capacidades
+## Capabilities
 
 - Plan generation (read-only, safe)
 - Synchronous execution (demo_run with confirm=true)
@@ -55,26 +55,26 @@ Adapters available: legacy-demo, native-dli, koocli, runtime-engine
 - Report generation with secret scrubbing
 - Stale result detection
 
-## Flujo general
+## General flow
 
 1. Discovery → 2. Architecture Validation → 3. Readiness → 4. Plan → 5. Approval → 6. Execution → 7. Validation → 8. Cutover (N/A for demo) → 9. Rollback → 10. Closure
 
-## Nivel de automatización
+## Automation level
 
-| Fase | Estado | Responsable |
+| Phase | Status | Responsible |
 |---|---|---|
-| Discovery | AUTOMATED | Agente |
-| Architecture Validation | ASSISTED | Agente + Humano |
-| Readiness and Prechecks | ASSISTED | Agente + Humano |
-| Plan Generation | AUTOMATED | Agente |
-| Approval | MANUAL | Humano |
-| Execution | ASSISTED | Agente + Humano |
-| Validation | AUTOMATED | Agente |
+| Discovery | AUTOMATED | Agent |
+| Architecture Validation | ASSISTED | Agent + Human |
+| Readiness and Prechecks | ASSISTED | Agent + Human |
+| Plan Generation | AUTOMATED | Agent |
+| Approval | MANUAL | Human |
+| Execution | ASSISTED | Agent + Human |
+| Validation | AUTOMATED | Agent |
 | Cutover | NOT_IMPLEMENTED | N/A (demo only) |
-| Rollback | MANUAL | Humano |
-| Closure and Reporting | AUTOMATED | Agente |
+| Rollback | MANUAL | Human |
+| Closure and Reporting | AUTOMATED | Agent |
 
-## Prerrequisitos
+## Prerequisites
 
 - Migration artifacts prepared (SQL files, manifest, expected results)
 - DLI queue configured and available
@@ -82,13 +82,13 @@ Adapters available: legacy-demo, native-dli, koocli, runtime-engine
 - Huawei Cloud credentials with DataArts and DLI access
 - dataarts-deploy-agent MCP configured and operational
 
-## Entradas
+## Inputs
 
-- job_name: Nombre del job en DataArts Factory
-- artifact_dir: Ruta al directorio de artefactos de migración
-- dli_queue: Nombre de la cola DLI (default: "default")
+- job_name: DataArts Factory job name
+- artifact_dir: Path to migration artifacts directory
+- dli_queue: DLI queue name (default: "default")
 
-## Salidas
+## Outputs
 
 - migration-plan.md
 - execution-status.json
@@ -96,14 +96,14 @@ Adapters available: legacy-demo, native-dli, koocli, runtime-engine
 - demo-report.md
 - validation-results.json
 
-## Instalación
+## Installation
 
 ```bash
 cd <INSTALLATION_ROOT>/shared-mcps/dataarts-deploy-agent
 npm install
 ```
 
-## Configuración
+## Configuration
 
 ```json
 {
@@ -120,31 +120,31 @@ npm install
 }
 ```
 
-## Uso con OpenCode o Hermes
+## Usage with OpenCode or Hermes
 
-1. Cargar la skill: `skill huawei-snowflake-to-dataarts-migration`
-2. Seguir el workflow documentado en SKILL.md
-3. Las fases AUTOMATED serán ejecutadas por el agente
-4. Las fases ASSISTED requieren revisión humana
-5. Las fases MANUAL requieren ejecución humana
+1. Load the skill: `skill huawei-snowflake-to-dataarts-migration`
+2. Follow the workflow documented in SKILL.md
+3. AUTOMATED phases will be executed by the agent
+4. ASSISTED phases require human review
+5. MANUAL phases require human execution
 
-## Ejemplo seguro
+## Safe example
 
 ```
-# Fase 1: Discovery (read-only)
+# Phase 1: Discovery (read-only)
 snowflake_dataarts_demo_plan({
   job_name: "customer_status_pipeline",
   artifact_dir: "./artifacts/customer_status_pipeline_simple",
   dli_queue: "default"
 })
 
-# Fase 4: Plan generation (read-only)
+# Phase 4: Plan generation (read-only)
 snowflake_dataarts_demo_plan({
   job_name: "customer_status_pipeline",
   artifact_dir: "./artifacts/customer_status_pipeline_simple"
 })
 
-# Fase 7: Validation (read-only)
+# Phase 7: Validation (read-only)
 snowflake_dataarts_demo_equivalence_summary({
   job_name: "customer_status_pipeline"
 })
@@ -154,16 +154,16 @@ snowflake_dataarts_demo_last_report({
 })
 ```
 
-## Aprobaciones requeridas
+## Required approvals
 
-- Ejecutar migración (demo_run con confirm=true)
-- Iniciar migración asíncrona (demo_start con confirm=true)
-- Cutover (no aplicable en demo, requerido en producción futura)
-- Rollback de recursos DataArts/DLI
+- Execute migration (demo_run with confirm=true)
+- Start async migration (demo_start with confirm=true)
+- Cutover (not applicable in demo, required in future production)
+- Rollback of DataArts/DLI resources
 
-## Validación
+## Validation
 
-- Equivalence summary: Comparación de resultados Snowflake vs DataArts/DLI
+- Equivalence summary: Comparison of Snowflake vs DataArts/DLI results
 - Row count match
 - Value match
 - Schema match
@@ -171,14 +171,14 @@ snowflake_dataarts_demo_last_report({
 
 ## Rollback
 
-1. Limpiar jobs de DataArts Factory creados
-2. Limpiar tablas/datos DLI creados
-3. Revertir a Snowflake como fuente de verdad
-4. Documentar razón de rollback
+1. Clean up DataArts Factory jobs created
+2. Clean up DLI tables/data created
+3. Revert to Snowflake as source of truth
+4. Document rollback reason
 
-## Manejo de gaps de capacidad
+## Capability gap handling
 
-| Gap ID | Descripción | Decisión |
+| Gap ID | Description | Decision |
 |---|---|---|
 | GAP-DA-001 | No automated Snowflake source extraction | MANUAL_STEP |
 | GAP-DA-002 | No automated schema mapping | MANUAL_STEP |
@@ -187,7 +187,7 @@ snowflake_dataarts_demo_last_report({
 | GAP-DA-005 | No automated rollback of DataArts resources | MANUAL_STEP |
 | GAP-DA-006 | No incremental/delta migration support | NOT_REQUIRED (demo only) |
 
-## Pruebas
+## Testing
 
 - Golden package validation: orders_pipeline_simple (runtime-confirmed) [VERIFIED_FROM_DOCUMENTATION]
 - Golden package validation: customer_status_pipeline_simple (package/dry-run validated) [VERIFIED_FROM_DOCUMENTATION]
@@ -195,45 +195,45 @@ snowflake_dataarts_demo_last_report({
 - confirm=true gate verified [VERIFIED_FROM_CODE]
 - Stale result detection verified [VERIFIED_FROM_CODE]
 
-## Seguridad
+## Security
 
-- Secret scrubbing automático en reportes
-- confirm=true requerido para operaciones write
-- Stale result detection previene uso de resultados obsoletos
-- No se exponen credenciales en reportes
+- Automatic secret scrubbing in reports
+- confirm=true required for write operations
+- Stale result detection prevents use of obsolete results
+- No credentials exposed in reports
 
-## Limitaciones
+## Limitations
 
-- Solo flujo demo/POC soportado
-- Extracción de Snowflake es manual
-- Mapeo de schemas es manual
-- No hay migración incremental/delta
-- No hay rollback automatizado de DataArts
-- Cutover no aplicable en demo
+- Only demo/POC flow supported
+- Snowflake extraction is manual
+- Schema mapping is manual
+- No incremental/delta migration
+- No automated DataArts rollback
+- Cutover not applicable in demo
 
 ## Troubleshooting
 
-| Problema | Solución |
+| Problem | Solution |
 |---|---|
-| Plan generation falla | Verificar artifact package, DLI queue, credenciales |
-| Execution falla | Revisar logs DataArts Factory, DLI job logs, SQL errors |
-| Equivalence mismatch | Revisar SQL adaptation, data types, NULL handling |
-| Stale results | Limpiar estado de run anterior |
+| Plan generation fails | Verify artifact package, DLI queue, credentials |
+| Execution fails | Review DataArts Factory logs, DLI job logs, SQL errors |
+| Equivalence mismatch | Review SQL adaptation, data types, NULL handling |
+| Stale results | Clean previous run state |
 
-## Estado de madurez
+## Maturity status
 
 **PARTIAL**
 
-El flujo demo/POC funciona end-to-end con validación de equivalencia. La migración producción completa no está disponible.
+The demo/POC flow works end-to-end with equivalence validation. Full production migration is not available.
 
-## Evidencia utilizada
+## Evidence used
 
-| Evidencia | Tipo |
+| Evidence | Type |
 |---|---|
-| 6 dataarts-deploy-agent tools disponibles | VERIFIED_FROM_CODE |
-| 2 write tools requieren confirm=true | VERIFIED_FROM_CODE |
-| Golden packages validados | VERIFIED_FROM_DOCUMENTATION |
-| Secret scrubbing implementado | VERIFIED_FROM_CODE |
-| Demo flow documentado | VERIFIED_FROM_DOCUMENTATION |
-| Production migration NO disponible | VERIFIED_FROM_DOCUMENTATION |
-| Snowflake extraction NO automatizado | NOT_VERIFIED |
+| 6 dataarts-deploy-agent tools available | VERIFIED_FROM_CODE |
+| 2 write tools require confirm=true | VERIFIED_FROM_CODE |
+| Golden packages validated | VERIFIED_FROM_DOCUMENTATION |
+| Secret scrubbing implemented | VERIFIED_FROM_CODE |
+| Demo flow documented | VERIFIED_FROM_DOCUMENTATION |
+| Production migration NOT available | VERIFIED_FROM_DOCUMENTATION |
+| Snowflake extraction NOT automated | NOT_VERIFIED |
