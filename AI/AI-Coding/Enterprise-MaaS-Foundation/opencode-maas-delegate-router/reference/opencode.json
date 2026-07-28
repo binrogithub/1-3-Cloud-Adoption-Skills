@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md"],
+  "agent": {
+    "ds-executor": {
+      "model": "huawei-maas/glm-5.1",
+      "mode": "subagent",
+      "description": "Execution pool agent on GLM-5.1 via Huawei MaaS. Use for unit tests, docs, CI fixes, codegen, batch refactors, low/medium-risk review.",
+      "permission": { "edit": "allow", "bash": "allow" }
+    },
+    "ds-reviewer": {
+      "model": "huawei-maas/glm-5.1",
+      "mode": "subagent",
+      "description": "Code reviewer on the MaaS execution pool (GLM-5.1). Reviews low/medium-risk PRs and code. Does not modify files.",
+      "permission": { "edit": "deny", "bash": { "git *": "allow", "*": "ask" } }
+    }
+  },
+  "skills": {
+    "paths": [".opencode/skills"]
+  }
+}
