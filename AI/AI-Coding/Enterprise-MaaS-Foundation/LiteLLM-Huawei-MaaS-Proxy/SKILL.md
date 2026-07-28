@@ -1308,3 +1308,103 @@ On completion, leave behind:
 - [ ] Each model has N deployments (N = `HUAWEI_MAAS_API_KEY_COUNT`)
 - [ ] `litellm_config.yaml` is generated (not manually edited)
 - [ ] Each MaaS API key tested individually succeeds
+
+## Optional: Complexity-Based Auto-Routing
+
+The base deployment routes all traffic to the model specified by the client. This optional overlay adds an `auto_router` that classifies each prompt by complexity and routes it to the appropriate model tier automatically.
+
+### When to enable
+
+- You have models at different price/capability points (e.g. DeepSeek-V3.2 cheap, GLM-5.2 premium)
+- You want automatic cost optimization without manual model selection
+- You want Claude Code-style complexity routing for any client (not just Claude Code)
+
+### When NOT to enable
+
+- Single model deployment
+- The `auto_router/complexity_router` model is not available in your LiteLLM version
+- You prefer explicit model selection per request
+
+### How it works
+
+The router analyzes each prompt across 7 dimensions (token count, code presence, reasoning markers, technical terms, simple indicators, multi-step patterns, question complexity), calculates a weighted score (0–1), and maps it to a tier:
+
+| Score range | Tier | Default model | Cost ($/1M input) |
+|-------------|------|---------------|-------------------|
+| 0.00 – 0.20 | SIMPLE | DeepSeek-V3.2 | $0.27 |
+| 0.20 – 0.40 | MEDIUM | GLM-5 | $0.81 |
+| 0.40 – 0.65 | COMPLEX | GLM-5.1 | $1.08 |
+| 0.65 – 1.00 | REASONING | GLM-5.2 | $1.50 |
+
+Keyword rules force a tier regardless of score (e.g. "arquitectura" → REASONING, "refactor" → COMPLEX). Session affinity keeps a conversation at its highest tier for 1 hour.
+
+### Setup
+
+1. Ensure `glm-5.2` is available in your MaaS account.
+
+2. Review the overlay file:
+```bash
+cat assets/config/complexity_router_overlay.yaml
+```
+
+3. Append the `additional_models` entries to the `model_list` in your generated `litellm_config.yaml`. **Note:** `claude-opus-4-6` already exists in the base config (mapped to glm-5.1) — remove the base entry before adding the overlay one (mapped to glm-5.2).
+
+4. Replace the `router_settings` block with the one from the overlay (adds fallbacks + context_window_fallbacks).
+
+5. Restart LiteLLM:
+```bash
+docker compose restart litellm
+```
+
+6. Verify routing:
+```bash
+# SIMPLE → should route to deepseek-v3.2
+curl -s http://localhost:4000/v1/chat/completions \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"smart-router","messages":[{"role":"user","content":"hola"}]}' | jq '.model'
+
+# REASONING → keyword "arquitectura" forces REASONING tier
+curl -s http://localhost:4000/v1/chat/completions \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"smart-router","messages":[{"role":"user","content":"Diseña la arquitectura de un sistema distribuido"}]}' | jq '.model'
+```
+
+### Dimension weights tuning
+
+The defaults are tuned for coding workloads (30% codePresence, 25% reasoningMarkers + technicalTerms). Adjust for your workload:
+
+| Workload | codePresence | reasoningMarkers | technicalTerms | questionComplexity |
+|----------|-------------|------------------|---------------|-------------------|
+| Coding | 0.30 | 0.25 | 0.25 | 0.05 |
+| Customer support | 0.05 | 0.15 | 0.10 | 0.35 |
+| Data analysis | 0.15 | 0.30 | 0.20 | 0.15 |
+| General chat | 0.10 | 0.20 | 0.10 | 0.30 |
+
+### Claude-compatible aliases
+
+The overlay includes aliases that map Claude model names to MaaS models:
+
+| Claude name | Routes to | Tier |
+|-------------|-----------|------|
+| `claude-opus-4-6` | GLM-5.2 | REASONING |
+| `claude-sonnet-4-6` | GLM-5.1 | COMPLEX |
+| `claude-haiku-3-5` | DeepSeek-V3.2 | SIMPLE |
+
+Clients that expect Claude model names work transparently — the proxy routes to MaaS behind the scenes.
+
+### Fallbacks
+
+The overlay adds fallback chains: if a model fails, the proxy upgrades to the next tier (cheap → expensive). Context window fallbacks do the same when a prompt exceeds a model's context limit.
+
+```
+deepseek-v3.2 → glm-5 → glm-5.1 → glm-5.2
+smart-router → glm-5.1 (default fallback)
+```
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `assets/config/complexity_router_overlay.yaml` | Overlay config: smart-router, glm-5.2, aliases, fallbacks |

@@ -1,0 +1,130 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Complexity Router Overlay (OPTIONAL)
+#
+# Merge this block into your generated litellm_config.yaml to enable
+# complexity-based auto-routing. The default deployment does NOT include this.
+#
+# Usage:
+#   1. Deploy the base stack (init_env.sh + generate_config.sh)
+#   2. Append the models below to the model_list in litellm_config.yaml
+#   3. Replace the router_settings block with the one below
+#   4. docker compose restart litellm
+#
+# Requires: glm-5.2 model available in your MaaS account.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Append these entries to model_list:
+# NOTE: claude-opus-4-6 already exists in the base config (mapped to glm-5.1).
+# Remove the base entry before adding this one (mapped to glm-5.2).
+additional_models:
+  # ── Tier 4: GLM-5.2 (premium) ──
+  - model_name: glm-5.2
+    litellm_params:
+      model: openai/glm-5.2
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
+      tpm: 500000
+      rpm: 30
+    model_info:
+      max_tokens: 198000
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+      input_cost_per_token: 0.0000015
+      output_cost_per_token: 0.000005
+
+  # ── Auto Router: classifies complexity and routes to the right tier ──
+  - model_name: smart-router
+    litellm_params:
+      model: auto_router/complexity_router
+      drop_params: true
+      complexity_router_config:
+        tiers:
+          SIMPLE:    deepseek-v3.2
+          MEDIUM:    glm-5
+          COMPLEX:   glm-5.1
+          REASONING: glm-5.2
+        keyword_tier_rules:
+          - keywords: ["arquitectura", "architecture", "planificar", "plan", "diseñar", "design"]
+            tier: REASONING
+          - keywords: ["refactor", "debug", "fix bug", "implementar"]
+            tier: COMPLEX
+        custom_technical_keywords: [terraform, cce, ecs, vpc, mrs, dws, gaussdb, obs, smn, iam]
+        session_affinity: true
+        session_affinity_ttl_seconds: 3600
+        tier_boundaries:
+          simple_medium:     0.20
+          medium_complex:    0.40
+          complex_reasoning: 0.65
+        dimension_weights:
+          tokenCount:        0.05
+          codePresence:      0.30
+          reasoningMarkers:  0.25
+          technicalTerms:    0.25
+          simpleIndicators:  0.05
+          multiStepPatterns: 0.05
+          questionComplexity: 0.05
+      complexity_router_default_model: glm-5.1
+
+  # ── Claude-compatible aliases (map Claude names to MaaS models) ──
+  - model_name: claude-opus-4-6
+    litellm_params:
+      model: openai/glm-5.2
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
+      tpm: 500000
+      rpm: 30
+    model_info:
+      max_tokens: 198000
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+      input_cost_per_token: 0.0000015
+      output_cost_per_token: 0.000005
+
+  - model_name: claude-sonnet-4-6
+    litellm_params:
+      model: openai/glm-5.1
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
+      tpm: 500000
+      rpm: 30
+    model_info:
+      max_tokens: 198000
+      max_input_tokens: 192000
+      max_output_tokens: 128000
+      input_cost_per_token: 0.000001078
+      output_cost_per_token: 0.000003774
+
+  - model_name: claude-haiku-3-5
+    litellm_params:
+      model: openai/deepseek-v3.2
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
+      tpm: 500000
+      rpm: 700
+    model_info:
+      max_tokens: 160000
+      max_input_tokens: 128000
+      max_output_tokens: 32000
+      input_cost_per_token: 0.00000027
+      output_cost_per_token: 0.000000404
+
+# Replace router_settings with this:
+router_settings:
+  routing_strategy: simple-shuffle
+  num_retries: 3
+  cooldown_time: 30
+  allowed_fails: 3
+  fallbacks:
+    - glm-5:
+        - glm-5.1
+    - glm-5.1:
+        - glm-5.2
+    - deepseek-v3.2:
+        - glm-5
+    - smart-router:
+        - glm-5.1
+  context_window_fallbacks:
+    - glm-5:
+        - glm-5.1
+    - glm-5.1:
+        - glm-5.2
