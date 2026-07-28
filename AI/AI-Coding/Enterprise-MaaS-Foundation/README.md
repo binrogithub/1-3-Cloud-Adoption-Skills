@@ -49,6 +49,9 @@ does not hold — `claude-glm` is self-contained.
 - `cursor-maas-delegate-router` — **USER-GLOBAL** task-level hybrid for Cursor:
   subscription/premium Agent orchestrates; MaaS GLM executes via `delegate.py`
   (Rules + Hooks under `~/.cursor/`, all workspaces).
+- `opencode-maas-delegate-router` — task-level hybrid for OpenCode: GLM-5.2
+  orchestrates through global instructions, while named GLM-5.1 subagents handle
+  execution-class tasks on the same Huawei MaaS provider.
 - `codex-maas-hybrid-router`, `codex-huawei-maas`, `copilot-huawei-maas`,
   `codearts-huawei-maas`, `CSS-Code-Search-MCP` — sibling integrations for
   other clients; unrelated to the two Claude Code entries above.
