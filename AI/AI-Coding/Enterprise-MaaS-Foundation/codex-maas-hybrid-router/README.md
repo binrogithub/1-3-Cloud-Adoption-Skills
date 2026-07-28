@@ -27,7 +27,8 @@ The bridge does not execute shell commands or apply patches. Codex CLI keeps res
 
 - `codex` CLI installed.
 - `node` and `curl` in PATH.
-- Forky already installed and running, typically from `claude-code-maas-hybrid-router`.
+- Forky already installed and running as an external dependency. This repository
+  no longer ships the legacy Claude Code forky installer.
 - Forky's execution backend already works, typically LiteLLM on `127.0.0.1:4000`.
 
 ## Quick Start

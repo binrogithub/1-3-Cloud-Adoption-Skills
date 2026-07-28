@@ -1,6 +1,6 @@
 ---
 name: codex-maas-hybrid-router
-description: Install, configure, verify, or troubleshoot a side-by-side `codex-forky` command that routes normal Codex tool/code-execution turns through an existing forky service to the MaaS execution backend such as LiteLLM/Huawei MaaS GLM, while routing non-tool ordinary turns and image turns directly to Codex ChatGPT/OAuth. Assumes forky is already installed and running, usually by claude-code-maas-hybrid-router.
+description: Install, configure, verify, or troubleshoot a side-by-side `codex-forky` command that routes normal Codex tool/code-execution turns through an existing external forky service to the MaaS execution backend such as LiteLLM/Huawei MaaS GLM, while routing non-tool ordinary turns and image turns directly to Codex ChatGPT/OAuth.
 ---
 
 # Codex MaaS Hybrid Router

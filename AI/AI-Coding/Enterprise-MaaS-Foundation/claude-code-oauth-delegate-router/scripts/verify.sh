@@ -3,7 +3,7 @@
 #  1. configure-claude-code.sh --verify   (litellm-maas-auto-plugin client probe + TOOL-CALL)
 #  2. live_smoke.py text|tools            (litellm-maas-auto-plugin live smoke, if key shim present)
 #  3. functional delegate smoke           (one tiny brief through claude-glm -> LiteLLM -> MaaS)
-#  4. spend-log SQL                       (claude-code-maas-hybrid-router verify-forky pattern)
+#  4. spend-log SQL                       (LiteLLM MaaS plugin verification pattern)
 #  5. env-isolation asserts               (acceptance A/C invariants)
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -2,7 +2,7 @@
 
 Status: v1.1 · 2026-07-17 · deployed and validated end-to-end on a live single-host deployment (Appendix C)
 Repo path: `AI/AI-Coding/Enterprise-MaaS-Foundation/claude-code-oauth-delegate-router/docs/PRD.md`
-Related: [`litellm-maas-auto-plugin/docs/PRD-smart-routing.md`](../../litellm-maas-auto-plugin/docs/PRD-smart-routing.md) (taxonomy source), [`claude-code-maas-hybrid-router`](../../claude-code-maas-hybrid-router/SKILL.md) (forky, the transport-layer alternative)
+Related: [`litellm-maas-auto-plugin/docs/PRD-smart-routing.md`](../../litellm-maas-auto-plugin/docs/PRD-smart-routing.md) (taxonomy source). The removed Claude Code forky router is retained here only as a historical transport-layer comparison.
 
 ## 1. Goal
 
@@ -37,7 +37,7 @@ The split happens at the **task layer** (who does the work), not the **transport
 
 ## 2. Positioning vs Existing Assets
 
-| | Gateway smart router (`cc_glm52_guard`) | forky (`claude-code-maas-hybrid-router`) | **This PRD** |
+| | Gateway smart router (`cc_glm52_guard`) | removed forky transport router | **This PRD** |
 |---|---|---|---|
 | Split layer | gateway, per-request | local proxy, per-phase (plan/vision/exec) | orchestrator, per-task |
 | Premium pool | API-key model in LiteLLM (OpenRouter/Anthropic) | OAuth token replayed by forky process | the OAuth session itself |
@@ -315,7 +315,7 @@ claude-code-oauth-delegate-router/
 Reused (not vendored) from sibling assets: `configure-claude-code.sh` (client
 config + TOOL-CALL probe; honors `CLAUDE_CONFIG_DIR`), `tests/live_smoke.py`,
 `server/install-litellm-plugin.sh` + both LiteLLM plugins, and the spend-log
-SQL verification pattern from `claude-code-maas-hybrid-router/scripts/verify-forky.sh`.
+SQL verification pattern used by the LiteLLM MaaS plugin probes.
 
 Env table (wrapper-internal only): `CLAUDE_CONFIG_DIR`, `ANTHROPIC_BASE_URL`, `ANTHROPIC_API_KEY` (virtual key), `ANTHROPIC_MODEL=claude-opus-4-6` (LiteLLM alias → glm-5.1), `ANTHROPIC_SMALL_FAST_MODEL=claude-glm1`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`. Delegate runner: `DELEGATE_MAX_ATTEMPTS=2`, `DELEGATE_TIMEOUT_S=1800`, `DELEGATE_AUDIT=~/.claude-hybrid/route-audit.jsonl`.
 

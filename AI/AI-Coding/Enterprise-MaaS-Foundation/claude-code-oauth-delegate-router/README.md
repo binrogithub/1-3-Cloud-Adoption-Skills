@@ -37,7 +37,7 @@ splitting are eliminated *by construction* (PRD §5):
 
 ## Positioning vs Sibling Assets
 
-| | [litellm-maas-auto-plugin](../litellm-maas-auto-plugin/) smart router | [claude-code-maas-hybrid-router](../claude-code-maas-hybrid-router/) (forky) | **this asset** |
+| | [litellm-maas-auto-plugin](../litellm-maas-auto-plugin/) smart router | legacy forky transport router | **this asset** |
 |---|---|---|---|
 | Split layer | gateway, per-request | local proxy, per-phase | orchestrator, per-task |
 | Premium pool | API-key model in LiteLLM | OAuth token replayed by proxy | the OAuth session itself |
@@ -82,8 +82,8 @@ splitting are eliminated *by construction* (PRD §5):
 
 Reused, not vendored: `../litellm-maas-auto-plugin/client/configure-claude-code.sh`
 (honors `CLAUDE_CONFIG_DIR`), `../litellm-maas-auto-plugin/tests/live_smoke.py`,
-server plugin installers, and the spend-log SQL pattern from
-`../claude-code-maas-hybrid-router/scripts/verify-forky.sh`.
+server plugin installers, and the spend-log SQL verification pattern used by
+the LiteLLM MaaS plugin probes.
 
 ## KPIs (PRD §11)
 
