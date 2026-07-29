@@ -1,0 +1,8 @@
+{
+  "execution": {
+    "timeout_seconds": 30,
+    "cli_output": "json",
+    "hcloud_binary": "hcloud",
+    "obs_endpoint_template": "https://obs.{region}.myhuaweicloud.com"
+  }
+}

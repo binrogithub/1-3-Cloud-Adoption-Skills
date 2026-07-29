@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hcloud-mcp-server"
+version = "0.3.0"
+description = "MCP server for Huawei Cloud (hcloud) CLI"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.27.0",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+hcloud-mcp = "src.server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]

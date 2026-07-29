@@ -1,0 +1,80 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "terraform": {
+      "type": "local",
+      "command": ["docker", "run", "-i", "--rm", "-e", "TFE_ADDRESS", "-e", "TFE_TOKEN", "hashicorp/terraform-mcp-server:0.5.1"],
+      "enabled": true,
+      "environment": {
+        "TFE_ADDRESS": "https://app.terraform.io",
+        "TFE_TOKEN": "YOUR_TFE_TOKEN"
+      }
+    },
+    "hcloud": {
+      "type": "local",
+      "command": ["hcloud-mcp"],
+      "enabled": true
+    }
+  },
+  "provider": {
+    "huawei-maas": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Huawei Cloud MaaS",
+      "options": {
+        "baseURL": "https://api-ap-southeast-1.modelarts-maas.com/openai/v1",
+        "apiKey": "YOUR_MAAS_API_KEY"
+      },
+      "models": {
+        "deepseek-v4-flash": {
+          "name": "DeepSeek-V4-Flash",
+          "limit": {
+            "context": 1048576,
+            "output": 131072
+          }
+        },
+        "deepseek-v3.2": {
+          "name": "DeepSeek-V3.2",
+          "limit": {
+            "context": 163840,
+            "output": 32768
+          }
+        },
+        "deepseek-v3.1-terminus": {
+          "name": "DeepSeek-V3.1",
+          "limit": {
+            "context": 131072,
+            "output": 32768
+          }
+        },
+        "DeepSeek-V3": {
+          "name": "DeepSeek-V3",
+          "limit": {
+            "context": 131072,
+            "output": 131072
+          }
+        },
+        "deepseek-r1-250528": {
+          "name": "DeepSeek-R1-0528",
+          "limit": {
+            "context": 131072,
+            "output": 32768
+          }
+        },
+        "glm-5": {
+          "name": "GLM-5",
+          "limit": {
+            "context": 202752,
+            "output": 65536
+          }
+        },
+        "glm-5.1": {
+          "name": "GLM-5.1",
+          "limit": {
+            "context": 202752,
+            "output": 131072
+          }
+        }
+      }
+    }
+  }
+}

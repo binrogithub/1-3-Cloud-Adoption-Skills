@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Migración de Object Storage con IA — OMS · AWS S3 → HuaweiCloud OBS</title>
+<style>
+/* ===== Reset & Base ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --hc-red:#C7000B;--hc-red-dark:#9E0009;--hc-red-light:#FDECEE;
+  --hc-gray:#666;--hc-gray-light:#f5f5f5;--hc-gray-border:#e0e0e0;
+  --hc-blue:#0073E6;--hc-green:#00A870;--hc-orange:#FF8C00;--hc-purple:#7B61FF;
+  --bg:#fff;--text:#1a1a1a;--text-muted:#666;
+  --code-bg:#1e1e2e;--code-text:#cdd6f4;--code-border:#313244;
+  --shadow:0 2px 8px rgba(0,0,0,.08);
+  --radius:8px;--max-width:960px;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+a{color:var(--hc-red);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ===== Layout ===== */
+.container{max-width:var(--max-width);margin:0 auto;padding:0 24px}
+section{padding:48px 0;border-bottom:1px solid var(--hc-gray-border)}
+section:last-child{border-bottom:none}
+
+/* ===== Typography ===== */
+h1{font-size:2.2rem;font-weight:800;line-height:1.2;color:var(--text)}
+h2{font-size:1.6rem;font-weight:700;margin-bottom:16px;color:var(--text)}
+h3{font-size:1.2rem;font-weight:600;margin-bottom:12px;color:var(--text)}
+h4{font-size:1rem;font-weight:600;margin-bottom:8px}
+p{margin-bottom:12px}
+small{font-size:.85rem;color:var(--text-muted)}
+.muted{color:var(--text-muted)}
+.center{text-align:center}
+
+/* ===== Header / Hero ===== */
+.hero{background:linear-gradient(135deg,#C7000B 0%,#9E0009 100%);color:#fff;padding:60px 0}
+.hero h1{color:#fff;margin-bottom:8px}
+.hero .subtitle{font-size:1.1rem;opacity:.9;margin-bottom:24px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:16px;font-size:.85rem;opacity:.85}
+.hero-meta span{background:rgba(255,255,255,.15);padding:4px 12px;border-radius:20px}
+.badge-success{display:inline-block;background:var(--hc-green);color:#fff;padding:6px 20px;border-radius:20px;font-weight:700;font-size:.9rem;letter-spacing:.5px}
+.badge{display:inline-block;padding:3px 10px;border-radius:4px;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.badge-red{background:var(--hc-red-light);color:var(--hc-red)}
+.badge-blue{background:#E6F2FF;color:var(--hc-blue)}
+.badge-green{background:#E6F9F0;color:var(--hc-green)}
+.badge-orange{background:#FFF5E6;color:var(--hc-orange)}
+.badge-purple{background:#F3EEFF;color:var(--hc-purple)}
+.badge-gray{background:var(--hc-gray-light);color:var(--hc-gray)}
+
+/* ===== Architecture Diagram ===== */
+.arch{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;margin:24px 0}
+.arch-box{flex:1;min-width:200px;max-width:280px;border:2px solid var(--hc-gray-border);border-radius:var(--radius);padding:16px;text-align:center;background:#fff}
+.arch-box.source{border-color:#FF9900;background:#FFFBF5}
+.arch-box.target{border-color:var(--hc-red);background:var(--hc-red-light)}
+.arch-box.oms{border-color:var(--hc-blue);background:#F0F7FF}
+.arch-arrow{flex:0 0 40px;text-align:center;font-size:1.5rem;color:var(--hc-gray);align-self:center}
+.arch-box h4{margin-bottom:4px}
+.arch-box .arch-detail{font-size:.8rem;color:var(--text-muted);line-height:1.4}
+.arch-box .arch-icon{font-size:2rem;margin-bottom:8px}
+
+/* ===== Skills Callout ===== */
+.skills-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0}
+.skill-card{border:1px solid var(--hc-gray-border);border-radius:var(--radius);padding:14px;background:#fff}
+.skill-card h4{color:var(--hc-red);margin-bottom:4px}
+.skill-card p{font-size:.85rem;color:var(--text-muted);margin:0}
+
+/* ===== Cards ===== */
+.card{border:1px solid var(--hc-gray-border);border-radius:var(--radius);padding:16px;margin:12px 0;background:#fff;box-shadow:var(--shadow)}
+.card.highlight{border-left:4px solid var(--hc-red)}
+.card.success{border-left:4px solid var(--hc-green)}
+.card.warning{border-left:4px solid var(--hc-orange)}
+.card.info{border-left:4px solid var(--hc-blue)}
+
+/* ===== Code Blocks ===== */
+.code-block{background:var(--code-bg);color:var(--code-text);border-radius:6px;padding:14px 16px;margin:12px 0;overflow-x:auto;font-size:.82rem;line-height:1.5;font-family:'SF Mono','Fira Code','Consolas','Monaco',monospace}
+.code-block pre{white-space:pre-wrap;word-break:break-word}
+code{background:var(--hc-gray-light);padding:2px 6px;border-radius:3px;font-size:.85em;font-family:'SF Mono','Fira Code','Consolas',monospace;color:var(--hc-red-dark)}
+
+/* ===== Tables ===== */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.9rem}
+th{background:var(--hc-red);color:#fff;padding:10px 12px;text-align:left;font-weight:600}
+td{padding:8px 12px;border-bottom:1px solid var(--hc-gray-border)}
+tr:nth-child(even) td{background:var(--hc-gray-light)}
+table.compact th,table.compact td{padding:6px 10px;font-size:.82rem}
+
+/* ===== Lessons ===== */
+.lesson{display:flex;gap:12px;padding:14px;margin:10px 0;border-radius:var(--radius);background:var(--hc-gray-light)}
+.lesson-icon{font-size:1.5rem;flex-shrink:0}
+.lesson-content h4{color:var(--hc-red);margin-bottom:2px}
+.lesson-content p{font-size:.85rem;margin:0;color:var(--text-muted)}
+
+/* ===== Sticky Nav ===== */
+.phase-nav{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--hc-gray-border);z-index:100;padding:8px 0;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.phase-nav-inner{max-width:var(--max-width);margin:0 auto;padding:0 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phase-nav a{font-size:.75rem;padding:4px 10px;border-radius:4px;color:var(--text-muted);font-weight:600}
+.phase-nav a:hover{background:var(--hc-red-light);color:var(--hc-red);text-decoration:none}
+
+/* ===== Print ===== */
+@media print{
+  .phase-nav{display:none}
+  body{font-size:12px}
+}
+
+/* ===== Utility ===== */
+.spacer{height:24px}
+hr{border:none;border-top:1px solid var(--hc-gray-border);margin:20px 0}
+</style>
+</head>
+<body>
+
+<!-- ===== Sticky Phase Nav ===== -->
+<nav class="phase-nav">
+<div class="phase-nav-inner">
+<a href="#hero">Inicio</a>
+<a href="#arquitectura">Arquitectura</a>
+<a href="#skills">Skills</a>
+<a href="#usuario">Rol del Usuario</a>
+<a href="#lecciones">Lecciones</a>
+</div>
+</nav>
+
+<!-- ===== Hero ===== -->
+<section class="hero" id="hero">
+<div class="container">
+<h1>Migración de Object Storage con IA</h1>
+<p class="subtitle">AWS S3 → HuaweiCloud OBS · Object Migration Service (OMS)</p>
+<div class="spacer"></div>
+<span class="badge-success">MIGRACIÓN EXITOSA</span>
+</div>
+</section>
+
+<!-- ===== Arquitectura ===== -->
+<section id="arquitectura">
+<div class="container">
+<h2>Arquitectura de la Migración</h2>
+<p>El bucket S3 de AWS fue descubierto automáticamente, junto con sus 15 objetos (~75 KB c/u). Se creó un bucket OBS nuevo en HuaweiCloud y una tarea OMS de migración única via Terraform, que copió todos los objetos preservando ETags y metadata. Posteriormente, la IA creó una skill reutilizable para futuras migraciones OMS.</p>
+
+<div class="arch">
+<div class="arch-box source">
+<div class="arch-icon">☁️</div>
+<h4>AWS us-east-2</h4>
+<div class="arch-detail">
+<strong>S3:</strong> demo-bucket-17b5e8a2<br>
+15 objetos · ~75 KB c/u<br>
+StorageClass: STANDARD<br>
+Weekly Report Week 10-24.docx<br>
+AK/SK en awscredentials.csv
+</div>
+</div>
+<div class="arch-arrow">→</div>
+<div class="arch-box oms">
+<div class="arch-icon">📦</div>
+<h4>OMS Task</h4>
+<div class="arch-detail">
+oms_migration_task<br>
+type: prefix · object: [""]<br>
+data_source: AWS<br>
+consistency: size_last_modified<br>
+overwrite: SIZE_LAST_MODIFIED<br>
+start_task: true
+</div>
+</div>
+<div class="arch-arrow">→</div>
+<div class="arch-box target">
+<div class="arch-icon">🟡</div>
+<h4>HuaweiCloud la-north-2</h4>
+<div class="arch-detail">
+<strong>OBS:</strong> demo-bucket-17b5e8a2<br>
+15 objetos · ETags idénticos<br>
+acl: private · STANDARD<br>
++ carpeta oms/ (metadata)<br>
+AK/SK en credentials.csv
+</div>
+</div>
+</div>
+
+<div class="spacer"></div>
+<h3>Inventario del Origen (AWS S3)</h3>
+<table class="compact">
+<tr><th>Atributo</th><th>Valor</th></tr>
+<tr><td>Bucket</td><td><code>demo-bucket-17b5e8a2</code></td></tr>
+<tr><td>Región</td><td><code>us-east-2</code></td></tr>
+<tr><td>Numero de objetos</td><td><strong>15</strong></td></tr>
+<tr><td>Tamaño por objeto</td><td>~75 KB (75,349 – 76,390 bytes)</td></tr>
+<tr><td>Tamaño total</td><td>~1.1 MB</td></tr>
+<tr><td>Storage class</td><td><code>STANDARD</code> (todos)</td></tr>
+<tr><td>Tipo de objetos</td><td><code>Weekly Report Week 10.docx</code> … <code>Weekly Report Week 24.docx</code></td></tr>
+<tr><td>Checksum</td><td>CRC64NVME (FULL_OBJECT)</td></tr>
+<tr><td>AK/SK</td><td>En <code>awscredentials.csv</code> — permisos <code>s3:ListBucket</code> + <code>s3:GetObject</code></td></tr>
+</table>
+
+<h3>Inventario del Destino (HuaweiCloud OBS)</h3>
+<table class="compact">
+<tr><th>Atributo</th><th>Valor</th></tr>
+<tr><td>Buckets OBS existentes</td><td><strong>Ninguno</strong> — el bucket destino fue creado por Terraform</td></tr>
+<tr><td>Región</td><td><code>la-north-2</code> (default del perfil hcloud)</td></tr>
+<tr><td>Project ID</td><td><code>50bc790b7aa3493f97b3968de4dfd490</code></td></tr>
+<tr><td>Domain ID</td><td><code>de207d5213bb429a93c3d9bdd721b4cb</code></td></tr>
+<tr><td>AK/SK</td><td>En <code>credentials.csv</code> — usuario <code>bs_dev_J50056672</code></td></tr>
+<tr><td>hcloud config</td><td>AKSK mode, region la-north-2</td></tr>
+</table>
+
+<h3>Recursos OMS Terraform disponibles (provider v1.93.0)</h3>
+<table class="compact">
+<tr><th>Recurso</th><th>Uso</th><th>Esta sesión</th></tr>
+<tr><td><code>huaweicloud_oms_migration_task</code></td><td>Migración única (fin de vida finito)</td><td><span class="badge badge-green">USADO</span></td></tr>
+<tr><td><code>huaweicloud_oms_migration_sync_task</code></td><td>Sincronización continua (replica cambios futuros)</td><td><span class="badge badge-gray">No usado</span></td></tr>
+<tr><td><code>huaweicloud_oms_migration_task_group</code></td><td>Agrupa varias tareas con bandwidth limits</td><td><span class="badge badge-gray">No usado</span></td></tr>
+<tr><td><code>huaweicloud_oms_sync_event</code></td><td>Eventos de sync (data source)</td><td><span class="badge badge-gray">No usado</span></td></tr>
+<tr><td><code>huaweicloud_obs_bucket</code></td><td>Crear bucket OBS destino</td><td><span class="badge badge-green">USADO</span></td></tr>
+</table>
+
+<h3>Hallazgos Críticos del Descubrimiento</h3>
+<div class="card warning">
+<table class="compact">
+<tr><th>#</th><th>Hallazgo</th><th>Impacto</th><th>Resolución</th></tr>
+<tr><td>1</td><td><strong>No existe bucket OBS destino</strong></td><td>Hay que crearlo</td><td>Terraform <code>huaweicloud_obs_bucket</code> en el mismo config</td></tr>
+<tr><td>2</td><td><strong>Provider no usa IMDS</strong></td><td><code>terraform plan</code> falla con timeout de metadata API</td><td>Pasar <code>access_key</code>/<code>secret_key</code> explicit en el provider block</td></tr>
+<tr><td>3</td><td><strong>OMS rechaza <code>-&gt;</code> en description</strong></td><td><code>terraform apply</code> falla con <code>OMS.0064</code></td><td>Usar ASCII plano: <code>"AWS S3 to Huawei OBS"</code></td></tr>
+<tr><td>4</td><td><strong>15 objetos pequeños</strong></td><td>Sincronización continua es overkill</td><td><code>oms_migration_task</code> (one-time) seleccionado</td></tr>
+<tr><td>5</td><td><strong>Bucket name global uniqueness</strong></td><td><code>demo-bucket-17b5e8a2</code> puede colisionar</td><td>Verificado — nombre disponible en la-north-2</td></tr>
+</table>
+</div>
+</div>
+</section>
+
+<!-- ===== Skills & Herramientas ===== -->
+<section id="skills">
+<div class="container">
+<h2>Skills y Herramientas Utilizadas</h2>
+<p>La IA cargó la skill <code>huaweicloud-terraform-planner</code> (genérica de Terraform para HuaweiCloud) ya que la skill específica <code>huaweicloud-oms-migration</code> <strong>aún no existía</strong> — fue creada al final de esta sesión como producto de la migración. La IA usó el Terraform MCP para descubrir schemas de recursos OMS y el AWS CLI para inventariar el bucket S3.</p>
+
+<div class="skills-grid">
+<div class="skill-card">
+<h4>huaweicloud-terraform-planner</h4>
+<p>Skill genérica de Terraform para HuaweiCloud. Proporciona el workflow de descubrir valores reales del cloud, validar con el provider schema, y generar código sin adivinar.</p>
+</div>
+<div class="skill-card">
+<h4>Terraform MCP</h4>
+<p>Consulta al registry para obtener provider v1.93.0, buscar recursos OMS (<code>search_providers</code>), y obtener schemas completos de <code>oms_migration_task</code> y <code>oms_migration_sync_task</code>.</p>
+</div>
+<div class="skill-card">
+<h4>AWS CLI</h4>
+<p>Inventario del bucket S3 origen: <code>list-buckets</code>, <code>get-bucket-location</code>, <code>list-objects-v2</code> para obtener los 15 objetos con tamaños y ETags.</p>
+</div>
+<div class="skill-card">
+<h4>hcloud CLI (KooCLI)</h4>
+<p>Verificación post-migración: <code>hcloud obs ls</code> (obsutil) para listar objetos en el bucket OBS destino y comparar ETags con el origen.</p>
+</div>
+</div>
+
+<div class="card">
+<h3>Reglas clave que la skill inyectó en el contexto de la IA</h3>
+<table class="compact">
+<tr><th>Regla</th><th>Impacto en esta sesión</th></tr>
+<tr><td><strong>Discover before act</strong></td><td>La IA inventarió el bucket S3 (15 objetos, ~75KB) y verificó que no existían buckets OBS antes de crear nada</td></tr>
+<tr><td><strong>Never guess values</strong></td><td>La IA consultó el provider schema via Terraform MCP en lugar de adivinar argumentos del recurso <code>oms_migration_task</code></td></tr>
+<tr><td><strong>Verify with latest schema</strong></td><td>Se validó que los recursos OMS existen en el provider v1.93.0 y se obtuvieron los argumentos required/optional</td></tr>
+</table>
+</div>
+
+<div class="card info">
+<h3>Nota: La skill <code>huaweicloud-oms-migration</code> fue creada en esta sesión</h3>
+<p>Tras completar la migración, el usuario pidió a la IA crear una skill reutilizable para que otros agentes sepan cómo hacer migraciones OMS. La IA creó <code>/home/ubuntu/.opencode/skills/huaweicloud-oms-migration/</code> con <code>SKILL.md</code> (305 líneas, 10 reglas, 6 fases) y 4 archivos de referencia (terraform-oms-resources, source-clouds, verification, troubleshooting). La skill se autodescubrirá en futuras sesiones de opencode.</p>
+</div>
+</div>
+</section>
+
+<!-- ===== Rol del Usuario ===== -->
+<section id="usuario">
+<div class="container">
+<h2>Rol del Usuario: Qué Tuvo Que Hacer</h2>
+<p>La IA ejecutó la migración automáticamente tras recibir las decisiones del usuario. El usuario jugó un rol fundamental proporcionando credenciales de ambos clouds, tomando decisiones de configuración, y dando confirmaciones en momentos críticos.</p>
+
+<div class="card highlight">
+<h3>1. Solicitud Inicial</h3>
+<p>El usuario inició la sesión cargando la skill <code>huaweicloud-terraform-planner</code> y pidiendo migrar el bucket S3 de AWS a HuaweiCloud OBS.</p>
+<div class="code-block">
+<pre>Load the skill huaweicloud-terraform-planner, then help me migrate
+my AWS S3 bucket to Huawei Cloud OBS using OMS.</pre>
+</div>
+</div>
+
+<div class="card highlight">
+<h3>2. Cuatro Decisiones Críticas</h3>
+<p>La IA formuló 4 preguntas que requerían decisión humana. El usuario respondió todas:</p>
+<table class="compact">
+<tr><th>Decisión</th><th>Opciones</th><th>Respuesta del usuario</th></tr>
+<tr><td>Región destino OBS</td><td>la-north-2 · cn-north-1 · cn-south-1</td><td><strong>la-north-2 (Recommended)</strong></td></tr>
+<tr><td>Nombre bucket destino</td><td>Mismo nombre · demo-bucket-oms</td><td><strong>demo-bucket-17b5e8a2 (mismo nombre)</strong></td></tr>
+<tr><td>Tipo de tarea OMS</td><td>Migración única · Sincronización continua</td><td><strong>Migración única (Recommended)</strong></td></tr>
+<tr><td>Gestión de credenciales</td><td>Variables TF (-var) · Leer desde CSV con tfvars</td><td><strong>Variables TF, pasarlas en apply (Recommended)</strong></td></tr>
+</table>
+</div>
+
+<div class="card highlight">
+<h3>3. Credenciales Proporcionadas</h3>
+<p>El usuario proporcionó acceso a credenciales sensibles que la IA no puede adivinar:</p>
+<table class="compact">
+<tr><th>Recurso</th><th>Ubicación</th><th>Uso</th></tr>
+<tr><td>AK/SK AWS</td><td><code>awscredentials.csv</code> en el proyecto</td><td>OMS <code>source_object</code> — acceso S3 lectura</td></tr>
+<tr><td>AK/SK HuaweiCloud</td><td><code>credentials.csv</code> en el proyecto</td><td>Terraform provider + OMS <code>destination_object</code></td></tr>
+</table>
+<p class="muted">Las credenciales se pasaron via <code>-var</code> en línea de comandos, nunca se persistieron en disco. <code>.gitignore</code> cubre <code>terraform.tfvars</code> y <code>*.tfstate*</code>.</p>
+</div>
+
+<div class="card highlight">
+<h3>4. Confirmación de Apply</h3>
+<p>Tras ver el plan de Terraform (2 recursos a crear: bucket OBS + tarea OMS), el usuario confirmó la ejecución:</p>
+<div class="code-block">
+<pre>Si, puedes hacer la migracion</pre>
+</div>
+</div>
+
+<div class="card highlight">
+<h3>5. Solicitud de Listado + Creación de Skill</h3>
+<p>Tras la migración, el usuario pidió dos cosas adicionales:</p>
+<div class="code-block">
+<pre>Listame los elementos de la bucket en OBS</pre>
+<pre>Perfecto, ya sabesa una migracion con OMS, quiero que hagas
+una Skill para agentes de IA sepan como hacer una migracion</pre>
+</div>
+<p>La segunda instrucción disparó la creación de la skill <code>huaweicloud-oms-migration</code> con 5 archivos (SKILL.md + 4 referencias).</p>
+</div>
+
+<div class="card warning">
+<h3>Qué Tuvo Que Considerar</h3>
+<ul style="padding-left:20px;margin:8px 0">
+<li><strong>Bucket name global uniqueness:</strong> Los nombres de bucket OBS son globalmente únicos. El usuario eligió reusar el mismo nombre (<code>demo-bucket-17b5e8a2</code>), lo que funcionó porque estaba disponible en la-north-2. Si colisionara, OMS fallaría al crear el bucket.</li>
+<li><strong>Migración única vs sync continua:</strong> Para 15 objetos estáticos, migración única es apropiada. Sync continua (<code>oms_migration_sync_task</code>) sería útil si el bucket S3 sigue recibiendo objetos nuevos y se quiere mantener OBS sincronizado.</li>
+<li><strong>Credenciales en CSV:</strong> El usuario eligió pasar las credenciales via <code>-var</code> en lugar de usar <code>terraform.tfvars</code>. Esto significa que las credenciales no se persisten en disco (no quedan en tfvars ni en state).</li>
+<li><strong>Costo de OMS:</strong> OMS cobra por objeto migrado + tráfico. Con 15 objetos pequeños (~1.1 MB total), el costo es despreciable. Para migraciones de millones de objetos, conviene revisar el pricing.</li>
+<li><strong>OMS crea carpeta <code>oms/</code>:</strong> OMS crea una carpeta <code>oms/</code> en el bucket destino para registro de objetos fallidos. En esta migración quedó vacía (todos los objetos migraron OK), pero el usuario debe saber que existirá.</li>
+</ul>
+</div>
+</div>
+</section>
+
+<!-- ===== Lecciones ===== -->
+<section id="lecciones">
+<div class="container">
+<h2>Lecciones Clave y Qué Considerar</h2>
+<p>Estos son los aprendizajes de esta migración que todo usuario debe considerar al usar IA para migrar object storage con OMS.</p>
+
+<div class="lesson">
+<div class="lesson-icon">🔧</div>
+<div class="lesson-content">
+<h4>El Provider HuaweiCloud No Usa IMDS (a diferencia de AWS)</h4>
+<p>El provider <code>huaweicloud</code> de Terraform no tiene fallback a ECS Metadata Service como el provider de AWS. Si no se pasan <code>access_key</code> y <code>secret_key</code> explícitamente en el bloque <code>provider</code>, <code>terraform plan</code> falla con <code>dial tcp 169.254.169.254:80: i/o timeout</code>. Siempre pasar AK/SK en el provider block o via <code>HW_ACCESS_KEY</code>/<code>HW_SECRET_KEY</code> env vars.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🚫</div>
+<div class="lesson-content">
+<h4>OMS.0064: Descripción No Acepta Caracteres Especiales</h4>
+<p>El campo <code>description</code> del recurso <code>oms_migration_task</code> rechaza caracteres como <code>-&gt;</code>, <code>&lt;-</code>, <code>=&gt;</code>, <code>&lt;&gt;</code>. Usar <code>"AWS S3 to Huawei OBS migration"</code> en lugar de <code>"AWS S3 -&gt; Huawei OBS migration"</code>. El error <code>OMS.0064</code> con <code>error_detail: request parameter [description] invalid.</code> es específico pero no obvio — la IA detectó y corrigió este error durante la sesión.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🔄</div>
+<div class="lesson-content">
+<h4>terraform refresh Para Status Real, No terraform output</h4>
+<p><code>terraform output</code> lee del state local (estático). Si la tarea OMS cambia de status (ej: de <code>2</code> migrando a <code>5</code> succeeded), <code>terraform output</code> seguirá mostrando el valor viejo. Ejecutar <code>terraform refresh</code> primero para actualizar el state desde la API de OMS, luego <code>terraform output</code>. Status codes: 1=waiting, 2=migrating, 3=paused, 4=failed, 5=succeeded.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🔍</div>
+<div class="lesson-content">
+<h4>Verificar con ETags, No Solo Conteo</h4>
+<p>Comparar solo el numero de objetos entre S3 y OBS no es suficiente — los objetos podrían tener el mismo nombre pero contenido distinto. Verificar que los <strong>ETags</strong> (MD5 checksums para objetos non-multipart) coincidan entre origen y destino. En esta sesión, los 15 ETags eran idénticos, confirmando integridad byte-level. El <code>consistency_check = "size_last_modified"</code> de OMS garantiza esto durante la migración.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">📦</div>
+<div class="lesson-content">
+<h4>type = "prefix" + object = [""] para Bucket Completo</h4>
+<p>Para migrar todo el bucket, usar <code>type = "prefix"</code> con <code>object = [""]</code> (prefix vacío = todo). Para selección fina, usar <code>type = "object"</code> con una lista de keys específicas. Para migrar desde URLs, <code>type = "url_list"</code>. La elección de <code>type</code> determina cómo OMS interpreta el campo <code>object</code>.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">♻️</div>
+<div class="lesson-content">
+<h4>Idempotencia con object_overwrite_mode</h4>
+<p><code>object_overwrite_mode = "SIZE_LAST_MODIFIED_COMPARISON_OVERWRITE"</code> hace que OMS no re-migre objetos idénticos si ejecutas el plan de nuevo. Compara size + last_modified del source vs destination y solo sobrescribe si el source es más reciente. Combinado con <code>consistency_check = "size_last_modified"</code>, hace la migración idempotente — seguro para re-ejecutar.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">📁</div>
+<div class="lesson-content">
+<h4>OMS Crea una Carpeta oms/ en el Destino</h4>
+<p>OMS crea automáticamente una carpeta <code>oms/</code> en el bucket destino para registrar objetos fallados. En esta migración quedó vacía (0 fallos), pero el usuario debe saber que existirá. Al comparar conteos, restar 1 folder del total del destino: <code>File number: 15</code> + <code>Folder number: 1</code> (oms/).</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">⚡</div>
+<div class="lesson-content">
+<h4>Migración Única vs Sincronización Continua</h4>
+<p><code>oms_migration_task</code> (one-time) copia objetos una sola vez — ideal para conjuntos finitos y estáticos. <code>oms_migration_sync_task</code> (continuous) mantiene el destino sincronizado con cambios futuros en el source — ideal para buckets que siguen recibiendo objetos. Para 15 documentos estáticos, one-time fue la elección correcta. Sync sería overkill y añadiría costo continuo.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🤖</div>
+<div class="lesson-content">
+<h4>La IA Como Creadora de Conocimiento Reutilizable</h4>
+<p>Tras completar la migración, el usuario pidió a la IA crear una skill para futuros agentes. La IA extrajo las lecciones aprendidas (OMS.0064, provider AK/SK, terraform refresh, ETags) y las codificó en <code>huaweicloud-oms-migration</code> — 305 líneas de SKILL.md con 10 reglas y 6 fases, más 4 archivos de referencia (1,244 líneas total). Esta skill se autodescubrirá en futuras sesiones, permitiendo que cualquier agente haga migraciones OMS sin cometer los mismos errores.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🛡️</div>
+<div class="lesson-content">
+<h4>Credenciales: -var vs terraform.tfvars</h4>
+<p>Pasar credenciales via <code>-var</code> en línea de comandos significa que no se persisten en disco (no hay <code>terraform.tfvars</code> commited). Sin embargo, las credenciales aparecen en el historial de comandos del shell. Para mayor seguridad, usar <code>TF_VAR_aws_ak=...</code> env vars (no aparecen en <code>ps</code> ni historial). El <code>.gitignore</code> cubre <code>terraform.tfvars</code> y <code>*.tfstate*</code> por si se usa esa alternativa.</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ===== Footer ===== -->
+<section style="padding:32px 0;background:var(--hc-gray-light)">
+<div class="center">
+<p class="muted">Generado como parte de una guía/curso de migración con IA · HuaweiCloud OMS</p>
+</div>
+</section>
+
+</body>
+</html>

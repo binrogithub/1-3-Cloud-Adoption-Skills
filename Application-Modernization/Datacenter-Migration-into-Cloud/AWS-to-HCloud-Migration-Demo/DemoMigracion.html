@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IA para Migraciones a Huawei Cloud — Entrenamiento</title>
+<style>
+  :root {
+    --huawei-red: #C7000B;
+    --huawei-red-dark: #A00009;
+    --huawei-red-light: #FDE8EA;
+    --bg: #FFFFFF;
+    --bg-soft: #F5F6F8;
+    --bg-card: #FFFFFF;
+    --text: #1A1A2E;
+    --text-soft: #555;
+    --border: #E0E0E8;
+    --aws-orange: #FF9900;
+    --aws-dark: #232F3E;
+    --huawei-blue: #0A2D6E;
+    --green-ok: #0A8C44;
+    --amber: #E89A00;
+    --radius: 10px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 4px 24px rgba(0,0,0,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+
+  body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== NAV ===== */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 56px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  nav .brand {
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  nav .brand .dot {
+    width: 10px; height: 10px;
+    background: var(--huawei-red);
+    border-radius: 50%;
+    display: inline-block;
+  }
+  nav ul {
+    list-style: none;
+    display: flex;
+    gap: 6px;
+  }
+  nav ul li a {
+    color: #cfd0dc;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    transition: background .2s, color .2s;
+  }
+  nav ul li a:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+  @media (max-width: 600px) {
+    nav { padding: 0 12px; }
+    nav ul li a { padding: 6px 8px; font-size: 12px; }
+    nav .brand { font-size: 12px; }
+  }
+
+  /* ===== SECTIONS ===== */
+  section {
+    padding: 56px 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  section h2 {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  section .subtitle {
+    color: var(--text-soft);
+    font-size: 15px;
+    margin-bottom: 32px;
+  }
+
+  /* ===== DISCLAIMER ===== */
+  #disclaimer {
+    background: var(--huawei-red-light);
+    border-bottom: 3px solid var(--huawei-red);
+    border-radius: 0;
+    max-width: 100%;
+    padding: 56px 24px;
+  }
+  #disclaimer .inner { max-width: 1100px; margin: 0 auto; }
+  #disclaimer h2 { color: var(--huawei-red-dark); }
+  #disclaimer .subtitle { color: var(--huawei-red-dark); opacity: .7; }
+
+  .central-note {
+    background: #fff;
+    border-left: 5px solid var(--huawei-red);
+    padding: 20px 24px;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    margin-bottom: 28px;
+    box-shadow: var(--shadow);
+    font-size: 15px;
+    color: var(--text);
+  }
+  .central-note strong { color: var(--huawei-red-dark); }
+
+  .disclaimer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .disclaimer-card {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    border-top: 4px solid var(--huawei-red);
+  }
+  .disclaimer-card .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    background: var(--huawei-red);
+    color: #fff;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  .disclaimer-card h3 {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+  .disclaimer-card .tag {
+    font-size: 12px;
+    color: var(--text-soft);
+    margin-bottom: 12px;
+    display: block;
+  }
+  .disclaimer-card ul {
+    list-style: none;
+    font-size: 13.5px;
+    color: var(--text);
+  }
+  .disclaimer-card ul li {
+    padding: 3px 0 3px 18px;
+    position: relative;
+  }
+  .disclaimer-card ul li::before {
+    content: "•";
+    color: var(--huawei-red);
+    position: absolute;
+    left: 4px;
+    font-weight: 700;
+  }
+
+  .disclaimer-closing {
+    background: var(--text);
+    color: #e8e8f0;
+    padding: 18px 24px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    text-align: center;
+    line-height: 1.7;
+  }
+  .disclaimer-closing strong { color: var(--huawei-red); }
+
+  /* ===== VENTAJAS ===== */
+  .ventajas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+  }
+  .ventaja-item {
+    text-align: center;
+    padding: 24px 16px;
+    background: var(--bg-soft);
+    border-radius: var(--radius);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .ventaja-item:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+  }
+  .ventaja-item .icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .ventaja-item h3 {
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+  .ventaja-item p {
+    font-size: 13px;
+    color: var(--text-soft);
+  }
+
+  /* ===== GLOSARIO ===== */
+  .glosario-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  .glosario-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .glosario-item .label {
+    display: inline-block;
+    background: var(--huawei-red);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .glosario-item h3 {
+    font-size: 17px;
+    margin-bottom: 6px;
+  }
+  .glosario-item p {
+    font-size: 13.5px;
+    color: var(--text-soft);
+  }
+
+  /* ===== DEMO ===== */
+  #demo { max-width: 1200px; }
+  .demo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .demo-grid { grid-template-columns: 1fr; }
+  }
+  .diagram-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .diagram-card .header {
+    padding: 16px 20px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .diagram-card.aws .header { background: var(--aws-dark); }
+  .diagram-card.huawei .header { background: var(--huawei-blue); }
+  .diagram-card .header .title {
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .diagram-card .header .badge {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.2);
+  }
+  .diagram-card .svg-wrap {
+    padding: 16px;
+    background: #FAFBFC;
+  }
+  .diagram-card svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .diagram-card .footer-note {
+    padding: 12px 20px;
+    background: var(--bg-soft);
+    font-size: 12.5px;
+    color: var(--text-soft);
+    border-top: 1px solid var(--border);
+  }
+  .diagram-card .footer-note strong { color: var(--text); }
+
+  .arrow-label {
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* ===== FOOTER ===== */
+  footer {
+    text-align: center;
+    padding: 32px 24px;
+    background: var(--text);
+    color: #9a9ab0;
+    font-size: 13px;
+  }
+  footer strong { color: var(--huawei-red); }
+</style>
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<nav>
+  <div class="brand"><span class="dot"></span> IA &rarr; Huawei Cloud · Entrenamiento</div>
+  <ul>
+    <li><a href="#disclaimer">Disclaimer</a></li>
+    <li><a href="#ventajas">Ventajas</a></li>
+    <li><a href="#glosario">Glosario</a></li>
+    <li><a href="#demo">Demo</a></li>
+  </ul>
+</nav>
+
+<!-- ===== DISCLAIMER ===== -->
+<section id="disclaimer">
+  <div class="inner">
+    <h2>⚠️ Disclaimer Central</h2>
+    <p class="subtitle">Lee con atención antes de continuar con la sesión.</p>
+
+    <div class="central-note">
+      <strong>Nota Central:</strong> Esta sesión presenta las capacidades asistidas por IA de
+      <strong>Huawei Cloud MaaS</strong> y sus ideas de aplicación para migrar VMs de nube a ECS.
+      No procesa datos reales de clientes ni constituye un plan formal de entrega, compromiso de
+      seguridad o cumplimiento, ni promesa de funciones del producto.
+    </div>
+
+    <div class="disclaimer-grid">
+      <div class="disclaimer-card">
+        <span class="num">1</span>
+        <h3>Datos y Privacidad</h3>
+        <span class="tag">Seguridad / Cumplimiento / Protección</span>
+        <ul>
+          <li>No se recopilan ni procesan datos reales del cliente</li>
+          <li>Use datos simulados, de prueba o anonimizados</li>
+          <li>No cargue cuentas, contraseñas, claves, certificados ni datos</li>
+        </ul>
+      </div>
+
+      <div class="disclaimer-card">
+        <span class="num">2</span>
+        <h3>Límites de Uso</h3>
+        <span class="tag">Referencia / Revisión Humana</span>
+        <ul>
+          <li>La IA apoya planificación, análisis, scripts y riesgos</li>
+          <li>No reemplaza diseño, revisión experta, pruebas ni decisiones</li>
+          <li>Revise planes, scripts y configuraciones antes del proyecto</li>
+        </ul>
+      </div>
+
+      <div class="disclaimer-card">
+        <span class="num">3</span>
+        <h3>Autorización del Cliente</h3>
+        <span class="tag">Autorización / Aprobación</span>
+        <ul>
+          <li>El cliente decide si usa IA en proyectos reales</li>
+          <li>Sin autorización, no ingrese información del cliente en IA</li>
+          <li>Respete seguridad, cumplimiento, confidencialidad y aprobaciones</li>
+        </ul>
+      </div>
+
+      <div class="disclaimer-card">
+        <span class="num">4</span>
+        <h3>Escenarios No Recomendados</h3>
+        <span class="tag">Evaluación Prudente / Proceso Manual</span>
+        <ul>
+          <li>Evalúe o evite escenarios de seguridad muy sensible</li>
+          <li>Sistemas clasificados, núcleo financiero, defensa o energía</li>
+          <li>Use migración manual ante soberanía estricta o prohibición de IA</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="disclaimer-closing">
+      La migración asistida por IA <strong>mejora la eficiencia</strong>; no sustituye la revisión humana
+      ni la autorización del cliente. La implementación real debe basarse en la confirmación del cliente,
+      seguridad, cumplimiento y situación del proyecto.
+    </div>
+  </div>
+</section>
+
+<!-- ===== VENTAJAS ===== -->
+<section id="ventajas">
+  <h2>Ventajas Operativas</h2>
+  <p class="subtitle">Por qué usar IA asistida en migraciones — resumen exprés.</p>
+  <div class="ventajas-grid">
+    <div class="ventaja-item">
+      <span class="icon">⚡</span>
+      <h3>Velocidad</h3>
+      <p>Reduce días de análisis a minutos</p>
+    </div>
+    <div class="ventaja-item">
+      <span class="icon">🎯</span>
+      <h3>Consistencia</h3>
+      <p>Planes repetibles y estandarizados</p>
+    </div>
+    <div class="ventaja-item">
+      <span class="icon">🛡️</span>
+      <h3>Menos errores</h3>
+      <p>Detección temprana de riesgos</p>
+    </div>
+    <div class="ventaja-item">
+      <span class="icon">📜</span>
+      <h3>Scripts auto.</h3>
+      <p>Generación de IaC y migración</p>
+    </div>
+    <div class="ventaja-item">
+      <span class="icon">📖</span>
+      <h3>Documentación</h3>
+      <p>Docs y diagramas al instante</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== GLOSARIO ===== -->
+<section id="glosario">
+  <h2>Glosario Exprés</h2>
+  <p class="subtitle">5 conceptos clave en menos de 1 minuto.</p>
+  <div class="glosario-grid">
+    <div class="glosario-item">
+      <span class="label">Modelo</span>
+      <h3>Modelo</h3>
+      <p>IA entrenada con miles de millones de parámetros que predice texto. Es el "cerebro" que razona y genera respuestas.</p>
+    </div>
+    <div class="glosario-item">
+      <span class="label">Token</span>
+      <h3>Token</h3>
+      <p>Unidad mínima de texto (palabra o fragmento) que el modelo procesa. El costo y el contexto se miden en tokens.</p>
+    </div>
+    <div class="glosario-item">
+      <span class="label">Agente</span>
+      <h3>Agente</h3>
+      <p>IA que recibe un objetivo, razona pasos, usa herramientas y actúa de forma autónoma hasta completar la tarea.</p>
+    </div>
+    <div class="glosario-item">
+      <span class="label">MCP</span>
+      <h3>MCP</h3>
+      <p>Protocolo que conecta al agente con herramientas y datos externos (APIs, CLI, nube) de forma estandarizada.</p>
+    </div>
+    <div class="glosario-item">
+      <span class="label">Skill</span>
+      <h3>Skill</h3>
+      <p>Paquete de instrucciones + flujos + referencias que convierte al agente en especialista de un dominio concreto.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== DEMO ===== -->
+<section id="demo">
+  <h2>Demo: Arquitectura WordPress</h2>
+  <p class="subtitle">
+    Migración de una arquitectura WordPress estándar de AWS a Huawei Cloud.
+    EC2 → ECS · RDS AWS → RDS Huawei Cloud · VPC, subnets y security groups equivalentes.
+  </p>
+
+  <div class="demo-grid">
+
+    <!-- ===== ANTES: AWS ===== -->
+    <div class="diagram-card aws">
+      <div class="header">
+        <span class="title">☁️ Antes — AWS</span>
+        <span class="badge">Estado actual</span>
+      </div>
+      <div class="svg-wrap">
+        <svg viewBox="0 0 520 560" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr-aws" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="#FF9900"/>
+            </marker>
+            <marker id="arr-aws-b" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="#232F3E"/>
+            </marker>
+          </defs>
+
+          <!-- Internet -->
+          <ellipse cx="260" cy="30" rx="55" ry="22" fill="#E8F0FE" stroke="#4285F4" stroke-width="1.5"/>
+          <text x="260" y="35" text-anchor="middle" font-size="13" font-weight="700" fill="#4285F4">Internet</text>
+
+          <!-- EIP -->
+          <rect x="210" y="68" width="100" height="28" rx="5" fill="#FF9900" stroke="#E67E00" stroke-width="1"/>
+          <text x="260" y="86" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Elastic IP (EIP)</text>
+
+          <!-- Arrow Internet -> EIP -->
+          <line x1="260" y1="52" x2="260" y2="66" stroke="#FF9900" stroke-width="2" marker-end="url(#arr-aws)"/>
+
+          <!-- VPC Container -->
+          <rect x="20" y="110" width="480" height="430" rx="12" fill="#F0F4F8" stroke="#232F3E" stroke-width="2" stroke-dasharray="6,3"/>
+          <text x="40" y="132" font-size="14" font-weight="700" fill="#232F3E">VPC 10.0.0.0/16 (AWS)</text>
+
+          <!-- Arrow EIP -> EC2 (crosses into VPC) -->
+          <line x1="260" y1="96" x2="260" y2="170" stroke="#FF9900" stroke-width="2" marker-end="url(#arr-aws)"/>
+          <rect x="270" y="118" width="90" height="18" rx="3" fill="#fff" stroke="#FF9900" stroke-width="1"/>
+          <text x="315" y="131" text-anchor="middle" font-size="10" font-weight="600" fill="#E67E00">80 / 443 (HTTP/S)</text>
+
+          <!-- Public Subnet -->
+          <rect x="40" y="150" width="440" height="150" rx="10" fill="#FFF7ED" stroke="#FF9900" stroke-width="1.5"/>
+          <text x="56" y="170" font-size="12" font-weight="700" fill="#E67E00">Subnet Pública · 10.0.1.0/24</text>
+
+          <!-- EC2 Instance -->
+          <rect x="80" y="185" width="160" height="95" rx="8" fill="#fff" stroke="#232F3E" stroke-width="2"/>
+          <text x="160" y="207" text-anchor="middle" font-size="13" font-weight="700" fill="#232F3E">EC2 Instance</text>
+          <text x="160" y="223" text-anchor="middle" font-size="11" fill="#555">t3.medium</text>
+          <!-- WordPress logo box -->
+          <rect x="115" y="232" width="90" height="34" rx="5" fill="#21759B" stroke="#13557A" stroke-width="1"/>
+          <text x="160" y="248" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">WordPress</text>
+          <text x="160" y="261" text-anchor="middle" font-size="9" fill="#cfe">+ Apache/PHP</text>
+
+          <!-- SG Web -->
+          <rect x="290" y="185" width="170" height="95" rx="8" fill="#E8F5E9" stroke="#0A8C44" stroke-width="2" stroke-dasharray="4,2"/>
+          <text x="375" y="205" text-anchor="middle" font-size="12" font-weight="700" fill="#0A8C44">SG-Web</text>
+          <text x="375" y="223" text-anchor="middle" font-size="10" fill="#555">Inbound:</text>
+          <text x="375" y="238" text-anchor="middle" font-size="10" fill="#555">80, 443 ← 0.0.0.0/0</text>
+          <text x="375" y="253" text-anchor="middle" font-size="10" fill="#555">3306 → SG-DB</text>
+          <text x="375" y="268" text-anchor="middle" font-size="10" fill="#555">22 ← (admin)</text>
+
+          <!-- Arrow EC2 -> SG-Web (association) -->
+          <line x1="240" y1="232" x2="288" y2="232" stroke="#0A8C44" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+          <!-- Private Subnet -->
+          <rect x="40" y="320" width="440" height="150" rx="10" fill="#EDF4FF" stroke="#1565C0" stroke-width="1.5"/>
+          <text x="56" y="340" font-size="12" font-weight="700" fill="#1565C0">Subnet Privada · 10.0.2.0/24</text>
+
+          <!-- RDS Instance -->
+          <rect x="80" y="355" width="160" height="95" rx="8" fill="#fff" stroke="#232F3E" stroke-width="2"/>
+          <text x="160" y="377" text-anchor="middle" font-size="13" font-weight="700" fill="#232F3E">RDS MySQL</text>
+          <text x="160" y="393" text-anchor="middle" font-size="11" fill="#555">db.t3.medium</text>
+          <rect x="110" y="402" width="100" height="34" rx="5" fill="#1565C0" stroke="#0D47A1" stroke-width="1"/>
+          <text x="160" y="418" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">MySQL 8.0</text>
+          <text x="160" y="431" text-anchor="middle" font-size="9" fill="#cde">Multi-AZ: No</text>
+
+          <!-- SG DB -->
+          <rect x="290" y="355" width="170" height="95" rx="8" fill="#E8F5E9" stroke="#0A8C44" stroke-width="2" stroke-dasharray="4,2"/>
+          <text x="375" y="375" text-anchor="middle" font-size="12" font-weight="700" fill="#0A8C44">SG-Database</text>
+          <text x="375" y="393" text-anchor="middle" font-size="10" fill="#555">Inbound:</text>
+          <text x="375" y="408" text-anchor="middle" font-size="10" fill="#555">3306 ← SG-Web</text>
+          <text x="375" y="423" text-anchor="middle" font-size="10" fill="#555">Deny: 0.0.0.0/0</text>
+          <text x="375" y="438" text-anchor="middle" font-size="10" fill="#555">(sólo EC2)</text>
+
+          <!-- Arrow RDS -> SG-DB -->
+          <line x1="240" y1="402" x2="288" y2="402" stroke="#0A8C44" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+          <!-- Arrow EC2 -> RDS (3306) crossing subnets -->
+          <line x1="160" y1="280" x2="160" y2="354" stroke="#232F3E" stroke-width="2.5" marker-end="url(#arr-aws-b)"/>
+          <rect x="170" y="308" width="80" height="18" rx="3" fill="#fff" stroke="#232F3E" stroke-width="1"/>
+          <text x="210" y="321" text-anchor="middle" font-size="10" font-weight="600" fill="#232F3E">3306 (MySQL)</text>
+
+          <!-- IGW label -->
+          <rect x="430" y="115" width="60" height="20" rx="4" fill="#232F3E"/>
+          <text x="460" y="129" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">IGW</text>
+          <line x1="430" y1="125" x2="390" y2="160" stroke="#232F3E" stroke-width="1" stroke-dasharray="3,2"/>
+
+          <!-- Legend -->
+          <rect x="40" y="490" width="440" height="40" rx="6" fill="#fff" stroke="#E0E0E8" stroke-width="1"/>
+          <circle cx="60" cy="510" r="5" fill="#FF9900"/>
+          <text x="72" y="514" font-size="10" fill="#555">Tráfico público</text>
+          <circle cx="170" cy="510" r="5" fill="#232F3E"/>
+          <text x="182" y="514" font-size="10" fill="#555">Tráfico interno (3306)</text>
+          <rect x="310" y="505" width="10" height="10" rx="2" fill="#E8F5E9" stroke="#0A8C44" stroke-width="1.5" stroke-dasharray="2,1"/>
+          <text x="326" y="514" font-size="10" fill="#555">Security Group</text>
+        </svg>
+      </div>
+      <div class="footer-note">
+        <strong>Arquitectura:</strong> WordPress en EC2 (subnet pública, EIP) + RDS MySQL (subnet privada).
+        SG-Web permite 80/443 desde Internet; SG-DB permite 3306 sólo desde SG-Web.
+      </div>
+    </div>
+
+    <!-- ===== OBJETIVO: Huawei Cloud ===== -->
+    <div class="diagram-card huawei">
+      <div class="header">
+        <span class="title">☁️ Objetivo — Huawei Cloud</span>
+        <span class="badge">Migración asistida por IA</span>
+      </div>
+      <div class="svg-wrap">
+        <svg viewBox="0 0 520 560" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr-hw" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="#C7000B"/>
+            </marker>
+            <marker id="arr-hw-b" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="#0A2D6E"/>
+            </marker>
+          </defs>
+
+          <!-- Internet -->
+          <ellipse cx="260" cy="30" rx="55" ry="22" fill="#FDE8EA" stroke="#C7000B" stroke-width="1.5"/>
+          <text x="260" y="35" text-anchor="middle" font-size="13" font-weight="700" fill="#C7000B">Internet</text>
+
+          <!-- EIP -->
+          <rect x="210" y="68" width="100" height="28" rx="5" fill="#C7000B" stroke="#A00009" stroke-width="1"/>
+          <text x="260" y="86" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">EIP (Huawei)</text>
+
+          <!-- Arrow Internet -> EIP -->
+          <line x1="260" y1="52" x2="260" y2="66" stroke="#C7000B" stroke-width="2" marker-end="url(#arr-hw)"/>
+
+          <!-- VPC Container -->
+          <rect x="20" y="110" width="480" height="430" rx="12" fill="#F0F4FA" stroke="#0A2D6E" stroke-width="2" stroke-dasharray="6,3"/>
+          <text x="40" y="132" font-size="14" font-weight="700" fill="#0A2D6E">VPC 10.0.0.0/16 (Huawei Cloud)</text>
+
+          <!-- Arrow EIP -> ECS -->
+          <line x1="260" y1="96" x2="260" y2="170" stroke="#C7000B" stroke-width="2" marker-end="url(#arr-hw)"/>
+          <rect x="270" y="118" width="90" height="18" rx="3" fill="#fff" stroke="#C7000B" stroke-width="1"/>
+          <text x="315" y="131" text-anchor="middle" font-size="10" font-weight="600" fill="#A00009">80 / 443 (HTTP/S)</text>
+
+          <!-- Public Subnet -->
+          <rect x="40" y="150" width="440" height="150" rx="10" fill="#FFF5F5" stroke="#C7000B" stroke-width="1.5"/>
+          <text x="56" y="170" font-size="12" font-weight="700" fill="#A00009">Subnet Pública · 10.0.1.0/24</text>
+
+          <!-- ECS Instance -->
+          <rect x="80" y="185" width="160" height="95" rx="8" fill="#fff" stroke="#0A2D6E" stroke-width="2"/>
+          <text x="160" y="207" text-anchor="middle" font-size="13" font-weight="700" fill="#0A2D6E">ECS Instance</text>
+          <text x="160" y="223" text-anchor="middle" font-size="11" fill="#555">s6.medium.2</text>
+          <rect x="115" y="232" width="90" height="34" rx="5" fill="#21759B" stroke="#13557A" stroke-width="1"/>
+          <text x="160" y="248" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">WordPress</text>
+          <text x="160" y="261" text-anchor="middle" font-size="9" fill="#cfe">+ Apache/PHP</text>
+
+          <!-- SG Web -->
+          <rect x="290" y="185" width="170" height="95" rx="8" fill="#E8F5E9" stroke="#0A8C44" stroke-width="2" stroke-dasharray="4,2"/>
+          <text x="375" y="205" text-anchor="middle" font-size="12" font-weight="700" fill="#0A8C44">SG-Web</text>
+          <text x="375" y="223" text-anchor="middle" font-size="10" fill="#555">Inbound:</text>
+          <text x="375" y="238" text-anchor="middle" font-size="10" fill="#555">80, 443 ← 0.0.0.0/0</text>
+          <text x="375" y="253" text-anchor="middle" font-size="10" fill="#555">3306 → SG-DB</text>
+          <text x="375" y="268" text-anchor="middle" font-size="10" fill="#555">22 ← (admin)</text>
+
+          <!-- Arrow ECS -> SG-Web -->
+          <line x1="240" y1="232" x2="288" y2="232" stroke="#0A8C44" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+          <!-- Private Subnet -->
+          <rect x="40" y="320" width="440" height="150" rx="10" fill="#EDF0FA" stroke="#0A2D6E" stroke-width="1.5"/>
+          <text x="56" y="340" font-size="12" font-weight="700" fill="#0A2D6E">Subnet Privada · 10.0.2.0/24</text>
+
+          <!-- RDS Huawei -->
+          <rect x="80" y="355" width="160" height="95" rx="8" fill="#fff" stroke="#0A2D6E" stroke-width="2"/>
+          <text x="160" y="377" text-anchor="middle" font-size="13" font-weight="700" fill="#0A2D6E">RDS MySQL</text>
+          <text x="160" y="393" text-anchor="middle" font-size="11" fill="#555">rds.mysql.s6.large</text>
+          <rect x="105" y="402" width="110" height="34" rx="5" fill="#C7000B" stroke="#A00009" stroke-width="1"/>
+          <text x="160" y="418" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">MySQL 8.0</text>
+          <text x="160" y="431" text-anchor="middle" font-size="9" fill="#fcc">Huawei Cloud RDS</text>
+
+          <!-- SG DB -->
+          <rect x="290" y="355" width="170" height="95" rx="8" fill="#E8F5E9" stroke="#0A8C44" stroke-width="2" stroke-dasharray="4,2"/>
+          <text x="375" y="375" text-anchor="middle" font-size="12" font-weight="700" fill="#0A8C44">SG-Database</text>
+          <text x="375" y="393" text-anchor="middle" font-size="10" fill="#555">Inbound:</text>
+          <text x="375" y="408" text-anchor="middle" font-size="10" fill="#555">3306 ← SG-Web</text>
+          <text x="375" y="423" text-anchor="middle" font-size="10" fill="#555">Deny: 0.0.0.0/0</text>
+          <text x="375" y="438" text-anchor="middle" font-size="10" fill="#555">(sólo ECS)</text>
+
+          <!-- Arrow RDS -> SG-DB -->
+          <line x1="240" y1="402" x2="288" y2="402" stroke="#0A8C44" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+          <!-- Arrow ECS -> RDS (3306) -->
+          <line x1="160" y1="280" x2="160" y2="354" stroke="#0A2D6E" stroke-width="2.5" marker-end="url(#arr-hw-b)"/>
+          <rect x="170" y="308" width="80" height="18" rx="3" fill="#fff" stroke="#0A2D6E" stroke-width="1"/>
+          <text x="210" y="321" text-anchor="middle" font-size="10" font-weight="600" fill="#0A2D6E">3306 (MySQL)</text>
+
+          <!-- EIP / Gateway label -->
+          <rect x="420" y="115" width="70" height="20" rx="4" fill="#0A2D6E"/>
+          <text x="455" y="129" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">EIP / NAT</text>
+          <line x1="420" y1="125" x2="390" y2="160" stroke="#0A2D6E" stroke-width="1" stroke-dasharray="3,2"/>
+
+          <!-- Legend -->
+          <rect x="40" y="490" width="440" height="40" rx="6" fill="#fff" stroke="#E0E0E8" stroke-width="1"/>
+          <circle cx="60" cy="510" r="5" fill="#C7000B"/>
+          <text x="72" y="514" font-size="10" fill="#555">Tráfico público</text>
+          <circle cx="170" cy="510" r="5" fill="#0A2D6E"/>
+          <text x="182" y="514" font-size="10" fill="#555">Tráfico interno (3306)</text>
+          <rect x="310" y="505" width="10" height="10" rx="2" fill="#E8F5E9" stroke="#0A8C44" stroke-width="1.5" stroke-dasharray="2,1"/>
+          <text x="326" y="514" font-size="10" fill="#555">Security Group</text>
+        </svg>
+      </div>
+      <div class="footer-note">
+        <strong>Arquitectura objetivo:</strong> WordPress en ECS (subnet pública, EIP) + RDS MySQL Huawei Cloud (subnet privada).
+        SG equivalentes. Mismas reglas de firewall, CIDRs y topología de red.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <p>Entrenamiento <strong>IA para Migraciones a Huawei Cloud</strong> — Sesión demostrativa</p>
+  <p style="margin-top:6px; font-size:11px;">No procesa datos reales · Requiere revisión humana · Sujeto a autorización del cliente</p>
+</footer>
+
+</body>
+</html>

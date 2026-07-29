@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fases de la Migración SMS — Proceso Estándar</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --hc-red:#C7000B;--hc-red-dark:#9E0009;--hc-red-light:#FDECEE;
+  --hc-gray:#666;--hc-gray-light:#f5f5f5;--hc-gray-border:#e0e0e0;
+  --hc-blue:#0073E6;--hc-green:#00A870;--hc-orange:#FF8C00;--hc-purple:#7B61FF;
+  --bg:#fff;--text:#1a1a1a;--text-muted:#666;
+  --code-bg:#1e1e2e;--code-text:#cdd6f4;--code-border:#313244;
+  --shadow:0 2px 8px rgba(0,0,0,.08);
+  --radius:8px;--max-width:960px;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+a{color:var(--hc-red);text-decoration:none}
+a:hover{text-decoration:underline}
+.container{max-width:var(--max-width);margin:0 auto;padding:0 24px}
+section{padding:48px 0;border-bottom:1px solid var(--hc-gray-border)}
+section:last-child{border-bottom:none}
+h1{font-size:2.2rem;font-weight:800;line-height:1.2;color:var(--text)}
+h2{font-size:1.6rem;font-weight:700;margin-bottom:16px;color:var(--text)}
+h3{font-size:1.2rem;font-weight:600;margin-bottom:12px;color:var(--text)}
+h4{font-size:1rem;font-weight:600;margin-bottom:8px}
+p{margin-bottom:12px}
+.muted{color:var(--text-muted)}
+.center{text-align:center}
+code{background:var(--hc-gray-light);padding:2px 6px;border-radius:3px;font-size:.85em;font-family:'SF Mono','Fira Code','Consolas',monospace;color:var(--hc-red-dark)}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,#C7000B 0%,#9E0009 100%);color:#fff;padding:60px 0}
+.hero h1{color:#fff;margin-bottom:8px}
+.hero .subtitle{font-size:1.1rem;opacity:.9;margin-bottom:24px}
+
+/* Phase flow */
+.phase-flow{margin:32px 0}
+.phase-step{display:flex;gap:20px;margin-bottom:0;position:relative}
+.phase-step:not(:last-child)::after{content:'';position:absolute;left:27px;top:56px;bottom:-16px;width:3px;background:var(--hc-gray-border)}
+.phase-num{flex-shrink:0;width:56px;height:56px;border-radius:50%;background:var(--hc-red);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;z-index:1}
+.phase-step.skipped .phase-num{background:var(--hc-gray);border:3px dashed var(--hc-gray)}
+.phase-step.done .phase-num{background:var(--hc-green)}
+.phase-body{flex:1;padding-bottom:32px}
+.phase-body h3{color:var(--hc-red);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.phase-step.skipped .phase-body h3{color:var(--hc-gray)}
+.phase-step.done .phase-body h3{color:var(--hc-green)}
+.phase-tag{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:4px}
+.phase-tag.done{background:#E6F9F0;color:var(--hc-green)}
+.phase-tag.skipped{background:var(--hc-gray-light);color:var(--hc-gray)}
+.phase-tag.auto{background:#E6F2FF;color:var(--hc-blue)}
+.phase-tag.user{background:#FFF5E6;color:var(--hc-orange)}
+
+/* Cards */
+.card{border:1px solid var(--hc-gray-border);border-radius:var(--radius);padding:16px;margin:12px 0;background:#fff;box-shadow:var(--shadow)}
+.card.highlight{border-left:4px solid var(--hc-red)}
+.card.success{border-left:4px solid var(--hc-green)}
+.card.warning{border-left:4px solid var(--hc-orange)}
+.card.info{border-left:4px solid var(--hc-blue)}
+
+/* Code */
+.code-block{background:var(--code-bg);color:var(--code-text);border-radius:6px;padding:14px 16px;margin:12px 0;overflow-x:auto;font-size:.82rem;line-height:1.5;font-family:'SF Mono','Fira Code','Consolas','Monaco',monospace}
+.code-block pre{white-space:pre-wrap;word-break:break-word}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.9rem}
+th{background:var(--hc-red);color:#fff;padding:10px 12px;text-align:left;font-weight:600}
+td{padding:8px 12px;border-bottom:1px solid var(--hc-gray-border)}
+tr:nth-child(even) td{background:var(--hc-gray-light)}
+table.compact th,table.compact td{padding:6px 10px;font-size:.82rem}
+
+/* Inputs section */
+.input-group{margin:20px 0}
+.input-item{display:flex;gap:16px;padding:14px;margin:8px 0;border-radius:var(--radius);border:1px solid var(--hc-gray-border);background:#fff}
+.input-item.required{border-left:4px solid var(--hc-red)}
+.input-item.optional{border-left:4px solid var(--hc-orange)}
+.input-item.skipped{border-left:4px solid var(--hc-gray);background:var(--hc-gray-light)}
+.input-icon{font-size:1.5rem;flex-shrink:0}
+.input-detail h4{margin-bottom:2px}
+.input-detail p{font-size:.85rem;color:var(--text-muted);margin:0}
+.input-tag{font-size:.7rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:4px;margin-left:8px}
+.input-tag.req{background:var(--hc-red-light);color:var(--hc-red)}
+.input-tag.opt{background:#FFF5E6;color:var(--hc-orange)}
+.input-tag.skip{background:var(--hc-gray-light);color:var(--hc-gray)}
+
+/* Badge */
+.badge{display:inline-block;padding:3px 10px;border-radius:4px;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.badge-green{background:#E6F9F0;color:var(--hc-green)}
+.badge-orange{background:#FFF5E6;color:var(--hc-orange)}
+.badge-gray{background:var(--hc-gray-light);color:var(--hc-gray)}
+
+/* Nav */
+.phase-nav{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--hc-gray-border);z-index:100;padding:8px 0;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.phase-nav-inner{max-width:var(--max-width);margin:0 auto;padding:0 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phase-nav a{font-size:.75rem;padding:4px 10px;border-radius:4px;color:var(--text-muted);font-weight:600}
+.phase-nav a:hover{background:var(--hc-red-light);color:var(--hc-red);text-decoration:none}
+
+/* Print */
+@media print{
+  .phase-nav{display:none}
+  section{page-break-inside:avoid;padding:24px 0}
+  .phase-step{page-break-inside:avoid}
+  .input-item{page-break-inside:avoid}
+  .timeline-item{page-break-inside:avoid}
+  .question-callout{page-break-inside:avoid}
+  body{font-size:12px}
+}
+.spacer{height:24px}
+
+/* ===== Timeline (moved from index.html) ===== */
+.timeline{position:relative;margin:24px 0;padding-left:0}
+.timeline-item{position:relative;padding-left:48px;margin-bottom:32px}
+.timeline-item::before{content:'';position:absolute;left:16px;top:0;bottom:-32px;width:2px;background:var(--hc-gray-border)}
+.timeline-item:last-child::before{display:none}
+.timeline-dot{position:absolute;left:8px;top:4px;width:18px;height:18px;border-radius:50%;border:3px solid #fff;z-index:1}
+.timeline-dot.user{background:var(--hc-red)}
+.timeline-dot.ai{background:var(--hc-blue)}
+.timeline-dot.question{background:var(--hc-orange);border-color:#fff;box-shadow:0 0 0 3px var(--hc-orange)}
+.timeline-dot.result{background:var(--hc-green)}
+.timeline-dot.skill{background:var(--hc-purple)}
+.timeline-label{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.timeline-label.user{color:var(--hc-red)}
+.timeline-label.ai{color:var(--hc-blue)}
+.timeline-label.question{color:var(--hc-orange)}
+.timeline-label.result{color:var(--hc-green)}
+.timeline-label.skill{color:var(--hc-purple)}
+.timeline-content{background:#fff;border:1px solid var(--hc-gray-border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.timeline-content.user{border-left:4px solid var(--hc-red)}
+.timeline-content.ai{border-left:4px solid var(--hc-blue)}
+.timeline-content.question{border-left:4px solid var(--hc-orange);background:#FFFCF5}
+.timeline-content.result{border-left:4px solid var(--hc-green)}
+.timeline-content.skill{border-left:4px solid var(--hc-purple)}
+
+/* AI Thinking collapsible */
+details.thinking{background:var(--hc-gray-light);border-radius:6px;padding:8px 12px;margin:8px 0;font-size:.9rem}
+details.thinking summary{cursor:pointer;font-weight:600;color:var(--text-muted);font-style:italic}
+details.thinking summary::marker{color:var(--hc-gray)}
+details.thinking p{margin:8px 0 0;color:var(--text-muted)}
+
+/* Code block with tool header */
+.code-block .tool-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--code-border)}
+.code-block .tool-name{font-weight:700;font-size:.75rem;text-transform:uppercase;letter-spacing:.5px}
+.code-block .tool-time{font-size:.7rem;opacity:.6;margin-left:auto}
+
+/* Question callout */
+.question-callout{background:#FFFCF5;border:2px solid var(--hc-orange);border-radius:var(--radius);padding:20px;margin:16px 0}
+.question-callout h3{color:var(--hc-orange);display:flex;align-items:center;gap:8px}
+.question-options{margin:12px 0}
+.question-option{display:flex;gap:10px;padding:8px 12px;margin:6px 0;border-radius:6px;background:#fff;border:1px solid var(--hc-gray-border)}
+.question-option.chosen{border:2px solid var(--hc-green);background:#F0FBF6}
+.question-option .opt-label{font-weight:700;min-width:20px}
+.question-option .opt-chosen{color:var(--hc-green);font-size:.75rem;font-weight:700;margin-left:auto}
+.user-answer{background:#F0FBF6;border:1px solid var(--hc-green);border-radius:6px;padding:10px 14px;margin:10px 0;font-size:.9rem}
+.user-answer::before{content:"Respuesta del usuario: ";font-weight:700;color:var(--hc-green)}
+
+/* Monitoring */
+.monitor-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.85rem}
+.monitor-table th{background:var(--hc-blue);color:#fff;padding:8px;text-align:left;font-size:.8rem}
+.monitor-table td{padding:6px 8px;border-bottom:1px solid var(--hc-gray-border)}
+.progress-bar{display:inline-block;width:120px;height:10px;background:var(--hc-gray-light);border-radius:5px;overflow:hidden;vertical-align:middle}
+.progress-fill{height:100%;border-radius:5px}
+.progress-fill.done{background:var(--hc-green)}
+.progress-fill.partial{background:var(--hc-blue)}
+
+/* Before/After */
+.ba-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+.ba-card{border-radius:var(--radius);padding:16px}
+.ba-card.before{background:#FFFBF5;border:1px solid #FF9900}
+.ba-card.after{background:#F0FBF6;border:1px solid var(--hc-green)}
+.ba-card h4{margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.ba-card ul{list-style:none;padding:0}
+.ba-card li{padding:4px 0;font-size:.85rem;border-bottom:1px solid rgba(0,0,0,.05)}
+.ba-card li:last-child{border-bottom:none}
+
+/* Badge variants */
+.badge-green{background:#E6F9F0;color:var(--hc-green)}
+.badge-orange{background:#FFF5E6;color:var(--hc-orange)}
+.badge-gray{background:var(--hc-gray-light);color:var(--hc-gray)}
+</style>
+</head>
+<body>
+
+<nav class="phase-nav">
+<div class="phase-nav-inner">
+<a href="#hero">Inicio</a>
+<a href="#proceso">Proceso Estándar</a>
+<a href="#inputs">Inputs del Usuario</a>
+<a href="#timeline">Conversación</a>
+<a href="#monitoreo">Monitoreo</a>
+<a href="#resultado">Resultado</a>
+</div>
+</nav>
+
+<!-- ===== Hero ===== -->
+<section class="hero" id="hero">
+<div class="container">
+<h1>Fases de la Migración SMS</h1>
+<p class="subtitle">Proceso Estándar · Server Migration Service · HuaweiCloud</p>
+</div>
+</section>
+
+<!-- ===== Proceso Estándar ===== -->
+<section id="proceso">
+<div class="container">
+<h2>Proceso Estándar de Migración</h2>
+<p>El Server Migration Service (SMS) de HuaweiCloud define un workflow de <strong>7 fases secuenciales</strong> para migrar servidores desde cualquier cloud (AWS, Azure, GCP, on-prem) hacia HuaweiCloud ECS. Cada fase tiene objetivos específicos, verificaciones obligatorias, y requisitos de input del usuario. A continuación se describe cada fase en detalle, indicando si fue ejecutada o saltada en esta sesión.</p>
+
+<div class="phase-flow">
+
+<!-- Phase 1 -->
+<div class="phase-step done">
+<div class="phase-num">1</div>
+<div class="phase-body">
+<h3>DISCOVER <span class="phase-tag done">Ejecutada</span> <span class="phase-tag auto">Automática</span></h3>
+<p><strong>Objetivo:</strong> Inventariar completamente el servidor origen y el entorno destino antes de crear cualquier recurso.</p>
+<h4>Qué se hace:</h4>
+<ul style="padding-left:20px;margin:8px 0">
+<li><strong>Origen:</strong> Identificar instancia, OS + versión, firmware (UEFI/BIOS), vCPU/RAM, layout de discos, red (VPC, subnet, SG, IPs), y SSH key. Decodificar <code>userData</code> para detectar aplicaciones y dependencias.</li>
+<li><strong>Destino:</strong> Listar VPCs, subnets, security groups, availability zones, flavors, e imágenes públicas en la región target de HuaweiCloud.</li>
+<li><strong>SMS:</strong> Verificar si ya hay servidores origen registrados con el SMS Agent (<code>hcloud SMS ListServers</code>).</li>
+</ul>
+<h4>Verificaciones:</h4>
+<p>Que el OS del origen sea compatible, que exista un flavor equivalente en el destino, y que no haya solapamiento de CIDR si se planea usar VPN.</p>
+<div class="card info">
+<p><strong>En esta sesión:</strong> La IA usó AWS MCP para descubrir el EC2 (instancia, imagen, volúmenes, SG, VPC, subnet) y <code>hcloud</code> para descubrir el entorno la-north-2. Decodificó el <code>userData</code> y detectó un stack LAMP + WordPress con dependencia en RDS.</p>
+</div>
+</div>
+</div>
+
+<!-- Phase 2 -->
+<div class="phase-step skipped">
+<div class="phase-num">2</div>
+<div class="phase-body">
+<h3>AGENT INSTALL <span class="phase-tag skipped">Saltada</span> <span class="phase-tag user">Requiere usuario</span></h3>
+<p><strong>Objetivo:</strong> Instalar el SMS Agent en el servidor origen para registrarlo con el servicio SMS.</p>
+<h4>Qué se hace (normalmente):</h4>
+<ul style="padding-left:20px;margin:8px 0">
+<li>Descargar el installer del SMS Agent en el servidor origen via SSH.</li>
+<li>Ejecutar el installer interactivo, que requiere <strong>6 prompts</strong>: región de SMS, AK/SK de HuaweiCloud, endpoint, y opciones de configuración.</li>
+<li>Verificar que el servidor origen aparezca en SMS con <code>state: "waiting"</code> y <code>connected: true</code>.</li>
+<li>Verificar que los <strong>14 pre-migration checks</strong> pasen (OS_VERSION, FIRMWARE, BOOT_LOADER, RSYNC, DISK_INFO, PARTITION_STYLE, FILE_SYSTEM, etc.).</li>
+</ul>
+<h4>Inputs del usuario necesarios (si no está instalado):</h4>
+<div class="card warning">
+<ul style="padding-left:20px;margin:4px 0">
+<li><strong>SSH access al servidor origen:</strong> IP, usuario, y key/password para instalar el agent.</li>
+<li><strong>AK/SK de HuaweiCloud:</strong> El agent los necesita para registrarse con el servicio SMS.</li>
+<li><strong>Región del SMS API:</strong> Ej: <code>ap-southeast-3</code> (no es la misma que la región target).</li>
+<li><strong>Root o sudo:</strong> Privilegios administrativos en el servidor origen.</li>
+</ul>
+</div>
+<div class="card info">
+<p><strong>En esta sesión:</strong> El SMS Agent <strong>ya estaba instalado</strong>. La IA verificó su estado (<code>state: waiting</code>, <code>connected: true</code>) y los 14 checks (todos OK). Esta fase se saltó completamente. Si no hubiera estado instalado, la IA habría necesitado los inputs listados arriba para automatizar la instalación con un script <code>pexpect</code>.</p>
+</div>
+</div>
+</div>
+
+<!-- Phase 3 -->
+<div class="phase-step done">
+<div class="phase-num">3</div>
+<div class="phase-body">
+<h3>NETWORK <span class="phase-tag done">Ejecutada</span> <span class="phase-tag user">Requiere usuario</span></h3>
+<p><strong>Objetivo:</strong> Decidir y preparar cómo el SMS Agent conectará el origen con el destino.</p>
+<h4>Qué se hace:</h4>
+<ul style="padding-left:20px;margin:8px 0">
+<li><strong>Decisión de conectividad:</strong> ¿Migración via IP pública o VPN? Para cross-cloud (AWS → HuaweiCloud), IP pública es lo más común.</li>
+<li><strong>Solapamiento CIDR:</strong> Verificar que los CIDRs de origen y destino no se solapen si se planea VPN.</li>
+<li><strong>Crear red target:</strong> VPC, subnet, y security groups en la región destino (si no se usan los existentes).</li>
+<li><strong>EIP para migración:</strong> El ECS target necesita un EIP para que el agent conecte (<code>bandwidth_size</code> en el template).</li>
+</ul>
+<h4>Inputs del usuario necesarios:</h4>
+<div class="card warning">
+<ul style="padding-left:20px;margin:4px 0">
+<li><strong>¿Usar red existente o crear nueva?</strong> Si crear nueva: CIDR del VPC, CIDR del subnet, puertos del SG.</li>
+<li><strong>¿IP pública o VPN?</strong> Para cross-cloud, IP pública es el default.</li>
+</ul>
+</div>
+<div class="card info">
+<p><strong>En esta sesión:</strong> El usuario eligió crear VPC/subnet/SG nuevos (10.0.0.0/16, 10.0.1.0/24, puertos 22/80/443). Se usó IP pública (<code>use_public_ip = true</code>). La IA creó y aplicó el Terraform de red primero, por instrucción del usuario.</p>
+</div>
+</div>
+</div>
+
+<!-- Phase 4 -->
+<div class="phase-step done">
+<div class="phase-num">4</div>
+<div class="phase-body">
+<h3>TERRAFORM <span class="phase-tag done">Ejecutada</span> <span class="phase-tag auto">Automática</span></h3>
+<p><strong>Objetivo:</strong> Crear los recursos SMS (template + task) via Terraform.</p>
+<h4>Qué se hace:</h4>
+<ul style="padding-left:20px;margin:8px 0">
+<li><strong>SMS Server Template:</strong> Define la configuración del ECS target (VPC, subnet, SG, flavor, AZ, tipo de volumen, EIP). SMS usa este template para auto-crear el ECS con firmware compatible.</li>
+<li><strong>SMS Task:</strong> Vincula el servidor origen (vía <code>source_server_id</code>) con el template (vía <code>vm_template_id</code>). Define tipo de migración (<code>MIGRATE_FILE</code> / <code>MIGRATE_BLOCK</code>), OS type, y opciones de inicio.</li>
+<li><strong>Provider config:</strong> Región del provider = región target (ej: <code>la-north-2</code>). SMS API calls usan la región SMS (ej: <code>ap-southeast-3</code>).</li>
+</ul>
+<h4>Decisión clave:</h4>
+<p>Usar <strong>SMS Server Template</strong> (recomendado, maneja firmware automáticamente) vs <strong>pre-crear ECS</strong> (requiere matching manual de firmware UEFI/BIOS, configuración explícita de discos, y <code>migration_ip</code>).</p>
+<div class="card info">
+<p><strong>En esta sesión:</strong> La IA generó <code>migration/main.tf</code> con <code>huaweicloud_sms_server_template</code> + <code>huaweicloud_sms_task</code>, referenciando la red creada en la Fase 3 via data sources. <code>MIGRATE_FILE</code> + <code>LINUX</code> + <code>c6.large.4</code> + <code>SAS</code>. Consultó la versión del provider (v1.93.0) via Terraform MCP.</p>
+</div>
+</div>
+</div>
+
+<!-- Phase 5 -->
+<div class="phase-step done">
+<div class="phase-num">5</div>
+<div class="phase-body">
+<h3>APPLY & MONITOR <span class="phase-tag done">Ejecutada</span> <span class="phase-tag auto">Automática</span></h3>
+<p><strong>Objetivo:</strong> Ejecutar <code>terraform apply</code> para iniciar la migración y monitorear hasta completar.</p>
+<h4>Qué se hace:</h4>
+<ul style="padding-left:20px;margin:8px 0">
+<li><strong>Apply:</strong> <code>terraform init</code> → <code>terraform plan</code> → <code>terraform apply</code>. Esto crea el template y el task, e inicia la migración automáticamente (<code>action = "start"</code>).</li>
+<li><strong>Monitoreo:</strong> Polling de <code>hcloud SMS ShowTask</code> cada 30-60s. El task ejecuta <strong>7 subtasks secuenciales</strong>:</li>
+</ul>
+<div class="code-block">
+<pre>CREATE_CLOUD_SERVER  → SMS crea el ECS target desde el template
+SSL_CONFIG           → Canal seguro entre agent y target
+ATTACH_AGENT_IMAGE   → Adjunta imagen del SMS agent al target
+FORMAT_DISK_LINUX    → Formatea discos del target
+MIGRATE_LINUX_FILE   → Replicación de datos (el más largo)
+CONFIGURE_LINUX_FILE → Configura OS migrado (red, fstab, etc.)
+DETTACH_AGENT_IMAGE  → Desconecta imagen del agent</pre>
+</div>
+<h4>Estados a observar:</h4>
+<table class="compact">
+<tr><th>Estado</th><th>Significado</th></tr>
+<tr><td><code>RUNNING</code></td><td>Migración en progreso</td></tr>
+<tr><td><code>MIGRATE_SUCCESS</code></td><td>Migración completada exitosamente</td></tr>
+<tr><td><code>MIGRATE_FAIL</code></td><td>Migración falló — revisar <code>error_json</code></td></tr>
+</table>
+<div class="card info">
+<p><strong>En esta sesión:</strong> <code>terraform apply</code> creó 2 recursos en 38s. El task <code>169e94d3-...</code> quedó en estado <code>RUNNING</code>. La IA monitoreó durante ~48 min hasta <code>MIGRATE_SUCCESS</code>. El subtask más largo fue <code>MIGRATE_LINUX_FILE</code> (~30 min, replicación de 8GB a nivel de archivo).</p>
+</div>
+</div>
+</div>
+
+<!-- Phase 6 -->
+<div class="phase-step done">
+<div class="phase-num">6</div>
+<div class="phase-body">
+<h3>VERIFY <span class="phase-tag done">Ejecutada</span> <span class="phase-tag auto">Automática</span></h3>
+<p><strong>Objetivo:</strong> Verificar que el ECS migrado funciona correctamente.</p>
+<h4>Qué se hace:</h4>
+<ul style="padding-left:20px;margin:8px 0">
+<li>Obtener el ID del ECS target desde la respuesta del SMS task.</li>
+<li>Verificar estado del ECS (<code>hcloud ECS ShowServer</code>): status, flavor, IPs, VPC.</li>
+<li><strong>SSH verification:</strong> Conectar al ECS migrado usando la SSH key del origen y verificar: hostname, OS version, kernel, discos, block devices, firmware, y aplicaciones.</li>
+<li>Verificar que los datos de la aplicación están intactos (ej: <code>wp-config.php</code> presente, Apache activo, PHP funcionando).</li>
+</ul>
+<h4>Inputs del usuario necesarios:</h4>
+<div class="card warning">
+<ul style="padding-left:20px;margin:4px 0">
+<li><strong>SSH key del servidor origen:</strong> Para conectarse al ECS migrado (las keys se preservan en la migración).</li>
+<li><strong>Usuario SSH:</strong> Ej: <code>ubuntu</code> para imágenes Ubuntu.</li>
+</ul>
+</div>
+<div class="card info">
+<p><strong>En esta sesión:</strong> La IA hizo SSH con <code>private-key.pem</code> al ECS (110.238.85.32). Verificó: Ubuntu 22.04.5 ✓, UEFI ✓, Apache active ✓, WordPress presente ✓, PHP 8.1.2 ✓, EFI partition intacta ✓.</p>
+</div>
+</div>
+</div>
+
+<!-- Phase 7 -->
+<div class="phase-step">
+<div class="phase-num">7</div>
+<div class="phase-body">
+<h3>CLEANUP <span class="phase-tag skipped">Pendiente</span></h3>
+<p><strong>Objetivo:</strong> Eliminar los recursos temporales de SMS después de migración y verificación exitosa.</p>
+<h4>Qué se hace:</h4>
+<ul style="padding-left:20px;margin:8px 0">
+<li><code>terraform destroy</code> en los directorios de migración y red — elimina el SMS task, template, y recursos de red temporales.</li>
+<li>Alternativamente: <code>hcloud SMS DeleteTask</code> + <code>hcloud SMS DeleteTemplate</code> via API.</li>
+<li><strong>El ECS migrado persiste</strong> — solo se limpia metadata de SMS.</li>
+</ul>
+<h4>Post-migración (tareas recomendadas):</h4>
+<table class="compact">
+<tr><th>Tarea</th><th>Comando / Acción</th></tr>
+<tr><td>Actualizar hostname</td><td><code>hostnamectl set-hostname demo-web</code></td></tr>
+<tr><td>Actualizar kernel (opcional)</td><td>Instalar kernel de HuaweiCloud para mejor soporte de drivers</td></tr>
+<tr><td>Configurar monitoreo</td><td>Agentes CES (Cloud Eye Service) y HSS (Host Security Service)</td></tr>
+<tr><td>Actualizar DNS</td><td>Apuntar al nuevo IP público del ECS</td></tr>
+<tr><td>Revertir cambios temporales del origen</td><td>Reglas de SG temporales, IPs públicas, etc.</td></tr>
+</table>
+<div class="card info">
+<p><strong>En esta sesión:</strong> El cleanup no se ejecutó. El ECS migrado está activo y funcionando. Las tareas de post-migración (hostname, kernel, monitoreo) quedaron pendientes.</p>
+</div>
+</div>
+</div>
+
+</div><!-- /phase-flow -->
+</div>
+</section>
+
+<!-- ===== Inputs del Usuario ===== -->
+<section id="inputs">
+<div class="container">
+<h2>La IA Puede Ejecutar la Migración, Pero Necesita Inputs del Usuario</h2>
+<p>La IA puede descubrir entornos, generar código Terraform, ejecutar migraciones, monitorear progreso, y verificar resultados de forma autónoma. Sin embargo, hay información que <strong>solo el usuario puede proporcionar</strong> — ya sea por seguridad (credenciales), por conocimiento del negocio (decisiones de arquitectura), o por acceso (SSH keys). A continuación se lista todo lo que la IA necesita del usuario, incluyendo lo que habría sido necesario en fases que se saltaron.</p>
+
+<h3>Credenciales y Acceso</h3>
+
+<div class="input-group">
+<div class="input-item required">
+<div class="input-icon">🔑</div>
+<div class="input-detail">
+<h4>AK/SK de HuaweiCloud <span class="input-tag req">Requerido</span></h4>
+<p>Access Key y Secret Key para autenticar Terraform (<code>HW_ACCESS_KEY</code> / <code>HW_SECRET_KEY</code>) y el <code>hcloud</code> CLI. La IA nunca adivina credenciales — siempre pregunta al usuario.</p>
+</div>
+</div>
+<div class="input-item required">
+<div class="input-icon">🔐</div>
+<div class="input-detail">
+<h4>SSH Key del servidor origen <span class="input-tag req">Requerido</span></h4>
+<p>Llave privada SSH para conectarse al servidor origen (instalar agent si es necesario) y al ECS migrado (verificación post-migración). Las keys se preservan durante la migración SMS.</p>
+</div>
+</div>
+<div class="input-item skipped">
+<div class="input-icon">📦</div>
+<div class="input-detail">
+<h4>SSH access al servidor origen <span class="input-tag skip">Requerido si el agent no está instalado</span></h4>
+<p>IP, usuario, y key/password del servidor origen. Necesario en la Fase 2 para instalar el SMS Agent. <strong>En esta sesión no fue necesario</strong> porque el agent ya estaba instalado.</p>
+</div>
+</div>
+<div class="input-item skipped">
+<div class="input-icon">🛠️</div>
+<div class="input-detail">
+<h4>Root/sudo en el servidor origen <span class="input-tag skip">Requerido si el agent no está instalado</span></h4>
+<p>Privilegios administrativos para instalar el SMS Agent. <strong>En esta sesión no fue necesario</strong> — el agent ya estaba instalado y verificado.</p>
+</div>
+</div>
+<div class="input-item optional">
+<div class="input-icon">🗄️</div>
+<div class="input-detail">
+<h4>Credenciales de la base de datos destino <span class="input-tag opt">Opcional (post-migración)</span></h4>
+<p>Si la aplicación migrada depende de una DB, el usuario debe proporcionar las credenciales de la nueva DB (host, user, password) para reconfigurar la aplicación. En esta sesión: RDS HuaweiCloud en 10.0.1.232, user: root.</p>
+</div>
+</div>
+</div>
+
+<h3>Decisiones de Arquitectura</h3>
+
+<div class="input-group">
+<div class="input-item required">
+<div class="input-icon">📋</div>
+<div class="input-detail">
+<h4>Región origen y destino <span class="input-tag req">Requerido</span></h4>
+<p>En qué cloud y región está el servidor origen, y a qué región de HuaweiCloud se quiere migrar. Ej: AWS us-east-2 → HuaweiCloud la-north-2.</p>
+</div>
+</div>
+<div class="input-item required">
+<div class="input-icon">🌐</div>
+<div class="input-detail">
+<h4>Estrategia de red del target <span class="input-tag req">Requerido</span></h4>
+<p>¿Usar VPC/subnet/SG existentes en HuaweiCloud o crear nuevos? Si crear nuevos: CIDR del VPC, CIDR del subnet, puertos del security group. ¿Migración via IP pública o VPN?</p>
+</div>
+</div>
+<div class="input-item required">
+<div class="input-icon">🏷️</div>
+<div class="input-detail">
+<h4>Nombre del servidor target <span class="input-tag req">Requerido</span></h4>
+<p>Nombre que tendrá el ECS migrado en HuaweiCloud. Puede ser el mismo del origen o uno nuevo.</p>
+</div>
+</div>
+<div class="input-item required">
+<div class="input-icon">🗄️</div>
+<div class="input-detail">
+<h4>Estrategia de base de datos <span class="input-tag req">Requerido si la app tiene DB</span></h4>
+<p>Si la aplicación depende de una DB externa (como WordPress → RDS), el usuario debe decidir: migrar la DB también, hacerla accesible públicamente, configurar VPN, o migrar el servidor primero y reconfigurar después.</p>
+</div>
+</div>
+<div class="input-item optional">
+<div class="input-icon">⚙️</div>
+<div class="input-detail">
+<h4>Tipo de migración y flavor <span class="input-tag opt">Opcional (la IA recomienda)</span></h4>
+<p><code>MIGRATE_FILE</code> (compatibilidad) vs <code>MIGRATE_BLOCK</code> (velocidad, Windows-only). Flavor del ECS target (la IA recomienda uno equivalente al origen). Tipo de volumen (SAS, SSD, GPSSD).</p>
+</div>
+</div>
+</div>
+
+<h3>Confirmaciones e Instrucciones</h3>
+
+<div class="input-group">
+<div class="input-item required">
+<div class="input-icon">✅</div>
+<div class="input-detail">
+<h4>Confirmación antes de aplicar <span class="input-tag req">Requerido</span></h4>
+<p>La IA presenta el plan completo (discovery, decisiones, Terraform a generar) y espera confirmación del usuario antes de ejecutar <code>terraform apply</code>. El usuario puede pedir modificaciones (ej: "crear red primero, después migración").</p>
+</div>
+</div>
+<div class="input-item optional">
+<div class="input-icon">📝</div>
+<div class="input-detail">
+<h4>Instrucciones de ejecución <span class="input-tag opt">Opcional</span></h4>
+<p>El usuario puede dar instrucciones específicas sobre el orden de ejecución, qué aplicar primero, o pasos adicionales post-migración (ej: "reconfigurar wp-config.php para apuntar a la RDS de HuaweiCloud").</p>
+</div>
+</div>
+<div class="input-item optional">
+<div class="input-icon">🔍</div>
+<div class="input-detail">
+<h4>Contexto adicional <span class="input-tag opt">Opcional</span></h4>
+<p>El usuario puede proporcionar contexto útil: qué aplicación corre el servidor, si hay dependencias externas, si hay ventanas de mantenimiento, etc. En esta sesión, el usuario incluyó el contenido completo de la skill SMS como contexto inicial.</p>
+</div>
+</div>
+</div>
+
+<div class="spacer"></div>
+<div class="card highlight">
+<h3>Resumen</h3>
+<p>La IA puede automatizar ~90% del proceso de migración: discovery, generación de código, ejecución, monitoreo, y verificación. El ~10% restante requiere input humano: <strong>credenciales</strong> (por seguridad), <strong>decisiones de arquitectura</strong> (por conocimiento del negocio), y <strong>confirmaciones</strong> (por seguridad operacional). La skill <code>huaweicloud-sms-migration</code> codifica la regla <strong>"Never Guess Credentials"</strong> — la IA siempre pregunta, nunca asume.</p>
+</div>
+
+<div class="card info">
+<h3>Nota: Migración Autónoma con un Prompt Completo</h3>
+<p>La interacción humana descrita arriba (4 preguntas, credenciales, instrucciones) fue necesaria porque el prompt inicial del usuario era breve: <em>"migrar un EC2 de us-east-2 a la-north-2"</em>. Sin embargo, <strong>si el usuario proporciona un prompt detallado y exhaustivo desde el inicio</strong> — incluyendo toda la arquitectura de origen y destino (IDs, regiones, OS, firmware, red, flavors), las decisiones de migración (estrategia de DB, red target, nombre del servidor, tipo de migración), las credenciales (AK/SK, SSH keys), y el procedimiento completo a seguir — la IA podría ejecutar toda la migración de forma autónoma sin interacción humana subsecuente.</p>
+<p>En ese escenario, la IA solo se detendría si encuentra <strong>errores graves</strong>: incompatibilidades de firmware no resolvibles, errores de información (datos inconsistentes entre lo declarado y lo descubierto), fallos de conectividad, o errores durante <code>terraform apply</code> o la replicación SMS. En esos casos, la IA pausaría y solicitaría intervención humana para resolver el problema antes de continuar.</p>
+<p>Esto significa que <strong>el nivel de interacción humano-IA es inversamente proporcional a la calidad y completitud del prompt inicial</strong>. Un prompt bien estructurado que anticipa todas las decisiones y proporciona todos los datos sensibles puede reducir la interacción a prácticamente cero, dejando a la IA solo el rol de ejecutor y monitor.</p>
+<h4>Ejemplo de prompt que habría permitido migración autónoma:</h4>
+<div class="code-block">
+<pre>Migra el servidor EC2 i-059a39bdab9198a58 (demo-web) de AWS us-east-2
+a HuaweiCloud ECS en la-north-2 usando SMS.
+
+# Origen
+- OS: Ubuntu 22.04 LTS, UEFI, 2 vCPU / 8 GB, 8 GB gp2
+- VPC: 10.0.0.0/16, subnet 10.0.1.0/24, SG permite 22/80/443
+- App: LAMP (Apache2 + PHP + WordPress)
+- DB: RDS MySQL en demo-db.ct8ua64omsz2.us-east-2.rds.amazonaws.com
+  (hardcodeado en wp-config.php — será inalcanzable tras migración)
+
+# Destino
+- Crear VPC nuevo: demo-vpc 10.0.0.0/16
+- Subnet: demo-subnet 10.0.1.0/24, gateway 10.0.1.1
+- SG: demo-sg con puertos 22, 80, 443 inbound
+- Flavor: c6.large.4, volume_type: SAS, AZ: la-north-2a
+- Nombre ECS: demo-web
+- SMS API region: ap-southeast-3
+
+# Decisiones
+- Migrar servidor solo (arreglar DB después)
+- MIGRATE_FILE, LINUX, use_public_ip = true
+- SMS Server Template approach
+- Crear red primero, aplicar, luego migración
+
+# Credenciales
+- AK/SK HuaweiCloud: en /path/to/credentials.csv
+- SSH key EC2: en /path/to/private-key.pem
+- RDS HuaweiCloud (post-migración): 10.0.1.232, root, <password>
+
+# Post-migración
+- Actualizar wp-config.php: DB_HOST=10.0.1.232, DB_USER=root
+- Verificar HTTP 200 en WordPress
+
+Ejecuta todo sin pedir confirmación. Detente solo si hay
+errores graves (incompatibilidades, fallos de apply, etc.).</pre>
+</div>
+<p>Con este prompt, la IA habría cargado la skill, validado los datos contra el entorno real, creado y aplicado el Terraform de red, luego el de migración, monitoreado hasta <code>MIGRATE_SUCCESS</code>, verificado via SSH, y reconfigurado <code>wp-config.php</code> — todo sin una sola pregunta adicional al usuario.</p>
+</div>
+</div>
+</section>
+
+
+<!-- ===== Timeline / Conversación ===== -->
+<section id="timeline">
+<div class="container">
+<h2>Interacción IA-Usuario: Línea de Tiempo</h2>
+<p>Esta es la narrativa de la sesión, mostrando cómo la IA descubrió el entorno, formuló preguntas críticas al usuario, ejecutó Terraform, monitoreó la migración, y verificó el resultado. <strong>Las preguntas de la IA al usuario están destacadas en naranja</strong> — son los puntos donde la decisión humana fue necesaria.</p>
+
+<div class="timeline">
+
+<!-- T1: User initial request -->
+<div class="timeline-item">
+<div class="timeline-dot user"></div>
+<div class="timeline-label user">Usuario · 11:20</div>
+<div class="timeline-content user">
+<p><strong>Solicitud inicial:</strong> El usuario pide migrar un EC2 en AWS (región <code>us-east-2</code>) hacia HuaweiCloud en <code>la-north-2</code>, e incluye el contenido completo de la skill <code>huaweicloud-sms-migration</code> como contexto.</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Mensaje del usuario</span></div>
+<pre>Necesito hacer una migración de un EC2 en AWS en la region us-east-2
+hacia Huawei Cloud en la-north-2</pre>
+</div>
+</div>
+</div>
+
+<!-- T2: AI loads skill -->
+<div class="timeline-item">
+<div class="timeline-dot skill"></div>
+<div class="timeline-label skill">IA · Carga de Skill</div>
+<div class="timeline-content skill">
+<p>La IA carga la skill <code>huaweicloud-sms-migration</code>, que inyecta el workflow de 7 fases, 10 reglas, y referencias a archivos de Terraform schemas, compatibilidad de firmware, y troubleshooting.</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Tool: skill</span><span class="tool-time">24.8s</span></div>
+<pre>{ "name": "huaweicloud-sms-migration" }</pre>
+</div>
+<details class="thinking">
+<summary>Pensamiento de la IA</summary>
+<p>El usuario quiere migrar un EC2 de AWS us-east-2 a HuaweiCloud la-north-2 usando SMS. Estoy en modo plan (read-only). Debería cargar la skill y descubrir información antes de planificar. Primero necesito ver qué instancias EC2 existen y el entorno de HuaweiCloud.</p>
+</details>
+</div>
+</div>
+
+<!-- T3: AI discovers AWS -->
+<div class="timeline-item">
+<div class="timeline-dot ai"></div>
+<div class="timeline-label ai">IA · Descubrimiento AWS</div>
+<div class="timeline-content ai">
+<p>La IA descubre las instancias EC2 en <code>us-east-2</code> usando el AWS MCP. Encuentra <strong>una instancia running</strong>: <code>demo-web</code>.</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Tool: aws ec2 describe-instances</span></div>
+<pre>ID: i-059a39bdab9198a58
+Name: demo-web
+Type: m7i-flex.large
+State: running
+PrivateIP: 10.0.1.156
+PublicIP: 18.119.129.93
+Image: ami-0063861063744e26c</pre>
+</div>
+<p>Luego obtiene detalles de la imagen, volúmenes, security groups, VPC y subnet:</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Tool: aws ec2 describe-images</span></div>
+<pre>Name: ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20260610
+Arch: x86_64 · Platform: Linux/UNIX
+BootMode: uefi-preferred
+RootDevice: /dev/sda1 (ebs, 8GB gp2)</pre>
+</div>
+<p>La IA decodifica el <code>userData</code> del EC2 y descubre que es un <strong>stack LAMP con WordPress</strong> que se conecta a un RDS MySQL:</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Tool: bash (base64 decode)</span></div>
+<pre>#!/bin/bash
+apt install -y apache2 php php-mysql php-gd ...
+wget https://wordpress.org/latest.tar.gz
+# wp-config.php → DB_HOST: demo-db.ct8ua64omsz2.us-east-2.rds.amazonaws.com
+# DB_USER: admin · DB_PASSWORD: ChangeMe123!</pre>
+</div>
+<details class="thinking">
+<summary>Pensamiento de la IA</summary>
+<p>Es un LAMP stack con WordPress, Apache2, PHP, y conecta a un RDS MySQL. Nota importante: el wp-config.php hardcodea el endpoint del RDS. Después de migrar a HuaweiCloud, el ECS no podrá alcanzar ese endpoint (es un DNS interno de VPC). El usuario necesita abordar esto — migrar la DB también, hacer el RDS públicamente accesible, o configurar un VPN.</p>
+</details>
+</div>
+</div>
+
+<!-- T4: AI discovers HuaweiCloud -->
+<div class="timeline-item">
+<div class="timeline-dot ai"></div>
+<div class="timeline-label ai">IA · Descubrimiento HuaweiCloud</div>
+<div class="timeline-content ai">
+<p>La IA descubre el entorno target en <code>la-north-2</code> usando <code>hcloud</code> CLI: VPCs, subnets, security groups, availability zones, flavors, y verifica el SMS Agent.</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Tool: hcloud VPC ListVpcs</span><span class="tool-name">· la-north-2</span></div>
+<pre>VPC: vpc-default (ca5aa4ea-...)
+CIDR: 192.168.0.0/16 · Status: ACTIVE</pre>
+</div>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Tool: hcloud SMS ListServers</span><span class="tool-name">· ap-southeast-3</span></div>
+<pre>count: 1
+id: d317cae9-f32a-4ac2-94d2-e098215b4664
+name: ip-10-0-1-156
+os_type: LINUX · os_version: UBUNTU_22_4_64BIT
+state: waiting · connected: true ✓</pre>
+</div>
+<p>El SMS Agent <strong>ya estaba instalado y conectado</strong>. La IA verifica los 14 pre-migration checks:</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Tool: hcloud SMS ShowServer</span></div>
+<pre>State: waiting · Connected: True
+OS: LINUX UBUNTU_22_4_64BIT · CPU: 2 · Memory: 7.6 GB
+
+Checks (14/14 OK):
+  OS_VERSION: OK          FIRMWARE: OK        BOOT_LOADER: OK
+  RSYNC: OK               RAW_DEVICES: OK     DISK_INFO: OK
+  PARTITION_STYLE: OK     FILE_SYSTEM: OK     DISK_PERFORMANCES: OK
+  CPU: OK                 MEMORY: OK          PARAVIRTUALIZATION: OK
+  DISK_USED_SIZE: OK</pre>
+</div>
+<details class="thinking">
+<summary>Pensamiento de la IA</summary>
+<p>El agente SMS ya está instalado y conectado. Todos los checks pasan. No hay ECS existentes en la-north-2. El listing de imágenes falla, pero con el approach de SMS Server Template, SMS auto-selecciona la imagen. El source es UEFI y el template maneja el firmware automáticamente. Preocupación crítica: el WordPress hardcodea el endpoint del RDS de AWS.</p>
+</details>
+</div>
+</div>
+
+<!-- T5: AI presents plan + asks questions -->
+<div class="timeline-item">
+<div class="timeline-dot question"></div>
+<div class="timeline-label question">IA · Preguntas al Usuario (4 decisiones críticas)</div>
+<div class="timeline-content question">
+<p>La IA presenta un discovery summary completo y un plan de 7 fases. Luego formula <strong>4 preguntas críticas</strong> al usuario antes de proceder. Estas son las decisiones que un humano debe tomar y que la IA no puede adivinar.</p>
+
+<div class="question-callout">
+<h3>❓ Pregunta 1: Estrategia de Base de Datos</h3>
+<p>El WordPress depende de un RDS MySQL de AWS (<code>demo-db.ct8ua64omsz2.us-east-2.rds.amazonaws.com</code>) hardcodeado en <code>wp-config.php</code>. Después de migrar a HuaweiCloud, el ECS no puede alcanzar este endpoint interno de VPC. ¿Cómo manejar la base de datos?</p>
+<div class="question-options">
+<div class="question-option"><span class="opt-label">A</span> Migrar DB a HuaweiCloud RDS con DRS</div>
+<div class="question-option"><span class="opt-label">B</span> Hacer RDS públicamente accesible</div>
+<div class="question-option chosen"><span class="opt-label">C</span> Migrar servidor solo, arreglar DB después<span class="opt-chosen">✓ Elegida</span></div>
+<div class="question-option"><span class="opt-label">D</span> Configurar VPN AWS↔HuaweiCloud</div>
+</div>
+<div class="user-answer">Migrar servidor solo, arreglar DB después</div>
+</div>
+
+<div class="question-callout">
+<h3>❓ Pregunta 2: Red del Target</h3>
+<p>¿Usar el VPC/subnet/SG default existente en la-north-2, o crear recursos de red nuevos que coincidan con el layout de AWS?</p>
+<div class="question-options">
+<div class="question-option"><span class="opt-label">A</span> Usar VPC/SG default existente</div>
+<div class="question-option chosen"><span class="opt-label">B</span> Crear nuevo VPC/subnet/SG (10.0.0.0/16, puertos 22/80/443)<span class="opt-chosen">✓ Elegida</span></div>
+</div>
+<div class="user-answer">Crear nuevo VPC/subnet/SG</div>
+</div>
+
+<div class="question-callout">
+<h3>❓ Pregunta 3: Nombre del Servidor Target</h3>
+<p>¿Qué nombre debe tener el ECS migrado en HuaweiCloud?</p>
+<div class="question-options">
+<div class="question-option chosen"><span class="opt-label">A</span> demo-web (mismo nombre que el EC2 origen)<span class="opt-chosen">✓ Elegida</span></div>
+<div class="question-option"><span class="opt-label">B</span> demo-web-migrated</div>
+</div>
+<div class="user-answer">demo-web</div>
+</div>
+
+<div class="question-callout">
+<h3>❓ Pregunta 4: Credenciales de HuaweiCloud</h3>
+<p>Necesito tu AK/SK de HuaweiCloud para Terraform (hcloud CLI ya está configurado, pero Terraform necesita <code>HW_ACCESS_KEY</code>/<code>HW_SECRET_KEY</code>). ¿Cómo quieres proporcionarlos?</p>
+<div class="question-options">
+<div class="question-option"><span class="opt-label">A</span> Voy a setear las env vars yo mismo</div>
+<div class="question-option"><span class="opt-label">B</span> Leer de la config de hcloud</div>
+</div>
+<div class="user-answer">Credentials are in the folder as well as the private key of the ec2</div>
+</div>
+</div>
+</div>
+
+<!-- T6: AI reads credentials -->
+<div class="timeline-item">
+<div class="timeline-dot ai"></div>
+<div class="timeline-label ai">IA · Lectura de credenciales</div>
+<div class="timeline-content ai">
+<p>La IA lee las credenciales de HuaweiCloud y la SSH key del EC2 desde archivos locales en el directorio del proyecto.</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Tool: read</span><span class="tool-name">credentials.csv</span></div>
+<pre>User Name,Access Key Id,Secret Access Key
+"bs_dev_J50056672",HPUAH7QPKG3HMQMM3AWB,TY6L8XF9Jjb7K8UcI0KmNtmqo5GAqAsog85cEHsf</pre>
+</div>
+<p>La IA también consulta la última versión del provider Terraform de HuaweiCloud vía MCP del registry:</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Tool: terraform_get_latest_provider_version</span></div>
+<pre>huaweicloud/huaweicloud → 1.93.0</pre>
+</div>
+</div>
+</div>
+
+<!-- T7: User says split network first -->
+<div class="timeline-item">
+<div class="timeline-dot user"></div>
+<div class="timeline-label user">Usuario · 11:25</div>
+<div class="timeline-content user">
+<p><strong>Instrucción del usuario:</strong> Crear primero los recursos de red y aplicarlos, después hacer la migración.</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Mensaje del usuario</span></div>
+<pre>Create the network resources first and apply them, after that we do migration</pre>
+</div>
+</div>
+</div>
+
+<!-- T8: AI creates network Terraform -->
+<div class="timeline-item">
+<div class="timeline-dot ai"></div>
+<div class="timeline-label ai">IA · Terraform de Red (Fase 3-4)</div>
+<div class="timeline-content ai">
+<p>La IA divide el trabajo en dos configuraciones Terraform separadas: <code>network/</code> (VPC, subnet, SG + rules) y <code>migration/</code> (SMS template + task). Crea y aplica primero la red.</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">network/main.tf</span></div>
+<pre>resource "huaweicloud_vpc" "demo" {
+  name = "demo-vpc"
+  cidr = "10.0.0.0/16"
+}
+
+resource "huaweicloud_vpc_subnet" "demo" {
+  name       = "demo-subnet"
+  cidr       = "10.0.1.0/24"
+  gateway_ip = "10.0.1.1"
+  vpc_id     = huaweicloud_vpc.demo.id
+}
+
+resource "huaweicloud_networking_secgroup" "demo" {
+  name        = "demo-sg"
+  description = "Allow HTTP and SSH inbound"
+}
+
+# + 3 reglas SG: SSH(22), HTTP(80), HTTPS(443) desde 0.0.0.0/0</pre>
+</div>
+<p><code>terraform init</code> → <code>terraform plan</code> (6 to add) → <code>terraform apply</code>:</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">terraform apply</span><span class="tool-time">34.7s</span></div>
+<pre>huaweicloud_vpc.demo: Creating... [id=35af0c49-55aa-4643-bb4c-7ac61f5f0419]
+huaweicloud_networking_secgroup.demo: Creating... [id=211aae9d-...]
+huaweicloud_networking_secgroup_rule.ssh: Creating... ✓
+huaweicloud_networking_secgroup_rule.http: Creating... ✓
+huaweicloud_networking_secgroup_rule.https: Creating... ✓
+huaweicloud_vpc_subnet.demo: Creating... [id=5536568f-...]
+
+Apply complete! Resources: 6 added, 0 changed, 0 destroyed.</pre>
+</div>
+</div>
+</div>
+
+<!-- T9: AI creates migration Terraform -->
+<div class="timeline-item">
+<div class="timeline-dot ai"></div>
+<div class="timeline-label ai">IA · Terraform de Migración (Fase 4)</div>
+<div class="timeline-content ai">
+<p>La IA crea la configuración de migración SMS, referenciando la red recién creada vía data sources. Usa el <strong>SMS Server Template approach</strong> (maneja firmware UEFI automáticamente).</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">migration/main.tf</span></div>
+<pre>data "huaweicloud_sms_source_servers" "demo" {
+  id = "d317cae9-f32a-4ac2-94d2-e098215b4664"
+}
+
+resource "huaweicloud_sms_server_template" "demo" {
+  name               = "demo-web-template"
+  availability_zone  = data.huaweicloud_availability_zones.demo.names[0]
+  vpc_id             = data.huaweicloud_vpc.demo.id
+  subnet_ids         = [data.huaweicloud_vpc_subnet.demo.id]
+  security_group_ids = [data.huaweicloud_networking_secgroup.demo.id]
+  flavor             = "c6.large.4"
+  volume_type        = "SAS"
+  target_server_name = "demo-web"
+  bandwidth_size     = 10
+}
+
+resource "huaweicloud_sms_task" "migration" {
+  type                = "MIGRATE_FILE"
+  os_type             = "LINUX"
+  source_server_id    = data.huaweicloud_sms_source_servers.demo.servers[0].id
+  vm_template_id      = huaweicloud_sms_server_template.demo.id
+  action              = "start"
+  start_target_server = true
+  use_public_ip       = true
+}</pre>
+</div>
+<p><code>terraform apply</code> — crea el template y el task, iniciando la migración:</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">terraform apply</span><span class="tool-time">38.1s</span></div>
+<pre>huaweicloud_sms_server_template.demo: Creating... [id=04457882-...]
+huaweicloud_sms_task.migration: Creating... [id=169e94d3-...]
+
+Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
+
+task_id = "169e94d3-ea2e-4fc2-8dd5-28d91309fbbc"
+task_state = "RUNNING"</pre>
+</div>
+</div>
+</div>
+
+<!-- T10: AI monitors migration -->
+<div class="timeline-item">
+<div class="timeline-dot ai"></div>
+<div class="timeline-label ai">IA · Monitoreo de Migración (Fase 5) · ~48 min</div>
+<div class="timeline-content ai">
+<p>La IA monitorea el progreso del SMS task pollando <code>hcloud SMS ShowTask</code> cada 30-60 segundos. La migración tardó aproximadamente <strong>48 minutos</strong> desde el inicio hasta <code>MIGRATE_SUCCESS</code>. El subtask más largo fue <code>MIGRATE_LINUX_FILE</code> (replicación de datos a nivel de archivo).</p>
+<p>Ver la sección <a href="#monitoreo">Monitoreo Detallado</a> para el progreso completo de los 7 subtasks.</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Resultado final</span></div>
+<pre>=== 12:22:06 State: MIGRATE_SUCCESS ===
+  CREATE_CLOUD_SERVER      100%
+  SSL_CONFIG               100%
+  ATTACH_AGENT_IMAGE       100%
+  FORMAT_DISK_LINUX_FILE   100%
+  MIGRATE_LINUX_FILE       100%
+  CONFIGURE_LINUX_FILE     100%
+  DETTACH_AGENT_IMAGE      100%
+
+FINAL STATE: MIGRATE_SUCCESS
+Target VM ID: 912575d5-3af9-455f-925e-ba7ec888b163  Name: demo-web</pre>
+</div>
+</div>
+</div>
+
+<!-- T11: AI verifies via SSH -->
+<div class="timeline-item">
+<div class="timeline-dot result"></div>
+<div class="timeline-label result">IA · Verificación SSH (Fase 6)</div>
+<div class="timeline-content result">
+<p>La IA hace SSH al ECS migrado usando la private key del EC2 original y verifica el sistema completo:</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">ssh ubuntu@110.238.85.32</span></div>
+<pre>=== HOSTNAME ===
+ip-10-0-1-156
+=== OS ===
+Ubuntu 22.04.5 LTS (Jammy Jellyfish)
+=== KERNEL ===
+Linux ip-10-0-1-156 6.8.0-1057-aws x86_64
+=== DISK ===
+/dev/vda1  7.6G  2.3G  4.8G  33% /
+=== BLOCK DEVICES ===
+vda    40G
+├─vda1 7.9G ext4     /
+└─vda2 106M vfat     /boot/efi
+=== APACHE ===
+active
+=== WORDPRESS ===
+wp-config exists
+=== PHP ===
+PHP 8.1.2-1ubuntu2.24
+=== FIRMWARE ===
+UEFI ✓</pre>
+</div>
+<p>Todo verificado: OS preservado, Apache activo, WordPress presente, firmware UEFI mantenido, EFI partition intacta.</p>
+</div>
+</div>
+
+<!-- T12: User asks to reconfigure DB -->
+<div class="timeline-item">
+<div class="timeline-dot user"></div>
+<div class="timeline-label user">Usuario · 12:25</div>
+<div class="timeline-content user">
+<p><strong>Solicitud del usuario:</strong> Cambiar la configuración para que apunte a la RDS de HuaweiCloud que ya desplegó, verificar que existe y cambiar la configuración en el ECS.</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Mensaje del usuario</span></div>
+<pre>Cambia la configuracion para que apunte a la rds de huawei cloud
+que ya desplegue, revisa que existe y cambia la configuracion en el ECS</pre>
+</div>
+</div>
+</div>
+
+<!-- T13: AI discovers RDS -->
+<div class="timeline-item">
+<div class="timeline-dot ai"></div>
+<div class="timeline-label ai">IA · Descubrimiento RDS + Reconfiguración</div>
+<div class="timeline-content ai">
+<p>La IA descubre la RDS en HuaweiCloud y verifica que está en la misma VPC/subnet que el ECS migrado:</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">hcloud RDS ListInstances</span><span class="tool-name">· la-north-2</span></div>
+<pre>Name: demo-db · Status: ACTIVE
+Engine: MySQL 8.0 · Flavor: rds.mysql.n1.large.2
+Private IP: 10.0.1.232
+VPC: 35af0c49-... (misma VPC que el ECS ✓)
+Subnet: 5536568f-... (misma subnet que el ECS ✓)</pre>
+</div>
+<p>La IA verifica conectividad desde el ECS y luego el usuario proporciona las credenciales correctas de la RDS:</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Test de conectividad</span></div>
+<pre>Connection to 10.0.1.232 3306 port [tcp/mysql] succeeded! ✓
+# MySQL ping con credenciales anteriores → Access denied (esperado)</pre>
+</div>
+</div>
+</div>
+
+<!-- T14: User provides RDS credentials -->
+<div class="timeline-item">
+<div class="timeline-dot user"></div>
+<div class="timeline-label user">Usuario · 12:28</div>
+<div class="timeline-content user">
+<p>El usuario proporciona las credenciales de la RDS de HuaweiCloud:</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Mensaje del usuario</span></div>
+<pre>Host: 10.0.1.232 (private IP dentro de demo-vpc)
+Port: 3306
+User: root
+Password: HuaweiRDS2026!Migration</pre>
+</div>
+</div>
+</div>
+
+<!-- T15: AI updates wp-config -->
+<div class="timeline-item">
+<div class="timeline-dot result"></div>
+<div class="timeline-label result">IA · Actualización de wp-config.php · Resultado Final</div>
+<div class="timeline-content result">
+<p>La IA verifica la conexión MySQL con las nuevas credenciales, confirma que la base de datos <code>wordpress</code> existe con 9 tablas, y actualiza <code>wp-config.php</code> en el ECS:</p>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">MySQL connection test</span></div>
+<pre>mysqld is alive ✓
+Databases: information_schema, mysql, performance_schema, sys, <strong>wordpress</strong> ✓</pre>
+</div>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">sed update wp-config.php</span></div>
+<pre>define('DB_NAME',     'wordpress');
+define('DB_USER',     'root');                    <!-- was: admin -->
+define('DB_PASSWORD', 'HuaweiRDS2026!Migration'); <!-- was: ChangeMe123! -->
+define('DB_HOST',     '10.0.1.232');              <!-- was: demo-db...rds.amazonaws.com --></pre>
+</div>
+<div class="code-block">
+<div class="tool-header"><span class="tool-name">Verificación final</span></div>
+<pre>=== WordPress tables ===
+wp_commentmeta, wp_comments, wp_links, wp_options,
+wp_postmeta, wp_posts, wp_term_relationships, ...
+=== Apache status ===
+active
+=== HTTP test ===
+HTTP 200 ✓
+=== WordPress response ===
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8" /> ✓</pre>
+</div>
+<p><strong>WordPress funcionando correctamente en HuaweiCloud</strong> — HTTP 200, sirviendo la página desde la RDS <code>demo-db</code> en la misma VPC.</p>
+</div>
+</div>
+
+</div><!-- /timeline -->
+</div>
+</section>
+
+<!-- ===== Monitoreo Detallado ===== -->
+<section id="monitoreo">
+<div class="container">
+<h2>Monitoreo Detallado de la Migración</h2>
+<p>El SMS task ejecuta 7 subtasks secuenciales. Cada uno debe llegar al 100% antes de que el siguiente comience. La IA monitoreó el progreso continuamente desde las 11:34 hasta las 12:22 (48 minutos).</p>
+
+<h3>Secuencia de Subtasks</h3>
+<table class="compact">
+<tr><th>Subtask</th><th>Descripción</th><th>Duración aprox.</th></tr>
+<tr><td><code>CREATE_CLOUD_SERVER</code></td><td>SMS crea el ECS target desde el template</td><td>~6 min</td></tr>
+<tr><td><code>SSL_CONFIG</code></td><td>Establece canal seguro (agent ↔ target)</td><td>~1 min</td></tr>
+<tr><td><code>ATTACH_AGENT_IMAGE</code></td><td>Adjunta la imagen del SMS agent al target</td><td>~6 min</td></tr>
+<tr><td><code>FORMAT_DISK_LINUX_FILE</code></td><td>Formatea los discos del target</td><td>~1 min</td></tr>
+<tr><td><code>MIGRATE_LINUX_FILE</code></td><td><strong>Replicación de datos a nivel de archivo</strong></td><td>~30 min</td></tr>
+<tr><td><code>CONFIGURE_LINUX_FILE</code></td><td>Configura el OS migrado (red, fstab, etc.)</td><td>~2 min</td></tr>
+<tr><td><code>DETTACH_AGENT_IMAGE</code></td><td>Desconecta la imagen del SMS agent</td><td>~2 min</td></tr>
+</table>
+
+<h3>Progreso Temporal (muestreo representativo)</h3>
+<table class="monitor-table">
+<tr><th>Hora</th><th>Estado</th><th>Subtask activo</th><th>Progreso</th></tr>
+<tr><td>11:34</td><td>RUNNING</td><td>CREATE_CLOUD_SERVER</td><td><span class="progress-bar"><span class="progress-fill partial" style="width:40%"></span></span> 40%</td></tr>
+<tr><td>11:36</td><td>RUNNING</td><td>ATTACH_AGENT_IMAGE</td><td><span class="progress-bar"><span class="progress-fill partial" style="width:5%"></span></span> 5%</td></tr>
+<tr><td>11:41</td><td>RUNNING</td><td>FORMAT_DISK_LINUX_FILE</td><td><span class="progress-bar"><span class="progress-fill partial" style="width:100%"></span></span> 100%</td></tr>
+<tr><td>11:42</td><td>RUNNING</td><td>MIGRATE_LINUX_FILE</td><td><span class="progress-bar"><span class="progress-fill partial" style="width:2%"></span></span> 2%</td></tr>
+<tr><td>11:50</td><td>RUNNING</td><td>MIGRATE_LINUX_FILE</td><td><span class="progress-bar"><span class="progress-fill partial" style="width:20%"></span></span> 20%</td></tr>
+<tr><td>12:00</td><td>RUNNING</td><td>MIGRATE_LINUX_FILE</td><td><span class="progress-bar"><span class="progress-fill partial" style="width:42%"></span></span> 42%</td></tr>
+<tr><td>12:10</td><td>RUNNING</td><td>MIGRATE_LINUX_FILE</td><td><span class="progress-bar"><span class="progress-fill partial" style="width:65%"></span></span> 65%</td></tr>
+<tr><td>12:15</td><td>RUNNING</td><td>MIGRATE_LINUX_FILE</td><td><span class="progress-bar"><span class="progress-fill partial" style="width:75%"></span></span> 75%</td></tr>
+<tr><td>12:19</td><td>RUNNING</td><td>CONFIGURE_LINUX_FILE</td><td><span class="progress-bar"><span class="progress-fill partial" style="width:15%"></span></span> 15%</td></tr>
+<tr><td>12:21</td><td>RUNNING</td><td>DETTACH_AGENT_IMAGE</td><td><span class="progress-bar"><span class="progress-fill partial" style="width:80%"></span></span> 80%</td></tr>
+<tr><td>12:22</td><td><strong>MIGRATE_SUCCESS</strong></td><td>—</td><td><span class="badge badge-green">100% todos</span></td></tr>
+</table>
+
+<div class="card">
+<h3>Script de monitoreo usado por la IA</h3>
+<div class="code-block">
+<pre>while true; do
+  RESPONSE=$(hcloud SMS ShowTask --task_id=$TASK_ID \
+    --cli-region=ap-southeast-3 --cli-output=json)
+  STATE=$(echo "$RESPONSE" | python3 -c \
+    "import json,sys; print(json.load(sys.stdin).get('state'))")
+  # ... extraer y mostrar progreso de sub_tasks ...
+  if [ "$STATE" = "MIGRATE_SUCCESS" ] || \
+     [ "$STATE" = "MIGRATE_FAIL" ]; then break; fi
+  sleep 60
+done</pre>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ===== Resultado Before/After ===== -->
+<section id="resultado">
+<div class="container">
+<h2>Resultado: Antes y Después</h2>
+
+<div class="ba-grid">
+<div class="ba-card before">
+<h4>☁️ Antes — AWS us-east-2</h4>
+<ul>
+<li><strong>EC2:</strong> demo-web (i-059a39bdab9198a58)</li>
+<li><strong>OS:</strong> Ubuntu 22.04.5 LTS</li>
+<li><strong>Flavor:</strong> m7i-flex.large (2 vCPU/8GB)</li>
+<li><strong>Disco:</strong> 8GB gp2 (/dev/nvme0n1)</li>
+<li><strong>Firmware:</strong> UEFI</li>
+<li><strong>IP Priv:</strong> 10.0.1.156</li>
+<li><strong>IP Pub:</strong> 18.119.129.93</li>
+<li><strong>VPC:</strong> demo-vpc (10.0.0.0/16)</li>
+<li><strong>DB Host:</strong> demo-db.ct8ua64omsz2.us-east-2.rds.amazonaws.com</li>
+<li><strong>DB User:</strong> admin</li>
+<li><strong>Kernel:</strong> 6.8.0-1057-aws</li>
+<li><strong>Hostname:</strong> ip-10-0-1-156</li>
+</ul>
+</div>
+<div class="ba-card after">
+<h4>🟡 Después — HuaweiCloud la-north-2</h4>
+<ul>
+<li><strong>ECS:</strong> demo-web (912575d5-...)</li>
+<li><strong>OS:</strong> Ubuntu 22.04.5 LTS ✓</li>
+<li><strong>Flavor:</strong> c6.large.4 (2 vCPU/8GB) ✓</li>
+<li><strong>Disco:</strong> 40GB SAS (/dev/vda)</li>
+<li><strong>Firmware:</strong> UEFI ✓ (preservado)</li>
+<li><strong>IP Priv:</strong> 10.0.1.55</li>
+<li><strong>IP Pub:</strong> 110.238.85.32</li>
+<li><strong>VPC:</strong> demo-vpc (10.0.0.0/16, nueva)</li>
+<li><strong>DB Host:</strong> 10.0.1.232 (RDS HuaweiCloud)</li>
+<li><strong>DB User:</strong> root</li>
+<li><strong>Kernel:</strong> 6.8.0-1057-aws (pendiente actualizar)</li>
+<li><strong>Hostname:</strong> ip-10-0-1-156 (pendiente cambiar)</li>
+</ul>
+</div>
+</div>
+
+<h3>Verificación Final</h3>
+<table class="compact">
+<tr><th>Check</th><th>Esperado</th><th>Obtenido</th><th>Estado</th></tr>
+<tr><td>OS version</td><td>Ubuntu 22.04</td><td>Ubuntu 22.04.5 LTS</td><td><span class="badge badge-green">OK</span></td></tr>
+<tr><td>Firmware</td><td>UEFI</td><td>UEFI</td><td><span class="badge badge-green">OK</span></td></tr>
+<tr><td>Apache</td><td>Activo</td><td>active</td><td><span class="badge badge-green">OK</span></td></tr>
+<tr><td>WordPress</td><td>wp-config.php presente</td><td>Presente</td><td><span class="badge badge-green">OK</span></td></tr>
+<tr><td>PHP</td><td>8.x</td><td>8.1.2</td><td><span class="badge badge-green">OK</span></td></tr>
+<tr><td>DB Connection</td><td>RDS HuaweiCloud</td><td>10.0.1.232:3306</td><td><span class="badge badge-green">OK</span></td></tr>
+<tr><td>HTTP Response</td><td>200</td><td>200</td><td><span class="badge badge-green">OK</span></td></tr>
+<tr><td>EFI Partition</td><td>vfat /boot/efi</td><td>vda2 106M vfat</td><td><span class="badge badge-green">OK</span></td></tr>
+</table>
+
+<h3>Cambios en wp-config.php</h3>
+<table class="compact">
+<tr><th>Variable</th><th>Antes (AWS)</th><th>Después (HuaweiCloud)</th></tr>
+<tr><td>DB_HOST</td><td>demo-db.ct8ua64omsz2.us-east-2.rds.amazonaws.com</td><td>10.0.1.232</td></tr>
+<tr><td>DB_USER</td><td>admin</td><td>root</td></tr>
+<tr><td>DB_PASSWORD</td><td>ChangeMe123!</td><td>HuaweiRDS2026!Migration</td></tr>
+<tr><td>DB_NAME</td><td>wordpress</td><td>wordpress (sin cambio)</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ===== Footer ===== -->
+<section style="padding:32px 0;background:var(--hc-gray-light)">
+<div class="center">
+<p class="muted">Fases de la Migración SMS · Proceso Estándar · HuaweiCloud</p>
+</div>
+</section>
+
+</body>
+</html>

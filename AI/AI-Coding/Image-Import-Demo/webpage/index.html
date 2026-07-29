@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCode + HCloud MCP + Terraform MCP — AI Infrastructure Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ==================== HERO ==================== -->
+<section id="hero" class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-content reveal">
+        <div class="hero-badges">
+            <span class="badge badge-opencode">OpenCode</span>
+            <span class="badge badge-hcloud">HCloud MCP</span>
+            <span class="badge badge-terraform">Terraform MCP</span>
+        </div>
+        <h1>AI Agents That <em>See</em> Your Cloud<br>&amp; <em>Write</em> Your Infrastructure</h1>
+        <p class="hero-sub">Discover Huawei Cloud resources, write correct Terraform code, and perform operational actions — all through natural conversation.</p>
+        <div class="hero-cta">
+            <a href="#how-it-works" class="btn btn-primary">See How It Thinks</a>
+            <a href="#get-started" class="btn btn-secondary">Get Started</a>
+        </div>
+    </div>
+    <div class="scroll-hint">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    </div>
+</section>
+
+<!-- ==================== PROBLEM ==================== -->
+<section id="problem" class="section">
+    <div class="container">
+        <div class="section-header reveal">
+            <span class="section-tag">The Problem</span>
+            <h2>AI agents writing Terraform are <span class="text-red">blind</span></h2>
+        </div>
+        <div class="problem-grid">
+            <div class="problem-card reveal reveal-delay-1">
+                <div class="problem-icon">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#C7000B" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                </div>
+                <h3>Guesses Everything</h3>
+                <p>"Use VPC <code>vpc-12345678</code> and flavor <code>s6.large.2</code>" — but those don't exist in your account. The AI has no way to discover your actual infrastructure, so it invents values that break at <code>terraform apply</code>.</p>
+            </div>
+            <div class="problem-card reveal reveal-delay-2">
+                <div class="problem-icon">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#C7000B" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                </div>
+                <h3>Terraform Can't Operate</h3>
+                <p>Need to restart a server? Resize a flavor? Create a manual backup? Terraform is declarative — it provisions infrastructure, but it can't perform day-2 operational actions.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== SOLUTION ==================== -->
+<section id="solution" class="section section-alt">
+    <div class="container">
+        <div class="section-header reveal">
+            <span class="section-tag">The Solution</span>
+            <h2>Three tools, one <span class="gradient-text">intelligent workflow</span></h2>
+        </div>
+        <div class="solution-grid">
+            <div class="solution-card solution-opencode reveal reveal-delay-1">
+                <div class="solution-card-header">
+                    <div class="solution-icon solution-icon-opencode">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                    </div>
+                    <h3>OpenCode</h3>
+                    <span class="solution-role">The Orchestrator</span>
+                </div>
+                <p>The open-source AI coding agent that ties it all together. Speaks MCP natively, asks you questions when choices arise, and orchestrates both discovery and provisioning.</p>
+                <ul class="solution-features">
+                    <li>First-class MCP support</li>
+                    <li>Asks the user when ambiguous</li>
+                    <li>Plan &amp; Build modes</li>
+                </ul>
+            </div>
+            <div class="solution-card solution-hcloud reveal reveal-delay-2">
+                <div class="solution-card-header">
+                    <div class="solution-icon solution-icon-hcloud">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2a10 10 0 0 1 0 20 10 10 0 0 1 0-20" opacity="0.5"/></svg>
+                    </div>
+                    <h3>HCloud MCP</h3>
+                    <span class="solution-role">The Eyes &amp; Hands</span>
+                </div>
+                <p>90 read-only tools that let the AI <strong>see</strong> your Huawei Cloud. Plus a CLI escape hatch for <strong>operational actions</strong> that Terraform can't do — restart, resize, backup, and more.</p>
+                <ul class="solution-features">
+                    <li>90 read-only discovery tools</li>
+                    <li>18 cloud services covered</li>
+                    <li>CLI escape hatch for operations</li>
+                </ul>
+            </div>
+            <div class="solution-card solution-terraform reveal reveal-delay-3">
+                <div class="solution-card-header">
+                    <div class="solution-icon solution-icon-terraform">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+                    </div>
+                    <h3>Terraform MCP</h3>
+                    <span class="solution-role">The Code Writer</span>
+                </div>
+                <p>Provider and module registry tools that let the AI <strong>write correct Terraform code</strong> — resource schemas, required parameters, and latest versions from the official registry.</p>
+                <ul class="solution-features">
+                    <li>Provider docs &amp; schemas</li>
+                    <li>Module discovery &amp; details</li>
+                    <li>Latest version lookup</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== HOW IT WORKS ==================== -->
+<section id="how-it-works" class="section">
+    <div class="container">
+        <div class="section-header reveal">
+            <span class="section-tag">How It Thinks</span>
+            <h2>Not a pipeline — a <span class="gradient-text">conversation</span></h2>
+            <p>The agent doesn't follow a script. It starts with Terraform MCP to understand the schema, writes partial code, then iteratively calls HCloud MCP as it discovers missing values — asking you when choices arise.</p>
+        </div>
+
+        <!-- Scenario 1: RDS -->
+        <div class="scenario reveal">
+            <div class="scenario-prompt">
+                <span class="scenario-user">You:</span>
+                <span class="scenario-question">"I need an RDS MySQL database in la-north-2"</span>
+            </div>
+            <div class="chain">
+                <div class="chain-step">
+                    <div class="chain-think">💭 "I need to write Terraform for an RDS instance. Let me get the resource schema first."</div>
+                    <div class="chain-call chain-call-terraform">
+                        <span class="chain-tool">terraform_get_provider_details</span>(provider_doc_id=<span class="chain-str">"..."</span>)
+                    </div>
+                    <div class="chain-result">→ needs: <code>flavor_ref</code>, <code>storage_type</code>, <code>vpc_id</code>, <code>subnet_id</code>, <code>availability_zone</code>...</div>
+                </div>
+
+                <div class="chain-step">
+                    <div class="chain-think">💭 "Writing the Terraform with what I know, but I'm missing some values..."</div>
+                    <div class="chain-code">
+                        <pre><code><span class="tf-keyword">resource</span> <span class="tf-string">"huaweicloud_rds_instance"</span> <span class="tf-string">"mysql"</span> {
+  name           = <span class="tf-string">"prod-mysql"</span>
+  engine         = <span class="tf-string">"mysql"</span>
+  engine_version = <span class="tf-string">"8.0"</span>
+  <span class="tf-unknown">flavor_ref     = "???"</span>    <span class="tf-comment">← need available flavors</span>
+  <span class="tf-unknown">storage_type   = "???"</span>    <span class="tf-comment">← need region-compatible types</span>
+  <span class="tf-unknown">vpc_id         = "???"</span>    <span class="tf-comment">← need to discover VPC</span>
+  <span class="tf-unknown">subnet_id      = "???"</span>    <span class="tf-comment">← need to discover subnet</span>
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="chain-step">
+                    <div class="chain-think">💭 "Schema requires a flavor_ref. What flavors exist for MySQL here?"</div>
+                    <div class="chain-call chain-call-hcloud">
+                        <span class="chain-tool">hcloud_list_rds_flavors</span>(region=<span class="chain-str">"la-north-2"</span>, database_name=<span class="chain-str">"MySQL"</span>)
+                    </div>
+                    <div class="chain-result">→ rds.mysql.x1.large.2 (4 vCPU, 16GB) · rds.mysql.x1.xlarge.2 (8 vCPU, 32GB) · rds.mysql.x1.2xlarge.2 (16 vCPU, 64GB)</div>
+                </div>
+
+                <div class="chain-step">
+                    <div class="chain-ask">💬 "Which flavor do you want for the RDS instance?"</div>
+                    <div class="chain-options">
+                        <span class="chain-option">1. rds.mysql.x1.large.2 — 4 vCPU, 16GB</span>
+                        <span class="chain-option">2. rds.mysql.x1.xlarge.2 — 8 vCPU, 32GB</span>
+                        <span class="chain-option">3. rds.mysql.x1.2xlarge.2 — 16 vCPU, 64GB</span>
+                    </div>
+                    <div class="chain-answer">👤 "Option 1 — the large one"</div>
+                </div>
+
+                <div class="chain-step">
+                    <div class="chain-think">💭 "Need a storage_type compatible with MySQL 8.0 in this region."</div>
+                    <div class="chain-call chain-call-hcloud">
+                        <span class="chain-tool">hcloud_list_rds_storage_types</span>(region=<span class="chain-str">"la-north-2"</span>, database_name=<span class="chain-str">"MySQL"</span>, version_name=<span class="chain-str">"8.0"</span>)
+                    </div>
+                    <div class="chain-result">→ ULTRAHIGH</div>
+                </div>
+
+                <div class="chain-step">
+                    <div class="chain-think">💭 "Need the VPC and subnet to place this database."</div>
+                    <div class="chain-call chain-call-hcloud">
+                        <span class="chain-tool">hcloud_list_vpcs</span>(region=<span class="chain-str">"la-north-2"</span>) → <span class="chain-str">ca5aa4ea-4df9-...</span>
+                    </div>
+                    <div class="chain-call chain-call-hcloud">
+                        <span class="chain-tool">hcloud_list_subnets</span>(vpc_id=<span class="chain-str">"ca5aa4ea..."</span>) → <span class="chain-str">701ac87c-47ea-...</span>
+                    </div>
+                </div>
+
+                <div class="chain-step">
+                    <div class="chain-think">💭 "All values resolved. Final code:"</div>
+                    <div class="chain-code chain-code-final">
+                        <pre><code><span class="tf-keyword">resource</span> <span class="tf-string">"huaweicloud_rds_instance"</span> <span class="tf-string">"mysql"</span> {
+  name           = <span class="tf-string">"prod-mysql"</span>
+  engine         = <span class="tf-string">"mysql"</span>
+  engine_version = <span class="tf-string">"8.0"</span>
+  <span class="tf-resolved">flavor_ref     = "rds.mysql.x1.large.2"</span>    <span class="tf-check">✓</span>
+  <span class="tf-resolved">storage_type   = "ULTRAHIGH"</span>               <span class="tf-check">✓</span>
+  <span class="tf-resolved">vpc_id         = "ca5aa4ea-4df9-..."</span>         <span class="tf-check">✓</span>
+  <span class="tf-resolved">subnet_id      = "701ac87c-47ea-..."</span>         <span class="tf-check">✓</span>
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scenario 2: ECS -->
+        <div class="scenario reveal">
+            <div class="scenario-prompt">
+                <span class="scenario-user">You:</span>
+                <span class="scenario-question">"Deploy a web server to my existing VPC"</span>
+            </div>
+            <div class="chain">
+                <div class="chain-step">
+                    <div class="chain-think">💭 "Let me get the ECS instance schema first."</div>
+                    <div class="chain-call chain-call-terraform">
+                        <span class="chain-tool">terraform_get_provider_details</span>(service_slug=<span class="chain-str">"compute_instance"</span>)
+                    </div>
+                    <div class="chain-result">→ needs: <code>image_id</code>, <code>flavor_id</code>, <code>network.uuid</code>, <code>availability_zone</code>...</div>
+                </div>
+
+                <div class="chain-step">
+                    <div class="chain-think">💭 "Writing with what I know..."</div>
+                    <div class="chain-code">
+                        <pre><code><span class="tf-keyword">resource</span> <span class="tf-string">"huaweicloud_compute_instance"</span> <span class="tf-string">"web"</span> {
+  name              = <span class="tf-string">"web-01"</span>
+  <span class="tf-unknown">image_id          = "???"</span>    <span class="tf-comment">← need Ubuntu image</span>
+  <span class="tf-unknown">flavor_id         = "???"</span>    <span class="tf-comment">← need available flavors</span>
+  <span class="tf-unknown">availability_zone = "???"</span>    <span class="tf-comment">← need AZs in region</span>
+  network {
+    <span class="tf-unknown">uuid = "???"</span>              <span class="tf-comment">← need subnet ID</span>
+  }
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="chain-step">
+                    <div class="chain-think">💭 "Need an image. What Ubuntu images are available?"</div>
+                    <div class="chain-call chain-call-hcloud">
+                        <span class="chain-tool">hcloud_list_images</span>(imagetype=<span class="chain-str">"gold"</span>, os_type=<span class="chain-str">"Linux"</span>)
+                    </div>
+                    <div class="chain-result">→ Ubuntu 22.04: <span class="chain-str">67c29d17-33bd-...</span> · Ubuntu 20.04: <span class="chain-str">a1b2c3d4-5678-...</span></div>
+                </div>
+
+                <div class="chain-step">
+                    <div class="chain-ask">💬 "Which OS image should I use?"</div>
+                    <div class="chain-options">
+                        <span class="chain-option">1. Ubuntu 22.04 LTS</span>
+                        <span class="chain-option">2. Ubuntu 20.04 LTS</span>
+                    </div>
+                    <div class="chain-answer">👤 "Ubuntu 22.04"</div>
+                </div>
+
+                <div class="chain-step">
+                    <div class="chain-think">💭 "Need a flavor and availability zone."</div>
+                    <div class="chain-call chain-call-hcloud">
+                        <span class="chain-tool">hcloud_list_flavors</span>(region=<span class="chain-str">"la-north-2"</span>) → c6.large.2, c6.xlarge.2, ...
+                    </div>
+                    <div class="chain-call chain-call-hcloud">
+                        <span class="chain-tool">hcloud_list_availability_zones</span>(region=<span class="chain-str">"la-north-2"</span>) → la-north-2a, la-north-2b, la-north-2c
+                    </div>
+                </div>
+
+                <div class="chain-step">
+                    <div class="chain-ask">💬 "Which flavor and availability zone?"</div>
+                    <div class="chain-options">
+                        <span class="chain-option">Flavors: c6.large.2 (2vCPU/4GB), c6.xlarge.2 (4vCPU/8GB)</span>
+                        <span class="chain-option">AZs: la-north-2a, la-north-2b, la-north-2c</span>
+                    </div>
+                    <div class="chain-answer">👤 "c6.large.2 in la-north-2a"</div>
+                </div>
+
+                <div class="chain-step">
+                    <div class="chain-think">💭 "Need the subnet for the network block."</div>
+                    <div class="chain-call chain-call-hcloud">
+                        <span class="chain-tool">hcloud_list_vpcs</span>(region=<span class="chain-str">"la-north-2"</span>) → <span class="chain-str">ca5aa4ea...</span>
+                    </div>
+                    <div class="chain-call chain-call-hcloud">
+                        <span class="chain-tool">hcloud_list_subnets</span>(vpc_id=<span class="chain-str">"ca5aa4ea..."</span>) → <span class="chain-str">701ac87c...</span>
+                    </div>
+                </div>
+
+                <div class="chain-step">
+                    <div class="chain-think">💭 "All values resolved. Final code:"</div>
+                    <div class="chain-code chain-code-final">
+                        <pre><code><span class="tf-keyword">resource</span> <span class="tf-string">"huaweicloud_compute_instance"</span> <span class="tf-string">"web"</span> {
+  name              = <span class="tf-string">"web-01"</span>
+  <span class="tf-resolved">image_id          = "67c29d17-33bd-..."</span>       <span class="tf-check">✓</span>
+  <span class="tf-resolved">flavor_id         = "c6.large.2"</span>              <span class="tf-check">✓</span>
+  <span class="tf-resolved">availability_zone = "la-north-2a"</span>             <span class="tf-check">✓</span>
+  network {
+    <span class="tf-resolved">uuid = "701ac87c-47ea-..."</span>              <span class="tf-check">✓</span>
+  }
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scenario 3: Restart -->
+        <div class="scenario reveal">
+            <div class="scenario-prompt">
+                <span class="scenario-user">You:</span>
+                <span class="scenario-question">"The prod API server is down, restart it"</span>
+            </div>
+            <div class="chain">
+                <div class="chain-step">
+                    <div class="chain-think">💭 "I need to find the server first."</div>
+                    <div class="chain-call chain-call-hcloud">
+                        <span class="chain-tool">hcloud_list_servers</span>(region=<span class="chain-str">"la-north-2"</span>, name=<span class="chain-str">"prod-api"</span>)
+                    </div>
+                    <div class="chain-result">→ server_id: <span class="chain-str">1a2b3c4d-5e6f-...</span>, status: ACTIVE</div>
+                </div>
+
+                <div class="chain-step">
+                    <div class="chain-think">💭 "Restarting is an operational action — Terraform can't do this. Using the CLI escape hatch with safety confirmation."</div>
+                    <div class="chain-call chain-call-hcloud">
+                        <span class="chain-tool">hcloud_cli</span>(
+                    </div>
+                    <div class="chain-code chain-code-cli">
+                        <pre><code>  command = <span class="tf-string">"ECS BatchRebootServers --cli-region=la-north-2
+             --servers.1.id=1a2b3c4d-5e6f-..."</span>,
+  confirm = <span class="tf-keyword">true</span>
+)</code></pre>
+                    </div>
+                    <div class="chain-result chain-result-success">→ ✓ Server reboot initiated successfully</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== BEYOND TERRAFORM ==================== -->
+<section id="beyond-terraform" class="section section-alt">
+    <div class="container">
+        <div class="section-header reveal">
+            <span class="section-tag">Beyond Terraform</span>
+            <h2>Actions Terraform <span class="text-red">can't</span> do — HCloud MCP <span class="text-green">can</span></h2>
+        </div>
+        <div class="beyond-grid">
+            <div class="beyond-col beyond-cant reveal reveal-delay-1">
+                <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C7000B" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Terraform Can't</h3>
+                <ul>
+                    <li>Restart / stop / start servers</li>
+                    <li>Resize server flavor (live)</li>
+                    <li>Attach / detach volumes</li>
+                    <li>Reset server password</li>
+                    <li>Create manual RDS backup</li>
+                    <li>Restart RDS instance</li>
+                    <li>Pause / resume AS groups</li>
+                    <li>Execute AS policy manually</li>
+                    <li>Attach / detach elastic IPs</li>
+                    <li>Modify security group rules</li>
+                    <li>Upload OBS objects</li>
+                </ul>
+            </div>
+            <div class="beyond-col beyond-can reveal reveal-delay-2">
+                <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg> HCloud MCP Can</h3>
+                <ul>
+                    <li><code>ECS BatchRebootServers</code></li>
+                    <li><code>ECS ResizeServer</code></li>
+                    <li><code>EVS AttachVolume</code></li>
+                    <li><code>ECS ResetServerPassword</code></li>
+                    <li><code>RDS CreateManualBackup</code></li>
+                    <li><code>RDS StartInstanceRestartAction</code></li>
+                    <li><code>AS PauseScalingGroup</code></li>
+                    <li><code>AS ExecuteScalingPolicy</code></li>
+                    <li><code>EIP AttachEip</code></li>
+                    <li><code>VPC CreateSecurityGroupRule</code></li>
+                    <li><code>obs cp</code></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== HCloud TOOLS ==================== -->
+<section id="hcloud-tools" class="section">
+    <div class="container">
+        <div class="section-header reveal">
+            <span class="section-tag badge-hcloud">HCloud MCP</span>
+            <h2>90 read-only tools across <span class="text-red">18 services</span></h2>
+        </div>
+        <div class="tools-grid reveal">
+            <div class="tool-card"><span class="tool-count">8</span><span class="tool-name">ECS</span><span class="tool-detail">Servers, Flavors, AZs</span></div>
+            <div class="tool-card"><span class="tool-count">9</span><span class="tool-name">VPC</span><span class="tool-detail">VPCs, Subnets, SGs</span></div>
+            <div class="tool-card"><span class="tool-count">9</span><span class="tool-name">ELB</span><span class="tool-detail">LBs, Listeners, Pools</span></div>
+            <div class="tool-card"><span class="tool-count">8</span><span class="tool-name">IAM</span><span class="tool-detail">Users, Groups, Policies</span></div>
+            <div class="tool-card"><span class="tool-count">7</span><span class="tool-name">AS</span><span class="tool-detail">Groups, Configs, Policies</span></div>
+            <div class="tool-card"><span class="tool-count">6</span><span class="tool-name">CCE</span><span class="tool-detail">Clusters, Nodes, Pools</span></div>
+            <div class="tool-card"><span class="tool-count">5</span><span class="tool-name">RDS</span><span class="tool-detail">Instances, Flavors</span></div>
+            <div class="tool-card"><span class="tool-count">5</span><span class="tool-name">EVS</span><span class="tool-detail">Volumes, Snapshots</span></div>
+            <div class="tool-card"><span class="tool-count">4</span><span class="tool-name">IMS</span><span class="tool-detail">Images, OS Versions</span></div>
+            <div class="tool-card"><span class="tool-count">4</span><span class="tool-name">NAT</span><span class="tool-detail">Gateways, SNAT, DNAT</span></div>
+            <div class="tool-card"><span class="tool-count">4</span><span class="tool-name">DCS</span><span class="tool-detail">Redis, Flavors, AZs</span></div>
+            <div class="tool-card"><span class="tool-count">4</span><span class="tool-name">EIP</span><span class="tool-detail">Public IPs, Quotas</span></div>
+            <div class="tool-card"><span class="tool-count">4</span><span class="tool-name">CES</span><span class="tool-detail">Alarms, Metrics</span></div>
+            <div class="tool-card"><span class="tool-count">3</span><span class="tool-name">OBS</span><span class="tool-detail">Buckets, Objects</span></div>
+            <div class="tool-card"><span class="tool-count">3</span><span class="tool-name">DNS</span><span class="tool-detail">Zones, Records</span></div>
+            <div class="tool-card"><span class="tool-count">3</span><span class="tool-name">DDS</span><span class="tool-detail">MongoDB, Flavors</span></div>
+            <div class="tool-card"><span class="tool-count">2</span><span class="tool-name">KMS</span><span class="tool-detail">Keys, Details</span></div>
+            <div class="tool-card"><span class="tool-count">2</span><span class="tool-name">SMN</span><span class="tool-detail">Topics, Subs</span></div>
+        </div>
+        <div class="cli-escape reveal">
+            <div class="cli-escape-card">
+                <span class="cli-escape-plus">+1</span>
+                <div class="cli-escape-info">
+                    <h3><code>hcloud_cli</code> — CLI Escape Hatch</h3>
+                    <p>Full access to any <code>hcloud</code> or <code>obs</code> command. Destructive ops require <code>confirm=true</code> and run with <code>--dryrun</code> by default.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== TERRAFORM TOOLS ==================== -->
+<section id="terraform-tools" class="section section-alt">
+    <div class="container">
+        <div class="section-header reveal">
+            <span class="section-tag badge-terraform">Terraform MCP</span>
+            <h2>Registry tools for <span class="text-purple">writing correct code</span></h2>
+        </div>
+        <div class="tf-tools-grid reveal">
+            <div class="tf-tool-card">
+                <h4>Provider Discovery</h4>
+                <ul>
+                    <li><code>search_providers</code> — Find providers by service</li>
+                    <li><code>get_provider_details</code> — Resource &amp; data source docs</li>
+                    <li><code>get_provider_capabilities</code> — Full capability map</li>
+                    <li><code>get_latest_provider_version</code> — Version lookup</li>
+                </ul>
+            </div>
+            <div class="tf-tool-card">
+                <h4>Module Discovery</h4>
+                <ul>
+                    <li><code>search_modules</code> — Find modules by query</li>
+                    <li><code>get_module_details</code> — Inputs, outputs, examples</li>
+                    <li><code>get_latest_module_version</code> — Version lookup</li>
+                </ul>
+            </div>
+            <div class="tf-tool-card">
+                <h4>Private Registry</h4>
+                <ul>
+                    <li><code>search_private_modules</code> — Your org's modules</li>
+                    <li><code>get_private_module_details</code> — Full details</li>
+                    <li><code>search_private_providers</code> — Your org's providers</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== ARCHITECTURE ==================== -->
+<section id="architecture" class="section">
+    <div class="container">
+        <div class="section-header reveal">
+            <span class="section-tag">Architecture</span>
+            <h2>How the pieces <span class="gradient-text">connect</span></h2>
+        </div>
+        <div class="arch-diagram reveal">
+            <div class="arch-row">
+                <div class="arch-node arch-opencode">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                    <span>OpenCode</span>
+                    <small>AI Agent (Terminal)</small>
+                </div>
+            </div>
+            <div class="arch-connector">
+                <div class="arch-line"></div>
+                <span class="arch-label">MCP Protocol (stdio)</span>
+            </div>
+            <div class="arch-row arch-row-servers">
+                <div class="arch-node arch-hcloud">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2a10 10 0 0 1 0 20 10 10 0 0 1 0-20" opacity="0.5"/></svg>
+                    <span>HCloud MCP</span>
+                    <small>90 tools + CLI escape hatch</small>
+                </div>
+                <div class="arch-node arch-terraform">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+                    <span>Terraform MCP</span>
+                    <small>Provider &amp; Module Registry</small>
+                </div>
+            </div>
+            <div class="arch-connector"><div class="arch-line"></div></div>
+            <div class="arch-row arch-row-backends">
+                <div class="arch-node arch-backend">
+                    <span>hcloud CLI</span>
+                    <small>KooCLI + obsutil</small>
+                </div>
+                <div class="arch-node arch-backend">
+                    <span>Terraform Registry</span>
+                    <small>Public + Private</small>
+                </div>
+            </div>
+            <div class="arch-connector"><div class="arch-line"></div></div>
+            <div class="arch-row arch-row-cloud">
+                <div class="arch-node arch-cloud">
+                    <span>Huawei Cloud</span>
+                    <small>ECS · VPC · RDS · CCE · ELB · ...</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== GET STARTED ==================== -->
+<section id="get-started" class="section section-alt">
+    <div class="container">
+        <div class="section-header reveal">
+            <span class="section-tag">Get Started</span>
+            <h2>Up and running in <span class="gradient-text">minutes</span></h2>
+        </div>
+        <div class="steps-grid">
+            <div class="step-card reveal reveal-delay-1">
+                <div class="step-number">1</div>
+                <h3>Install OpenCode</h3>
+                <pre class="code-block code-block-sm"><code>curl -fsSL https://opencode.ai/install | bash</code></pre>
+            </div>
+            <div class="step-card reveal reveal-delay-2">
+                <div class="step-number">2</div>
+                <h3>Configure MCP Servers</h3>
+                <pre class="code-block code-block-sm"><code>{
+  <span class="code-string">"mcp"</span>: {
+    <span class="code-string">"hcloud"</span>: {
+      <span class="code-string">"type"</span>: <span class="code-string">"local"</span>,
+      <span class="code-string">"command"</span>: <span class="code-string">"hcloud-mcp"</span>
+    },
+    <span class="code-string">"terraform"</span>: {
+      <span class="code-string">"type"</span>: <span class="code-string">"local"</span>,
+      <span class="code-string">"command"</span>: <span class="code-string">"terraform-mcp-server"</span>,
+      <span class="code-string">"environment"</span>: {
+        <span class="code-string">"TF_API_TOKEN"</span>: <span class="code-string">"..."</span>
+      }
+    }
+  }
+}</code></pre>
+            </div>
+            <div class="step-card reveal reveal-delay-3">
+                <div class="step-number">3</div>
+                <h3>Start Building</h3>
+                <pre class="code-block code-block-sm"><code><span class="code-comment"># Start OpenCode and ask:</span>
+opencode
+
+<span class="code-prompt">&gt;</span> Write Terraform for an RDS instance
+<span class="code-prompt">&gt;</span> List all VPCs in la-north-2
+<span class="code-prompt">&gt;</span> Restart the prod-api server</code></pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== FOOTER ==================== -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-content">
+            <div class="footer-brand"><span class="gradient-text">OpenCode + HCloud MCP + Terraform MCP</span></div>
+            <div class="footer-links">
+                <a href="https://opencode.ai" target="_blank" rel="noopener">OpenCode</a>
+                <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener">GitHub</a>
+                <a href="https://registry.terraform.io/providers/huaweicloud/huaweicloud/latest" target="_blank" rel="noopener">Huawei Cloud Provider</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

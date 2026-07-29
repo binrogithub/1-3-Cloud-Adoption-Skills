@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Migración de Bases de Datos con IA — DRS · AWS RDS → HuaweiCloud RDS</title>
+<style>
+/* ===== Reset & Base ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --hc-red:#C7000B;--hc-red-dark:#9E0009;--hc-red-light:#FDECEE;
+  --hc-gray:#666;--hc-gray-light:#f5f5f5;--hc-gray-border:#e0e0e0;
+  --hc-blue:#0073E6;--hc-green:#00A870;--hc-orange:#FF8C00;--hc-purple:#7B61FF;
+  --bg:#fff;--text:#1a1a1a;--text-muted:#666;
+  --code-bg:#1e1e2e;--code-text:#cdd6f4;--code-border:#313244;
+  --shadow:0 2px 8px rgba(0,0,0,.08);
+  --radius:8px;--max-width:960px;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+a{color:var(--hc-red);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ===== Layout ===== */
+.container{max-width:var(--max-width);margin:0 auto;padding:0 24px}
+section{padding:48px 0;border-bottom:1px solid var(--hc-gray-border)}
+section:last-child{border-bottom:none}
+
+/* ===== Typography ===== */
+h1{font-size:2.2rem;font-weight:800;line-height:1.2;color:var(--text)}
+h2{font-size:1.6rem;font-weight:700;margin-bottom:16px;color:var(--text)}
+h3{font-size:1.2rem;font-weight:600;margin-bottom:12px;color:var(--text)}
+h4{font-size:1rem;font-weight:600;margin-bottom:8px}
+p{margin-bottom:12px}
+small{font-size:.85rem;color:var(--text-muted)}
+.muted{color:var(--text-muted)}
+.center{text-align:center}
+
+/* ===== Header / Hero ===== */
+.hero{background:linear-gradient(135deg,#C7000B 0%,#9E0009 100%);color:#fff;padding:60px 0}
+.hero h1{color:#fff;margin-bottom:8px}
+.hero .subtitle{font-size:1.1rem;opacity:.9;margin-bottom:24px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:16px;font-size:.85rem;opacity:.85}
+.hero-meta span{background:rgba(255,255,255,.15);padding:4px 12px;border-radius:20px}
+.badge-success{display:inline-block;background:var(--hc-green);color:#fff;padding:6px 20px;border-radius:20px;font-weight:700;font-size:.9rem;letter-spacing:.5px}
+.badge{display:inline-block;padding:3px 10px;border-radius:4px;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.badge-red{background:var(--hc-red-light);color:var(--hc-red)}
+.badge-blue{background:#E6F2FF;color:var(--hc-blue)}
+.badge-green{background:#E6F9F0;color:var(--hc-green)}
+.badge-orange{background:#FFF5E6;color:var(--hc-orange)}
+.badge-purple{background:#F3EEFF;color:var(--hc-purple)}
+.badge-gray{background:var(--hc-gray-light);color:var(--hc-gray)}
+
+/* ===== Architecture Diagram ===== */
+.arch{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;margin:24px 0}
+.arch-box{flex:1;min-width:200px;max-width:280px;border:2px solid var(--hc-gray-border);border-radius:var(--radius);padding:16px;text-align:center;background:#fff}
+.arch-box.source{border-color:#FF9900;background:#FFFBF5}
+.arch-box.target{border-color:var(--hc-red);background:var(--hc-red-light)}
+.arch-box.drs{border-color:var(--hc-blue);background:#F0F7FF}
+.arch-arrow{flex:0 0 40px;text-align:center;font-size:1.5rem;color:var(--hc-gray);align-self:center}
+.arch-box h4{margin-bottom:4px}
+.arch-box .arch-detail{font-size:.8rem;color:var(--text-muted);line-height:1.4}
+.arch-box .arch-icon{font-size:2rem;margin-bottom:8px}
+
+/* ===== Skills Callout ===== */
+.skills-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0}
+.skill-card{border:1px solid var(--hc-gray-border);border-radius:var(--radius);padding:14px;background:#fff}
+.skill-card h4{color:var(--hc-red);margin-bottom:4px}
+.skill-card p{font-size:.85rem;color:var(--text-muted);margin:0}
+
+/* ===== Cards ===== */
+.card{border:1px solid var(--hc-gray-border);border-radius:var(--radius);padding:16px;margin:12px 0;background:#fff;box-shadow:var(--shadow)}
+.card.highlight{border-left:4px solid var(--hc-red)}
+.card.success{border-left:4px solid var(--hc-green)}
+.card.warning{border-left:4px solid var(--hc-orange)}
+.card.info{border-left:4px solid var(--hc-blue)}
+
+/* ===== Code Blocks ===== */
+.code-block{background:var(--code-bg);color:var(--code-text);border-radius:6px;padding:14px 16px;margin:12px 0;overflow-x:auto;font-size:.82rem;line-height:1.5;font-family:'SF Mono','Fira Code','Consolas','Monaco',monospace}
+.code-block pre{white-space:pre-wrap;word-break:break-word}
+code{background:var(--hc-gray-light);padding:2px 6px;border-radius:3px;font-size:.85em;font-family:'SF Mono','Fira Code','Consolas',monospace;color:var(--hc-red-dark)}
+
+/* ===== Tables ===== */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.9rem}
+th{background:var(--hc-red);color:#fff;padding:10px 12px;text-align:left;font-weight:600}
+td{padding:8px 12px;border-bottom:1px solid var(--hc-gray-border)}
+tr:nth-child(even) td{background:var(--hc-gray-light)}
+table.compact th,table.compact td{padding:6px 10px;font-size:.82rem}
+
+/* ===== Lessons ===== */
+.lesson{display:flex;gap:12px;padding:14px;margin:10px 0;border-radius:var(--radius);background:var(--hc-gray-light)}
+.lesson-icon{font-size:1.5rem;flex-shrink:0}
+.lesson-content h4{color:var(--hc-red);margin-bottom:2px}
+.lesson-content p{font-size:.85rem;margin:0;color:var(--text-muted)}
+
+/* ===== Sticky Nav ===== */
+.phase-nav{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--hc-gray-border);z-index:100;padding:8px 0;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.phase-nav-inner{max-width:var(--max-width);margin:0 auto;padding:0 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phase-nav a{font-size:.75rem;padding:4px 10px;border-radius:4px;color:var(--text-muted);font-weight:600}
+.phase-nav a:hover{background:var(--hc-red-light);color:var(--hc-red);text-decoration:none}
+
+/* ===== Print ===== */
+@media print{
+  .phase-nav{display:none}
+  body{font-size:12px}
+}
+
+/* ===== Utility ===== */
+.spacer{height:24px}
+hr{border:none;border-top:1px solid var(--hc-gray-border);margin:20px 0}
+</style>
+</head>
+<body>
+
+<!-- ===== Sticky Phase Nav ===== -->
+<nav class="phase-nav">
+<div class="phase-nav-inner">
+<a href="#hero">Inicio</a>
+<a href="#arquitectura">Arquitectura</a>
+<a href="#skills">Skills</a>
+<a href="#usuario">Rol del Usuario</a>
+<a href="#lecciones">Lecciones</a>
+</div>
+</nav>
+
+<!-- ===== Hero ===== -->
+<section class="hero" id="hero">
+<div class="container">
+<h1>Migración de Bases de Datos con IA</h1>
+<p class="subtitle">AWS RDS MySQL → HuaweiCloud RDS MySQL · Data Replication Service (DRS)</p>
+<div class="spacer"></div>
+<span class="badge-success">MIGRACIÓN EXITOSA</span>
+</div>
+</section>
+
+<!-- ===== Arquitectura ===== -->
+<section id="arquitectura">
+<div class="container">
+<h2>Arquitectura de la Migración</h2>
+<p>La base de datos origen en AWS RDS fue descubierta automáticamente, junto con sus parámetros críticos. Se creó una instancia RDS nueva en HuaweiCloud con parámetros alineados, y el DRS (Data Replication Service) replicó los datos con full + incremental transfer, logrando RPO=0s antes del cutover.</p>
+
+<div class="arch">
+<div class="arch-box source">
+<div class="arch-icon">☁️</div>
+<h4>AWS us-east-2</h4>
+<div class="arch-detail">
+<strong>RDS:</strong> demo-db<br>
+MySQL 8.0.45<br>
+db.t3.micro · 2vCPU/1GB<br>
+20 GB gp3<br>
+Endpoint: demo-db...rds<br>
+Public: false → true<br>
+binlog: ROW · FULL
+</div>
+</div>
+<div class="arch-arrow">→</div>
+<div class="arch-box drs">
+<div class="arch-icon">🔄</div>
+<h4>DRS Job</h4>
+<div class="arch-detail">
+mysql-to-mysql<br>
+FULL_INCR_TRANS<br>
+net_type: eip<br>
+node_type: high<br>
+EIP: 46.250.162.93<br>
+source: offline<br>
+target: cloud
+</div>
+</div>
+<div class="arch-arrow">→</div>
+<div class="arch-box target">
+<div class="arch-icon">🟡</div>
+<h4>HuaweiCloud la-north-2</h4>
+<div class="arch-detail">
+<strong>RDS:</strong> demo-db<br>
+MySQL 8.0.43<br>
+rds.mysql.n1.large.2<br>
+2vCPU/4GB · 20GB CLOUDSSD<br>
+IP: 10.0.1.232<br>
+VPC demo-vpc (existente)<br>
+lower_case=0 · params alineados
+</div>
+</div>
+</div>
+
+<div class="spacer"></div>
+<h3>Inventario del Origen (AWS RDS)</h3>
+<table class="compact">
+<tr><th>Atributo</th><th>Valor</th></tr>
+<tr><td>Instance ID</td><td><code>demo-db</code></td></tr>
+<tr><td>Engine / Version</td><td>MySQL <strong>8.0.45</strong></td></tr>
+<tr><td>Clase</td><td>db.t3.micro (2 vCPU, 1 GB)</td></tr>
+<tr><td>Endpoint</td><td><code>demo-db.ct8ua64omsz2.us-east-2.rds.amazonaws.com:3306</code></td></tr>
+<tr><td>Publicly accessible</td><td><strong>false</strong> (habilitado temporalmente para DRS)</td></tr>
+<tr><td>Backup retention</td><td>1 (binlog ON)</td></tr>
+<tr><td>Storage</td><td>20 GB gp3</td></tr>
+<tr><td>VPC</td><td><code>vpc-0877d1e55bf31b035</code> — <strong>10.0.0.0/16</strong></td></tr>
+<tr><td>Security Group</td><td><code>sg-073756dfdd7c22c52</code> (demo-rds-sg) — regla tcp 3306</td></tr>
+<tr><td>Route tables</td><td>Ambas con <code>0.0.0.0/0 → igw</code> (IGW ya enrutado)</td></tr>
+<tr><td>Param group</td><td><code>demo-db-migration-params</code></td></tr>
+</table>
+
+<h4>Parámetros críticos del origen:</h4>
+<table class="compact">
+<tr><th>Parámetro</th><th>Valor</th><th>Categoría DRS</th></tr>
+<tr><td><code>binlog_format</code></td><td>ROW</td><td><span class="badge badge-green">PASSED</span></td></tr>
+<tr><td><code>binlog_row_image</code></td><td>FULL</td><td><span class="badge badge-green">PASSED</span></td></tr>
+<tr><td><code>transaction_isolation</code></td><td>REPEATABLE-READ (default)</td><td><span class="badge badge-green">PASSED</span> (alineado en target)</td></tr>
+<tr><td><code>innodb_strict_mode</code></td><td>ON (default)</td><td><span class="badge badge-green">PASSED</span> (alineado en target)</td></tr>
+<tr><td><code>lower_case_table_names</code></td><td>0 (default Linux)</td><td><span class="badge badge-green">PASSED</span> (ForceNew en target)</td></tr>
+<tr><td><code>explicit_defaults_for_timestamp</code></td><td>1</td><td><span class="badge badge-orange">ALARM</span> (warning only)</td></tr>
+<tr><td><code>gtid_mode</code></td><td>0 (OFF)</td><td><span class="badge badge-orange">ALARM</span> (DRS usa binlog position)</td></tr>
+<tr><td><code>sql_mode</code></td><td>NO_ENGINE_SUBSTITUTION</td><td><span class="badge badge-orange">ALARM</span> (warning only)</td></tr>
+</table>
+
+<h3>Inventario del Destino (HuaweiCloud)</h3>
+<table class="compact">
+<tr><th>Atributo</th><th>Valor</th></tr>
+<tr><td>RDS instances</td><td><strong>Ninguna</strong> — la instancia destino fue creada por Terraform</td></tr>
+<tr><td>Project ID</td><td><code>50bc790b7aa3493f97b3968de4dfd490</code></td></tr>
+<tr><td>VPC</td><td><code>demo-vpc</code> — <strong>10.0.0.0/16</strong> (id <code>35af0c49-...</code>) — <strong>existente (de migración SMS)</strong></td></tr>
+<tr><td>Subnet</td><td><code>demo-subnet</code> — 10.0.1.0/24 (id <code>5536568f-...</code>)</td></tr>
+<tr><td>Security Group</td><td><code>demo-sg</code> (id <code>211aae9d-...</code>) — reusada para DRS node</td></tr>
+<tr><td>ECS existente</td><td><code>demo-web</code> (c6.large.4, IP 10.0.1.55, EIP 110.238.85.32, SG=demo-sg)</td></tr>
+<tr><td>RDS MySQL versions</td><td><strong>8.0.43</strong>, 5.7.44 (source es 8.0.45 — diferencia minor)</td></tr>
+<tr><td>RDS flavors</td><td>Desde 2vCPU/4GB hasta 64vCPU/128GB</td></tr>
+<tr><td>DRS node types</td><td>Solo <strong><code>high</code></strong> disponible en la-north-2</td></tr>
+<tr><td>DRS links</td><td>mysql-to-mysql migration soportado: eip, vpn, vpc — <code>FULL_INCR_TRANS</code> OK</td></tr>
+</table>
+
+<h3>Hallazgos Críticos del Descubrimiento</h3>
+<div class="card warning">
+<table class="compact">
+<tr><th>#</th><th>Hallazgo</th><th>Impacto</th><th>Resolución</th></tr>
+<tr><td>1</td><td><strong>Overlap de CIDR</strong>: ambos VPCs usan <code>10.0.0.0/16</code></td><td>VPN descartado</td><td><code>net_type=eip</code> — única opción viable</td></tr>
+<tr><td>2</td><td><strong>No existe RDS destino</strong></td><td>Hay que crear la instancia</td><td>Terraform <code>huaweicloud_rds_instance</code></td></tr>
+<tr><td>3</td><td><strong>Version mismatch</strong>: 8.0.45 → 8.0.43</td><td>Diferencia minor</td><td>DRS lo permite (precheck PASSED)</td></tr>
+<tr><td>4</td><td><strong>Source no público</strong></td><td>DRS no puede conectar</td><td>Habilitar <code>publicly-accessible</code> + regla SG 3306</td></tr>
+<tr><td>5</td><td><strong>Parameter alignment</strong></td><td>Precheck FALLARÍA sin alineación</td><td>Custom param template + <code>lower_case_table_names=0</code> al crear</td></tr>
+<tr><td>6</td><td><strong>DRS node type</strong></td><td>Solo <code>high</code> disponible</td><td>Usar <code>node_type=high</code></td></tr>
+</table>
+</div>
+</div>
+</section>
+
+<!-- ===== Skills & Herramientas ===== -->
+<section id="skills">
+<div class="container">
+<h2>Skills y Herramientas Utilizadas</h2>
+<p>La IA cargó y utilizó las siguientes herramientas especializadas durante la sesión. La skill <code>huaweicloud-drs-migration</code> proporcionó el workflow completo de 8 fases, los schemas de recursos Terraform, y las referencias de parameter alignment y preparación del origen.</p>
+
+<div class="skills-grid">
+<div class="skill-card">
+<h4>huaweicloud-drs-migration</h4>
+<p>Skill principal. Define el workflow de 8 fases, reglas (DISCOVER before ACT, align parameters, prepare source), y referencias de Terraform DRS job, parameter alignment, y AWS RDS preparation.</p>
+</div>
+<div class="skill-card">
+<h4>hcloud CLI</h4>
+<p>KooCLI de HuaweiCloud para descubrir VPCs, subnets, SGs, RDS flavors/datastores, DRS links/node types, y ejecutar BatchValidateConnections, BatchCheckJobs, BatchStartJobs, monitoreo de progreso y RPO.</p>
+</div>
+<div class="skill-card">
+<h4>Terraform MCP</h4>
+<p>Consulta al registry para obtener la última versión del provider HuaweiCloud (v1.93.0) y validar schemas de <code>huaweicloud_rds_instance</code> y <code>huaweicloud_drs_job_v5</code>.</p>
+</div>
+<div class="skill-card">
+<h4>AWS MCP</h4>
+<p>CLI de AWS para descubrir el RDS instance, parameter groups, VPC, subnets, route tables y security groups en us-east-2. También para modificar <code>publicly-accessible</code> y añadir/regocar reglas SG.</p>
+</div>
+</div>
+
+<div class="card">
+<h3>Reglas clave que la skill inyectó en el contexto de la IA</h3>
+<table class="compact">
+<tr><th>Regla</th><th>Impacto en esta sesión</th></tr>
+<tr><td><strong>DISCOVER before ACT</strong></td><td>La IA inventarió completamente el RDS origen y el entorno HuaweiCloud antes de crear cualquier recurso</td></tr>
+<tr><td><strong>Align Parameters</strong></td><td>Se creó un custom param template con <code>transaction_isolation=REPEATABLE-READ</code>, <code>innodb_strict_mode=ON</code>, <code>explicit_defaults_for_timestamp=ON</code></td></tr>
+<tr><td><strong>lower_case_table_names es ForceNew</strong></td><td>Se seteó <code>lower_case_table_names=0</code> al crear el RDS — no se puede cambiar después</td></tr>
+<tr><td><strong>Prepare Source for DRS</strong></td><td>Se habilitó public access + regla SG 3306 en AWS RDS. Binlog ya estaba ON (backup_retention=1)</td></tr>
+<tr><td><strong>Precheck Before Start</strong></td><td>Se ejecutó <code>BatchCheckJobs</code> antes de <code>BatchStartJobs</code> — 100% passed, 3 ALARMs non-blocking</td></tr>
+<tr><td><strong>Monitor RPO for Cutover</strong></td><td>Se monitoreó RPO hasta llegar a 0s antes de proceder con cutover</td></tr>
+</table>
+</div>
+</div>
+</section>
+
+<!-- ===== Rol del Usuario ===== -->
+<section id="usuario">
+<div class="container">
+<h2>Rol del Usuario: Qué Tuvo Que Hacer</h2>
+<p>La IA ejecutó la migración automáticamente tras recibir las decisiones del usuario. El usuario jugó un rol fundamental proporcionando credenciales de base de datos, tomando decisiones de configuración, y dando la instrucción de ejecución completa.</p>
+
+<div class="card highlight">
+<h3>1. Solicitud Inicial</h3>
+<p>El usuario inició la sesión cargando la skill <code>huaweicloud-drs-migration</code> y pidiendo migrar la base de datos RDS de AWS a HuaweiCloud.</p>
+<div class="code-block">
+<pre>Load the skill huaweicloud-drs-migration, then help me migrate
+my AWS RDS MySQL database to Huawei Cloud RDS.</pre>
+</div>
+</div>
+
+<div class="card highlight">
+<h3>2. Cinco Decisiones Críticas</h3>
+<p>La IA formuló 5 preguntas que requerían decisión humana. El usuario respondió todas:</p>
+<table class="compact">
+<tr><th>Decisión</th><th>Opciones</th><th>Respuesta del usuario</th></tr>
+<tr><td>RDS flavor destino</td><td>2vCPU/4GB · 4vCPU/8GB · 8vCPU/16GB</td><td><strong>2 vCPU / 4 GB (Recommended)</strong></td></tr>
+<tr><td>DRS task type</td><td>FULL_INCR_TRANS · FULL_TRANS</td><td><strong>FULL_INCR_TRANS (zero-downtime)</strong></td></tr>
+<tr><td>Password DB origen</td><td>admin / root + password</td><td><strong>ChangeMe123!</strong> (password directo)</td></tr>
+<tr><td>DBs a migrar</td><td>wordpress · Migrar todas</td><td><strong>Migrar todas las DBs</strong></td></tr>
+<tr><td>Usuario DB origen</td><td>admin · root</td><td><strong>admin</strong></td></tr>
+</table>
+</div>
+
+<div class="card highlight">
+<h3>3. Credenciales Proporcionadas</h3>
+<p>El usuario proporcionó acceso a credenciales sensibles que la IA no puede adivinar:</p>
+<table class="compact">
+<tr><th>Recurso</th><th>Ubicación</th><th>Uso</th></tr>
+<tr><td>AK/SK HuaweiCloud</td><td><code>credentials.csv</code> en el proyecto</td><td>Terraform provider + hcloud CLI</td></tr>
+<tr><td>Password DB origen (AWS)</td><td>Respuesta directa en el chat</td><td>DRS source endpoint (<code>admin / ChangeMe123!</code>)</td></tr>
+<tr><td>Password DB destino (HuaweiCloud)</td><td>La IA seteó <code>HuaweiRDS2026!Migration</code></td><td>RDS root password + DRS target endpoint</td></tr>
+</table>
+</div>
+
+<div class="card highlight">
+<h3>4. Instrucción de Ejecución</h3>
+<p>Tras ver el plan completo de 8 fases, el usuario dio una sola instrucción que disparó toda la ejecución:</p>
+<div class="code-block">
+<pre>Desarrolla toda la migracion, credenciales estan en @credentials.csv</pre>
+</div>
+<p>Esta instrucción le dio a la IA permiso para ejecutar todas las fases restantes sin parar: crear el RDS destino, preparar el origen AWS, crear el DRS job, validar, precheck, iniciar, monitorear, y hacer cutover + cleanup.</p>
+</div>
+
+<div class="card warning">
+<h3>Qué Tuvo Que Considerar</h3>
+<ul style="padding-left:20px;margin:8px 0">
+<li><strong>Overlap de CIDR:</strong> Ambos VPCs (AWS y HuaweiCloud) usaban <code>10.0.0.0/16</code>, lo que hacía imposible una VPN. La IA detectó esto automáticamente y seleccionó <code>net_type=eip</code>. El usuario debía entender que el tráfico de replicación iría por internet.</li>
+<li><strong>Parameter alignment:</strong> El RDS de HuaweiCloud tiene defaults distintos (<code>transaction_isolation=READ-COMMITTED</code>, <code>innodb_strict_mode=OFF</code>, <code>lower_case_table_names=1</code>). Sin alineación, el precheck FALLARÍA. La IA manejó esto creando un custom param template.</li>
+<li><strong>lower_case_table_names es ForceNew:</strong> En MySQL 8.0, este parámetro no se puede cambiar después de la inicialización. Debe setearse al crear el RDS. Si se equivoca, hay que destruir y recrear el RDS.</li>
+<li><strong>Source preparation:</strong> El RDS de AWS no era públicamente accesible. Habilitar public access + abrir SG 3306 son cambios temporales que se revierten tras el cutover.</li>
+<li><strong>Binlog hidden requirement:</strong> En AWS RDS, <code>binlog_format=ROW</code> no activa binlogging por sí solo. Se necesita <code>backup_retention_period > 0</code>. En este caso ya estaba habilitado (retention=1).</li>
+<li><strong>Cutover timing:</strong> El cutover se hace cuando RPO=0s (source y target en sync). El usuario debía saber que durante el cutover hay que pausar writes en el origen.</li>
+</ul>
+</div>
+</div>
+</section>
+
+<!-- ===== Lecciones ===== -->
+<section id="lecciones">
+<div class="container">
+<h2>Lecciones Clave y Qué Considerar</h2>
+<p>Estos son los aprendizajes de esta migración que todo usuario debe considerar al usar IA para migrar bases de datos con DRS.</p>
+
+<div class="lesson">
+<div class="lesson-icon">⚖️</div>
+<div class="lesson-content">
+<h4>Parameter Alignment: El Precheck Puede Fallar</h4>
+<p>DRS valida que los parámetros del source y target sean compatibles. Parámetros como <code>transaction_isolation</code>, <code>innodb_strict_mode</code>, y <code>lower_case_table_names</code> tienen defaults distintos entre AWS RDS y HuaweiCloud RDS. Sin un custom param template, el precheck <strong>FALLARÁ</strong> y bloqueará el inicio del job. La IA creó el template <code>drs-migration-mysql80</code> con los valores correctos antes de crear el RDS.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🔥</div>
+<div class="lesson-content">
+<h4>El Trap de lower_case_table_names (ForceNew)</h4>
+<p>En MySQL 8.0, <code>lower_case_table_names</code> <strong>no se puede cambiar después de la inicialización</strong>. AWS RDS usa <code>0</code> (case-sensitive, Linux) y HuaweiCloud RDS usa <code>1</code> (case-insensitive) por defecto. En el Terraform provider, es <code>ForceNew</code> — cambiarlo destruye y recrea el RDS. <strong>Debe setearse al crear</strong>: <code>lower_case_table_names = "0"</code>. DRS precheck falla con <code>DB_TBL_NAME_CASE_SENSITIVE_INCONSISTENCY_FOR_UP</code> si no coincide.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🌐</div>
+<div class="lesson-content">
+<h4>Overlap de CIDR → net_type=eip</h4>
+<p>Si los VPCs de origen y destino usan el mismo CIDR (ej: ambos <code>10.0.0.0/16</code>), VPN es imposible por conflicto de routing. La única opción es <code>net_type=eip</code>: el DRS node obtiene un EIP propio y conecta al source por internet. Esto requiere que el source sea públicamente accesible. En esta sesión, ambos VPCs usaban <code>10.0.0.0/16</code> → EIP fue la única opción.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">📋</div>
+<div class="lesson-content">
+<h4>Binlog: El Requisito Oculto de AWS RDS</h4>
+<p>Para <code>FULL_INCR_TRANS</code> (replicación incremental), binlog debe estar ON. En AWS RDS MySQL 8.0, setear <code>binlog_format=ROW</code> en un parameter group <strong>NO activa binlogging</strong>. Se necesita <code>backup_retention_period > 0</code> — esto es lo que activa <code>log_bin=ON</code>. Sin backups automatizadas, <code>log_bin</code> queda OFF y la replicación incremental es imposible. En esta sesión, retention ya era 1.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🔍</div>
+<div class="lesson-content">
+<h4>Precheck: ALARMs vs FAILEDs</h4>
+<p>El precheck de DRS distingue entre <strong>FAILED</strong> (bloquea el inicio) y <strong>ALARM</strong> (warning, no bloquea). En esta sesión hubo 3 ALARMs: <code>dstDbDiskSize</code> (target más grande que source — informativo), <code>sqlModeConsistency</code> (<code>NO_ENGINE_SUBSTITUTION</code> vs vacío — warning), y <code>srcGtidStatusCheck</code> (GTID OFF — DRS usa binlog position). Ninguna bloqueó. Es crucial revisar el precheck completo antes de start.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">📊</div>
+<div class="lesson-content">
+<h4>RPO/RTO: Cuándo Hacer Cutover</h4>
+<p>El cutover se hace cuando <strong>RPO=0s</strong> (Recovery Point Objective): significa que source y target están sincronizados, no hay lag. Se verifica con <code>BatchListRposAndRtos</code>. En esta sesión, RPO llegó a 0s rápidamente (DB pequeña, 1.8MB). Para DBs grandes, el full transfer puede tardar horas y el incremental sync necesita tiempo para alcanzar el lag. <strong>Nunca hacer cutover con RPO > 0</strong>.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🔄</div>
+<div class="lesson-content">
+<h4>Version Mismatch: Minor vs Major</h4>
+<p>El source era MySQL 8.0.45 y el target 8.0.43 (la versión más reciente disponible en HuaweiCloud la-north-2). DRS permite diferencias de <strong>minor version</strong> — el precheck <code>dbVersionMeetRequirement</code> pasó. Para diferencias de <strong>major version</strong> (ej: 5.7 → 8.0), se necesita validación adicional de compatibilidad de features.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🛡️</div>
+<div class="lesson-content">
+<h4>Reuso de Security Group para DRS Node</h4>
+<p>El DRS node necesita conectarse al target RDS en puerto 3306. En lugar de crear una SG dedicada, se reusó <code>demo-sg</code> (la SG del ECS existente). Esto funciona porque la SG del RDS ya permite MySQL desde <code>demo-sg</code>. Simplifica la configuración y reduce el número de recursos. <code>is_target_readonly = true</code> previene writes accidentales durante la migración.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🧹</div>
+<div class="lesson-content">
+<h4>Cleanup: Revertir Cambios Temporales</h4>
+<p>Tras el cutover, los cambios temporales en AWS deben revertirse: (1) revocar regla SG <code>tcp 3306 0.0.0.0/0</code>, (2) deshabilitar <code>publicly-accessible</code> en el RDS, (3) <code>force_terminate</code> + <code>delete</code> el DRS job, (4) remover el DRS job del Terraform state. El RDS destino persiste — solo se limpia recursos temporales.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🤖</div>
+<div class="lesson-content">
+<h4>El Rol de la IA</h4>
+<p>La IA actuó como orquestador completo: descubrió ambos entornos, identificó 6 hallazgos críticos, formuló 5 preguntas al usuario, creó un parameter template, generó código Terraform correcto (RDS + DRS job), preparó el origen AWS, validó conexiones, ejecutó precheck, inició y monitoreó la replicación hasta RPO=0, hizo cutover, y revirtió cambios temporales. El humano solo tomó decisiones y proporcionó credenciales.</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ===== Footer ===== -->
+<section style="padding:32px 0;background:var(--hc-gray-light)">
+<div class="center">
+<p class="muted">Generado como parte de una guía/curso de migración con IA · HuaweiCloud DRS</p>
+</div>
+</section>
+
+</body>
+</html>

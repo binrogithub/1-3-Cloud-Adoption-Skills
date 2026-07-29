@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Migración de Servidores con IA — SMS · AWS EC2 → HuaweiCloud ECS</title>
+<style>
+/* ===== Reset & Base ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --hc-red:#C7000B;--hc-red-dark:#9E0009;--hc-red-light:#FDECEE;
+  --hc-gray:#666;--hc-gray-light:#f5f5f5;--hc-gray-border:#e0e0e0;
+  --hc-blue:#0073E6;--hc-green:#00A870;--hc-orange:#FF8C00;--hc-purple:#7B61FF;
+  --bg:#fff;--text:#1a1a1a;--text-muted:#666;
+  --code-bg:#1e1e2e;--code-text:#cdd6f4;--code-border:#313244;
+  --shadow:0 2px 8px rgba(0,0,0,.08);
+  --radius:8px;--max-width:960px;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+a{color:var(--hc-red);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ===== Layout ===== */
+.container{max-width:var(--max-width);margin:0 auto;padding:0 24px}
+section{padding:48px 0;border-bottom:1px solid var(--hc-gray-border)}
+section:last-child{border-bottom:none}
+
+/* ===== Typography ===== */
+h1{font-size:2.2rem;font-weight:800;line-height:1.2;color:var(--text)}
+h2{font-size:1.6rem;font-weight:700;margin-bottom:16px;color:var(--text)}
+h3{font-size:1.2rem;font-weight:600;margin-bottom:12px;color:var(--text)}
+h4{font-size:1rem;font-weight:600;margin-bottom:8px}
+p{margin-bottom:12px}
+small{font-size:.85rem;color:var(--text-muted)}
+.muted{color:var(--text-muted)}
+.center{text-align:center}
+
+/* ===== Header / Hero ===== */
+.hero{background:linear-gradient(135deg,#C7000B 0%,#9E0009 100%);color:#fff;padding:60px 0}
+.hero h1{color:#fff;margin-bottom:8px}
+.hero .subtitle{font-size:1.1rem;opacity:.9;margin-bottom:24px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:16px;font-size:.85rem;opacity:.85}
+.hero-meta span{background:rgba(255,255,255,.15);padding:4px 12px;border-radius:20px}
+.badge-success{display:inline-block;background:var(--hc-green);color:#fff;padding:6px 20px;border-radius:20px;font-weight:700;font-size:.9rem;letter-spacing:.5px}
+.badge{display:inline-block;padding:3px 10px;border-radius:4px;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.badge-red{background:var(--hc-red-light);color:var(--hc-red)}
+.badge-blue{background:#E6F2FF;color:var(--hc-blue)}
+.badge-green{background:#E6F9F0;color:var(--hc-green)}
+.badge-orange{background:#FFF5E6;color:var(--hc-orange)}
+.badge-purple{background:#F3EEFF;color:var(--hc-purple)}
+.badge-gray{background:var(--hc-gray-light);color:var(--hc-gray)}
+
+/* ===== Architecture Diagram ===== */
+.arch{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;margin:24px 0}
+.arch-box{flex:1;min-width:200px;max-width:280px;border:2px solid var(--hc-gray-border);border-radius:var(--radius);padding:16px;text-align:center;background:#fff}
+.arch-box.source{border-color:#FF9900;background:#FFFBF5}
+.arch-box.target{border-color:var(--hc-red);background:var(--hc-red-light)}
+.arch-box.sms{border-color:var(--hc-blue);background:#F0F7FF}
+.arch-arrow{flex:0 0 40px;text-align:center;font-size:1.5rem;color:var(--hc-gray);align-self:center}
+.arch-box h4{margin-bottom:4px}
+.arch-box .arch-detail{font-size:.8rem;color:var(--text-muted);line-height:1.4}
+.arch-box .arch-icon{font-size:2rem;margin-bottom:8px}
+
+/* ===== Skills Callout ===== */
+.skills-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0}
+.skill-card{border:1px solid var(--hc-gray-border);border-radius:var(--radius);padding:14px;background:#fff}
+.skill-card h4{color:var(--hc-red);margin-bottom:4px}
+.skill-card p{font-size:.85rem;color:var(--text-muted);margin:0}
+
+/* ===== Phase Stepper ===== */
+.phases{display:flex;flex-wrap:wrap;gap:4px;margin:24px 0}
+.phase{flex:1;min-width:120px;text-align:center;position:relative;padding:12px 8px;border-radius:6px;font-size:.8rem}
+.phase.done{background:#E6F9F0;color:var(--hc-green);border:1px solid var(--hc-green)}
+.phase.active{background:var(--hc-red-light);color:var(--hc-red);border:1px solid var(--hc-red)}
+.phase.pending{background:var(--hc-gray-light);color:var(--hc-gray);border:1px solid var(--hc-gray-border)}
+.phase-num{display:block;font-size:1.4rem;font-weight:800;margin-bottom:2px}
+.phase-name{display:block;font-weight:600}
+.phase-status{display:block;font-size:.7rem;margin-top:2px;opacity:.8}
+
+/* ===== Timeline ===== */
+.timeline{position:relative;margin:24px 0;padding-left:0}
+.timeline-item{position:relative;padding-left:48px;margin-bottom:32px}
+.timeline-item::before{content:'';position:absolute;left:16px;top:0;bottom:-32px;width:2px;background:var(--hc-gray-border)}
+.timeline-item:last-child::before{display:none}
+.timeline-dot{position:absolute;left:8px;top:4px;width:18px;height:18px;border-radius:50%;border:3px solid #fff;z-index:1}
+.timeline-dot.user{background:var(--hc-red)}
+.timeline-dot.ai{background:var(--hc-blue)}
+.timeline-dot.question{background:var(--hc-orange);border-color:#fff;box-shadow:0 0 0 3px var(--hc-orange)}
+.timeline-dot.result{background:var(--hc-green)}
+.timeline-dot.skill{background:var(--hc-purple)}
+.timeline-label{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.timeline-label.user{color:var(--hc-red)}
+.timeline-label.ai{color:var(--hc-blue)}
+.timeline-label.question{color:var(--hc-orange)}
+.timeline-label.result{color:var(--hc-green)}
+.timeline-label.skill{color:var(--hc-purple)}
+.timeline-content{background:#fff;border:1px solid var(--hc-gray-border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.timeline-content.user{border-left:4px solid var(--hc-red)}
+.timeline-content.ai{border-left:4px solid var(--hc-blue)}
+.timeline-content.question{border-left:4px solid var(--hc-orange);background:#FFFCF5}
+.timeline-content.result{border-left:4px solid var(--hc-green)}
+.timeline-content.skill{border-left:4px solid var(--hc-purple)}
+
+/* ===== AI Thinking (collapsible) ===== */
+details.thinking{background:var(--hc-gray-light);border-radius:6px;padding:8px 12px;margin:8px 0;font-size:.9rem}
+details.thinking summary{cursor:pointer;font-weight:600;color:var(--text-muted);font-style:italic}
+details.thinking summary::marker{color:var(--hc-gray)}
+details.thinking p{margin:8px 0 0;color:var(--text-muted)}
+
+/* ===== Code Blocks ===== */
+.code-block{background:var(--code-bg);color:var(--code-text);border-radius:6px;padding:14px 16px;margin:12px 0;overflow-x:auto;font-size:.82rem;line-height:1.5;font-family:'SF Mono','Fira Code','Consolas','Monaco',monospace}
+.code-block .tool-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--code-border)}
+.code-block .tool-name{font-weight:700;font-size:.75rem;text-transform:uppercase;letter-spacing:.5px}
+.code-block .tool-time{font-size:.7rem;opacity:.6;margin-left:auto}
+.code-block pre{white-space:pre-wrap;word-break:break-word}
+.code-block .comment{color:#7f849c}
+.code-block .keyword{color:#cba6f7}
+.code-block .string{color:#a6e3a1}
+.code-block .number{color:#fab387}
+
+/* Inline code */
+code{background:var(--hc-gray-light);padding:2px 6px;border-radius:3px;font-size:.85em;font-family:'SF Mono','Fira Code','Consolas',monospace;color:var(--hc-red-dark)}
+
+/* ===== Tables ===== */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.9rem}
+th{background:var(--hc-red);color:#fff;padding:10px 12px;text-align:left;font-weight:600}
+td{padding:8px 12px;border-bottom:1px solid var(--hc-gray-border)}
+tr:nth-child(even) td{background:var(--hc-gray-light)}
+table.compact th,table.compact td{padding:6px 10px;font-size:.82rem}
+
+/* ===== Question Callout (key emphasis) ===== */
+.question-callout{background:#FFFCF5;border:2px solid var(--hc-orange);border-radius:var(--radius);padding:20px;margin:16px 0}
+.question-callout h3{color:var(--hc-orange);display:flex;align-items:center;gap:8px}
+.question-options{margin:12px 0}
+.question-option{display:flex;gap:10px;padding:8px 12px;margin:6px 0;border-radius:6px;background:#fff;border:1px solid var(--hc-gray-border)}
+.question-option.chosen{border:2px solid var(--hc-green);background:#F0FBF6}
+.question-option .opt-label{font-weight:700;min-width:20px}
+.question-option .opt-chosen{color:var(--hc-green);font-size:.75rem;font-weight:700;margin-left:auto}
+.user-answer{background:#F0FBF6;border:1px solid var(--hc-green);border-radius:6px;padding:10px 14px;margin:10px 0;font-size:.9rem}
+.user-answer::before{content:"Respuesta del usuario: ";font-weight:700;color:var(--hc-green)}
+
+/* ===== Monitoring Progress ===== */
+.monitor-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.85rem}
+.monitor-table th{background:var(--hc-blue);color:#fff;padding:8px;text-align:left;font-size:.8rem}
+.monitor-table td{padding:6px 8px;border-bottom:1px solid var(--hc-gray-border)}
+.progress-bar{display:inline-block;width:120px;height:10px;background:var(--hc-gray-light);border-radius:5px;overflow:hidden;vertical-align:middle}
+.progress-fill{height:100%;border-radius:5px}
+.progress-fill.done{background:var(--hc-green)}
+.progress-fill.partial{background:var(--hc-blue)}
+
+/* ===== Cards ===== */
+.card{border:1px solid var(--hc-gray-border);border-radius:var(--radius);padding:16px;margin:12px 0;background:#fff;box-shadow:var(--shadow)}
+.card.highlight{border-left:4px solid var(--hc-red)}
+.card.success{border-left:4px solid var(--hc-green)}
+.card.warning{border-left:4px solid var(--hc-orange)}
+
+/* ===== Before/After ===== */
+.ba-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+.ba-card{border-radius:var(--radius);padding:16px}
+.ba-card.before{background:#FFFBF5;border:1px solid #FF9900}
+.ba-card.after{background:#F0FBF6;border:1px solid var(--hc-green)}
+.ba-card h4{margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.ba-card ul{list-style:none;padding:0}
+.ba-card li{padding:4px 0;font-size:.85rem;border-bottom:1px solid rgba(0,0,0,.05)}
+.ba-card li:last-child{border-bottom:none}
+
+/* ===== Lessons ===== */
+.lesson{display:flex;gap:12px;padding:14px;margin:10px 0;border-radius:var(--radius);background:var(--hc-gray-light)}
+.lesson-icon{font-size:1.5rem;flex-shrink:0}
+.lesson-content h4{color:var(--hc-red);margin-bottom:2px}
+.lesson-content p{font-size:.85rem;margin:0;color:var(--text-muted)}
+
+/* ===== Sticky Nav ===== */
+.phase-nav{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--hc-gray-border);z-index:100;padding:8px 0;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.phase-nav-inner{max-width:var(--max-width);margin:0 auto;padding:0 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phase-nav a{font-size:.75rem;padding:4px 10px;border-radius:4px;color:var(--text-muted);font-weight:600}
+.phase-nav a:hover{background:var(--hc-red-light);color:var(--hc-red);text-decoration:none}
+
+/* ===== Print ===== */
+@media print{
+  .phase-nav{display:none}
+  body{font-size:12px}
+  details.thinking[open] summary{font-weight:700}
+}
+
+/* ===== Utility ===== */
+.spacer{height:24px}
+.flex{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+.icon{font-size:1.2em}
+hr{border:none;border-top:1px solid var(--hc-gray-border);margin:20px 0}
+</style>
+</head>
+<body>
+
+<!-- ===== Sticky Phase Nav ===== -->
+<nav class="phase-nav">
+<div class="phase-nav-inner">
+<a href="#hero">Inicio</a>
+<a href="#arquitectura">Arquitectura</a>
+<a href="#skills">Skills</a>
+<a href="#usuario">Rol del Usuario</a>
+<a href="#lecciones">Lecciones</a>
+</div>
+</nav>
+
+<!-- ===== Hero ===== -->
+<section class="hero" id="hero">
+<div class="container">
+<h1>Migración de Servidores con IA</h1>
+<p class="subtitle">AWS EC2 → HuaweiCloud ECS · Server Migration Service (SMS)</p>
+<div class="spacer"></div>
+<span class="badge-success">MIGRACIÓN EXITOSA</span>
+</div>
+</section>
+
+<!-- ===== Arquitectura ===== -->
+<section id="arquitectura">
+<div class="container">
+<h2>Arquitectura de la Migración</h2>
+<p>El servidor origen en AWS fue descubierto automáticamente, y se creó infraestructura de red nueva en HuaweiCloud para alojar el ECS migrado. El SMS Agent ya estaba instalado en el servidor origen, lo que permitió saltar la Fase 2 (instalación del agente).</p>
+
+<div class="arch">
+<div class="arch-box source">
+<div class="arch-icon">☁️</div>
+<h4>AWS us-east-2</h4>
+<div class="arch-detail">
+<strong>EC2:</strong> demo-web<br>
+i-059a39bdab9198a58<br>
+Ubuntu 22.04 · UEFI<br>
+2 vCPU / 8 GB · 8 GB<br>
+IP: 18.119.129.93<br>
+LAMP + WordPress
+</div>
+</div>
+<div class="arch-arrow">→</div>
+<div class="arch-box sms">
+<div class="arch-icon">🔄</div>
+<h4>SMS Agent</h4>
+<div class="arch-detail">
+Conectado · state=waiting<br>
+14 checks OK<br>
+Región API:<br>
+ap-southeast-3<br>
+MIGRATE_FILE · LINUX
+</div>
+</div>
+<div class="arch-arrow">→</div>
+<div class="arch-box target">
+<div class="arch-icon">🟡</div>
+<h4>HuaweiCloud la-north-2</h4>
+<div class="arch-detail">
+<strong>ECS:</strong> demo-web<br>
+912575d5-3af9-...<br>
+Ubuntu 22.04 · UEFI<br>
+c6.large.4 · SAS<br>
+IP: 110.238.85.32<br>
+VPC demo-vpc (nueva)
+</div>
+</div>
+</div>
+
+<div class="spacer"></div>
+<h3>Inventario del Origen (AWS)</h3>
+<table class="compact">
+<tr><th>Item</th><th>Valor</th></tr>
+<tr><td>Instancia</td><td><code>i-059a39bdab9198a58</code> (demo-web)</td></tr>
+<tr><td>OS</td><td>Ubuntu 22.04 LTS (Jammy), x86_64</td></tr>
+<tr><td>Firmware</td><td>UEFI (<code>uefi-preferred</code>)</td></tr>
+<tr><td>Flavor</td><td>m7i-flex.large (2 vCPU / 8 GB)</td></tr>
+<tr><td>Disco</td><td>8 GB gp2 EBS (<code>/dev/nvme0n1</code>)</td></tr>
+<tr><td>Red</td><td>VPC demo-vpc <code>10.0.0.0/16</code>, subnet <code>10.0.1.0/24</code>, AZ us-east-2a</td></tr>
+<tr><td>IPs</td><td>Privada 10.0.1.156 · Pública 18.119.129.93</td></tr>
+<tr><td>Security Group</td><td>demo-ec2-sg — inbound 22/80/443, all outbound</td></tr>
+<tr><td>Aplicación</td><td><strong>LAMP</strong>: Apache2 + PHP + WordPress</td></tr>
+<tr><td>Base de datos</td><td>RDS MySQL en <code>demo-db.ct8ua64omsz2.us-east-2.rds.amazonaws.com</code></td></tr>
+</table>
+
+<h3>Inventario del Destino (HuaweiCloud)</h3>
+<table class="compact">
+<tr><th>Item</th><th>Valor</th></tr>
+<tr><td>VPC</td><td><code>demo-vpc</code> (35af0c49-...), CIDR <code>10.0.0.0/16</code> — <strong>creada nueva</strong></td></tr>
+<tr><td>Subnet</td><td><code>demo-subnet</code> (5536568f-...), CIDR <code>10.0.1.0/24</code></td></tr>
+<tr><td>Security Group</td><td><code>demo-sg</code> (211aae9d-...) — puertos 22/80/443</td></tr>
+<tr><td>Availability Zones</td><td>la-north-2a, la-north-2b, la-north-2c</td></tr>
+<tr><td>Flavor</td><td><strong>c6.large.4</strong> (2 vCPU / 8 GB — coincide con origen)</td></tr>
+<tr><td>Solapamiento CIDR</td><td><span class="badge badge-green">Ninguno</span> (10.0.0.0/16 vs 192.168.0.0/16 del VPC default)</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ===== Skills & Herramientas ===== -->
+<section id="skills">
+<div class="container">
+<h2>Skills y Herramientas Utilizadas</h2>
+<p>La IA cargó y utilizó las siguientes herramientas especializadas durante la sesión. Estas skills proporcionaron el conocimiento del workflow completo de migración SMS, los schemas de recursos Terraform, y las referencias de compatibilidad de firmware.</p>
+
+<div class="skills-grid">
+<div class="skill-card">
+<h4>huaweicloud-sms-migration</h4>
+<p>Skill principal. Define el workflow de 7 fases, reglas (DISCOVER before ACT, prefer template, verify firmware), y referencias de Terraform y troubleshooting.</p>
+</div>
+<div class="skill-card">
+<h4>Terraform MCP</h4>
+<p>Consulta al registry para obtener la última versión del provider HuaweiCloud (v1.93.0) y validar schemas de recursos SMS.</p>
+</div>
+<div class="skill-card">
+<h4>hcloud CLI</h4>
+<p>KooCLI de HuaweiCloud para descubrir VPCs, subnets, SGs, flavors, imágenes, y monitorear el estado del SMS task vía API.</p>
+</div>
+<div class="skill-card">
+<h4>AWS MCP</h4>
+<p>CLI de AWS para descubrir instancias EC2, imágenes, volúmenes, security groups, VPCs y subnets en us-east-2.</p>
+</div>
+</div>
+
+<div class="card">
+<h3>Reglas clave que la skill inyectó en el contexto de la IA</h3>
+<table class="compact">
+<tr><th>Regla</th><th>Impacto en esta sesión</th></tr>
+<tr><td><strong>DISCOVER before ACT</strong></td><td>La IA inventarió completamente el EC2 y el entorno HuaweiCloud antes de crear cualquier recurso</td></tr>
+<tr><td><strong>Prefer SMS Server Template</strong></td><td>Se usó <code>huaweicloud_sms_server_template</code> en lugar de pre-crear el ECS, manejando firmware UEFI automáticamente</td></tr>
+<tr><td><strong>SMS API Region ≠ Target Region</strong></td><td>SMS API en <code>ap-southeast-3</code>, ECS target en <code>la-north-2</code></td></tr>
+<tr><td><strong>Never Guess Credentials</strong></td><td>La IA preguntó al usuario por AK/SK y los obtuvo de archivos locales</td></tr>
+<tr><td><strong>Verify Agent Connection</strong></td><td>Se verificaron los 14 pre-migration checks antes de crear el task</td></tr>
+<tr><td><strong>Choose Migration Type Wisely</strong></td><td><code>MIGRATE_FILE</code> seleccionado por mejor compatibilidad con Linux</td></tr>
+</table>
+</div>
+</div>
+</section>
+
+<!-- ===== Rol del Usuario ===== -->
+<section id="usuario">
+<div class="container">
+<h2>Rol del Usuario: Qué Tuvo Que Hacer</h2>
+<p>Aunque la IA ejecutó la migración automáticamente, el usuario jugó un rol fundamental proporcionando datos, tomando decisiones y dando instrucciones. Sin estos inputs, la migración no habría sido posible.</p>
+
+<div class="card highlight">
+<h3>1. Solicitud Inicial</h3>
+<p>El usuario inició la sesión indicando el origen y destino de la migración, y proporcionó el contenido completo de la skill <code>huaweicloud-sms-migration</code> como contexto para que la IA conociera el workflow estándar.</p>
+<div class="code-block">
+<pre>Necesito hacer una migración de un EC2 en AWS en la region us-east-2
+hacia Huawei Cloud en la-north-2</pre>
+</div>
+</div>
+
+<div class="card highlight">
+<h3>2. Cuatro Decisiones Críticas</h3>
+<p>La IA formuló 4 preguntas que requerían decisión humana. El usuario respondió todas:</p>
+<table class="compact">
+<tr><th>Decisión</th><th>Opciones</th><th>Respuesta del usuario</th></tr>
+<tr><td>Estrategia de base de datos</td><td>Migrar DB / RDS público / Solo servidor / VPN</td><td><strong>Solo servidor, arreglar DB después</strong></td></tr>
+<tr><td>Red del target</td><td>Usar VPC default / Crear nueva</td><td><strong>Crear nuevo VPC/subnet/SG</strong></td></tr>
+<tr><td>Nombre del servidor</td><td>demo-web / demo-web-migrated</td><td><strong>demo-web</strong></td></tr>
+<tr><td>Credenciales HuaweiCloud</td><td>Env vars / Leer de config hcloud</td><td><strong>Archivos locales del proyecto</strong></td></tr>
+</table>
+</div>
+
+<div class="card highlight">
+<h3>3. Credenciales y Llaves Proporcionadas</h3>
+<p>El usuario proporcionó acceso a credenciales sensibles que la IA no puede adivinar:</p>
+<table class="compact">
+<tr><th>Recurso</th><th>Ubicación</th><th>Uso</th></tr>
+<tr><td>AK/SK HuaweiCloud</td><td><code>credentials.csv</code> en el proyecto</td><td>Terraform provider (HW_ACCESS_KEY / HW_SECRET_KEY)</td></tr>
+<tr><td>SSH key del EC2</td><td><code>private-key.pem</code> en el proyecto</td><td>Verificación SSH del ECS migrado</td></tr>
+<tr><td>Credenciales RDS HuaweiCloud</td><td>Mensaje directo en el chat</td><td>Reconfiguración de wp-config.php (user: root, password)</td></tr>
+</table>
+</div>
+
+<div class="card highlight">
+<h3>4. Instrucciones de Ejecución</h3>
+<p>El usuario dio dos instrucciones clave durante la sesión:</p>
+<p><strong>"Crear primero los recursos de red y aplicarlos, después hacemos la migración."</strong> — Esto llevó a la IA a dividir el Terraform en dos configuraciones separadas (<code>network/</code> y <code>migration/</code>), aplicando primero la red y luego la migración.</p>
+<p><strong>"Cambia la configuración para que apunte a la RDS de HuaweiCloud que ya desplegé."</strong> — Después de la migración, el usuario pidió reconfigurar <code>wp-config.php</code> para conectar el WordPress migrado a la RDS de HuaweiCloud.</p>
+</div>
+
+<div class="card warning">
+<h3>Qué Tuvo Que Considerar</h3>
+<ul style="padding-left:20px;margin:8px 0">
+<li><strong>Dependencia de base de datos:</strong> El WordPress dependía de un RDS de AWS con endpoint VPC-internal. Tras migrar, sería inalcanzable. El usuario decidió postergar este problema y resolverlo después.</li>
+<li><strong>Firmware UEFI:</strong> El EC2 usaba UEFI. La IA manejó esto automáticamente con el SMS Server Template, pero el usuario debía saber que un approach manual (pre-crear ECS) podría fallar por mismatch UEFI/BIOS.</li>
+<li><strong>Región SMS vs región target:</strong> El servicio SMS no está disponible en <code>la-north-2</code>, solo en <code>ap-southeast-3</code>. El ECS target sí va en <code>la-north-2</code>. El usuario no necesitó decidir esto, pero debía entender la distinción.</li>
+<li><strong>Solapamiento de CIDR:</strong> El VPC de AWS usaba <code>10.0.0.0/16</code> y el VPC default de HuaweiCloud usaba <code>192.168.0.0/16</code> — sin solapamiento, lo que permitía crear el VPC target con el mismo CIDR que el origen.</li>
+</ul>
+</div>
+</div>
+</section>
+
+
+<!-- ===== Lecciones ===== -->
+<section id="lecciones">
+<div class="container">
+<h2>Lecciones Clave y Qué Considerar</h2>
+<p>Estos son los aprendizajes de esta migración que todo usuario debe considerar al usar IA para migrar servidores con SMS.</p>
+
+<div class="lesson">
+<div class="lesson-icon">🔥</div>
+<div class="lesson-content">
+<h4>Compatibilidad de Firmware (UEFI/BIOS)</h4>
+<p>La mayoría de clouds modernos (AWS, Azure, GCP) usan UEFI para imágenes Linux recientes. HuaweiCloud puede usar BIOS por defecto. El <strong>SMS Server Template approach</strong> maneja esto automáticamente seleccionando una imagen compatible. Pre-crear el ECS manualmente puede causar el error <code>SMS.0515</code> por mismatch de firmware.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🗄️</div>
+<div class="lesson-content">
+<h4>Dependencias de Base de Datos</h4>
+<p>Al migrar un servidor de aplicación (como WordPress), la DB probablemente queda inalcanzable desde el nuevo cloud. Identificar estas dependencias <strong>antes</strong> de migrar (como hizo la IA al decodificar el <code>userData</code>) es crítico. Planificar la migración de DB en paralelo o posteriormente.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🌐</div>
+<div class="lesson-content">
+<h4>Región API SMS ≠ Región Target</h4>
+<p>El servicio SMS solo está disponible en regiones específicas (ej: <code>ap-southeast-3</code>). El ECS target puede estar en cualquier región (ej: <code>la-north-2</code>). Siempre usar <code>--cli-region=sms-region</code> para calls de SMS API, pero <code>region = target-region</code> en el provider de Terraform.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🔑</div>
+<div class="lesson-content">
+<h4>Manejo de Credenciales</h4>
+<p>La IA nunca debe adivinar credenciales. Siempre preguntar al usuario por AK/SK y SSH keys. En esta sesión, las credenciales estaban en archivos locales del proyecto. Para production, usar secret managers o input interactivo.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">📊</div>
+<div class="lesson-content">
+<h4>Tipo de Migración: File vs Block</h4>
+<p><code>MIGRATE_FILE</code> (nivel de archivo): mejor compatibilidad, más lento, funciona para todo Linux. <code>MIGRATE_BLOCK</code> (nivel de bloque): más rápido, pero solo Windows y puede tener issues en Linux. Para Ubuntu, <code>MIGRATE_FILE</code> es la opción segura.</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">💾</div>
+<div class="lesson-content">
+<h4>Diferencias de Tamaño de Disco</h4>
+<p>El disco target debe ser ≥ al origen. Las imágenes de HuaweiCloud pueden tener requisitos mínimos (ej: 10GB) que exceden el disco origen (ej: 8GB). El template approach maneja esto automáticamente. En esta migración, el disco resultante fue de 40GB (vs 8GB origen).</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🧹</div>
+<div class="lesson-content">
+<h4>Post-Migración</h4>
+<p>Tareas pendientes después de migrar: (1) actualizar hostname con <code>hostnamectl set-hostname</code>, (2) opcionalmente instalar kernel de HuaweiCloud para mejor soporte de drivers, (3) configurar monitoreo CES/HSS, (4) actualizar DNS, (5) cleanup con <code>terraform destroy</code> (el ECS migrado persiste, solo se borra metadata de SMS).</p>
+</div>
+</div>
+
+<div class="lesson">
+<div class="lesson-icon">🤖</div>
+<div class="lesson-content">
+<h4>El Rol de la IA</h4>
+<p>La IA actuó como orquestador: descubrió ambos entornos automáticamente, identificó la dependencia de DB al decodificar el userData, formuló 4 preguntas críticas al usuario, generó código Terraform correcto, monitoreó la migración por 48 min, verificó el resultado via SSH, y reconfiguró la aplicación. El humano solo tomó decisiones y proporcionó credenciales.</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ===== Footer ===== -->
+<section style="padding:32px 0;background:var(--hc-gray-light)">
+<div class="center">
+<p class="muted">Generado como parte de una guía/curso de migración con IA · HuaweiCloud</p>
+</div>
+</section>
+
+</body>
+</html>
