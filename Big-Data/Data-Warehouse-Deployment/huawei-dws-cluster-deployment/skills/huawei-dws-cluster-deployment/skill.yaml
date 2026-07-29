@@ -1,0 +1,263 @@
+name: huawei-dws-cluster-deployment
+version: 1.0.0
+category: migration
+status: READY_WITH_WARNINGS
+risk_level: high
+requires_explicit_approval: true
+
+domain: Big-Data
+family: Data-Warehouse-Deployment
+service: DWS
+
+scenario:
+  source: user-requirements-new-cluster
+  target: operational-dws-cluster
+  topology: single-az-or-ha
+  mechanism: hcloud-dws-cli
+
+mcps:
+  required: []
+  optional:
+    - huaweicloud-pricing
+    - huaweicloud-ticket
+    - huaweicloud-deploy
+
+shared_skills:
+  required:
+    - mcp-capability-builder
+
+capability_gap:
+  builder_skill: mcp-capability-builder
+  allow_new_mcp_scaffolding: false
+  allow_live_activation: false
+  require_manual_review: true
+  known_gaps:
+    - id: GAP-DWS-001
+      description: "No dedicated DWS MCP exists; all DWS operations via hcloud CLI"
+      phase: all
+      decision: USE_HCLOUD_CLI
+    - id: GAP-DWS-002
+      description: "DWS not in huaweicloud-deploy supported services"
+      phase: plan_generation
+      decision: EXTEND_EXISTING_MCP
+    - id: GAP-DWS-003
+      description: "hcloud CLI operations lack structured error handling and retry logic"
+      phase: execution
+      decision: USE_HCLOUD_CLI
+    - id: GAP-DWS-004
+      description: "Node type availability varies by region"
+      phase: discovery
+      decision: REGION_DEPENDENT
+    - id: GAP-DWS-005
+      description: "Storage type availability varies by region"
+      phase: discovery
+      decision: REGION_DEPENDENT
+    - id: GAP-DWS-006
+      description: "Password handling in CLI is a security concern"
+      phase: execution
+      decision: SECURE_INPUT_REQUIRED
+    - id: GAP-DWS-007
+      description: "Cluster creation time is variable and not SLA-guaranteed"
+      phase: execution
+      decision: POLLING_REQUIRED
+
+phases:
+  - name: parse_intent
+    automation: AUTOMATED
+    mcp_tools_used: []
+  - name: verify_auth_service
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: discover_existing_clusters
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: discover_capabilities
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: discover_network
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: capacity_cost_plan
+    automation: AUTOMATED
+    mcp_tools_used: [huaweicloud-pricing]
+  - name: architecture_plan
+    automation: AUTOMATED
+    mcp_tools_used: []
+  - name: readiness_check
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: prepare_network
+    automation: ASSISTED
+    mcp_tools_used: [huaweicloud-deploy]
+  - name: prepare_credentials
+    automation: MANUAL
+    mcp_tools_used: []
+  - name: create_cluster
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: poll_creation
+    automation: AUTOMATED
+    mcp_tools_used: []
+  - name: verify_cluster
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: configure_public_access
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: verify_connectivity
+    automation: MANUAL
+    mcp_tools_used: []
+  - name: create_database_schemas
+    automation: MANUAL
+    mcp_tools_used: []
+  - name: obs_data_load
+    automation: MANUAL
+    mcp_tools_used: []
+  - name: configure_snapshots
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: operational_validation
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: closure
+    automation: AUTOMATED
+    mcp_tools_used: []
+
+hcloud:
+  service: DWS
+  verified_version: 6.2.9
+  newer_version_pending: 7.2.12
+  operations_verified:
+    - ListClusters
+    - ShowClusters
+    - ListClusterDetails
+    - CreateCluster
+    - DeleteCluster
+    - DeleteDwsCluster
+    - StartCluster
+    - StopCluster
+    - RestartCluster
+    - ResizeCluster
+    - ShrinkCluster
+    - ListNodeTypes
+    - ListUpdatableVersion
+    - ResetPassword
+    - ModifyClusterName
+    - ListSnapshots
+    - ListSnapshotDetails
+    - CreateSnapshot
+    - DeleteSnapshot
+    - RestoreCluster
+    - RestoreTable
+    - ListClusterNodes
+    - ChangeSecurityGroup
+    - EncryptCluster
+    - ExpandInstanceStorage
+    - ExecuteFlavorChange
+    - EnableLtsLogs
+    - DisableLtsLogs
+    - ListDssPools
+    - ListTagsForResource
+    - ShowClusterFlavor
+    - ShowClusterVolume
+    - ShowResourceStatistics
+
+execution:
+  primary_mechanism: hcloud_dws_cli
+  automation_blocker: missing_dws_mcp_or_deploy_extension
+  core_workflow_blocker: false
+  orchestration_blocker: true
+
+inputs:
+  required:
+    - region
+    - cluster_name
+    - environment
+    - approval_owner
+    - password_source
+  optional:
+    - engine_version
+    - node_type
+    - node_count
+    - storage_type
+    - storage_capacity
+    - ha_requirement
+    - availability_zone
+    - vpc_name
+    - subnet_name
+    - security_group_name
+    - access_mode
+    - eip_requirement
+    - database_name
+    - administrator_username
+    - obs_bucket
+    - snapshot_schedule
+    - snapshot_retention
+    - enterprise_project
+    - tags
+    - estimated_budget
+    - maintenance_window
+    - workload_type
+    - expected_data_volume
+    - expected_daily_growth
+    - concurrency
+    - query_complexity
+    - latency_objective
+
+outputs:
+  - dws-intent
+  - dws-auth-context
+  - dws-existing-clusters
+  - dws-capability-matrix
+  - dws-network-discovery
+  - dws-capacity-cost-plan
+  - dws-architecture-plan
+  - dws-readiness-report
+  - dws-credential-handling-plan
+  - dws-cluster-creation-request
+  - dws-cluster-creation-status
+  - dws-cluster-validation-report
+  - dws-database-schema-plan
+  - dws-obs-load-plan
+  - dws-snapshot-policy-report
+  - dws-operational-validation-report
+  - dws-final-report
+
+approval_gates:
+  - create_cluster
+  - delete_cluster
+  - resize_cluster
+  - restart_cluster
+  - create_snapshot
+  - restore_cluster
+  - bind_eip
+  - reset_password
+  - change_security_group
+  - network_creation
+  - database_creation
+  - obs_data_load
+
+evidence_policy:
+  log_all_cli_commands: true
+  sanitize_passwords: true
+  sanitize_ids: true
+  record_approvals: true
+  record_timestamps: true
+  no_secrets: true
+
+regional_validation:
+  require_node_type_check: true
+  require_version_check: true
+  require_storage_type_check: true
+  require_quota_check: true
+  require_az_check: true
+
+password_policy:
+  never_in_command_line: true
+  never_in_shell_history: true
+  never_in_logs: true
+  never_in_versioned_files: true
+  prefer_cli_json_input: true
+  temp_file_permissions: "0600"
+  temp_file_outside_repo: true
+  secure_deletion_after_use: true

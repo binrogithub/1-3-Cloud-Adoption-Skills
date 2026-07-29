@@ -1,0 +1,162 @@
+name: huawei-cbr-backup-restore
+version: 1.0.0
+category: migration
+status: READY_WITH_WARNINGS
+risk_level: high
+requires_explicit_approval: true
+
+domain: Cloud-Foundation
+family: DR-and-Backup
+service: CBR
+
+scenario:
+  source: ecs-evs-cce-resource
+  target: restored-resource-new
+  topology: in-region-backup-restore
+  mechanism: cbr-vault-checkpoint-restore
+
+mcps:
+  required: []
+  optional:
+    - huaweicloud-pricing
+    - huaweicloud-ticket
+    - huaweicloud-deploy
+
+capability_gap:
+  builder_skill: mcp-capability-builder
+  allow_new_mcp_scaffolding: false
+  allow_live_activation: false
+  require_manual_review: true
+  known_gaps:
+    - id: GAP-CBR-001
+      description: "No dedicated CBR MCP exists; all CBR operations via hcloud CLI"
+      phase: all
+      decision: USE_HCLOUD_CLI
+    - id: GAP-CBR-002
+      description: "CBR not in huaweicloud-deploy supported services"
+      phase: plan_generation
+      decision: EXTEND_EXISTING_MCP
+    - id: GAP-CBR-003
+      description: "hcloud CLI operations lack structured error handling and retry logic"
+      phase: execution
+      decision: USE_HCLOUD_CLI
+    - id: GAP-CBR-004
+      description: "Cross-region copy capability varies by region"
+      phase: execution
+      decision: REGION_DEPENDENT
+    - id: GAP-CBR-005
+      description: "Agent-based backup requires agent verification via CLI"
+      phase: readiness
+      decision: USE_HCLOUD_CLI
+
+phases:
+  - name: parse_intent
+    automation: AUTOMATED
+    mcp_tools_used: []
+  - name: discover_auth_region
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: discover_source
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: discover_existing
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: plan_vault
+    automation: AUTOMATED
+    mcp_tools_used: []
+  - name: create_reuse_vault
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: associate_resource
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: create_reuse_policy
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: trigger_backup
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: verify_backup
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: plan_restore
+    automation: AUTOMATED
+    mcp_tools_used: []
+  - name: execute_restore
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: verify_restored
+    automation: ASSISTED
+    mcp_tools_used: []
+  - name: closure
+    automation: AUTOMATED
+    mcp_tools_used: []
+
+hcloud:
+  service: CBR
+  verified_version: 6.2.9
+  newer_version_pending: 7.2.12
+  operations_verified:
+    - ListVault
+    - ShowVault
+    - CreateVault
+    - CreatePostPaidVault
+    - DeleteVault
+    - AddVaultResource
+    - RemoveVaultResource
+    - ListBackups
+    - ShowBackup
+    - CreateCheckpoint
+    - RestoreBackup
+    - DeleteBackup
+    - CopyBackup
+    - ListPolicies
+    - ShowPolicy
+    - CreatePolicy
+    - DeletePolicy
+    - AssociateVaultPolicy
+    - DisassociateVaultPolicy
+    - ShowReplicationCapabilities
+    - ListProtectable
+    - ShowProtectable
+    - RegisterAgent
+    - UnregisterAgent
+    - ListAgent
+    - ShowAgent
+    - ShowSummary
+
+inputs:
+  required:
+    - resource_type
+    - source_region
+    - source_resource_name
+    - backup_type
+    - approval_owner
+  optional:
+    - vault_name
+    - schedule
+    - retention_by_time
+    - retention_by_count
+    - cross_region_copy
+    - destination_region
+    - restore_requirement
+    - restore_target_naming
+    - encryption_requirements
+    - enterprise_project
+
+outputs:
+  - cbr-intent
+  - cbr-auth-discovery
+  - cbr-source-discovery
+  - cbr-existing-resources
+  - cbr-vault-plan
+  - cbr-vault-result
+  - cbr-association-result
+  - cbr-policy-result
+  - cbr-backup-result
+  - cbr-backup-validation-report
+  - cbr-restore-plan
+  - cbr-restore-result
+  - cbr-restore-validation-report
+  - cbr-final-report
