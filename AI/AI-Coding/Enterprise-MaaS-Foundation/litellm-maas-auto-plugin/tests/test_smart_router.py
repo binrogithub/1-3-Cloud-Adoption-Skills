@@ -36,6 +36,10 @@ def test_multilingual_routes():
         "Diseña la arquitectura del sistema",
         "Faça uma revisão de segurança",
         "Analiza un incidente en producción",
+        "Investigate a race condition in the payment authentication flow",
+        "修复支付鉴权代码中的竞态条件",
+        "Revise a autenticação do fluxo de pagamento",
+        "Revisa la autenticación del flujo de pago",
     ]
     for text in premium:
         assert router.route_request(request(text))["model"] == "premium-openrouter"
@@ -138,10 +142,30 @@ def test_rules_schema_and_runtime_validation():
         raise AssertionError("weights that do not sum to one must fail")
 
 
+def test_prometheus_metrics_are_registered():
+    names = {
+        metric.name
+        for collector in (
+            router.ROUTE_REQUESTS,
+            router.FALLBACKS,
+            router.CROSS_BORDER_BLOCKS,
+            router.COMPLEXITY_SCORES,
+        )
+        if hasattr(collector, "collect")
+        for metric in collector.collect()
+    }
+    if names:
+        assert "smart_router_requests" in names
+        assert "smart_router_fallbacks" in names
+        assert "smart_router_cross_border_blocks" in names
+        assert "smart_router_complexity_score" in names
+
+
 if __name__ == "__main__":
     test_multilingual_routes()
     test_observability_and_score_does_not_route()
     test_context_boundary_and_controlled_fallbacks()
     test_image_fallback_stays_vision_capable()
     test_rules_schema_and_runtime_validation()
+    test_prometheus_metrics_are_registered()
     print("smart_router tests passed")

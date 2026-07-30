@@ -6,7 +6,8 @@
 # Reuses ../../litellm-maas-auto-plugin/client/configure-claude-code.sh (it
 # honors CLAUDE_CONFIG_DIR) instead of vendoring client-config logic.
 # Server-side prerequisites (install first — see SKILL.md):
-#   anthropic_stream_guard + context_window_guard mounted and registered,
+#   anthropic_stream_guard + anthropic_reasoning_filter + smart_router mounted
+#   and registered, with smart_router_rules.json,
 #   use_chat_completions_url_for_anthropic_messages: true,
 #   a `claude-*` wildcard model route (required for W1 sub-orchestration).
 set -euo pipefail
@@ -30,7 +31,7 @@ python3 - "$GLM_DIR" "$KEY" <<'PY'
 import json, os, sys
 d, key = sys.argv[1], sys.argv[2]
 s = json.load(open(f"{d}/settings.json"))
-s.setdefault("env", {})["CLAUDE_CODE_AUTO_COMPACT_WINDOW"] = "180000"
+s.setdefault("env", {})["CLAUDE_CODE_AUTO_COMPACT_WINDOW"] = "198000"
 json.dump(s, open(f"{d}/settings.json", "w"), indent=2)
 p = f"{d}/.claude.json"
 c = json.load(open(p)) if os.path.exists(p) else {}

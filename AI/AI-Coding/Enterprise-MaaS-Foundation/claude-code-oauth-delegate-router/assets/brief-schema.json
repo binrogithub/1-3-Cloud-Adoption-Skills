@@ -10,7 +10,7 @@
     "constraints": {"type": "array", "items": {"type": "string"}},
     "acceptance": {"type": "string", "description": "shell command; exit 0 = success (authoritative)"},
     "context_notes": {"type": "string"},
-    "max_attempts": {"type": "integer", "default": 2},
+    "max_attempts": {"type": "integer", "minimum": 1, "maximum": 2, "default": 2},
     "previous_failure": {"type": "object", "description": "auto-appended by the runner on retry"}
   }
 }

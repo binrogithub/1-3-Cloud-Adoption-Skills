@@ -6,8 +6,8 @@ For every substantive work item, classify first:
 **Do in-session (premium):** architecture/design, complex debugging (multi-subsystem,
 race conditions, repeated failed fixes), security review, production incidents,
 PR review touching payment/auth/pci/infra/migrations or CODEOWNERS-protected paths,
-any task whose input includes images/screenshots, any task that cannot be briefed
-under ~160K tokens.
+any task whose input includes images/screenshots, any task above 198K tokens,
+and any task that cannot be reduced below the GLM context boundary.
 
 **Delegate (execution):** unit test generation, documentation/repo summaries,
 CI auto-fixes, single-module code generation, batch/mechanical refactors,

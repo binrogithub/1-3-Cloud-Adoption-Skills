@@ -25,6 +25,12 @@
       "languages": ["en", "zh", "pt-BR", "es"],
       "allow_downgrade": false,
       "pattern": "\\b(?:security\\s+review|production\\s+incident|infrastructure\\s+change)\\b|安全(?:审查|评审|分析)|生产(?:事故|故障|事件)|基础设施变更|\\b(?:revisão|revisao|análise|analise)\\s+de\\s+segurança\\b|\\bincidente\\s+(?:de|em)\\s+produção\\b|\\b(?:revisión|revision|análisis|analisis)\\s+de\\s+seguridad\\b|\\bincidente\\s+(?:de|en)\\s+producción\\b"
+    },
+    {
+      "id": "high-risk-code-change",
+      "languages": ["en", "zh", "pt-BR", "es"],
+      "allow_downgrade": false,
+      "pattern": "\\b(?:race\\s+condition|repeated\\s+(?:failed\\s+)?fix(?:es)?|payment|authentication|authorization|auth|pci|codeowners|protected\\s+path|infrastructure\\s+migration|production\\s+migration)\\b|竞态条件|竞争条件|重复修复失败|支付|认证|鉴权|受保护路径|基础设施迁移|生产迁移|\\b(?:condição\\s+de\\s+corrida|condicao\\s+de\\s+corrida|falhas?\\s+repetidas?\\s+de\\s+correção|pagamento|autenticação|autenticacao|autorização|autorizacao|migração\\s+de\\s+infraestrutura)\\b|\\b(?:condición\\s+de\\s+carrera|condicion\\s+de\\s+carrera|fallos?\\s+repetidos?\\s+de\\s+corrección|pago|autenticación|autenticacion|autorización|autorizacion|migración\\s+de\\s+infraestructura)\\b"
     }
   ],
   "cross_border_block_rules": [

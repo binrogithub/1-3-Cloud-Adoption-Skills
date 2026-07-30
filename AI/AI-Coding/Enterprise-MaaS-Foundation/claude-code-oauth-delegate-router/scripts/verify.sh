@@ -18,12 +18,10 @@ echo "── 1. client probe (reused: configure-claude-code.sh --verify) ──"
 CLAUDE_CONFIG_DIR="$GLM_DIR" bash "$CONFIGURE" "$KEY" --base-url "$BASE_URL" \
   --model claude-opus-4-6 --verify 2>&1 | grep -E "VERIFY|TOOL-CALL"
 
-echo "── 2. live smoke (reused: live_smoke.py; needs LITELLM_ANTHROPIC_KEY in /root/LiteLLM/.env) ──"
-if [ -f /root/LiteLLM/.env ] && grep -q LITELLM_ANTHROPIC_KEY /root/LiteLLM/.env 2>/dev/null; then
-  for t in text tools; do python3 "$SMOKE" "$t" 2>&1 | tail -1; done
-else
-  echo "skipped (no key shim; see SKILL.md)"
-fi
+echo "── 2. live smoke (message / stream / tools / reasoning boundary) ──"
+for t in message stream tools reasoning; do
+  LITELLM_KEY="$KEY" LITELLM_BASE_URL="$BASE_URL" python3 "$SMOKE" "$t" 2>&1 | tail -1
+done
 
 echo "── 3. functional delegate smoke ──"
 TMP=$(mktemp -d)

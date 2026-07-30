@@ -29,6 +29,19 @@ Fallbacks are request-scoped:
   matched rule explicitly permits downgrade.
 - Vision can fall back only to `vision-openrouter-secondary`.
 
+High-risk payment/authentication/PCI changes, race conditions, repeated failed
+fixes, protected paths, and production/infrastructure migrations route to
+Premium and cannot downgrade to GLM.
+
+Prometheus metrics:
+
+```text
+smart_router_requests_total{route,matched_rule,router_version}
+smart_router_fallbacks_total{source,target,reason}
+smart_router_cross_border_blocks_total{matched_rule}
+smart_router_complexity_score{route}
+```
+
 Environment overrides:
 
 ```bash

@@ -6,6 +6,7 @@ Usage:
     python3 tests/live_smoke.py message
     python3 tests/live_smoke.py stream
     python3 tests/live_smoke.py tools
+    python3 tests/live_smoke.py reasoning
 
 The key is resolved from LITELLM_KEY, ANTHROPIC_API_KEY, or KEY_FILE.
 """
@@ -21,6 +22,7 @@ import urllib.request
 
 BASE_URL = os.environ.get("LITELLM_BASE_URL", "http://127.0.0.1:4000").rstrip("/")
 MODEL = os.environ.get("CLAUDE_CODE_MODEL", "claude-opus-4-6")
+OPENAI_MODEL = os.environ.get("OPENCODE_MODEL", "glm-5.1")
 KEY_FILE = os.environ.get(
     "KEY_FILE",
     "/root/LiteLLM-Huawei-MaaS-Proxy/.claude-code-key.json",
@@ -55,6 +57,26 @@ def post(body, timeout=120):
             "content-type": "application/json",
             "x-api-key": KEY,
             "anthropic-version": "2023-06-01",
+        },
+        method="POST",
+    )
+    started = time.time()
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.status, response.read().decode("utf-8"), time.time() - started
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.read().decode("utf-8"), time.time() - started
+    except Exception as exc:
+        return -1, "{}: {}".format(type(exc).__name__, exc), time.time() - started
+
+
+def post_openai(body, timeout=120):
+    request = urllib.request.Request(
+        BASE_URL + "/v1/chat/completions",
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "content-type": "application/json",
+            "authorization": "Bearer " + KEY,
         },
         method="POST",
     )
@@ -159,21 +181,81 @@ def probe_tools():
     return valid
 
 
+def probe_reasoning():
+    anthropic_status, anthropic_raw, anthropic_elapsed = post({
+        "model": MODEL,
+        "max_tokens": 64,
+        "thinking": {"type": "enabled", "budget_tokens": 1024},
+        "messages": [{"role": "user", "content": "Think briefly, then reply REASONING_OK."}],
+    })
+    try:
+        anthropic_payload = json.loads(anthropic_raw)
+        block_types = [
+            block.get("type") for block in anthropic_payload.get("content", [])
+        ]
+        anthropic_valid = (
+            anthropic_status == 200
+            and "text" in block_types
+            and not {"thinking", "redacted_thinking"} & set(block_types)
+            and "reasoning_content" not in anthropic_raw
+        )
+    except (ValueError, AttributeError):
+        block_types = []
+        anthropic_valid = False
+    show(
+        "reasoning-anthropic-filtered",
+        200 if anthropic_valid else anthropic_status,
+        anthropic_elapsed,
+        "block_types={!r}".format(block_types),
+    )
+
+    openai_status, openai_raw, openai_elapsed = post_openai({
+        "model": OPENAI_MODEL,
+        "max_tokens": 64,
+        "messages": [{"role": "user", "content": "Think briefly, then reply REASONING_OK."}],
+    })
+    try:
+        openai_payload = json.loads(openai_raw)
+        message = openai_payload["choices"][0]["message"]
+        openai_valid = (
+            openai_status == 200
+            and bool(message.get("content"))
+            and "reasoning_content" in message
+        )
+        detail = "reasoning_content={}, final_content={}".format(
+            "present" if "reasoning_content" in message else "missing",
+            bool(message.get("content")),
+        )
+    except (ValueError, KeyError, IndexError, TypeError):
+        openai_valid = False
+        detail = openai_raw[:160]
+    show(
+        "reasoning-openai-preserved",
+        200 if openai_valid else openai_status,
+        openai_elapsed,
+        detail,
+    )
+    return anthropic_valid and openai_valid
+
+
 PROBES = {
     "message": probe_message,
     "stream": probe_stream,
     "tools": probe_tools,
+    "reasoning": probe_reasoning,
 }
 
 
 def main():
     requested = sys.argv[1] if len(sys.argv) > 1 else "all"
     if requested == "all":
-        names = ["message", "stream", "tools"]
+        names = ["message", "stream", "tools", "reasoning"]
     elif requested in PROBES:
         names = [requested]
     else:
-        raise SystemExit("Usage: {} [all|message|stream|tools]".format(sys.argv[0]))
+        raise SystemExit(
+            "Usage: {} [all|message|stream|tools|reasoning]".format(sys.argv[0])
+        )
 
     results = [PROBES[name]() for name in names]
     print("summary: {}/{} passed".format(sum(results), len(results)))
