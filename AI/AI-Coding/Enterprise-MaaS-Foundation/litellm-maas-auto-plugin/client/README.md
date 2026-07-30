@@ -5,7 +5,7 @@ API endpoint. No client-side proxy, router, or adapter is installed — Claude
 Code talks the Anthropic `/v1/messages` protocol directly to LiteLLM.
 
 ```
-Claude Code (this machine) ──Anthropic /v1/messages──► LiteLLM gateway :4000 ──► GLM-5.2
+Claude Code (this machine) ──Anthropic /v1/messages──► LiteLLM gateway :4000 ──► GLM-5.1
 ```
 
 Multiple Claude Code clients can share one gateway; each client should use its

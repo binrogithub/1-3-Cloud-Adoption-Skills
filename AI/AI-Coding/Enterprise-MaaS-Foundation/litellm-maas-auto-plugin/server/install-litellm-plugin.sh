@@ -18,7 +18,7 @@ set -euo pipefail
 #   4. Restarts the LiteLLM service and verifies the plugin import.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LITELLM_DIR="/root/LiteLLM"
+LITELLM_DIR="/root/LiteLLM-Huawei-MaaS-Proxy"
 COMPOSE_FILE=""
 CONFIG_FILE=""
 SERVICE="litellm"
@@ -26,6 +26,12 @@ CONTAINER="litellm_proxy"
 PLUGIN_FILE="$(cd "$SCRIPT_DIR/.." && pwd)/litellm_plugins/anthropic_stream_guard/callback.py"
 MOUNT_PATH="/app/anthropic_stream_guard.py"
 CALLBACK_NAME="anthropic_stream_guard.proxy_handler_instance"
+FILTER_FILE="$(cd "$SCRIPT_DIR/.." && pwd)/litellm_plugins/anthropic_reasoning_filter/callback.py"
+FILTER_MOUNT="/app/anthropic_reasoning_filter.py"
+FILTER_CALLBACK="anthropic_reasoning_filter.proxy_handler_instance"
+ROUTER_FILE="$(cd "$SCRIPT_DIR/.." && pwd)/litellm_plugins/smart_router/callback.py"
+ROUTER_MOUNT="/app/smart_router.py"
+ROUTER_CALLBACK="smart_router.proxy_handler_instance"
 FLAG_LINE="use_chat_completions_url_for_anthropic_messages"
 NO_RESTART=0
 DRY_RUN=0
@@ -39,7 +45,7 @@ Usage: install-litellm-plugin.sh [options]
 
 Options:
   --litellm-dir DIR   LiteLLM deployment dir containing docker-compose.yml.
-                      Default: /root/LiteLLM
+                      Default: /root/LiteLLM-Huawei-MaaS-Proxy
   --compose-file F    Compose file. Default: <litellm-dir>/docker-compose.yml
   --config-file F     LiteLLM config yaml. Default: auto-detected from the
                       compose mount of /app/config.yaml, else
@@ -71,6 +77,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -f "$PLUGIN_FILE" ]] || die "plugin file not found: $PLUGIN_FILE"
+[[ -f "$FILTER_FILE" ]] || die "reasoning filter not found: $FILTER_FILE"
+[[ -f "$ROUTER_FILE" ]] || die "smart router not found: $ROUTER_FILE"
 COMPOSE_FILE="${COMPOSE_FILE:-$LITELLM_DIR/docker-compose.yml}"
 [[ -f "$COMPOSE_FILE" ]] || die "compose file not found: $COMPOSE_FILE"
 command -v python3 >/dev/null || die "python3 is required"
@@ -102,7 +110,10 @@ echo
 ASG_MODE="$([[ $UNINSTALL == 1 ]] && echo uninstall || echo install)" \
 ASG_DRY="$DRY_RUN" ASG_COMPOSE="$COMPOSE_FILE" ASG_CONFIG="$CONFIG_FILE" \
 ASG_SERVICE="$SERVICE" ASG_PLUGIN="$PLUGIN_FILE" ASG_MOUNT="$MOUNT_PATH" \
-ASG_CALLBACK="$CALLBACK_NAME" ASG_FLAG="$FLAG_LINE" python3 - <<'PY'
+ASG_CALLBACK="$CALLBACK_NAME" ASG_FLAG="$FLAG_LINE" \
+ASG_FILTER_PLUGIN="$FILTER_FILE" ASG_FILTER_MOUNT="$FILTER_MOUNT" \
+ASG_FILTER_CALLBACK="$FILTER_CALLBACK" ASG_ROUTER_PLUGIN="$ROUTER_FILE" \
+ASG_ROUTER_MOUNT="$ROUTER_MOUNT" ASG_ROUTER_CALLBACK="$ROUTER_CALLBACK" python3 - <<'PY'
 import os, re, sys, time
 
 mode      = os.environ["ASG_MODE"]
@@ -113,6 +124,12 @@ service   = os.environ["ASG_SERVICE"]
 plugin    = os.environ["ASG_PLUGIN"]
 mount     = os.environ["ASG_MOUNT"]
 callback  = os.environ["ASG_CALLBACK"]
+filter_plugin = os.environ["ASG_FILTER_PLUGIN"]
+filter_mount = os.environ["ASG_FILTER_MOUNT"]
+filter_callback = os.environ["ASG_FILTER_CALLBACK"]
+router_plugin = os.environ["ASG_ROUTER_PLUGIN"]
+router_mount = os.environ["ASG_ROUTER_MOUNT"]
+router_callback = os.environ["ASG_ROUTER_CALLBACK"]
 flag      = os.environ["ASG_FLAG"]
 ts        = time.strftime("%Y%m%d%H%M%S")
 
@@ -161,6 +178,28 @@ else:
     text2 = mount_line_re.sub("", text)
     text = re.sub(r"\n\n+", "\n\n", text2) if text2 != text else text
     print(f"  compose: mount {'removed' if text != orig else 'not present'}")
+
+filter_mount_re = re.compile(r"^\s*-\s*.+:" + re.escape(filter_mount) + r"(:ro)?\s*$", re.M)
+if mode == "install" and not filter_mount_re.search(text):
+    primary_mount = re.search(r"^(\s*)-\s*.+:" + re.escape(mount) + r"(:ro)?\s*$", text, re.M)
+    if not primary_mount:
+        sys.exit(f"error: primary plugin mount missing while adding {filter_mount}")
+    insert_at = primary_mount.end()
+    text = text[:insert_at] + f"\n{primary_mount.group(1)}- {filter_plugin}:{filter_mount}:ro" + text[insert_at:]
+    print("  compose: reasoning filter mount added")
+elif mode == "uninstall":
+    text = filter_mount_re.sub("", text)
+
+router_mount_re = re.compile(r"^\s*-\s*.+:" + re.escape(router_mount) + r"(:ro)?\s*$", re.M)
+if mode == "install" and not router_mount_re.search(text):
+    filter_mount_line = re.search(r"^(\s*)-\s*.+:" + re.escape(filter_mount) + r"(:ro)?\s*$", text, re.M)
+    if not filter_mount_line:
+        sys.exit(f"error: reasoning filter mount missing while adding {router_mount}")
+    insert_at = filter_mount_line.end()
+    text = text[:insert_at] + f"\n{filter_mount_line.group(1)}- {router_plugin}:{router_mount}:ro" + text[insert_at:]
+    print("  compose: smart router mount added")
+elif mode == "uninstall":
+    text = router_mount_re.sub("", text)
 save(compose_f, text, orig)
 
 # ---------- litellm config yaml ----------
@@ -210,6 +249,28 @@ else:
         print("  config : callback removed")
     else:
         print("  config : callback not present")
+
+filter_cb_re = re.compile(r"^\s*-\s*" + re.escape(filter_callback) + r"\s*$", re.M)
+if mode == "install" and not filter_cb_re.search(text):
+    primary_cb = re.search(r"^(\s*)-\s*" + re.escape(callback) + r"\s*$", text, re.M)
+    if not primary_cb:
+        sys.exit(f"error: primary callback missing while adding {filter_callback}")
+    insert_at = primary_cb.end()
+    text = text[:insert_at] + f"\n{primary_cb.group(1)}- {filter_callback}" + text[insert_at:]
+    print("  config : reasoning filter callback registered")
+elif mode == "uninstall":
+    text = filter_cb_re.sub("", text)
+
+router_cb_re = re.compile(r"^\s*-\s*" + re.escape(router_callback) + r"\s*$", re.M)
+if mode == "install" and not router_cb_re.search(text):
+    filter_cb = re.search(r"^(\s*)-\s*" + re.escape(filter_callback) + r"\s*$", text, re.M)
+    if not filter_cb:
+        sys.exit(f"error: reasoning filter callback missing while adding {router_callback}")
+    insert_at = filter_cb.end()
+    text = text[:insert_at] + f"\n{filter_cb.group(1)}- {router_callback}" + text[insert_at:]
+    print("  config : smart router callback registered")
+elif mode == "uninstall":
+    text = router_cb_re.sub("", text)
 save(config_f, text, orig)
 PY
 
@@ -241,8 +302,12 @@ if [[ "$UNINSTALL" == "0" ]]; then
   docker exec "$CONTAINER" python -c "
 import sys; sys.path.insert(0, '/app')
 from anthropic_stream_guard import proxy_handler_instance, AnthropicStreamGuard
+from anthropic_reasoning_filter import proxy_handler_instance as reasoning_filter
+from smart_router import proxy_handler_instance as smart_router
 assert 'async_post_call_streaming_iterator_hook' in AnthropicStreamGuard.__dict__
 print('plugin import OK:', type(proxy_handler_instance).__name__)
+print('reasoning filter import OK:', type(reasoning_filter).__name__)
+print('smart router import OK:', type(smart_router).__name__)
 " || die "plugin import failed inside container"
   echo
   echo "Install complete. Next steps: see server/README.md"

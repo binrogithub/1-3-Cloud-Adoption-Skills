@@ -2,7 +2,7 @@
 
 Make a LiteLLM proxy serve **native Claude Code** clients over the Anthropic
 `/v1/messages` protocol, backed by an OpenAI-compatible reasoning model
-(GLM-5.2 on Huawei MaaS in this deployment). Supports many concurrent Claude
+(GLM-5.1 on Huawei MaaS in this deployment). Supports many concurrent Claude
 Code clients, each with its own virtual key, budget, and rate limits.
 
 ```
@@ -12,7 +12,7 @@ Claude Code #N ─┘                             │  auth / budgets / tpm / rp
                                               │  anthropic_stream_guard  (this plugin)
                                               │  claude-* wildcard route
                                               ▼
-                                       GLM-5.2 (/chat/completions)
+                                       GLM-5.1 (/chat/completions)
 ```
 
 ## Why a plugin is needed
@@ -55,7 +55,7 @@ Design details: [`../docs/PRD-anthropic-stream-guard.md`](../docs/PRD-anthropic-
 ## Install
 
 ```bash
-./install-litellm-plugin.sh                # defaults: /root/LiteLLM, service litellm
+./install-litellm-plugin.sh                # defaults: /root/LiteLLM-Huawei-MaaS-Proxy
 ./install-litellm-plugin.sh --dry-run      # preview changes
 ./install-litellm-plugin.sh --uninstall    # roll back mount + callback
 ```
@@ -65,15 +65,14 @@ and performs:
 
 | Step | File | Change |
 |---|---|---|
-| mount plugin | `docker-compose.yml` | `- <repo>/litellm_plugins/anthropic_stream_guard/callback.py:/app/anthropic_stream_guard.py:ro` |
-| register callback | `litellm_config.yaml` | `litellm_settings.callbacks: - anthropic_stream_guard.proxy_handler_instance` |
+| mount plugins | `docker-compose.yml` | mount stream guard, reasoning filter, and smart router as `/app/*.py` |
+| register callbacks | `litellm_config.yaml` | stream guard, then reasoning filter, then smart router |
 | routing flag | `litellm_config.yaml` | `litellm_settings.use_chat_completions_url_for_anthropic_messages: true` |
 | restart + verify | container | health wait + in-container import check |
 
-> The plugin **must** be mounted as a single file at
-> `/app/anthropic_stream_guard.py`: LiteLLM's `get_instance_fn` resolves
-> callbacks as `<module>.py` next to the config file and does not support
-> package directories.
+> Each plugin **must** be mounted as a single `/app/<module>.py` file:
+> LiteLLM's `get_instance_fn` resolves callbacks next to the config file and
+> does not support package directories.
 
 ## Required LiteLLM configuration (manual, deployment-specific)
 
@@ -84,11 +83,11 @@ wildcard entry in `model_list`:
 ```yaml
   - model_name: "claude-*"
     litellm_params:
-      model: openai/glm-5.2
+      model: openai/glm-5.1
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
     model_info:
-      max_input_tokens: 192000
+      max_input_tokens: 198000
       max_output_tokens: 128000
 ```
 
@@ -108,7 +107,8 @@ must cover the wildcard:
 curl -sS -X POST http://127.0.0.1:4000/key/generate \
   -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
   -H "content-type: application/json" \
-  -d '{"key_alias":"claude-code-alice","models":["claude-*"],
+  -d '{"key_alias":"claude-code-alice",
+       "models":["claude-*","vision-openrouter","premium-openrouter"],
        "max_budget":100,"tpm_limit":500000,"rpm_limit":30}'
 ```
 

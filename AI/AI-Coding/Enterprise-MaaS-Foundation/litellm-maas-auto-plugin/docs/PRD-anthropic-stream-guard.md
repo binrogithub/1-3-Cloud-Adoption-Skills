@@ -8,11 +8,13 @@
 ## 1. 背景
 
 生产链路: Claude Code(可能多实例)→ LiteLLM `:4000` `/v1/messages`(Anthropic 协议)→
-`use_chat_completions_url_for_anthropic_messages: true` → OpenAI `/chat/completions` → GLM-5.2 (Huawei MaaS)。
+`use_chat_completions_url_for_anthropic_messages: true` → OpenAI `/chat/completions` → GLM-5.1 (Huawei MaaS)。
 
-GLM-5.2 无法关闭 reasoning 输出(实测 `enable_thinking:false` / `reasoning_effort:none` /
-`thinking:{type:disabled}` 均无效),`reasoning_content` 恒定存在。LiteLLM 负责把
-OpenAI 流 chunk 转回 Anthropic SSE 事件。
+GLM-5.1 默认输出 reasoning。`thinking:{type:disabled}` 可以关闭模型思考，但会同时
+失去推理能力；部分通用参数（如 `enable_thinking:false`）在兼容接口上不稳定。
+本方案保持 thinking 开启，在 Anthropic 响应边界过滤内部 reasoning，同时让
+OpenAI 兼容客户端继续获得 `reasoning_content`。LiteLLM 负责把 OpenAI 流 chunk
+转回 Anthropic SSE 事件。
 
 ## 2. 问题(实测复现)
 

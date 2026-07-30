@@ -1,8 +1,10 @@
 # anthropic_stream_guard
 
 LiteLLM custom callback that makes `/v1/messages` safe for native Claude Code
-clients when the backend is an OpenAI-compatible reasoning model whose
-`reasoning_content` cannot be disabled (e.g. GLM-5.2 on Huawei MaaS).
+clients when the backend is an OpenAI-compatible reasoning model that emits
+`reasoning_content` (e.g. GLM-5.1 on Huawei MaaS). The recommended deployment
+keeps model thinking enabled and uses the companion response filter to hide
+internal reasoning only at the Anthropic client boundary.
 
 - **Request side** (`async_pre_call_hook`): strips `thinking` / `reasoning` /
   `reasoning_effort` so LiteLLM keeps `/v1/messages` on `/chat/completions`

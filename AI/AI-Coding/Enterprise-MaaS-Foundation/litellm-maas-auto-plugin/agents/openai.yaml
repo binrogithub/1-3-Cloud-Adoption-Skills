@@ -1,0 +1,4 @@
+interface:
+  display_name: "LiteLLM MaaS Auto Plugin"
+  short_description: "Operate GLM and OpenRouter coding gateways"
+  default_prompt: "Use $litellm-maas-auto-plugin to deploy and verify a LiteLLM gateway for Claude Code or OpenCode."
