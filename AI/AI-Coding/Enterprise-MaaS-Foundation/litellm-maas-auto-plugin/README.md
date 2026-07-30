@@ -28,6 +28,8 @@ upstream model is an Anthropic Claude model.
 | `litellm_plugins/anthropic_stream_guard/callback.py` | Request and Anthropic SSE compatibility callback |
 | `litellm_plugins/anthropic_reasoning_filter/callback.py` | Hide thinking from Claude while preserving upstream reasoning |
 | `litellm_plugins/smart_router/callback.py` | Four-language deterministic model router |
+| `litellm_plugins/smart_router/smart_router_rules.json` | Versioned multilingual rules and observational score weights |
+| `litellm_plugins/smart_router/smart_router_rules.schema.json` | Strict rules schema |
 | `tests/test_anthropic_stream_guard.py` | Callback regression tests |
 | `tests/test_smart_router.py` | Language, intent, and 198K boundary tests |
 | `tests/live_smoke.py` | Live message, stream, and tool-call probes |
@@ -58,8 +60,8 @@ fail-open.
 - A healthy Docker Compose LiteLLM deployment.
 - A working `glm-5.1` model route.
 - A `claude-*` model route backed by `openai/glm-5.1`.
-- A LiteLLM virtual key allowed to use `claude-*`, `vision-openrouter`, and
-  `premium-openrouter`.
+- A LiteLLM virtual key allowed to use `claude-*`, `vision-openrouter`,
+  `vision-openrouter-secondary`, and `premium-openrouter`.
 - Native Claude Code installed.
 
 ## Install the server plugin
@@ -71,7 +73,7 @@ server/install-litellm-plugin.sh \
 
 The installer:
 
-1. mounts the stream guard, reasoning filter, and smart router as single files;
+1. mounts the three callbacks plus the smart-router rules;
 2. registers their callbacks in the required order;
 3. enables Chat Completions routing for Anthropic Messages;
 4. restarts LiteLLM;
@@ -110,7 +112,8 @@ curl -sS -X POST http://127.0.0.1:4000/key/generate \
   -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
   -H "Content-Type: application/json" \
   -d '{"key_alias":"claude-code-user",
-       "models":["claude-*","vision-openrouter","premium-openrouter"],
+       "models":["claude-*","vision-openrouter",
+                 "vision-openrouter-secondary","premium-openrouter"],
        "tpm_limit":500000,"rpm_limit":30}'
 ```
 
@@ -164,3 +167,9 @@ and Spanish. Images and visual/UI requests use `vision-openrouter`;
 architecture, database design, complex debugging, security review, production
 incidents, infrastructure changes, and input above 198000 tokens use
 `premium-openrouter`. Other execution work stays on GLM.
+
+Routing metadata includes the token estimate, matched rule, observational
+complexity score, router version, and request-scoped fallback chain. GLM can
+fall back to Premium only when cross-border policy permits it; Premium can
+downgrade only for explicitly permitted rules below the context limit; Vision
+falls back only to `vision-openrouter-secondary`.

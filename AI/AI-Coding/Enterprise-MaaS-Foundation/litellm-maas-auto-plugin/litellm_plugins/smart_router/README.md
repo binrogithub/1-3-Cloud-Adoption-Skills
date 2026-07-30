@@ -12,14 +12,34 @@ Routing order:
    production incidents, and infrastructure changes -> `premium-openrouter`.
 5. Everything else remains on the requested GLM-backed Claude alias.
 
+The score is observational only. Each request records `estimated_tokens`,
+`matched_rule`, `complexity_score`, `router_version`, and `fallback_chain`
+under `metadata.smart_router`.
+
+Rules live in `smart_router_rules.json` and are described by
+`smart_router_rules.schema.json`. The callback validates the configuration at
+import time and fails fast on unknown keys, invalid regexes, duplicate IDs, or
+invalid scoring weights.
+
+Fallbacks are request-scoped:
+
+- GLM execution can fall back to Premium unless sensitive/data-residency
+  language blocks a China-to-US transfer.
+- Premium can fall back to GLM only below the context limit and only when its
+  matched rule explicitly permits downgrade.
+- Vision can fall back only to `vision-openrouter-secondary`.
+
 Environment overrides:
 
 ```bash
 SMART_ROUTER_GLM_MODEL=claude-*
 SMART_ROUTER_VISION_MODEL=vision-openrouter
+SMART_ROUTER_VISION_FALLBACK_MODEL=vision-openrouter-secondary
 SMART_ROUTER_PREMIUM_MODEL=premium-openrouter
 SMART_ROUTER_PREMIUM_CONTEXT_THRESHOLD=198000
+SMART_ROUTER_RULES_FILE=/app/smart_router_rules.json
 ```
 
 Register `smart_router.proxy_handler_instance` in `litellm_settings.callbacks`
-after mounting `callback.py` as `/app/smart_router.py`.
+after mounting `callback.py` as `/app/smart_router.py` and the rules file as
+`/app/smart_router_rules.json`.

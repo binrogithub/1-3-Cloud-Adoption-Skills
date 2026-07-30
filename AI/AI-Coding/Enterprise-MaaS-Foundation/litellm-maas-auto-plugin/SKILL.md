@@ -127,6 +127,26 @@ Use `litellm_plugins/smart_router/callback.py`. Apply hard rules in order:
 
 At the exact boundary, 198000 stays on GLM and 198001 routes to Premium.
 
+Load multilingual intent rules from
+`litellm_plugins/smart_router/smart_router_rules.json`. Validate edits against
+`smart_router_rules.schema.json`; the callback also rejects unknown keys,
+invalid regexes, duplicate rule IDs, and scoring weights that do not sum to
+one. Keep `complexity_score` observational: never let it override the hard
+routing order.
+
+Record `estimated_tokens`, `matched_rule`, `complexity_score`, `router_version`,
+and the selected request-scoped fallback chain under `metadata.smart_router`.
+
+Use capability- and residency-safe request fallbacks:
+
+- GLM execution → Premium unless a sensitive/data-residency rule blocks the
+  China-to-US fallback.
+- Premium → GLM only at `<= 198000` and only for a matched rule marked
+  `allow_downgrade`.
+- Vision → `vision-openrouter-secondary`; never fall back to a text-only model.
+
+Allow virtual keys to access every configured fallback model.
+
 ## Model routes
 
 Configure the GLM-backed Claude alias:
@@ -154,6 +174,10 @@ vision deployment:
   litellm_params:
     model: openrouter/openai/gpt-4o
 
+- model_name: vision-openrouter-secondary
+  litellm_params:
+    model: openrouter/google/gemini-2.5-pro
+
 - model_name: premium-openrouter
   litellm_params:
     model: openrouter/anthropic/claude-opus-4
@@ -168,13 +192,15 @@ Issue one scoped key per client or host.
 Claude Code key models:
 
 ```json
-["claude-*", "vision-openrouter", "premium-openrouter"]
+["claude-*", "vision-openrouter", "vision-openrouter-secondary",
+ "premium-openrouter"]
 ```
 
 OpenCode key models:
 
 ```json
-["glm-5.1", "vision-openrouter", "premium-openrouter"]
+["glm-5.1", "vision-openrouter", "vision-openrouter-secondary",
+ "premium-openrouter"]
 ```
 
 Store key responses in separate `0600` files. Do not reuse the LiteLLM master
