@@ -8,8 +8,14 @@ internal reasoning only at the Anthropic client boundary.
 
 - **Request side** (`async_pre_call_hook`): strips `thinking` / `reasoning` /
   `reasoning_effort` so LiteLLM keeps `/v1/messages` on `/chat/completions`
-  instead of the unsupported OpenAI Responses API. Opt out with
-  `ASG_STRIP_THINKING=false`.
+  instead of the unsupported OpenAI Responses API. It also strips Anthropic
+  server tools that the OpenAI-compatible backend cannot execute, normalizes
+  OpenAI-style `image_url` blocks into Anthropic `image/source` blocks, and can
+  translate forced Anthropic `tool_choice` values into OpenAI-compatible
+  function choice for direct-provider adapters that validate the OpenAI shape.
+  Keep `ASG_TRANSLATE_TOOL_CHOICE=false` for LiteLLM `/v1/messages` ingress;
+  enable it only for direct Huawei endpoint adapter deployments. Opt out of
+  thinking stripping with `ASG_STRIP_THINKING=false`.
 - **Response side** (`async_post_call_streaming_iterator_hook`): re-sequences
   the malformed SSE stream produced by the messages->chat/completions adapter
   (single `text` block mixing `thinking_delta` + `text_delta`) into a
@@ -17,6 +23,11 @@ internal reasoning only at the Anthropic client boundary.
   `content_block_stop`/`start` pairs, index remapping. Byte-identical
   pass-through for already-correct streams; fail-open on errors; never touches
   OpenAI-protocol streams.
+- **Huawei SSE compatibility**: repairs raw byte chunks framed as bare
+  `data:` plus un-prefixed pretty JSON into compact Anthropic SSE, and drops
+  trailing OpenAI-style `data: [DONE]` only after `message_stop`. Multi-event
+  malformed chunks fail open and pass through unchanged instead of risking
+  data loss.
 - **Tool-call diagnostics**: increments `asg_unparsed_tool_markup_total` and
   logs one redacted warning when a tools request streams raw `<tool_call`
   markup as visible text. The guard intentionally does not rewrite improvised
@@ -50,7 +61,7 @@ vLLM, start with `--enable-auto-tool-choice` and the matching
 ## Hardening (10k-user scale)
 
 Security invariants (enforced in code comments I1-I7 and by the test suite
-`tests/test_anthropic_stream_guard.py`, 21 checks):
+`tests/test_anthropic_stream_guard.py`, 32 checks):
 
 | Invariant | Mechanism |
 |---|---|
@@ -72,6 +83,9 @@ asg_oversize_passthrough_total  chunks skipped by the size cap
 asg_synthesized_terminations_total streams finalized after early upstream end
 asg_upstream_stream_errors_total upstream iterator exceptions finalized
 asg_unparsed_tool_markup_total  raw <tool_call markup seen in tool requests
+asg_raw_sse_repaired_total      Huawei raw pretty-JSON SSE frames repaired
+asg_openai_done_dropped_total   trailing data: [DONE] chunks dropped
+asg_tool_choice_translated_total forced Anthropic tool_choice translations
 ```
 
 Alerting suggestions: page when `asg_parse_errors_total` rate stays above zero
@@ -79,4 +93,6 @@ Alerting suggestions: page when `asg_parse_errors_total` rate stays above zero
 stops increasing while traffic is nonzero (upstream fixed - plugin can be
 retired).
 
-Env: `ASG_STRIP_THINKING` (default true), `ASG_MAX_PARSE_BYTES` (default 262144).
+Env: `ASG_STRIP_THINKING` (default true), `ASG_NORMALIZE_IMAGE_URL` (default
+true), `ASG_TRANSLATE_TOOL_CHOICE` (default false), `ASG_MAX_PARSE_BYTES`
+(default 262144).

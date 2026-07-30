@@ -5,7 +5,9 @@
 `test_anthropic_stream_guard.py` is a self-contained regression script. It
 covers request normalization, queued user
 interjections, Anthropic streaming block repair, terminal event synthesis,
-raw tool-markup detection, fail-open behavior, and Prometheus counters.
+Huawei pretty-JSON SSE repair, trailing `[DONE]` suppression, forced
+`tool_choice` translation, raw tool-markup detection, fail-open behavior, and
+Prometheus counters.
 
 Run with Python 3.7+:
 

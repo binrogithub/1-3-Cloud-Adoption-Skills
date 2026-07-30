@@ -22,7 +22,13 @@ sys.path.insert(
     0,
     str(Path(__file__).resolve().parents[1] / "litellm_plugins" / "anthropic_stream_guard"),
 )
-from callback import proxy_handler_instance, _normalize_thinking_signatures, _sse
+from callback import (
+    apply_stop_sequences,
+    normalize_image_url_blocks,
+    proxy_handler_instance,
+    _normalize_thinking_signatures,
+    _sse,
+)
 
 def sse(e): return _sse(e)
 
@@ -247,6 +253,42 @@ assert " < hi:" in "".join(
 )
 print("T13 tools request without tool identity downgraded: PASS")
 
+# T13b OpenAI-style image_url blocks are normalized to Anthropic image/source.
+img_req = {
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "color?"},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "data:image/png;base64,QUJD",
+                    },
+                },
+            ],
+        }
+    ]
+}
+assert normalize_image_url_blocks(img_req) == 1
+assert img_req["messages"][0]["content"][1] == {
+    "type": "image",
+    "source": {"type": "base64", "media_type": "image/png", "data": "QUJD"},
+}
+print("T13b image_url normalized to Anthropic image source: PASS")
+
+# T13c non-stream stop_sequences are enforced if the backend ignores them.
+stop_resp = {
+    "content": [{"type": "text", "text": "BEGIN STOPXYZ AFTER"}],
+    "stop_reason": "end_turn",
+    "stop_sequence": None,
+}
+assert apply_stop_sequences({"stop_sequences": ["STOPXYZ"]}, stop_resp) is True
+assert stop_resp["content"][0]["text"] == "BEGIN "
+assert stop_resp["stop_reason"] == "stop_sequence"
+assert stop_resp["stop_sequence"] == "STOPXYZ"
+print("T13c stop_sequences enforced for non-stream response: PASS")
+
 # T14 upstream ends right after a complete tool_use block (the GLM/MaaS
 # "Connection closed mid-response" bug): guard must synthesize termination
 TRUNC_TOOL=[sse(e) for e in [
@@ -447,4 +489,77 @@ assert json.dumps(req_t3) == before_t3
 assert strip_server_tools({}) == 0
 print("T27 client-only tools untouched: PASS")
 
-print("ALL 27 TESTS PASS")
+# T28 Huawei raw pretty JSON SSE framing is repaired into valid Anthropic SSE
+RAW_PRETTY = (
+    b"event: message_start\n"
+    b"data:\n"
+    b"{\n"
+    b'  "type": "message_start",\n'
+    b'  "message": {\n'
+    b'    "id": "m_raw"\n'
+    b"  }\n"
+    b"}\n\n"
+)
+raw_event = {"type": "message_start", "message": {"id": "m_raw"}}
+raw_stop = {"type": "message_stop"}
+assert asyncio.run(run([RAW_PRETTY, sse(raw_stop)])) == [sse(raw_event), sse(raw_stop)]
+print("T28 Huawei raw pretty JSON SSE repaired: PASS")
+
+# T29 trailing OpenAI-style data: [DONE] after Anthropic message_stop is dropped
+TRAILING_DONE = [
+    sse({"type": "message_start", "message": {"id": "m_done"}}),
+    sse({"type": "message_stop"}),
+    b"data: [DONE]\n\n",
+]
+assert asyncio.run(run(TRAILING_DONE)) == TRAILING_DONE[:2]
+print("T29 trailing OpenAI DONE after message_stop dropped: PASS")
+
+# T30 Huawei pretty JSON repair refuses multi-event chunks rather than
+# dropping trailing content.
+RAW_PRETTY_MULTI_EVENT = RAW_PRETTY + sse({"type": "message_stop"})
+assert asyncio.run(run([RAW_PRETTY_MULTI_EVENT])) == [RAW_PRETTY_MULTI_EVENT]
+print("T30 Huawei raw pretty JSON multi-event chunk is fail-open: PASS")
+
+# T31 forced Anthropic tool_choice translation is opt-in for direct adapters
+async def pre_call(data):
+    return await proxy_handler_instance.async_pre_call_hook(
+        user_api_key_dict=None, cache=None, data=data, call_type="acompletion"
+    )
+
+forced_req = {"tool_choice": {"type": "tool", "name": "get_weather"}}
+asyncio.run(pre_call(forced_req))
+assert forced_req["tool_choice"] == {"type": "tool", "name": "get_weather"}
+
+old_translate = _cbmod.TRANSLATE_TOOL_CHOICE
+_cbmod.TRANSLATE_TOOL_CHOICE = True
+forced_req = {"tool_choice": {"type": "tool", "name": "get_weather"}}
+asyncio.run(pre_call(forced_req))
+assert forced_req["tool_choice"] == {
+    "type": "function",
+    "function": {"name": "get_weather"},
+}
+for choice in ("auto", "any", "none"):
+    req_choice = {"tool_choice": {"type": choice}}
+    before_choice = json.dumps(req_choice)
+    asyncio.run(pre_call(req_choice))
+    assert json.dumps(req_choice) == before_choice, choice
+_cbmod.TRANSLATE_TOOL_CHOICE = old_translate
+print("T31 forced Anthropic tool_choice translated only when enabled: PASS")
+
+# T32 compatibility metrics exist and can be monkey-patched to no-op counters
+for metric_name in (
+    "RAW_SSE_REPAIRED",
+    "OPENAI_DONE_DROPPED",
+    "TOOL_CHOICE_TRANSLATED",
+):
+    metric = getattr(_cbmod, metric_name)
+    assert hasattr(metric, "inc")
+    old_metric = metric
+    noop_metric = _Rec()
+    setattr(_cbmod, metric_name, noop_metric)
+    getattr(_cbmod, metric_name).inc()
+    assert noop_metric.n == 1
+    setattr(_cbmod, metric_name, old_metric)
+print("T32 compatibility metrics degrade through inc-compatible counters: PASS")
+
+print("ALL TESTS PASS")
