@@ -65,7 +65,7 @@ and performs:
 
 | Step | File | Change |
 |---|---|---|
-| mount plugins | `docker-compose.yml` | mount stream guard, reasoning filter, and smart router as `/app/*.py` |
+| mount plugins | `docker-compose.yml` | mount three callbacks plus `/app/smart_router_rules.json` |
 | register callbacks | `litellm_config.yaml` | stream guard, then reasoning filter, then smart router |
 | routing flag | `litellm_config.yaml` | `litellm_settings.use_chat_completions_url_for_anthropic_messages: true` |
 | restart + verify | container | health wait + in-container import check |
@@ -108,7 +108,8 @@ curl -sS -X POST http://127.0.0.1:4000/key/generate \
   -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
   -H "content-type: application/json" \
   -d '{"key_alias":"claude-code-alice",
-       "models":["claude-*","vision-openrouter","premium-openrouter"],
+       "models":["claude-*","vision-openrouter",
+                 "vision-openrouter-secondary","premium-openrouter"],
        "max_budget":100,"tpm_limit":500000,"rpm_limit":30}'
 ```
 

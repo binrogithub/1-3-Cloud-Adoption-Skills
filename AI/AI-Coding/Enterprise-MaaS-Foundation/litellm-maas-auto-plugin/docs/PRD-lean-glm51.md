@@ -158,6 +158,21 @@ Expose Prometheus counters for request normalization, stream repair,
 interjection amplification, raw tool markup, upstream errors, and synthesized
 terminations.
 
+The smart router must record `estimated_tokens`, `matched_rule`,
+`complexity_score`, `router_version`, and the request-scoped fallback chain.
+The score is diagnostic only and must not override deterministic routing.
+
+### FR-10: Configurable routing and safe fallback
+
+- Store Chinese, English, Brazilian Portuguese, and Spanish intent rules in a
+  versioned JSON file with a strict JSON Schema and import-time validation.
+- Route GLM failures to Premium only when cross-border policy permits.
+- Downgrade Premium to GLM only for explicitly permitted rules at or below
+  198000 tokens.
+- Route Vision failures only to another vision-capable model.
+- Use request-scoped LiteLLM fallbacks; do not install a global,
+  capability-blind fallback chain.
+
 ## 7. Repository scope
 
 Production source:
@@ -167,6 +182,8 @@ client/
 server/
 litellm_plugins/anthropic_stream_guard/
 litellm_plugins/smart_router/
+  smart_router_rules.json
+  smart_router_rules.schema.json
 ```
 
 Verification source:
@@ -209,6 +226,9 @@ unavailable model routes, or test suites for plugins that are not shipped.
 10. Uninstall remains available and documented.
 11. All retained unit tests pass.
 12. Secret scan of tracked/product files and runtime logs is clean.
+13. Invalid rule files fail closed during callback import.
+14. Complexity scoring never changes the selected hard-rule route.
+15. Vision fallback never selects a text-only model.
 
 ## 9. Risks
 

@@ -32,6 +32,8 @@ FILTER_CALLBACK="anthropic_reasoning_filter.proxy_handler_instance"
 ROUTER_FILE="$(cd "$SCRIPT_DIR/.." && pwd)/litellm_plugins/smart_router/callback.py"
 ROUTER_MOUNT="/app/smart_router.py"
 ROUTER_CALLBACK="smart_router.proxy_handler_instance"
+ROUTER_RULES_FILE="$(cd "$SCRIPT_DIR/.." && pwd)/litellm_plugins/smart_router/smart_router_rules.json"
+ROUTER_RULES_MOUNT="/app/smart_router_rules.json"
 FLAG_LINE="use_chat_completions_url_for_anthropic_messages"
 NO_RESTART=0
 DRY_RUN=0
@@ -79,6 +81,7 @@ done
 [[ -f "$PLUGIN_FILE" ]] || die "plugin file not found: $PLUGIN_FILE"
 [[ -f "$FILTER_FILE" ]] || die "reasoning filter not found: $FILTER_FILE"
 [[ -f "$ROUTER_FILE" ]] || die "smart router not found: $ROUTER_FILE"
+[[ -f "$ROUTER_RULES_FILE" ]] || die "smart router rules not found: $ROUTER_RULES_FILE"
 COMPOSE_FILE="${COMPOSE_FILE:-$LITELLM_DIR/docker-compose.yml}"
 [[ -f "$COMPOSE_FILE" ]] || die "compose file not found: $COMPOSE_FILE"
 command -v python3 >/dev/null || die "python3 is required"
@@ -113,7 +116,9 @@ ASG_SERVICE="$SERVICE" ASG_PLUGIN="$PLUGIN_FILE" ASG_MOUNT="$MOUNT_PATH" \
 ASG_CALLBACK="$CALLBACK_NAME" ASG_FLAG="$FLAG_LINE" \
 ASG_FILTER_PLUGIN="$FILTER_FILE" ASG_FILTER_MOUNT="$FILTER_MOUNT" \
 ASG_FILTER_CALLBACK="$FILTER_CALLBACK" ASG_ROUTER_PLUGIN="$ROUTER_FILE" \
-ASG_ROUTER_MOUNT="$ROUTER_MOUNT" ASG_ROUTER_CALLBACK="$ROUTER_CALLBACK" python3 - <<'PY'
+ASG_ROUTER_MOUNT="$ROUTER_MOUNT" ASG_ROUTER_CALLBACK="$ROUTER_CALLBACK" \
+ASG_ROUTER_RULES_PLUGIN="$ROUTER_RULES_FILE" \
+ASG_ROUTER_RULES_MOUNT="$ROUTER_RULES_MOUNT" python3 - <<'PY'
 import os, re, sys, time
 
 mode      = os.environ["ASG_MODE"]
@@ -130,6 +135,8 @@ filter_callback = os.environ["ASG_FILTER_CALLBACK"]
 router_plugin = os.environ["ASG_ROUTER_PLUGIN"]
 router_mount = os.environ["ASG_ROUTER_MOUNT"]
 router_callback = os.environ["ASG_ROUTER_CALLBACK"]
+router_rules_plugin = os.environ["ASG_ROUTER_RULES_PLUGIN"]
+router_rules_mount = os.environ["ASG_ROUTER_RULES_MOUNT"]
 flag      = os.environ["ASG_FLAG"]
 ts        = time.strftime("%Y%m%d%H%M%S")
 
@@ -200,6 +207,17 @@ if mode == "install" and not router_mount_re.search(text):
     print("  compose: smart router mount added")
 elif mode == "uninstall":
     text = router_mount_re.sub("", text)
+
+router_rules_mount_re = re.compile(r"^\s*-\s*.+:" + re.escape(router_rules_mount) + r"(:ro)?\s*$", re.M)
+if mode == "install" and not router_rules_mount_re.search(text):
+    router_mount_line = re.search(r"^(\s*)-\s*.+:" + re.escape(router_mount) + r"(:ro)?\s*$", text, re.M)
+    if not router_mount_line:
+        sys.exit(f"error: smart router mount missing while adding {router_rules_mount}")
+    insert_at = router_mount_line.end()
+    text = text[:insert_at] + f"\n{router_mount_line.group(1)}- {router_rules_plugin}:{router_rules_mount}:ro" + text[insert_at:]
+    print("  compose: smart router rules mount added")
+elif mode == "uninstall":
+    text = router_rules_mount_re.sub("", text)
 save(compose_f, text, orig)
 
 # ---------- litellm config yaml ----------

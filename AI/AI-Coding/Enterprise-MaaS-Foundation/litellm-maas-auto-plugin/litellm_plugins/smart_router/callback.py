@@ -1,58 +1,114 @@
-"""LiteLLM pre-call router for GLM execution, OpenRouter vision, and Opus reasoning."""
+"""Deterministic, observable router for GLM and US-hosted OpenRouter pools."""
 
 import json
 import os
 import re
+from pathlib import Path
 
 from litellm.integrations.custom_logger import CustomLogger
 
+
 GLM_MODEL = os.getenv("SMART_ROUTER_GLM_MODEL", "claude-*")
 VISION_MODEL = os.getenv("SMART_ROUTER_VISION_MODEL", "vision-openrouter")
+VISION_FALLBACK_MODEL = os.getenv(
+    "SMART_ROUTER_VISION_FALLBACK_MODEL", "vision-openrouter-secondary"
+)
 PREMIUM_MODEL = os.getenv("SMART_ROUTER_PREMIUM_MODEL", "premium-openrouter")
-PREMIUM_CONTEXT_THRESHOLD = int(os.getenv("SMART_ROUTER_PREMIUM_CONTEXT_THRESHOLD", "198000"))
-
-_VISION_RE = re.compile(
-    r"\b(?:ui|ux|visual\s+design|design\s+system|landing\s+page)\b|"
-    r"视觉设计|界面设计|网页设计|设计(?:网页|页面|界面|UI|UX)|设计系统|"
-    r"\bdesign\s+(?:visual|de\s+interface|de\s+ui|de\s+ux)\b|"
-    r"\bdiseño\s+(?:visual|de\s+interfaz|de\s+ui|de\s+ux)\b",
-    re.IGNORECASE,
+PREMIUM_CONTEXT_THRESHOLD = int(
+    os.getenv("SMART_ROUTER_PREMIUM_CONTEXT_THRESHOLD", "198000")
+)
+RULES_FILE = Path(
+    os.getenv(
+        "SMART_ROUTER_RULES_FILE",
+        str(Path(__file__).with_name("smart_router_rules.json")),
+    )
 )
 
-_PREMIUM_RE = re.compile(
-    r"\b(?:system|software|solution|technical|application|cloud|security)\s+architecture\b|"
-    r"\barchitecture\s+(?:design|planning|review)\b|"
-    r"\b(?:database|schema|data\s+model|api|microservice|infrastructure)\s+design\b|"
-    r"\b(?:complex\s+debug|security\s+review|production\s+incident|infrastructure\s+change)\b|"
-    r"系统架构|软件架构|架构(?:设计|规划|评审)|数据库(?:架构|结构|表结构)?设计|"
-    r"设计(?:数据库|表结构|数据模型|系统架构|软件架构)|"
-    r"复杂(?:调试|排错|故障诊断)|安全(?:审查|评审|分析)|生产(?:事故|故障|事件)|"
-    r"\b(?:arquitetura|desenho)\s+(?:de\s+)?(?:sistema|software|solução|solucao|"
-    r"aplicação|aplicacao|nuvem|segurança|seguranca|banco\s+de\s+dados|dados|api|"
-    r"microsserviços|microsservicos|infraestrutura)\b|"
-    r"\b(?:desenhe|projete|planeje|revise)\b.{0,60}\b(?:arquitetura|banco\s+de\s+dados|"
-    r"modelo\s+de\s+dados|microsserviços|microsservicos)\b|"
-    r"\b(?:depuração|depuracao|diagnóstico|diagnostico)\s+complex[oa]\b|"
-    r"\b(?:revisão|revisao|análise|analise)\s+de\s+segurança\b|"
-    r"\bincidente\s+(?:de|em)\s+produção\b|"
-    r"\b(?:arquitectura|diseño)\s+(?:de\s+)?(?:sistema|software|solución|solucion|"
-    r"aplicación|aplicacion|nube|seguridad|base\s+de\s+datos|datos|api|"
-    r"microservicios|infraestructura)\b|"
-    r"\b(?:diseña|diseñe|planifica|planifique|revisa|revise)\b.{0,60}"
-    r"\b(?:arquitectura|base\s+de\s+datos|modelo\s+de\s+datos|microservicios)\b|"
-    r"\b(?:depuración|depuracion|diagnóstico|diagnostico)\s+complej[oa]\b|"
-    r"\b(?:revisión|revision|análisis|analisis)\s+de\s+seguridad\b|"
-    r"\bincidente\s+(?:de|en)\s+producción\b",
-    re.IGNORECASE,
-)
+_TOP_LEVEL_KEYS = {
+    "router_version",
+    "vision_rules",
+    "premium_rules",
+    "cross_border_block_rules",
+    "complexity",
+}
+_RULE_KEYS = {"id", "languages", "pattern", "allow_downgrade"}
+_COMPLEXITY_KEYS = {"weights", "code_pattern", "reasoning_pattern", "multistep_pattern"}
+_WEIGHT_KEYS = {"token_ratio", "code", "reasoning", "multistep", "premium_intent"}
+
+
+def _validate_rules(raw):
+    if not isinstance(raw, dict) or set(raw) != _TOP_LEVEL_KEYS:
+        raise ValueError("rules must contain exactly the documented top-level keys")
+    if not isinstance(raw["router_version"], str) or not raw["router_version"]:
+        raise ValueError("router_version must be a non-empty string")
+    for group in ("vision_rules", "premium_rules", "cross_border_block_rules"):
+        if not isinstance(raw[group], list):
+            raise ValueError("%s must be an array" % group)
+        seen = set()
+        for rule in raw[group]:
+            allowed = _RULE_KEYS if group == "premium_rules" else _RULE_KEYS - {"allow_downgrade"}
+            if not isinstance(rule, dict) or not {"id", "languages", "pattern"} <= set(rule):
+                raise ValueError("%s entries require id, languages, and pattern" % group)
+            if set(rule) - allowed:
+                raise ValueError("%s entry has unknown keys" % group)
+            if rule["id"] in seen:
+                raise ValueError("duplicate rule id: %s" % rule["id"])
+            seen.add(rule["id"])
+            if not isinstance(rule["languages"], list) or not rule["languages"]:
+                raise ValueError("%s.languages must be a non-empty array" % rule["id"])
+            re.compile(rule["pattern"], re.IGNORECASE)
+            if "allow_downgrade" in rule and not isinstance(rule["allow_downgrade"], bool):
+                raise ValueError("%s.allow_downgrade must be boolean" % rule["id"])
+    complexity = raw["complexity"]
+    if not isinstance(complexity, dict) or set(complexity) != _COMPLEXITY_KEYS:
+        raise ValueError("complexity must contain exactly the documented keys")
+    weights = complexity["weights"]
+    if not isinstance(weights, dict) or set(weights) != _WEIGHT_KEYS:
+        raise ValueError("complexity.weights keys do not match the schema")
+    if any(not isinstance(value, (int, float)) or value < 0 or value > 1 for value in weights.values()):
+        raise ValueError("complexity weights must be numbers between 0 and 1")
+    if abs(sum(weights.values()) - 1.0) > 0.000001:
+        raise ValueError("complexity weights must sum to 1")
+    for key in ("code_pattern", "reasoning_pattern", "multistep_pattern"):
+        re.compile(complexity[key], re.IGNORECASE)
+    return raw
+
+
+def load_rules(path=RULES_FILE):
+    with Path(path).open(encoding="utf-8") as handle:
+        return _validate_rules(json.load(handle))
+
+
+RULES = load_rules()
+
+
+def _compiled_rules(name):
+    return [
+        (rule, re.compile(rule["pattern"], re.IGNORECASE))
+        for rule in RULES[name]
+    ]
+
+
+VISION_RULES = _compiled_rules("vision_rules")
+PREMIUM_RULES = _compiled_rules("premium_rules")
+CROSS_BORDER_BLOCK_RULES = _compiled_rules("cross_border_block_rules")
+COMPLEXITY_PATTERNS = {
+    key: re.compile(RULES["complexity"][key], re.IGNORECASE)
+    for key in ("code_pattern", "reasoning_pattern", "multistep_pattern")
+}
 
 
 def _has_image(data):
     for message in data.get("messages") or data.get("input") or []:
         if not isinstance(message, dict):
             continue
-        for block in message.get("content") if isinstance(message.get("content"), list) else []:
-            if isinstance(block, dict) and block.get("type") in {"image", "image_url", "input_image"}:
+        content = message.get("content")
+        for block in content if isinstance(content, list) else []:
+            if isinstance(block, dict) and block.get("type") in {
+                "image",
+                "image_url",
+                "input_image",
+            }:
                 return True
     return False
 
@@ -69,9 +125,26 @@ def _latest_user_text(data):
                 return " ".join(
                     block.get("text", "")
                     for block in content
-                    if isinstance(block, dict) and block.get("type") in {"text", "input_text"}
+                    if isinstance(block, dict)
+                    and block.get("type") in {"text", "input_text"}
                 )
     return ""
+
+
+def _policy_text(data):
+    """Return all request text relevant to residency/fallback policy."""
+    values = [
+        data.get("messages"),
+        data.get("input"),
+        data.get("system"),
+        data.get("instructions"),
+        data.get("tools"),
+    ]
+    return " ".join(
+        json.dumps(value, ensure_ascii=False, default=str)
+        for value in values
+        if value
+    )
 
 
 def _estimate_tokens(data):
@@ -84,34 +157,93 @@ def _estimate_tokens(data):
         estimate = len(json.dumps(messages, ensure_ascii=False, default=str)) // 4
     for key in ("system", "instructions", "tools"):
         if data.get(key):
-            estimate += max(1, len(json.dumps(data[key], ensure_ascii=False, default=str)) // 4)
+            estimate += max(
+                1, len(json.dumps(data[key], ensure_ascii=False, default=str)) // 4
+            )
     return estimate
 
 
+def _first_match(rules, text):
+    for rule, pattern in rules:
+        if pattern.search(text):
+            return rule
+    return None
+
+
+def _complexity_score(text, tokens, premium_match):
+    weights = RULES["complexity"]["weights"]
+    features = {
+        "token_ratio": min(1.0, tokens / float(PREMIUM_CONTEXT_THRESHOLD + 1)),
+        "code": float(bool(COMPLEXITY_PATTERNS["code_pattern"].search(text))),
+        "reasoning": float(bool(COMPLEXITY_PATTERNS["reasoning_pattern"].search(text))),
+        "multistep": float(bool(COMPLEXITY_PATTERNS["multistep_pattern"].search(text))),
+        "premium_intent": float(bool(premium_match)),
+    }
+    return round(sum(features[key] * weights[key] for key in weights), 4)
+
+
+def _fallbacks(route_reason, tokens, premium_rule, cross_border_blocked):
+    if route_reason == "image" or route_reason.startswith("vision:"):
+        return [VISION_FALLBACK_MODEL]
+    if route_reason.startswith("premium:"):
+        if (
+            tokens <= PREMIUM_CONTEXT_THRESHOLD
+            and premium_rule
+            and premium_rule.get("allow_downgrade", False)
+        ):
+            return [GLM_MODEL]
+        return []
+    if route_reason == "glm_execution" and not cross_border_blocked:
+        return [PREMIUM_MODEL]
+    return []
+
+
 def route_request(data):
-    """Mutate and return a request according to the documented hard rules."""
+    """Mutate a request using hard rules; scoring is observational only."""
     original = data.get("model", GLM_MODEL)
-    if _has_image(data):
-        target, reason = VISION_MODEL, "image"
+    tokens = _estimate_tokens(data)
+    text = _latest_user_text(data)
+    policy_text = _policy_text(data)
+    image = _has_image(data)
+    vision_rule = _first_match(VISION_RULES, text)
+    premium_rule = _first_match(PREMIUM_RULES, text)
+    cross_border_rule = _first_match(CROSS_BORDER_BLOCK_RULES, policy_text)
+
+    if image:
+        target, matched_rule = VISION_MODEL, "image"
+    elif tokens > PREMIUM_CONTEXT_THRESHOLD:
+        target, matched_rule = PREMIUM_MODEL, "context_over_198k"
+    elif vision_rule:
+        target, matched_rule = VISION_MODEL, "vision:%s" % vision_rule["id"]
+    elif premium_rule:
+        target, matched_rule = PREMIUM_MODEL, "premium:%s" % premium_rule["id"]
     else:
-        tokens = _estimate_tokens(data)
-        text = _latest_user_text(data)
-        if tokens > PREMIUM_CONTEXT_THRESHOLD:
-            target, reason = PREMIUM_MODEL, "context_over_198k"
-        elif _VISION_RE.search(text):
-            target, reason = VISION_MODEL, "visual_ui"
-        elif _PREMIUM_RE.search(text):
-            target, reason = PREMIUM_MODEL, "premium_reasoning"
-        else:
-            target, reason = original, "glm_execution"
+        target, matched_rule = original, "glm_execution"
+
+    fallback_chain = _fallbacks(
+        matched_rule, tokens, premium_rule, bool(cross_border_rule)
+    )
     data["model"] = target
+    if fallback_chain:
+        # LiteLLM supports client/request-scoped fallbacks. This avoids a global,
+        # capability-blind fallback chain.
+        data["fallbacks"] = fallback_chain
+    else:
+        data.pop("fallbacks", None)
+
     metadata = data.setdefault("metadata", {})
     metadata["smart_router"] = {
         "original_model": original,
         "target_model": target,
-        "route_reason": reason,
+        "route_reason": matched_rule,
+        "matched_rule": matched_rule,
+        "estimated_tokens": tokens,
+        "complexity_score": _complexity_score(text, tokens, premium_rule),
+        "router_version": RULES["router_version"],
         "context_threshold": PREMIUM_CONTEXT_THRESHOLD,
         "languages": ["zh", "en", "pt-BR", "es"],
+        "fallback_chain": fallback_chain,
+        "cross_border_fallback_blocked": bool(cross_border_rule),
     }
     return data
 
