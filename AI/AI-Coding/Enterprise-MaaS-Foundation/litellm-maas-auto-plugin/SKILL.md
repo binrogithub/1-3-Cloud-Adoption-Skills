@@ -126,6 +126,9 @@ Use `litellm_plugins/smart_router/callback.py`. Apply hard rules in order:
 5. Everything else remains on GLM.
 
 At the exact boundary, 198000 stays on GLM and 198001 routes to Premium.
+Treat payment/authentication/PCI, race conditions, repeated failed fixes,
+CODEOWNERS-protected paths, and production or infrastructure migrations as
+non-downgradable Premium work.
 
 Load multilingual intent rules from
 `litellm_plugins/smart_router/smart_router_rules.json`. Validate edits against
@@ -146,6 +149,26 @@ Use capability- and residency-safe request fallbacks:
 - Vision → `vision-openrouter-secondary`; never fall back to a text-only model.
 
 Allow virtual keys to access every configured fallback model.
+
+Expose and monitor:
+
+- `smart_router_requests_total{route,matched_rule,router_version}`
+- `smart_router_fallbacks_total{source,target,reason}`
+- `smart_router_cross_border_blocks_total{matched_rule}`
+- `smart_router_complexity_score{route}`
+
+### Retry and budget controls
+
+- Limit an execution item to two model attempts. Include concise failure
+  evidence in the second attempt; after that, return `needs_escalation` and do
+  not route the same item back to GLM.
+- Give interactive clients, CI, and recurring loops separate virtual keys.
+- Set per-key rolling budgets plus RPM and TPM limits as circuit breakers.
+- Treat 429 as capacity/budget backpressure: use bounded exponential backoff
+  with jitter, honor `Retry-After`, and stop rather than creating a retry
+  storm.
+- Bound workflow concurrency to the virtual key's RPM/TPM capacity and set a
+  hard wall-clock timeout.
 
 ## Model routes
 

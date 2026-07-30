@@ -12,8 +12,10 @@ user ──► claude (official client, OAuth, ZERO middleware) ─────�
            │
            └─ execution/workflow task ──► delegate / workflow (runners)
                 └─ claude-glm -p (CLAUDE_CONFIG_DIR isolation, virtual key)
-                     └─ LiteLLM :4000 (stream guard, context guard, budgets)
-                          └─ GLM-5.1/5.2 (Huawei MaaS)  ← incl. all subagent fan-out
+                     └─ LiteLLM :4000 (stream + reasoning guards, smart router, budgets)
+                          ├─ execution / ≤198K → GLM-5.1 (Huawei MaaS)
+                          ├─ premium / >198K → premium-openrouter
+                          └─ image / visual → vision-openrouter
 ```
 
 Full product definition, mechanism specs, and acceptance criteria: [docs/PRD.md](docs/PRD.md).
@@ -33,7 +35,12 @@ splitting are eliminated *by construction* (PRD §5):
 |---|---|
 | Subscription OAuth terms risk | token is only ever held/presented by the official `claude` binary; delegation is an ordinary Bash subprocess |
 | Prompt-cache / rate-limit burn on backend switches | the OAuth session is append-only on one backend; briefs go down, summaries come up — no cross-backend replay |
-| Protocol edge cases (role shapes, cache TTL, thinking signatures) | zero middleware on the OAuth path; GLM-path quirks handled server-side by `anthropic_stream_guard` + `context_window_guard` |
+| Protocol edge cases (role shapes, cache TTL, thinking signatures) | zero middleware on the OAuth path; GLM-path quirks handled server-side by `anthropic_stream_guard` + `anthropic_reasoning_filter` |
+
+The GLM model keeps thinking enabled. Claude Code receives only final text,
+structured tool calls, usage, and termination events; OpenCode retains
+`reasoning_content` through `/v1/chat/completions`. This prevents the malformed
+internal reasoning stream that previously appeared as garbled characters.
 
 ## Positioning vs Sibling Assets
 
@@ -49,7 +56,7 @@ splitting are eliminated *by construction* (PRD §5):
 | Tool | Purpose |
 |---|---|
 | LiteLLM proxy (LiteLLM-Huawei-MaaS-Proxy stack) | execution-pool gateway on :4000 |
-| litellm-maas-auto-plugin server plugins | `anthropic_stream_guard` (mandatory), `context_window_guard`, `claude-*` wildcard route |
+| litellm-maas-auto-plugin server plugins | `anthropic_stream_guard`, `anthropic_reasoning_filter`, `smart_router` + rules, GLM/Premium/Vision model pools |
 | Claude Code CLI ≥ 2.1.x | orchestrator (OAuth) and delegate (virtual key) runtimes |
 | python3 (stdlib) | `delegate` / `workflow` runners |
 

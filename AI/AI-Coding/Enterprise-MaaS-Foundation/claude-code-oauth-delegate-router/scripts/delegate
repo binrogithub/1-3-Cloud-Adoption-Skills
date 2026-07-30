@@ -9,7 +9,7 @@ Brief schema: assets/brief-schema.json. Result JSON on stdout (PRD §6.2).
 Exit codes: 0 success, 2 needs_escalation, 1 usage/infra error.
 Audit: one JSONL record per attempt in $DELEGATE_AUDIT.
 """
-import json, os, re, subprocess, sys, time, uuid
+import json, os, random, re, subprocess, sys, time, uuid
 
 AUDIT = os.environ.get("DELEGATE_AUDIT") or os.path.expanduser("~/.claude-hybrid/route-audit.jsonl")
 TIMEOUT = int(os.environ.get("DELEGATE_TIMEOUT_S", "1800"))
@@ -17,6 +17,7 @@ ALLOWED_TOOLS = os.environ.get(
     "DELEGATE_ALLOWED_TOOLS", "Bash,Read,Edit,Write,Glob,Grep,TodoWrite"
 )
 CLAUDE_GLM = os.environ.get("DELEGATE_CLIENT", "claude-glm")
+MAX_BACKOFF = max(0, int(os.environ.get("DELEGATE_MAX_BACKOFF_S", "30")))
 
 PROTOCOL = """You are an execution agent working headlessly in the current directory.
 Complete the TASK BRIEF below. Rules:
@@ -81,6 +82,20 @@ def check_acceptance(brief, cwd):
     return p.returncode == 0, (p.stdout + p.stderr)[-800:]
 
 
+def retry_delay(attempt, report, evidence):
+    text = "{} {}".format(report.get("summary", ""), evidence)
+    if not re.search(r"\b(?:429|rate.?limit|capacity|too many requests)\b", text, re.I):
+        return 0
+    retry_after = re.search(r"retry-after\D{0,8}(\d+)", text, re.I)
+    if retry_after:
+        return min(MAX_BACKOFF, int(retry_after.group(1)))
+    return min(MAX_BACKOFF, (2 ** attempt) + random.uniform(0, 1))
+
+
+def bounded_attempts(value):
+    return min(2, max(1, int(value)))
+
+
 def main():
     args = sys.argv[1:]
     cwd = os.getcwd()
@@ -93,7 +108,8 @@ def main():
     else:
         sys.exit(__doc__)
     brief.setdefault("attempt", 1)
-    max_attempts = int(brief.get("max_attempts", 2))
+    # This runner is the loop boundary. Caller input cannot raise the ceiling.
+    max_attempts = bounded_attempts(brief.get("max_attempts", 2))
     task_id = brief.get("task_id") or uuid.uuid4().hex[:8]
 
     result = None
@@ -124,6 +140,9 @@ def main():
         brief["previous_failure"] = {"attempt": attempt,
                                      "summary": report.get("summary", "")[:300],
                                      "acceptance_output": evidence}
+        delay = retry_delay(attempt, report, evidence)
+        if delay and attempt < max_attempts:
+            time.sleep(delay)
     if result["status"] != "success":
         result["status"] = "needs_escalation"
         audit({"ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "task_id": task_id,

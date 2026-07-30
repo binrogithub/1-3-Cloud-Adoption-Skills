@@ -173,3 +173,14 @@ complexity score, router version, and request-scoped fallback chain. GLM can
 fall back to Premium only when cross-border policy permits it; Premium can
 downgrade only for explicitly permitted rules below the context limit; Vision
 falls back only to `vision-openrouter-secondary`.
+
+Payment/authentication/PCI changes, race conditions, repeated failed fixes,
+protected paths, and production/infrastructure migrations are
+non-downgradable Premium work. Monitor `smart_router_requests_total`,
+`smart_router_fallbacks_total`, `smart_router_cross_border_blocks_total`, and
+`smart_router_complexity_score`.
+
+For automated work, use separate virtual keys for interactive clients, CI,
+and recurring loops. Limit each work item to two attempts, enforce rolling
+budgets/RPM/TPM, honor `Retry-After` with bounded exponential backoff and
+jitter, and stop after exhaustion instead of creating a 429 retry storm.

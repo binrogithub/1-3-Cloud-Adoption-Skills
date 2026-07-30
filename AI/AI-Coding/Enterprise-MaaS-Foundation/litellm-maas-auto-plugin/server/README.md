@@ -116,6 +116,12 @@ curl -sS -X POST http://127.0.0.1:4000/key/generate \
 **4. Network.** For remote clients, expose port 4000 to their IPs only
 (cloud security group). LiteLLM already binds `0.0.0.0:4000` in this compose.
 
+**5. Automation circuit breakers.** Use separate virtual keys for interactive
+clients, CI, and recurring loops. Set rolling budgets, RPM, and TPM on each
+key. Limit an execution item to two attempts, honor `Retry-After`, use bounded
+exponential backoff with jitter, and stop after exhaustion. Size workflow
+concurrency below the key's RPM/TPM capacity.
+
 ## Verify
 
 ```bash

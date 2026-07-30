@@ -172,6 +172,21 @@ The score is diagnostic only and must not override deterministic routing.
 - Route Vision failures only to another vision-capable model.
 - Use request-scoped LiteLLM fallbacks; do not install a global,
   capability-blind fallback chain.
+- Classify payment/authentication/PCI changes, race conditions, repeated
+  failed fixes, protected paths, and production/infrastructure migrations as
+  non-downgradable Premium work.
+- Export route, fallback, cross-border-block, and complexity-score Prometheus
+  metrics.
+
+### FR-11: Retry and budget safety
+
+- Limit each execution item to two attempts and include failure evidence only
+  in the final retry.
+- Escalate after exhaustion and never automatically re-delegate the same item.
+- Isolate interactive, CI, and recurring-loop traffic with separate virtual
+  keys and rolling budget/RPM/TPM circuit breakers.
+- Honor `Retry-After`; use bounded exponential backoff with jitter for 429;
+  stop rather than forming a retry storm.
 
 ## 7. Repository scope
 
@@ -215,14 +230,14 @@ unavailable model routes, or test suites for plugins that are not shipped.
 2. Chinese, English, Brazilian Portuguese, and Spanish routing tests pass.
 3. An estimated 198000-token execution request stays on GLM; 198001 routes
    to Premium/Opus.
-2. LiteLLM container imports `anthropic_stream_guard`.
-3. LiteLLM does not import `cc_glm52_guard` or `context_window_guard`.
-4. `/health/liveliness` returns HTTP 200.
-5. `/v1/messages` returns an Anthropic message response.
-6. Streaming produces a valid terminal sequence.
-7. Tool probe returns a structured `tool_use` block.
-8. `claude -p` completes successfully through the gateway.
-9. Installer dry-run is a no-op after installation.
+4. LiteLLM container imports the stream guard, reasoning filter, and smart router.
+5. LiteLLM imports no removed compatibility or context-guard plugin.
+6. `/health/liveliness` returns HTTP 200.
+7. `/v1/messages` returns an Anthropic message response.
+8. Streaming produces a valid terminal sequence.
+9. Tool probe returns a structured `tool_use` block.
+10. `claude -p` completes successfully through the gateway.
+11. Installer dry-run is a no-op after installation.
 10. Uninstall remains available and documented.
 11. All retained unit tests pass.
 12. Secret scan of tracked/product files and runtime logs is clean.

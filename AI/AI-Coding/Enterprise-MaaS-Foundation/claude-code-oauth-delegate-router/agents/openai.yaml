@@ -1,0 +1,4 @@
+interface:
+  display_name: "Claude Code OAuth Delegate Router"
+  short_description: "Delegate Claude Code execution to MaaS"
+  default_prompt: "Use $claude-code-oauth-delegate-router to configure and verify OAuth-safe Claude Code delegation through LiteLLM."

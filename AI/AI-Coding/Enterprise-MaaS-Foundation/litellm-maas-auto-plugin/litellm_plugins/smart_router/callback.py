@@ -35,6 +35,46 @@ _RULE_KEYS = {"id", "languages", "pattern", "allow_downgrade"}
 _COMPLEXITY_KEYS = {"weights", "code_pattern", "reasoning_pattern", "multistep_pattern"}
 _WEIGHT_KEYS = {"token_ratio", "code", "reasoning", "multistep", "premium_intent"}
 
+# Metrics degrade to no-ops if prometheus_client is unavailable. Label values
+# come only from validated rule IDs and configured model names.
+try:
+    from prometheus_client import Counter as _Counter
+    from prometheus_client import Histogram as _Histogram
+
+    ROUTE_REQUESTS = _Counter(
+        "smart_router_requests_total",
+        "Requests classified by the deterministic smart router",
+        ["route", "matched_rule", "router_version"],
+    )
+    FALLBACKS = _Counter(
+        "smart_router_fallbacks_total",
+        "Request-scoped fallback chains selected by the smart router",
+        ["source", "target", "reason"],
+    )
+    CROSS_BORDER_BLOCKS = _Counter(
+        "smart_router_cross_border_blocks_total",
+        "GLM-to-US fallbacks blocked by residency or sensitivity rules",
+        ["matched_rule"],
+    )
+    COMPLEXITY_SCORES = _Histogram(
+        "smart_router_complexity_score",
+        "Observational complexity score; never used to select a route",
+        ["route"],
+        buckets=(0.1, 0.25, 0.5, 0.75, 0.9, 1.0),
+    )
+except Exception:  # pragma: no cover - only used in minimal installations
+    class _Noop:
+        def labels(self, **kwargs):
+            return self
+
+        def inc(self):
+            return None
+
+        def observe(self, value):
+            return None
+
+    ROUTE_REQUESTS = FALLBACKS = CROSS_BORDER_BLOCKS = COMPLEXITY_SCORES = _Noop()
+
 
 def _validate_rules(raw):
     if not isinstance(raw, dict) or set(raw) != _TOP_LEVEL_KEYS:
@@ -231,6 +271,7 @@ def route_request(data):
     else:
         data.pop("fallbacks", None)
 
+    complexity_score = _complexity_score(text, tokens, premium_rule)
     metadata = data.setdefault("metadata", {})
     metadata["smart_router"] = {
         "original_model": original,
@@ -238,13 +279,27 @@ def route_request(data):
         "route_reason": matched_rule,
         "matched_rule": matched_rule,
         "estimated_tokens": tokens,
-        "complexity_score": _complexity_score(text, tokens, premium_rule),
+        "complexity_score": complexity_score,
         "router_version": RULES["router_version"],
         "context_threshold": PREMIUM_CONTEXT_THRESHOLD,
         "languages": ["zh", "en", "pt-BR", "es"],
         "fallback_chain": fallback_chain,
         "cross_border_fallback_blocked": bool(cross_border_rule),
     }
+    ROUTE_REQUESTS.labels(
+        route=target,
+        matched_rule=matched_rule,
+        router_version=RULES["router_version"],
+    ).inc()
+    COMPLEXITY_SCORES.labels(route=target).observe(complexity_score)
+    for fallback in fallback_chain:
+        FALLBACKS.labels(
+            source=target,
+            target=fallback,
+            reason=matched_rule,
+        ).inc()
+    if cross_border_rule and matched_rule == "glm_execution":
+        CROSS_BORDER_BLOCKS.labels(matched_rule=cross_border_rule["id"]).inc()
     return data
 
 
