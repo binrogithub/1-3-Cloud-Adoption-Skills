@@ -1,4 +1,4 @@
-# Scenario 2: AI-Assisted Image Discovery and ECS Deployment
+# AI-Assisted Image Discovery and ECS Deployment
 
 ## Overview
 

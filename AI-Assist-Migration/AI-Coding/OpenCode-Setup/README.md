@@ -1,4 +1,4 @@
-# Scenario 1: OpenCode Setup for Huawei Cloud AI-Assisted Infrastructure
+# OpenCode Setup for Huawei Cloud AI-Assisted Infrastructure
 
 ## Overview
 

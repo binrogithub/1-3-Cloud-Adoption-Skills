@@ -1,4 +1,4 @@
-# Scenario 4: AWS to Huawei Cloud Migration with AI Assistance
+# AWS to Huawei Cloud Migration with AI Assistance
 
 ## Overview
 

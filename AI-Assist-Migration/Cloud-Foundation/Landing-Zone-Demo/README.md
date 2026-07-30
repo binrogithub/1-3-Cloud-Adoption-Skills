@@ -1,4 +1,4 @@
-# Scenario 3: Multi-Account Landing Zone on Huawei Cloud
+# Multi-Account Landing Zone on Huawei Cloud
 
 ## Overview
 
