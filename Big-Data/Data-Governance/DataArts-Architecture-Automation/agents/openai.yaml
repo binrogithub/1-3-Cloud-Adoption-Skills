@@ -1,0 +1,6 @@
+interface:
+  display_name: "DataArts Architecture Automation"
+  short_description: "Automate DataArts Architecture APIs"
+  default_prompt: "Use $dataarts-architecture-automation to infer metadata from source tables and create DataArts Architecture objects."
+policy:
+  allow_implicit_invocation: true
