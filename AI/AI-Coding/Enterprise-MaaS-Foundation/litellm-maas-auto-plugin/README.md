@@ -34,6 +34,7 @@ upstream model is an Anthropic Claude model.
 | `tests/test_smart_router.py` | Language, intent, and 198K boundary tests |
 | `tests/live_smoke.py` | Live message, stream, and tool-call probes |
 | `docs/PRD-lean-glm51.md` | Current product requirements and acceptance criteria |
+| `docs/PRD-huawei-meli-compat-router.md` | Huawei/Meli compatibility and advisor-routing requirements |
 
 ## What the callback fixes
 
@@ -45,8 +46,13 @@ upstream model is an Anthropic Claude model.
   It hides provider reasoning only from Anthropic/Claude responses while
   preserving final text and structured tool calls.
 - Removes incompatible server-side search tool declarations.
+- Translates Anthropic forced `tool_choice` into the OpenAI-compatible
+  function-choice shape required by some Huawei MaaS endpoints.
 - Separates mixed thinking and text delta families into valid Anthropic
   content blocks.
+- Repairs Huawei raw Anthropic SSE frames that use bare `data:` plus
+  un-prefixed pretty JSON, and drops trailing OpenAI-style `data: [DONE]`
+  after `message_stop`.
 - Synthesizes missing terminal events when an upstream stream ends early.
 - Re-surfaces the newest queued user interjection.
 - Detects raw model-authored `<tool_call>` markup and exposes a metric without
@@ -163,16 +169,19 @@ Expected:
 ## Smart routing
 
 The deterministic router recognizes Chinese, English, Brazilian Portuguese,
-and Spanish. Images and visual/UI requests use `vision-openrouter`;
-architecture, database design, complex debugging, security review, production
-incidents, infrastructure changes, and input above 198000 tokens use
-`premium-openrouter`. Other execution work stays on GLM.
+and Spanish. Images, visual inspection, UI/design, wireframe, diagram, graph,
+and mockup requests use `vision-openrouter`; advisor/strategy, architecture,
+database design, strict output contracts, complex debugging, security review,
+production incidents, infrastructure changes, and input above 198000 tokens use
+`premium-openrouter`. Other execution work, including ordinary code generation,
+tests, and simple refactors, stays on GLM.
 
 Routing metadata includes the token estimate, matched rule, observational
-complexity score, router version, and request-scoped fallback chain. GLM can
-fall back to Premium only when cross-border policy permits it; Premium can
-downgrade only for explicitly permitted rules below the context limit; Vision
-falls back only to `vision-openrouter-secondary`.
+complexity score, router version, request-scoped fallback chain, and a provider
+capability reason when a route is selected because GLM should not handle that
+capability. GLM can fall back to Premium only when cross-border policy permits
+it; Premium can downgrade only for explicitly permitted rules below the context
+limit; Vision falls back only to `vision-openrouter-secondary`.
 
 Payment/authentication/PCI changes, race conditions, repeated failed fixes,
 protected paths, and production/infrastructure migrations are

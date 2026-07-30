@@ -5,20 +5,31 @@
       "id": "visual-ui",
       "languages": ["en", "zh", "pt-BR", "es"],
       "pattern": "\\b(?:ui|ux|visual\\s+design|design\\s+system|landing\\s+page|design\\s+(?:visual|de\\s+interface|de\\s+ui|de\\s+ux)|diseño\\s+(?:visual|de\\s+interfaz|de\\s+ui|de\\s+ux))\\b|视觉设计|界面设计|网页设计|设计(?:网页|页面|界面|UI|UX)|设计系统"
+    },
+    {
+      "id": "visual-output",
+      "languages": ["en", "zh", "pt-BR", "es"],
+      "pattern": "\\b(?:visual\\s+inspection|inspect\\b.{0,40}\\b(?:ui|interface|screen|screenshot|layout)|(?:create|generate|draw|design|render)\\b.{0,40}\\b(?:diagram|graph|wireframe|mockup|visual|layout))\\b|图表|线框图|流程图|架构图|界面检查|\\b(?:inspeção|inspecao)\\s+visual\\b|\\b(?:crie|gere|desenhe|projete)\\b.{0,40}\\b(?:diagrama|gráfico|grafico|wireframe|protótipo|prototipo|layout)\\b|\\b(?:inspección|inspeccion)\\s+visual\\b|\\b(?:crea|genere|dibuja|diseña|disena)\\b.{0,40}\\b(?:diagrama|gráfico|grafico|wireframe|maqueta|layout)\\b"
     }
   ],
   "premium_rules": [
     {
+      "id": "advisor-strategy",
+      "languages": ["en", "zh", "pt-BR", "es"],
+      "allow_downgrade": false,
+      "pattern": "\\b(?:advisor|advise|recommend\\s+(?:a\\s+)?strategy|strategy\\s+review|migration\\s+strategy)\\b|顾问|建议策略|迁移策略|\\b(?:assessor|consultor|aconselhe|recomende\\s+(?:uma\\s+)?estratégia|recomende\\s+(?:uma\\s+)?estrategia|estratégia\\s+de\\s+migração|estrategia\\s+de\\s+migracao)\\b|\\b(?:asesor|consultor|aconseja|recomienda\\s+(?:una\\s+)?estrategia|estrategia\\s+de\\s+migración|estrategia\\s+de\\s+migracion)\\b"
+    },
+    {
       "id": "architecture-data",
       "languages": ["en", "zh", "pt-BR", "es"],
       "allow_downgrade": true,
-      "pattern": "\\b(?:system|software|solution|technical|application|cloud|security)\\s+architecture\\b|\\barchitecture\\s+(?:design|planning|review)\\b|\\b(?:database|schema|data\\s+model|api|microservice|infrastructure)\\s+design\\b|系统架构|软件架构|架构(?:设计|规划|评审)|数据库(?:架构|结构|表结构)?设计|设计(?:数据库|表结构|数据模型|系统架构|软件架构)|\\b(?:arquitetura|desenho)\\s+(?:de\\s+)?(?:sistema|software|solução|solucao|nuvem|banco\\s+de\\s+dados|dados|api|microsserviços|microsservicos|infraestrutura)\\b|\\b(?:desenhe|projete|planeje|revise)\\b.{0,60}\\b(?:arquitetura|banco\\s+de\\s+dados|modelo\\s+de\\s+dados|microsserviços|microsservicos)\\b|\\b(?:arquitectura|diseño)\\s+(?:de\\s+)?(?:sistema|software|solución|solucion|nube|base\\s+de\\s+datos|datos|api|microservicios|infraestructura)\\b|\\b(?:diseña|diseñe|planifica|planifique|revisa|revise)\\b.{0,60}\\b(?:arquitectura|base\\s+de\\s+datos|modelo\\s+de\\s+datos|microservicios)\\b"
+      "pattern": "\\b(?:system|software|solution|technical|application|cloud|security)\\s+architecture\\b|\\barchitecture\\s+(?:design|planning|review)\\b|\\b(?:review|assess|evaluate)\\b.{0,40}\\barchitecture\\b|\\b(?:database|schema|data\\s+model|api|microservice|infrastructure)\\s+design\\b|系统架构|软件架构|架构(?:设计|规划|评审)|数据库(?:架构|结构|表结构)?设计|设计(?:数据库|表结构|数据模型|系统架构|软件架构)|\\b(?:arquitetura|desenho)\\s+(?:de\\s+)?(?:sistema|software|solução|solucao|nuvem|banco\\s+de\\s+dados|dados|api|microsserviços|microsservicos|infraestrutura)\\b|\\b(?:desenhe|projete|planeje|revise)\\b.{0,60}\\b(?:arquitetura|banco\\s+de\\s+dados|modelo\\s+de\\s+dados|microsserviços|microsservicos)\\b|\\b(?:arquitectura|diseño)\\s+(?:de\\s+)?(?:sistema|software|solución|solucion|nube|base\\s+de\\s+datos|datos|api|microservicios|infraestructura)\\b|\\b(?:diseña|diseñe|planifica|planifique|revisa|revise)\\b.{0,60}\\b(?:arquitectura|base\\s+de\\s+datos|modelo\\s+de\\s+datos|microservicios)\\b"
     },
     {
       "id": "complex-debug",
       "languages": ["en", "zh", "pt-BR", "es"],
       "allow_downgrade": true,
-      "pattern": "\\bcomplex\\s+(?:debug|diagnosis)\\b|复杂(?:调试|排错|故障诊断)|\\b(?:depuração|depuracao|diagnóstico|diagnostico)\\s+complex[oa]\\b|\\b(?:depuración|depuracion|diagnóstico|diagnostico)\\s+complej[oa]\\b"
+      "pattern": "\\bcomplex\\s+(?:debug|debugging|diagnosis)\\b|复杂(?:调试|排错|故障诊断)|\\b(?:depuração|depuracao|diagnóstico|diagnostico)\\s+complex[oa]\\b|\\b(?:depuración|depuracion|diagnóstico|diagnostico)\\s+complej[oa]\\b"
     },
     {
       "id": "security-incident-infra",
@@ -31,6 +42,12 @@
       "languages": ["en", "zh", "pt-BR", "es"],
       "allow_downgrade": false,
       "pattern": "\\b(?:race\\s+condition|repeated\\s+(?:failed\\s+)?fix(?:es)?|payment|authentication|authorization|auth|pci|codeowners|protected\\s+path|infrastructure\\s+migration|production\\s+migration)\\b|竞态条件|竞争条件|重复修复失败|支付|认证|鉴权|受保护路径|基础设施迁移|生产迁移|\\b(?:condição\\s+de\\s+corrida|condicao\\s+de\\s+corrida|falhas?\\s+repetidas?\\s+de\\s+correção|pagamento|autenticação|autenticacao|autorização|autorizacao|migração\\s+de\\s+infraestrutura)\\b|\\b(?:condición\\s+de\\s+carrera|condicion\\s+de\\s+carrera|fallos?\\s+repetidos?\\s+de\\s+corrección|pago|autenticación|autenticacion|autorización|autorizacion|migración\\s+de\\s+infraestructura)\\b"
+    },
+    {
+      "id": "strict-output-contract",
+      "languages": ["en", "zh", "pt-BR", "es"],
+      "allow_downgrade": false,
+      "pattern": "\\b(?:strict|valid|only)\\s+json\\b|\\bjson\\s+schema\\b|\\b(?:exact|strict)\\s+(?:output\\s+)?(?:schema|contract|format)\\b|严格JSON|JSON模式|输出契约|\\bjson\\s+(?:estrito|válido|valido)\\b|\\b(?:contrato|formato|esquema)\\s+(?:estrito|exato)\\b|\\bjson\\s+(?:estricto|válido|valido)\\b|\\b(?:contrato|formato|esquema)\\s+(?:estricto|exacto)\\b"
     }
   ],
   "cross_border_block_rules": [

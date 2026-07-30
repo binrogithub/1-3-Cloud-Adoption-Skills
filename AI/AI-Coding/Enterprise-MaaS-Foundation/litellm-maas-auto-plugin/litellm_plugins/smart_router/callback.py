@@ -222,6 +222,16 @@ def _complexity_score(text, tokens, premium_match):
     return round(sum(features[key] * weights[key] for key in weights), 4)
 
 
+def _provider_capability_reason(route_reason):
+    if route_reason == "image" or route_reason.startswith("vision:"):
+        return "requires_vision_capability"
+    if route_reason.startswith("premium:"):
+        return "requires_premium_advisor_capability"
+    if route_reason == "context_over_198k":
+        return "requires_large_context_capability"
+    return None
+
+
 def _fallbacks(route_reason, tokens, premium_rule, cross_border_blocked):
     if route_reason == "image" or route_reason.startswith("vision:"):
         return [VISION_FALLBACK_MODEL]
@@ -286,6 +296,11 @@ def route_request(data):
         "fallback_chain": fallback_chain,
         "cross_border_fallback_blocked": bool(cross_border_rule),
     }
+    provider_capability_reason = _provider_capability_reason(matched_rule)
+    if provider_capability_reason:
+        metadata["smart_router"][
+            "provider_capability_reason"
+        ] = provider_capability_reason
     ROUTE_REQUESTS.labels(
         route=target,
         matched_rule=matched_rule,

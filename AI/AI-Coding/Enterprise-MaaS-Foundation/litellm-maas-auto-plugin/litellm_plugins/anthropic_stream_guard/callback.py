@@ -42,6 +42,11 @@ Env:
   ASG_STRIP_SERVER_TOOLS=true|false  remove Anthropic server-tool entries
                                   (web_search etc.) the backend cannot run
                                   (default true)
+  ASG_TRANSLATE_TOOL_CHOICE=true|false  translate forced Anthropic tool_choice
+                                  to OpenAI-compatible function choice for
+                                  direct-provider adapters (default false)
+  ASG_NORMALIZE_IMAGE_URL=true|false  convert OpenAI-style image_url blocks
+                                  to Anthropic image/source (default true)
   ASG_MAX_PARSE_BYTES=262144      max SSE event size that will be parsed
 
 Prometheus metrics (exported via the proxy /metrics endpoint):
@@ -52,6 +57,9 @@ Prometheus metrics (exported via the proxy /metrics endpoint):
   asg_unparsed_tool_markup_total raw tool-call markup seen in text streams
   asg_amplified_interjections_total queued user messages re-surfaced (#115)
   asg_server_tools_stripped_total Anthropic server-tool entries removed
+  asg_raw_sse_repaired_total Huawei raw pretty-JSON SSE frames repaired
+  asg_openai_done_dropped_total trailing data: [DONE] chunks dropped
+  asg_tool_choice_translated_total forced Anthropic tool_choice translations
 """
 
 import json
@@ -80,6 +88,12 @@ TOOL_MARKUP_PREFIX = b"<tool_call"
 
 STRIP_THINKING = os.getenv("ASG_STRIP_THINKING", "true").strip().lower() != "false"
 STRIPPED_REQUEST_KEYS = ("thinking", "reasoning", "reasoning_effort")
+TRANSLATE_TOOL_CHOICE = (
+    os.getenv("ASG_TRANSLATE_TOOL_CHOICE", "false").strip().lower() == "true"
+)
+NORMALIZE_IMAGE_URL = (
+    os.getenv("ASG_NORMALIZE_IMAGE_URL", "true").strip().lower() != "false"
+)
 
 # ---- issue #115: queued mid-task user messages -----------------------------
 # Claude Code delivers messages typed while a task is running as
@@ -157,6 +171,18 @@ try:
         "Anthropic server-tool entries removed before the OpenAI-compatible "
         "backend (GLM/MaaS rejects them with a 'tools' validation error)",
     )
+    RAW_SSE_REPAIRED = _Counter(
+        "asg_raw_sse_repaired_total",
+        "Huawei raw pretty-JSON SSE frames repaired into Anthropic SSE",
+    )
+    OPENAI_DONE_DROPPED = _Counter(
+        "asg_openai_done_dropped_total",
+        "OpenAI-style data: [DONE] chunks dropped after Anthropic message_stop",
+    )
+    TOOL_CHOICE_TRANSLATED = _Counter(
+        "asg_tool_choice_translated_total",
+        "Forced Anthropic tool_choice values translated to OpenAI function choice",
+    )
 except Exception:  # duplicate registration, missing dep, ...
 
     class _Noop:
@@ -165,7 +191,9 @@ except Exception:  # duplicate registration, missing dep, ...
 
     RETYPED = SYNTHESIZED = PARSE_ERRORS = OVERSIZE = SYNTH_TERM = (
         UPSTREAM_ERRORS
-    ) = TOOL_MARKUP = INTERJECTIONS = SERVER_TOOLS_STRIPPED = _Noop()
+    ) = TOOL_MARKUP = INTERJECTIONS = SERVER_TOOLS_STRIPPED = RAW_SSE_REPAIRED = (
+        OPENAI_DONE_DROPPED
+    ) = TOOL_CHOICE_TRANSLATED = _Noop()
 
 # ---- byte-level fast path (I6) --------------------------------------------
 _DELTA_PREFIX = b"event: content_block_delta"
@@ -190,25 +218,78 @@ def _sniff_delta_family(chunk: bytes) -> Tuple[Optional[str], bool]:
     return family, family is None
 
 
-def _parse_sse(chunk: bytes) -> Optional[Dict[str, Any]]:
-    """Parse one serialized SSE event; None if not a single anthropic event."""
+def _parse_sse_with_repair_flag(chunk: bytes) -> Tuple[Optional[Dict[str, Any]], bool]:
+    """Parse one serialized SSE event.
+
+    Returns (event, repaired). "repaired" is true only for Huawei's malformed
+    frame shape where `data:` is followed by un-prefixed pretty JSON lines.
+    """
     try:
         text = chunk.decode("utf-8")
     except Exception:
-        return None
+        return None, False
+
+    event_name = None
     event_dict = None
-    for line in text.split("\n"):
+    repaired = False
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        if line.startswith("event: "):
+            event_name = line[7:].strip()
         if line.startswith("data: "):
             if event_dict is not None:  # multiple data lines -> not ours, bail
-                return None
+                return None, False
+            payload = line[6:]
+            if payload.strip() == "[DONE]":
+                return None, False
             try:
-                event_dict = json.loads(line[6:])
+                event_dict = json.loads(payload)
             except Exception:
                 PARSE_ERRORS.inc()
-                return None
-    if isinstance(event_dict, dict) and event_dict.get("type") in ANTHROPIC_EVENT_TYPES:
-        return event_dict
-    return None
+                return None, False
+        elif line == "data:":
+            if event_dict is not None:
+                return None, False
+            repaired = True
+            payload_lines = []
+            remainder_start = len(lines)
+            for offset, continuation in enumerate(lines[i + 1:], start=i + 1):
+                if continuation == "":
+                    remainder_start = offset + 1
+                    break
+                payload_lines.append(continuation)
+            if any(line.strip() for line in lines[remainder_start:]):
+                return None, False
+            if not payload_lines:
+                return None, False
+            try:
+                event_dict = json.loads("\n".join(payload_lines))
+            except Exception:
+                PARSE_ERRORS.inc()
+                return None, False
+            break
+    if (
+        isinstance(event_dict, dict)
+        and event_dict.get("type") in ANTHROPIC_EVENT_TYPES
+        and (event_name is None or event_name == event_dict.get("type"))
+    ):
+        return event_dict, repaired
+    return None, False
+
+
+def _parse_sse(chunk: bytes) -> Optional[Dict[str, Any]]:
+    """Parse one serialized SSE event; None if not a single anthropic event."""
+    event, _repaired = _parse_sse_with_repair_flag(chunk)
+    return event
+
+
+def _is_openai_done(chunk: bytes) -> bool:
+    try:
+        lines = [line.strip() for line in chunk.decode("utf-8").splitlines()]
+    except Exception:
+        return False
+    meaningful = [line for line in lines if line]
+    return meaningful == ["data: [DONE]"]
 
 
 def _sse(event: Dict[str, Any]) -> bytes:
@@ -425,6 +506,116 @@ def strip_server_tools(data: Dict[str, Any]) -> int:
     return removed
 
 
+def translate_forced_tool_choice(data: Dict[str, Any]) -> bool:
+    """Translate Anthropic forced tool_choice to OpenAI-compatible function
+    choice. `auto`, `any`, and `none` are intentionally left untouched."""
+    choice = data.get("tool_choice")
+    if not isinstance(choice, dict):
+        return False
+    if choice.get("type") != "tool" or not isinstance(choice.get("name"), str):
+        return False
+    data["tool_choice"] = {
+        "type": "function",
+        "function": {"name": choice["name"]},
+    }
+    return True
+
+
+_DATA_URL_RE = re.compile(r"^data:([^;,]+);base64,(.*)$", re.DOTALL)
+
+
+def _image_source_from_image_url(value: Any) -> Optional[Dict[str, str]]:
+    if isinstance(value, dict):
+        url = value.get("url")
+    else:
+        url = value
+    if not isinstance(url, str) or not url:
+        return None
+    match = _DATA_URL_RE.match(url)
+    if match:
+        return {
+            "type": "base64",
+            "media_type": match.group(1),
+            "data": match.group(2),
+        }
+    return {"type": "url", "url": url}
+
+
+def normalize_image_url_blocks(data: Dict[str, Any]) -> int:
+    """Convert OpenAI-style image_url blocks into Anthropic image/source.
+
+    Meli's original failing image case used `image_url`. LiteLLM's Messages
+    adapter passes Anthropic `image/source` through to vision models, but it
+    silently loses OpenAI-style `image_url` blocks on /v1/messages.
+    """
+    if not isinstance(data, dict):
+        return 0
+    changed = 0
+    for message in data.get("messages") or []:
+        if not isinstance(message, dict):
+            continue
+        content = message.get("content")
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if not isinstance(block, dict) or block.get("type") != "image_url":
+                continue
+            source = _image_source_from_image_url(block.get("image_url"))
+            if source:
+                block.clear()
+                block.update({"type": "image", "source": source})
+                changed += 1
+    return changed
+
+
+def apply_stop_sequences(data: Dict[str, Any], response: Any) -> bool:
+    if not isinstance(data, dict):
+        return False
+    stop_sequences = data.get("stop_sequences") or data.get("stop")
+    if isinstance(stop_sequences, str):
+        stop_sequences = [stop_sequences]
+    if not isinstance(stop_sequences, list) or not stop_sequences:
+        return False
+    if not isinstance(response, dict):
+        return False
+    content = response.get("content")
+    if not isinstance(content, list):
+        return False
+    stopped = None
+    new_content = []
+    for block in content:
+        if stopped is not None:
+            continue
+        if not isinstance(block, dict) or block.get("type") != "text":
+            new_content.append(block)
+            continue
+        text = block.get("text")
+        if not isinstance(text, str):
+            new_content.append(block)
+            continue
+        hit = min(
+            (
+                (text.find(seq), seq)
+                for seq in stop_sequences
+                if isinstance(seq, str) and seq and text.find(seq) >= 0
+            ),
+            default=None,
+        )
+        if hit is None:
+            new_content.append(block)
+            continue
+        index, stopped = hit
+        fixed = dict(block)
+        fixed["text"] = text[:index]
+        new_content.append(fixed)
+    if stopped is None:
+        return False
+    response["content"] = new_content
+    response["stop_reason"] = "stop_sequence"
+    response["stop_sequence"] = stopped
+    return True
+
+
 def amplify_user_interjections(data: Dict[str, Any]) -> int:
     """Re-surface queued mid-task user messages (#115). Only the NEWEST user
     message is scanned - older occurrences are history the client resends
@@ -471,6 +662,15 @@ class AnthropicStreamGuard(CustomLogger):
         """Strip Anthropic thinking/reasoning params so /v1/messages routes
         via chat/completions instead of the (unsupported) Responses API.
         Also re-surfaces queued mid-task user messages (#115)."""
+        if NORMALIZE_IMAGE_URL and isinstance(data, dict):
+            try:
+                normalize_image_url_blocks(data)
+            except Exception as err:  # fail-open
+                verbose_proxy_logger.error(
+                    "[anthropic_stream_guard] %s while normalizing image_url "
+                    "blocks (request passed through)",
+                    type(err).__name__,
+                )
         if STRIP_THINKING and isinstance(data, dict):
             for key in STRIPPED_REQUEST_KEYS:
                 data.pop(key, None)
@@ -488,6 +688,20 @@ class AnthropicStreamGuard(CustomLogger):
                 verbose_proxy_logger.error(
                     "[anthropic_stream_guard] %s while stripping server "
                     "tools (request passed through)",
+                    type(err).__name__,
+                )
+        if TRANSLATE_TOOL_CHOICE and isinstance(data, dict):
+            try:
+                if translate_forced_tool_choice(data):
+                    TOOL_CHOICE_TRANSLATED.inc()
+                    verbose_proxy_logger.debug(
+                        "[anthropic_stream_guard] translated forced "
+                        "Anthropic tool_choice to function choice"
+                    )
+            except Exception as err:  # fail-open
+                verbose_proxy_logger.error(
+                    "[anthropic_stream_guard] %s while translating "
+                    "tool_choice (request passed through)",
                     type(err).__name__,
                 )
         if AMPLIFY_INTERJECTIONS and isinstance(data, dict):
@@ -510,6 +724,7 @@ class AnthropicStreamGuard(CustomLogger):
 
     async def async_post_call_success_hook(self, data, user_api_key_dict, response):
         _normalize_thinking_signatures(response)
+        apply_stop_sequences(data, response)
         return response
 
     async def async_logging_hook(self, kwargs: dict, result: Any, call_type: str):
@@ -593,16 +808,26 @@ class AnthropicStreamGuard(CustomLogger):
                         continue
                     # mismatch or ambiguity -> full parse below
 
-                event = (
-                    _parse_sse(chunk)
-                    if is_bytes
-                    else (
+                repaired_sse = False
+                if is_bytes:
+                    event, repaired_sse = _parse_sse_with_repair_flag(bytes(chunk))
+                    if (
+                        event is None
+                        and st.saw_message_stop
+                        and _is_openai_done(bytes(chunk))
+                    ):
+                        OPENAI_DONE_DROPPED.inc()
+                        continue
+                    if repaired_sse and event is not None:
+                        RAW_SSE_REPAIRED.inc()
+                        chunk = _sse(event)
+                else:
+                    event = (
                         chunk
                         if isinstance(chunk, dict)
                         and chunk.get("type") in ANTHROPIC_EVENT_TYPES
                         else None
                     )
-                )
                 if event is None:  # not an anthropic event -> passthrough
                     if is_bytes:
                         self._note_passthrough_terminals(st, bytes(chunk))

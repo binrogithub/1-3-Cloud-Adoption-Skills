@@ -15,9 +15,9 @@ litellm = types.ModuleType("litellm")
 litellm.token_counter = lambda **kwargs: 100
 custom_logger = types.ModuleType("litellm.integrations.custom_logger")
 custom_logger.CustomLogger = object
-sys.modules.setdefault("litellm", litellm)
-sys.modules.setdefault("litellm.integrations", types.ModuleType("litellm.integrations"))
-sys.modules.setdefault("litellm.integrations.custom_logger", custom_logger)
+sys.modules["litellm"] = litellm
+sys.modules["litellm.integrations"] = types.ModuleType("litellm.integrations")
+sys.modules["litellm.integrations.custom_logger"] = custom_logger
 spec = importlib.util.spec_from_file_location("smart_router", CALLBACK)
 router = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(router)
@@ -114,6 +114,46 @@ def test_image_fallback_stays_vision_capable():
     assert result["metadata"]["smart_router"]["matched_rule"] == "image"
 
 
+def test_capability_aware_routing_for_meli_glm_strategy():
+    vision = [
+        "Inspect this UI and create a visual design recommendation",
+        "Generate a wireframe for the checkout flow",
+        "Create a diagram showing the service graph",
+        "Draw a graph of the deployment topology",
+    ]
+    for text in vision:
+        result = router.route_request(request(text))
+        info = result["metadata"]["smart_router"]
+        assert result["model"] == "vision-openrouter"
+        assert result["fallbacks"] == ["vision-openrouter-secondary"]
+        assert info["provider_capability_reason"] == "requires_vision_capability"
+
+    premium = [
+        "Act as an advisor for the migration strategy",
+        "Review this architecture for scale risks",
+        "Run a security review of the authentication flow",
+        "Analyze this production incident and propose mitigations",
+        "Perform complex debugging for this intermittent deadlock",
+        "Return only strict JSON matching this schema: {\"risk\": string}",
+    ]
+    for text in premium:
+        result = router.route_request(request(text))
+        info = result["metadata"]["smart_router"]
+        assert result["model"] == "premium-openrouter"
+        assert info["provider_capability_reason"] == "requires_premium_advisor_capability"
+
+    glm = [
+        "Write a Python function that sorts invoices by due date",
+        "Generate pytest tests for this helper",
+        "Simple refactor: rename this variable and extract a helper",
+        "Generate a simple unit test and return JSON with the file path",
+    ]
+    for text in glm:
+        result = router.route_request(request(text))
+        assert result["model"] == "claude-opus-4-6"
+        assert result["metadata"]["smart_router"].get("provider_capability_reason") is None
+
+
 def test_rules_schema_and_runtime_validation():
     rules = json.loads(RULES.read_text(encoding="utf-8"))
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
@@ -166,6 +206,7 @@ if __name__ == "__main__":
     test_observability_and_score_does_not_route()
     test_context_boundary_and_controlled_fallbacks()
     test_image_fallback_stays_vision_capable()
+    test_capability_aware_routing_for_meli_glm_strategy()
     test_rules_schema_and_runtime_validation()
     test_prometheus_metrics_are_registered()
     print("smart_router tests passed")

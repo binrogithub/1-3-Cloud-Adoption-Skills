@@ -7,14 +7,18 @@ Routing order:
 
 1. Image content -> `vision-openrouter`.
 2. Estimated input above 198000 tokens -> `premium-openrouter`.
-3. Visual/UI design -> `vision-openrouter`.
-4. Architecture, database design, complex debugging, security review,
-   production incidents, and infrastructure changes -> `premium-openrouter`.
+3. Visual/UI design, visual inspection, wireframe, diagram, graph, and mockup
+   output -> `vision-openrouter`.
+4. Advisor/strategy, architecture, database design, strict output contracts,
+   complex debugging, security review, production incidents, and infrastructure
+   changes -> `premium-openrouter`.
 5. Everything else remains on the requested GLM-backed Claude alias.
 
 The score is observational only. Each request records `estimated_tokens`,
-`matched_rule`, `complexity_score`, `router_version`, and `fallback_chain`
-under `metadata.smart_router`.
+`matched_rule`, `complexity_score`, `router_version`, `fallback_chain`, and,
+when applicable, `provider_capability_reason` under `metadata.smart_router`.
+Ordinary code generation, test generation, and simple refactors remain on GLM
+unless a higher-priority hard rule matches.
 
 Rules live in `smart_router_rules.json` and are described by
 `smart_router_rules.schema.json`. The callback validates the configuration at
