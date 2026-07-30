@@ -3,7 +3,7 @@ anthropic_stream_guard - LiteLLM custom callback (plugin, no core patches).
 
 Fixes the malformed Anthropic SSE stream produced by LiteLLM's
 messages->chat/completions adapter for backends that always emit
-reasoning_content (e.g. GLM-5.2 on Huawei MaaS): the whole response arrives
+reasoning_content (e.g. GLM-5.1 on Huawei MaaS): the whole response arrives
 as ONE "text" content block mixing thinking_delta and text_delta events.
 Also strips Anthropic thinking/reasoning request params so /v1/messages
 stays on /chat/completions instead of the unsupported Responses API.
@@ -84,7 +84,7 @@ STRIPPED_REQUEST_KEYS = ("thinking", "reasoning", "reasoning_effort")
 # ---- issue #115: queued mid-task user messages -----------------------------
 # Claude Code delivers messages typed while a task is running as
 # <system-reminder> text buried inside the next tool_result, relying on the
-# model to notice and obey. Models without that alignment (GLM-5.2) ignore
+# model to notice and obey. Models without that alignment (GLM-5.1) ignore
 # it. We re-surface each queued message as a standalone text block at the END
 # of the newest user message, where every chat template gives it top salience.
 AMPLIFY_INTERJECTIONS = (
