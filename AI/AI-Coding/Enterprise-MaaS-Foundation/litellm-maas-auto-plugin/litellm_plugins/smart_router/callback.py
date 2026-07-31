@@ -139,17 +139,29 @@ COMPLEXITY_PATTERNS = {
 
 
 def _has_image(data):
-    for message in data.get("messages") or data.get("input") or []:
-        if not isinstance(message, dict):
-            continue
-        content = message.get("content")
-        for block in content if isinstance(content, list) else []:
-            if isinstance(block, dict) and block.get("type") in {
-                "image",
-                "image_url",
-                "input_image",
-            }:
-                return True
+    """Check only the latest user message for images (current turn).
+
+    Multi-turn conversations include prior messages (with their images) in
+    the request payload.  Routing every subsequent turn to the vision model
+    wastes quota and adds latency.  By inspecting only the *last* user
+    message we ensure image routing fires only when the current turn
+    actually carries an image.
+    """
+    for key in ("messages", "input"):
+        messages = data.get(key) or []
+        for message in reversed(messages):
+            if not isinstance(message, dict) or message.get("role") != "user":
+                continue
+            content = message.get("content")
+            for block in content if isinstance(content, list) else []:
+                if isinstance(block, dict) and block.get("type") in {
+                    "image",
+                    "image_url",
+                    "input_image",
+                }:
+                    return True
+            # Only the latest user message matters; stop after finding it.
+            return False
     return False
 
 
