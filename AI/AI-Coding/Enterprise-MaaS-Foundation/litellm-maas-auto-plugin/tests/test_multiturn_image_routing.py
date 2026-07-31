@@ -4,6 +4,7 @@ turns."""
 
 import copy
 import importlib.util
+import json
 import pathlib
 import sys
 import types
@@ -256,6 +257,34 @@ def test_image_only_in_assistant_reply_not_user():
     assert rule == "glm_execution"
 
 
+def test_large_historical_image_does_not_force_premium_context_route():
+    """Huge historical image payloads should not affect text-turn token routing."""
+    old_counter = litellm.token_counter
+    litellm.token_counter = lambda **kwargs: len(
+        json.dumps(kwargs.get("messages") or [], default=str)
+    ) // 4
+    try:
+        large_image = {
+            "type": "image_url",
+            "image_url": {"url": "data:image/png;base64," + ("A" * 900000)},
+        }
+        data = {
+            "model": "claude-opus-4-6",
+            "messages": [
+                msg("user", [{"type": "text", "text": "Analyze this"}, large_image]),
+                assistant_text("Done."),
+                user_text("Write a simple pytest"),
+            ],
+        }
+        result = router.route_request(copy.deepcopy(data))
+        assert result["model"] == "claude-opus-4-6"
+        assert result["metadata"]["smart_router"]["matched_rule"] == "glm_execution"
+        assert result["metadata"]["smart_router"]["estimated_tokens"] < 198000
+        assert result["messages"][0]["content"] == [{"type": "text", "text": "Analyze this"}]
+    finally:
+        litellm.token_counter = old_counter
+
+
 # ── 6. Regression: existing single-turn image test still passes ───────────
 
 def test_existing_single_turn_image_test():
@@ -338,6 +367,7 @@ if __name__ == "__main__":
         test_string_content_no_image,
         test_input_key_works_same_as_messages,
         test_image_only_in_assistant_reply_not_user,
+        test_large_historical_image_does_not_force_premium_context_route,
         test_existing_single_turn_image_test,
         test_full_conversation_loop,
     ]

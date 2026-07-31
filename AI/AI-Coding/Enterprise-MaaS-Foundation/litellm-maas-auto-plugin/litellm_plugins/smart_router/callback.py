@@ -1,5 +1,6 @@
 """Deterministic, observable router for GLM and US-hosted OpenRouter pools."""
 
+import copy
 import json
 import os
 import re
@@ -204,6 +205,12 @@ def _strip_images(data):
             message["content"] = filtered
 
 
+def _with_images_stripped(data):
+    stripped = copy.deepcopy(data)
+    _strip_images(stripped)
+    return stripped
+
+
 def _latest_user_text(data):
     for key in ("messages", "input"):
         for message in reversed(data.get(key) or []):
@@ -302,10 +309,11 @@ def _fallbacks(route_reason, tokens, premium_rule, cross_border_blocked):
 def route_request(data):
     """Mutate a request using hard rules; scoring is observational only."""
     original = data.get("model", GLM_MODEL)
-    tokens = _estimate_tokens(data)
     text = _latest_user_text(data)
-    policy_text = _policy_text(data)
     image = _has_image(data)
+    routing_data = data if image else _with_images_stripped(data)
+    tokens = _estimate_tokens(routing_data)
+    policy_text = _policy_text(routing_data)
     vision_rule = _first_match(VISION_RULES, text)
     premium_rule = _first_match(PREMIUM_RULES, text)
     cross_border_rule = _first_match(CROSS_BORDER_BLOCK_RULES, policy_text)
