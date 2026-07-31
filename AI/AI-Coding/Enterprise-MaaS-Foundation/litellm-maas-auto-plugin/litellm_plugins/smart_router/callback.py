@@ -1,5 +1,6 @@
 """Deterministic, observable router for GLM and US-hosted OpenRouter pools."""
 
+import copy
 import json
 import os
 import re
@@ -139,18 +140,75 @@ COMPLEXITY_PATTERNS = {
 
 
 def _has_image(data):
-    for message in data.get("messages") or data.get("input") or []:
-        if not isinstance(message, dict):
-            continue
-        content = message.get("content")
-        for block in content if isinstance(content, list) else []:
-            if isinstance(block, dict) and block.get("type") in {
-                "image",
-                "image_url",
-                "input_image",
-            }:
-                return True
+    """Check only the latest user message for images (current turn).
+
+    Multi-turn conversations include prior messages (with their images) in
+    the request payload.  Routing every subsequent turn to the vision model
+    wastes quota and adds latency.  By inspecting only the *last* user
+    message we ensure image routing fires only when the current turn
+    actually carries an image.
+    """
+    for key in ("messages", "input"):
+        messages = data.get(key) or []
+        for message in reversed(messages):
+            if not isinstance(message, dict) or message.get("role") != "user":
+                continue
+            content = message.get("content")
+            for block in content if isinstance(content, list) else []:
+                if isinstance(block, dict) and block.get("type") in {
+                    "image",
+                    "image_url",
+                    "input_image",
+                }:
+                    return True
+            # Only the latest user message matters; stop after finding it.
+            return False
     return False
+
+
+_IMAGE_BLOCK_TYPES = {"image", "image_url", "input_image"}
+
+
+def _strip_images(data):
+    """Remove image content blocks from historical messages in-place.
+
+    GLM (and other text-only backends) reject requests whose message history
+    contains ``image_url`` content blocks, even when the current turn is
+    pure text.  This causes LiteLLM to fall back to a premium external model
+    — defeating the purpose of the ``_has_image`` fix.
+
+    When the smart router decides to route to GLM (i.e. the current turn has
+    no image), we strip image blocks from prior messages so GLM accepts the
+    request.  Text blocks in the same message are preserved so the
+    conversation context is retained.
+    """
+    for key in ("messages", "input"):
+        messages = data.get(key)
+        if not isinstance(messages, list):
+            continue
+        for message in messages:
+            if not isinstance(message, dict):
+                continue
+            content = message.get("content")
+            if not isinstance(content, list):
+                continue
+            # Keep only non-image blocks.  If a message would become empty
+            # (all blocks were images), replace with a short placeholder so
+            # the role sequence stays valid.
+            filtered = [
+                block
+                for block in content
+                if not (isinstance(block, dict) and block.get("type") in _IMAGE_BLOCK_TYPES)
+            ]
+            if not filtered:
+                filtered = [{"type": "text", "text": "[image omitted]"}]
+            message["content"] = filtered
+
+
+def _with_images_stripped(data):
+    stripped = copy.deepcopy(data)
+    _strip_images(stripped)
+    return stripped
 
 
 def _latest_user_text(data):
@@ -251,10 +309,11 @@ def _fallbacks(route_reason, tokens, premium_rule, cross_border_blocked):
 def route_request(data):
     """Mutate a request using hard rules; scoring is observational only."""
     original = data.get("model", GLM_MODEL)
-    tokens = _estimate_tokens(data)
     text = _latest_user_text(data)
-    policy_text = _policy_text(data)
     image = _has_image(data)
+    routing_data = data if image else _with_images_stripped(data)
+    tokens = _estimate_tokens(routing_data)
+    policy_text = _policy_text(routing_data)
     vision_rule = _first_match(VISION_RULES, text)
     premium_rule = _first_match(PREMIUM_RULES, text)
     cross_border_rule = _first_match(CROSS_BORDER_BLOCK_RULES, policy_text)
@@ -280,6 +339,12 @@ def route_request(data):
         data["fallbacks"] = fallback_chain
     else:
         data.pop("fallbacks", None)
+
+    # When routing to GLM (text-only backend), strip image blocks from
+    # historical messages so GLM doesn't reject the request and trigger
+    # an unnecessary fallback to a premium external model.
+    if matched_rule == "glm_execution":
+        _strip_images(data)
 
     complexity_score = _complexity_score(text, tokens, premium_rule)
     metadata = data.setdefault("metadata", {})
