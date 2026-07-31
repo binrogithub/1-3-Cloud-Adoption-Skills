@@ -165,6 +165,45 @@ def _has_image(data):
     return False
 
 
+_IMAGE_BLOCK_TYPES = {"image", "image_url", "input_image"}
+
+
+def _strip_images(data):
+    """Remove image content blocks from historical messages in-place.
+
+    GLM (and other text-only backends) reject requests whose message history
+    contains ``image_url`` content blocks, even when the current turn is
+    pure text.  This causes LiteLLM to fall back to a premium external model
+    — defeating the purpose of the ``_has_image`` fix.
+
+    When the smart router decides to route to GLM (i.e. the current turn has
+    no image), we strip image blocks from prior messages so GLM accepts the
+    request.  Text blocks in the same message are preserved so the
+    conversation context is retained.
+    """
+    for key in ("messages", "input"):
+        messages = data.get(key)
+        if not isinstance(messages, list):
+            continue
+        for message in messages:
+            if not isinstance(message, dict):
+                continue
+            content = message.get("content")
+            if not isinstance(content, list):
+                continue
+            # Keep only non-image blocks.  If a message would become empty
+            # (all blocks were images), replace with a short placeholder so
+            # the role sequence stays valid.
+            filtered = [
+                block
+                for block in content
+                if not (isinstance(block, dict) and block.get("type") in _IMAGE_BLOCK_TYPES)
+            ]
+            if not filtered:
+                filtered = [{"type": "text", "text": "[image omitted]"}]
+            message["content"] = filtered
+
+
 def _latest_user_text(data):
     for key in ("messages", "input"):
         for message in reversed(data.get(key) or []):
@@ -292,6 +331,12 @@ def route_request(data):
         data["fallbacks"] = fallback_chain
     else:
         data.pop("fallbacks", None)
+
+    # When routing to GLM (text-only backend), strip image blocks from
+    # historical messages so GLM doesn't reject the request and trigger
+    # an unnecessary fallback to a premium external model.
+    if matched_rule == "glm_execution":
+        _strip_images(data)
 
     complexity_score = _complexity_score(text, tokens, premium_rule)
     metadata = data.setdefault("metadata", {})
