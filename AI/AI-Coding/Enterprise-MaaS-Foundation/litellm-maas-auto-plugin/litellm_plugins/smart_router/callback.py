@@ -168,19 +168,76 @@ def _has_image(data):
 
 _IMAGE_BLOCK_TYPES = {"image", "image_url", "input_image"}
 
+# Keywords that indicate the user is referring to a previous image,
+# even though the current message is pure text.  When the latest user
+# message contains one of these keywords *and* the conversation history
+# actually contains an image block, we route to the vision model so the
+# model can "see" the image being referenced.
+_IMAGE_REFERENCE_KEYWORDS = re.compile(
+    r"(?:上一张|上一幅|上次的|之前的|刚才的|那张|这个截图|这张截图|这张图|这张图片|这张照片)"
+    r"|(?:上一?张|上一?幅|上一?个)?\s*(?:截图|图片|图|照片|图像|报错图|error\s*screenshot)"
+    r"|(?:re-?analyze|重新分析|再看|重新看|帮我看|分析一下|看一下|看看)"
+    r"\s*(?:上?一?张|那个|这个|this|that|previous|last)?\s*"
+    r"(?:截图|图片|图|照片|image|screenshot|picture|photo)"
+    r"|(?:上一?张|上一?个|previous|last)\s*(?:截图|图片|图|照片|image|screenshot|picture|photo)",
+    re.IGNORECASE,
+)
+
+
+def _references_image(text):
+    """Detect whether *text* refers to a previous image.
+
+    Returns True for prompts like:
+      - "请重新帮我分析下上一张报错截图。"
+      - "再看一下刚才的截图"
+      - "帮我看下这张图片"
+      - "re-analyze the last screenshot"
+    """
+    if not text:
+        return False
+    return bool(_IMAGE_REFERENCE_KEYWORDS.search(text))
+
+
+def _history_has_image(data):
+    """Check whether any *prior* message (excluding the latest user turn) carries an image block."""
+    for key in ("messages", "input"):
+        messages = data.get(key) or []
+        if not isinstance(messages, list):
+            continue
+        # Find the index of the last user message — everything before it is "history".
+        last_user_idx = None
+        for idx in range(len(messages) - 1, -1, -1):
+            msg = messages[idx]
+            if isinstance(msg, dict) and msg.get("role") == "user":
+                last_user_idx = idx
+                break
+        if last_user_idx is None:
+            continue
+        # Check all messages before the last user message.
+        for idx in range(last_user_idx):
+            msg = messages[idx]
+            if not isinstance(msg, dict):
+                continue
+            content = msg.get("content")
+            if isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") in _IMAGE_BLOCK_TYPES:
+                        return True
+    return False
+
 
 def _strip_images(data):
-    """Remove image content blocks from historical messages in-place.
+    """Replace image content blocks in historical messages with text placeholders.
 
     GLM (and other text-only backends) reject requests whose message history
-    contains ``image_url`` content blocks, even when the current turn is
-    pure text.  This causes LiteLLM to fall back to a premium external model
+    contains ``image_url`` content blocks, even when the current turn is pure
+    text.  This causes LiteLLM to fall back to a premium external model
     — defeating the purpose of the ``_has_image`` fix.
 
-    When the smart router decides to route to GLM (i.e. the current turn has
-    no image), we strip image blocks from prior messages so GLM accepts the
-    request.  Text blocks in the same message are preserved so the
-    conversation context is retained.
+    Instead of silently deleting image blocks (which loses context — the
+    model no longer knows an image was shared), we replace each image block
+    with a descriptive text placeholder so the conversation history remains
+    coherent.  Text blocks in the same message are preserved.
     """
     for key in ("messages", "input"):
         messages = data.get(key)
@@ -192,17 +249,23 @@ def _strip_images(data):
             content = message.get("content")
             if not isinstance(content, list):
                 continue
-            # Keep only non-image blocks.  If a message would become empty
-            # (all blocks were images), replace with a short placeholder so
-            # the role sequence stays valid.
-            filtered = [
-                block
-                for block in content
-                if not (isinstance(block, dict) and block.get("type") in _IMAGE_BLOCK_TYPES)
-            ]
-            if not filtered:
-                filtered = [{"type": "text", "text": "[image omitted]"}]
-            message["content"] = filtered
+            new_content = []
+            for block in content:
+                if isinstance(block, dict) and block.get("type") in _IMAGE_BLOCK_TYPES:
+                    # Replace image with a text placeholder that preserves
+                    # the fact that an image was shared, without the binary
+                    # payload that GLM cannot process.
+                    new_content.append({
+                        "type": "text",
+                        "text": "[图片内容已省略]",
+                    })
+                else:
+                    new_content.append(block)
+            # If a message would become empty (shouldn't happen since we
+            # always add a placeholder, but guard anyway), add fallback text.
+            if not new_content:
+                new_content = [{"type": "text", "text": "[图片内容已省略]"}]
+            message["content"] = new_content
 
 
 def _with_images_stripped(data):
@@ -320,6 +383,11 @@ def route_request(data):
 
     if image:
         target, matched_rule = VISION_MODEL, "image"
+    elif _references_image(text) and _history_has_image(data):
+        # The current turn is pure text but explicitly references a
+        # previous image (e.g. "请重新帮我分析下上一张报错截图。").
+        # Route to Vision so the model can see the referenced image.
+        target, matched_rule = VISION_MODEL, "image_reference"
     elif tokens > PREMIUM_CONTEXT_THRESHOLD:
         target, matched_rule = PREMIUM_MODEL, "context_over_198k"
     elif vision_rule:

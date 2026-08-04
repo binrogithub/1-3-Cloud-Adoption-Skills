@@ -280,7 +280,10 @@ def test_large_historical_image_does_not_force_premium_context_route():
         assert result["model"] == "claude-opus-4-6"
         assert result["metadata"]["smart_router"]["matched_rule"] == "glm_execution"
         assert result["metadata"]["smart_router"]["estimated_tokens"] < 198000
-        assert result["messages"][0]["content"] == [{"type": "text", "text": "Analyze this"}]
+        assert result["messages"][0]["content"] == [
+            {"type": "text", "text": "Analyze this"},
+            {"type": "text", "text": "[图片内容已省略]"},
+        ]
     finally:
         litellm.token_counter = old_counter
 
@@ -350,6 +353,156 @@ def test_full_conversation_loop():
     assert model5 == "claude-opus-4-6", f"Turn 5: expected GLM, got {model5}"
 
 
+# ── Bug fix tests: text referencing previous image ──
+
+
+def test_text_references_previous_image_routes_to_vision():
+    """User says '请重新帮我分析下上一张报错截图' with image in history → Vision."""
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "这是报错截图"},
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBOR"}},
+            ],
+        },
+        {"role": "assistant", "content": "这是一个错误提示截图。"},
+        {"role": "user", "content": "请重新帮我分析下上一张报错截图。"},
+    ]
+    model, rule = run({"model": "claude-opus-4-6", "messages": messages})
+    assert model == "vision-openrouter", f"Expected vision-openrouter, got {model}"
+    assert rule == "image_reference", (
+        f"Expected route_reason='image_reference', got {rule}"
+    )
+
+
+def test_text_references_image_no_history_stays_glm():
+    """User says '看下截图' but NO image in history → stays on GLM (no false positive)."""
+    messages = [
+        {"role": "user", "content": "我们来讨论一下设计"},
+        {"role": "assistant", "content": "好的，请说"},
+        {"role": "user", "content": "请帮我看下这张截图"},
+    ]
+    model, _ = run({"model": "claude-opus-4-6", "messages": messages})
+    assert model == "claude-opus-4-6", f"Expected GLM (no history image), got {model}"
+
+
+def test_text_references_image_keyword_variations():
+    """Various Chinese keywords that reference previous images should all route to Vision."""
+    base_history = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "看这个"},
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+            ],
+        },
+        {"role": "assistant", "content": "看到了"},
+    ]
+    test_prompts = [
+        "再看一下刚才的截图",
+        "重新分析下上一张图片",
+        "帮我看下那张照片",
+        "分析一下这张截图",
+        "看看上一张图",
+    ]
+    for prompt in test_prompts:
+        msgs = copy.deepcopy(base_history) + [{"role": "user", "content": prompt}]
+        model, rule = run({"model": "claude-opus-4-6", "messages": msgs})
+        assert model == "vision-openrouter", (
+            f"Prompt '{prompt}': expected vision-openrouter, got {model}"
+        )
+        assert rule == "image_reference", (
+            f"Prompt '{prompt}': expected image_reference, got {rule}"
+        )
+
+
+def test_english_text_references_screenshot_routes_to_vision():
+    """English prompts referencing previous screenshots should route to Vision."""
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Check this"},
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,xyz"}},
+            ],
+        },
+        {"role": "assistant", "content": "I see the screenshot."},
+        {"role": "user", "content": "Can you re-analyze the last screenshot?"},
+    ]
+    model, rule = run({"model": "claude-opus-4-6", "messages": messages})
+    assert model == "vision-openrouter", f"Expected vision-openrouter, got {model}"
+    assert rule == "image_reference", (
+        f"Expected image_reference, got {rule}"
+    )
+
+
+# ── Bug fix tests: _strip_images preserves context ──
+
+
+def test_strip_images_replaces_with_placeholder_not_delete():
+    """_strip_images should replace image blocks with text placeholders, not delete them."""
+    data = {
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "看这个截图"},
+                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+                ],
+            },
+            {"role": "assistant", "content": "我看到了"},
+            {"role": "user", "content": "继续分析"},
+        ]
+    }
+    router._strip_images(data)
+    # First message should still have 2 blocks: text + placeholder
+    first_msg = data["messages"][0]
+    assert isinstance(first_msg["content"], list), "Content should still be a list"
+    assert len(first_msg["content"]) == 2, (
+        f"Expected 2 blocks (text + placeholder), got {len(first_msg['content'])}"
+    )
+    # First block should be the original text
+    assert first_msg["content"][0]["type"] == "text"
+    assert first_msg["content"][0]["text"] == "看这个截图"
+    # Second block should be the placeholder text
+    assert first_msg["content"][1]["type"] == "text"
+    assert "省略" in first_msg["content"][1]["text"], (
+        f"Expected placeholder text, got: {first_msg['content'][1]['text']}"
+    )
+    # No image_url blocks should remain
+    for msg in data["messages"]:
+        content = msg.get("content")
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict):
+                    assert block.get("type") not in {"image", "image_url", "input_image"}, (
+                        f"Image block should have been replaced: {block}"
+                    )
+
+
+def test_strip_images_preserves_text_blocks_around_images():
+    """_strip_images should preserve text blocks that appear before and after image blocks."""
+    data = {
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "before image"},
+                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,xyz"}},
+                    {"type": "text", "text": "after image"},
+                ],
+            },
+        ]
+    }
+    router._strip_images(data)
+    content = data["messages"][0]["content"]
+    assert len(content) == 3, f"Expected 3 blocks, got {len(content)}"
+    assert content[0]["text"] == "before image"
+    assert content[1]["type"] == "text" and "省略" in content[1]["text"]
+    assert content[2]["text"] == "after image"
+
+
 if __name__ == "__main__":
     tests = [
         test_single_turn_with_image_routes_to_vision,
@@ -370,6 +523,14 @@ if __name__ == "__main__":
         test_large_historical_image_does_not_force_premium_context_route,
         test_existing_single_turn_image_test,
         test_full_conversation_loop,
+        # ── Bug fix: text referencing previous image → route to Vision ──
+        test_text_references_previous_image_routes_to_vision,
+        test_text_references_image_no_history_stays_glm,
+        test_text_references_image_keyword_variations,
+        test_english_text_references_screenshot_routes_to_vision,
+        # ── Bug fix: _strip_images preserves context with placeholder ──
+        test_strip_images_replaces_with_placeholder_not_delete,
+        test_strip_images_preserves_text_blocks_around_images,
     ]
 
     passed = 0
