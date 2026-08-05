@@ -23,6 +23,16 @@ The skills are organized into two folders:
 - **[Enterprise-MaaS-Foundation/](./Enterprise-MaaS-Foundation/)** — connectivity, proxy/gateway infrastructure, and tool/agent configuration that plug coding tools into Huawei Cloud MaaS.
 - **[AI-Coding-Best-Practice/](./AI-Coding-Best-Practice/)** — engineering workflows, quality gates, and capability skills that consume the Foundation to do engineering work well.
 
+## Migration Scenarios
+
+| Directory | Description | Status |
+|---|---|---|
+| [ClaudeCode-LiteLLM-MaaS](./ClaudeCode-LiteLLM-MaaS/) | Claude Code with LiteLLM proxy and Huawei MaaS | Active |
+| [Hermes-Setup](./Hermes-Setup/) | Hermes Agent setup on Linux with Huawei MaaS | Beta |
+| [Image-Import-Demo](./Image-Import-Demo/) | Image import demonstration | Active |
+| [OpenCode-LiteLLM-MaaS](./OpenCode-LiteLLM-MaaS/) | OpenCode with LiteLLM proxy and Huawei MaaS | Active |
+| [OpenCode-Setup](./OpenCode-Setup/) | OpenCode installation and configuration | Active |
+
 ## Enterprise MaaS Foundation
 
 Connectivity and tool configuration: deploy a proxy/gateway, or point a coding tool at `glm-5.1` with an API key and base URL.

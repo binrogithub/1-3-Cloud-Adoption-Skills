@@ -1,0 +1,12 @@
+{
+  "name": "floci-az-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Azure operations against floci-az local emulator",
+  "main": "index.js",
+  "bin": {
+    "floci-az-mcp": "./index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0"
+  }
+}

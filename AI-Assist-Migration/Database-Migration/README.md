@@ -27,3 +27,14 @@ Migrate big data platforms and data warehouses (Cloudera, Databricks, Teradata) 
 - [Teradata to Huawei DWS](./Big-Data-Platform-Migration/Teradata-to-Huawei-DWS-Skill/SKILL.md): Migrate Teradata to DWS with schema migration, data loading, report parity, and optimization.
 
 See [Big-Data-Platform-Migration/README.md](./Big-Data-Platform-Migration/README.md) for details.
+
+### NoSQL and In-Memory Database Migration
+
+Migrate NoSQL and in-memory databases from AWS and Azure to Huawei Cloud managed database services (DDS, GeminiDB, DCS).
+
+| Directory | Source | Target | Status |
+|---|---|---|---|
+| [AWS-DocumentDB-to-Huawei-DDS](./AWS-DocumentDB-to-Huawei-DDS/) | AWS DocumentDB | Huawei Cloud DDS (MongoDB) | Beta |
+| [AWS-DynamoDB-to-Huawei-GeminiDB](./AWS-DynamoDB-to-Huawei-GeminiDB/) | AWS DynamoDB | Huawei Cloud GeminiDB (Cassandra) | Beta |
+| [AWS-ElastiCache-to-Huawei-DCS](./AWS-ElastiCache-to-Huawei-DCS/) | AWS ElastiCache (Redis) | Huawei Cloud DCS (Redis) | Beta |
+| [Azure-CosmosDB-to-Huawei-GeminiDB](./Azure-CosmosDB-to-Huawei-GeminiDB/) | Azure Cosmos DB | Huawei Cloud GeminiDB (MongoDB) | Beta |

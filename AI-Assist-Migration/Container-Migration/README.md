@@ -85,6 +85,15 @@ Container-Migration/
 
 ---
 
+## Additional Migration Scenarios
+
+| Directory | Description | Status |
+|---|---|---|
+| [AWS-ECR-to-Huawei-SWR](./AWS-ECR-to-Huawei-SWR/) | Migrate AWS ECR container images to Huawei Cloud SWR (Software Repository for Containers) | Beta |
+| [AWS-ECS-Fargate-to-CCE-Volcano](./AWS-ECS-Fargate-to-CCE-Volcano/) | Migrate AWS ECS Fargate serverless containers to Huawei Cloud CCE with Volcano scheduler | Beta |
+
+---
+
 ## Installation
 
 The skills are markdown documents (SKILL.md) with YAML frontmatter + instructions. Each AI agent loads them from its own path. The scripts accompany each skill in its directory.
