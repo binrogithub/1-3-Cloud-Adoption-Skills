@@ -175,7 +175,11 @@ _IMAGE_BLOCK_TYPES = {"image", "image_url", "input_image"}
 # model can "see" the image being referenced.
 _IMAGE_REFERENCE_KEYWORDS = re.compile(
     r"(?:上一张|上一幅|上次的|之前的|刚才的|那张|这个截图|这张截图|这张图|这张图片|这张照片)"
-    r"|(?:上一?张|上一?幅|上一?个)?\s*(?:截图|图片|图|照片|图像|报错图|error\s*screenshot)"
+    # The demonstrative prefix here is REQUIRED.  Making it optional would
+    # reduce this branch to a bare ``图`` match, which fires on ordinary
+    # words like 试图 / 视图 / 地图 / 架构图 / 图书 and misroutes plain text
+    # turns to the vision model for the rest of the conversation.
+    r"|(?:上一?张|上一?幅|上一?个)\s*(?:截图|图片|图|照片|图像|报错图|error\s*screenshot)"
     r"|(?:re-?analyze|重新分析|再看|重新看|帮我看|分析一下|看一下|看看)"
     r"\s*(?:上?一?张|那个|这个|this|that|previous|last)?\s*"
     r"(?:截图|图片|图|照片|image|screenshot|picture|photo)"

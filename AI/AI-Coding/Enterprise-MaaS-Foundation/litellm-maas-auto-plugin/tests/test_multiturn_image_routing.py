@@ -437,6 +437,42 @@ def test_english_text_references_screenshot_routes_to_vision():
     )
 
 
+def test_ordinary_text_containing_tu_stays_glm():
+    """Words that merely contain 图 must not be read as image references.
+
+    Once any image appears in history, ``_history_has_image`` is permanently
+    true for that conversation, so a loose keyword regex misroutes every
+    later text turn to the (external, premium) vision model.  These are all
+    ordinary engineering prompts with no image intent.
+    """
+    base_history = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "看这个报错"},
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+            ],
+        },
+        {"role": "assistant", "content": "这是空指针异常。"},
+    ]
+    non_image_prompts = [
+        "我试图解决这个 bug",
+        "这个函数的意图是什么",
+        "视图层的逻辑有问题",
+        "把地图组件重构一下",
+        "这个图书管理系统怎么设计",
+    ]
+    for prompt in non_image_prompts:
+        msgs = copy.deepcopy(base_history) + [{"role": "user", "content": prompt}]
+        model, rule = run({"model": "claude-opus-4-6", "messages": msgs})
+        assert rule != "image_reference", (
+            f"Prompt '{prompt}': misread as an image reference, routed to {model}"
+        )
+        assert model == "claude-opus-4-6", (
+            f"Prompt '{prompt}': expected GLM, got {model} (rule={rule})"
+        )
+
+
 # ── Bug fix tests: _strip_images preserves context ──
 
 
@@ -528,6 +564,7 @@ if __name__ == "__main__":
         test_text_references_image_no_history_stays_glm,
         test_text_references_image_keyword_variations,
         test_english_text_references_screenshot_routes_to_vision,
+        test_ordinary_text_containing_tu_stays_glm,
         # ── Bug fix: _strip_images preserves context with placeholder ──
         test_strip_images_replaces_with_placeholder_not_delete,
         test_strip_images_preserves_text_blocks_around_images,
