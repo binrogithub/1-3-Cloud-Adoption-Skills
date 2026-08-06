@@ -15,6 +15,7 @@ Run with Python 3.7+:
 python3 tests/test_anthropic_stream_guard.py
 python3 tests/test_anthropic_reasoning_filter.py
 python3 tests/test_smart_router.py
+python3 tests/test_glm_loop_breaker.py
 ```
 
 On an older host Python, run it in the pinned LiteLLM image:

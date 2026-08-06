@@ -1,6 +1,6 @@
 ---
 name: litellm-maas-auto-plugin
-description: Deploy, configure, verify, upgrade, troubleshoot, or remove a LiteLLM bridge for native Claude Code and OpenCode backed by Huawei MaaS GLM-5.1 and OpenRouter. Use for Anthropic Messages compatibility, GLM reasoning filtering, structured tool calls, multilingual smart routing, 198K context escalation, vision routing, virtual keys, or end-to-end gateway validation.
+description: Deploy, configure, verify, upgrade, troubleshoot, or remove a LiteLLM bridge for native Claude Code and OpenCode backed by Huawei MaaS GLM-5.1 and OpenRouter. Use for Anthropic Messages compatibility, GLM reasoning filtering, structured tool calls, multilingual smart routing, 198K context escalation, vision routing, virtual keys, agent tool-call loop protection, or end-to-end gateway validation.
 ---
 
 # LiteLLM MaaS Auto Plugin
@@ -79,6 +79,7 @@ litellm_settings:
     - anthropic_stream_guard.proxy_handler_instance
     - anthropic_reasoning_filter.proxy_handler_instance
     - smart_router.proxy_handler_instance
+    - glm_loop_breaker.proxy_handler_instance
 ```
 
 The deployment may combine `smart_router` with another operational callback.
@@ -114,6 +115,27 @@ text, `tool_use`, usage, stop reasons, and `message_stop`.
 
 Do not disable GLM thinking merely to hide it in Claude Code. OpenAI-compatible
 clients such as OpenCode must still be able to receive `reasoning_content`.
+
+Disabling thinking also costs the model its ability to escape agent tool-call
+loops. Measured on one glm-5.2 route from a context seeded with three loop
+iterations: 12 of 12 runs looped with thinking disabled, 1 of 6 with it enabled.
+Verify thinking is actually live by reading `reasoning_tokens` and the length of
+`reasoning_content` in a response — a model-level `extra_body` overrides a
+request-level `thinking` parameter, so the request is not evidence. See
+`docs/PRD-glm-loop-breaker.md`.
+
+### Loop breaker
+
+Use `litellm_plugins/glm_loop_breaker/callback.py` as the second line of defence
+behind thinking. It fingerprints assistant tool calls already in the request,
+detects repeating cycles of period 1-3 at the tail of the history, then raises
+`temperature` to a floor and finally appends an instruction to stop retrying.
+
+Register it last so it sees the request after routing has chosen a model.
+
+Its default model pattern covers `glm` and `*-coding-*` aliases such as
+`coding-auto`, which resolve to a GLM upstream under a name containing no "glm".
+Check `GLM_LOOP_MODEL_PATTERN` against the deployment's own `model_list`.
 
 ### Smart router
 
@@ -335,6 +357,22 @@ executable tools.
 Call `/v1/chat/completions` directly and verify `reasoning_content` exists.
 Then run OpenCode with `--thinking`. The Anthropic reasoning filter must pass
 OpenAI chunks through unchanged.
+
+### Agent repeats the same tool call forever
+
+The client is looping on an unchanging environment: a page stuck loading, a
+command whose output never varies. Check in this order.
+
+1. Is provider thinking actually live on the route? Read `reasoning_tokens` and
+   `len(reasoning_content)` from a response, not the request parameters. Zero
+   reasoning tokens means thinking is off regardless of what the request said.
+2. Is `glm_loop_breaker` registered, and does `GLM_LOOP_MODEL_PATTERN` match the
+   alias the client requested?
+3. Does the looping tool report success on failure? A `sleep` that returns
+   `done` tells the model the step worked and gives it no reason to change.
+
+Dropped `reasoning_content` in the request history is not the cause; echoing it
+back does not break the loop.
 
 ## Roll back
 

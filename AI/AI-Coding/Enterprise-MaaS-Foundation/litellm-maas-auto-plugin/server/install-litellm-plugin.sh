@@ -34,6 +34,9 @@ ROUTER_MOUNT="/app/smart_router.py"
 ROUTER_CALLBACK="smart_router.proxy_handler_instance"
 ROUTER_RULES_FILE="$(cd "$SCRIPT_DIR/.." && pwd)/litellm_plugins/smart_router/smart_router_rules.json"
 ROUTER_RULES_MOUNT="/app/smart_router_rules.json"
+BREAKER_FILE="$(cd "$SCRIPT_DIR/.." && pwd)/litellm_plugins/glm_loop_breaker/callback.py"
+BREAKER_MOUNT="/app/glm_loop_breaker.py"
+BREAKER_CALLBACK="glm_loop_breaker.proxy_handler_instance"
 FLAG_LINE="use_chat_completions_url_for_anthropic_messages"
 NO_RESTART=0
 DRY_RUN=0
@@ -80,6 +83,7 @@ done
 
 [[ -f "$PLUGIN_FILE" ]] || die "plugin file not found: $PLUGIN_FILE"
 [[ -f "$FILTER_FILE" ]] || die "reasoning filter not found: $FILTER_FILE"
+[[ -f "$BREAKER_FILE" ]] || die "loop breaker not found: $BREAKER_FILE"
 [[ -f "$ROUTER_FILE" ]] || die "smart router not found: $ROUTER_FILE"
 [[ -f "$ROUTER_RULES_FILE" ]] || die "smart router rules not found: $ROUTER_RULES_FILE"
 COMPOSE_FILE="${COMPOSE_FILE:-$LITELLM_DIR/docker-compose.yml}"
@@ -118,7 +122,9 @@ ASG_FILTER_PLUGIN="$FILTER_FILE" ASG_FILTER_MOUNT="$FILTER_MOUNT" \
 ASG_FILTER_CALLBACK="$FILTER_CALLBACK" ASG_ROUTER_PLUGIN="$ROUTER_FILE" \
 ASG_ROUTER_MOUNT="$ROUTER_MOUNT" ASG_ROUTER_CALLBACK="$ROUTER_CALLBACK" \
 ASG_ROUTER_RULES_PLUGIN="$ROUTER_RULES_FILE" \
-ASG_ROUTER_RULES_MOUNT="$ROUTER_RULES_MOUNT" python3 - <<'PY'
+ASG_ROUTER_RULES_MOUNT="$ROUTER_RULES_MOUNT" \
+ASG_BREAKER_PLUGIN="$BREAKER_FILE" ASG_BREAKER_MOUNT="$BREAKER_MOUNT" \
+ASG_BREAKER_CALLBACK="$BREAKER_CALLBACK" python3 - <<'PY'
 import os, re, sys, time
 
 mode      = os.environ["ASG_MODE"]
@@ -137,6 +143,9 @@ router_mount = os.environ["ASG_ROUTER_MOUNT"]
 router_callback = os.environ["ASG_ROUTER_CALLBACK"]
 router_rules_plugin = os.environ["ASG_ROUTER_RULES_PLUGIN"]
 router_rules_mount = os.environ["ASG_ROUTER_RULES_MOUNT"]
+breaker_plugin = os.environ["ASG_BREAKER_PLUGIN"]
+breaker_mount = os.environ["ASG_BREAKER_MOUNT"]
+breaker_callback = os.environ["ASG_BREAKER_CALLBACK"]
 flag      = os.environ["ASG_FLAG"]
 ts        = time.strftime("%Y%m%d%H%M%S")
 
@@ -218,6 +227,17 @@ if mode == "install" and not router_rules_mount_re.search(text):
     print("  compose: smart router rules mount added")
 elif mode == "uninstall":
     text = router_rules_mount_re.sub("", text)
+
+breaker_mount_re = re.compile(r"^\s*-\s*.+:" + re.escape(breaker_mount) + r"(:ro)?\s*$", re.M)
+if mode == "install" and not breaker_mount_re.search(text):
+    router_rules_line = re.search(r"^(\s*)-\s*.+:" + re.escape(router_rules_mount) + r"(:ro)?\s*$", text, re.M)
+    if not router_rules_line:
+        sys.exit(f"error: smart router rules mount missing while adding {breaker_mount}")
+    insert_at = router_rules_line.end()
+    text = text[:insert_at] + f"\n{router_rules_line.group(1)}- {breaker_plugin}:{breaker_mount}:ro" + text[insert_at:]
+    print("  compose: loop breaker mount added")
+elif mode == "uninstall":
+    text = breaker_mount_re.sub("", text)
 save(compose_f, text, orig)
 
 # ---------- litellm config yaml ----------
@@ -289,6 +309,18 @@ if mode == "install" and not router_cb_re.search(text):
     print("  config : smart router callback registered")
 elif mode == "uninstall":
     text = router_cb_re.sub("", text)
+
+# Registered last so it sees the request after routing has chosen a model.
+breaker_cb_re = re.compile(r"^\s*-\s*" + re.escape(breaker_callback) + r"\s*$", re.M)
+if mode == "install" and not breaker_cb_re.search(text):
+    router_cb = re.search(r"^(\s*)-\s*" + re.escape(router_callback) + r"\s*$", text, re.M)
+    if not router_cb:
+        sys.exit(f"error: smart router callback missing while adding {breaker_callback}")
+    insert_at = router_cb.end()
+    text = text[:insert_at] + f"\n{router_cb.group(1)}- {breaker_callback}" + text[insert_at:]
+    print("  config : loop breaker callback registered")
+elif mode == "uninstall":
+    text = breaker_cb_re.sub("", text)
 save(config_f, text, orig)
 PY
 
@@ -322,10 +354,12 @@ import sys; sys.path.insert(0, '/app')
 from anthropic_stream_guard import proxy_handler_instance, AnthropicStreamGuard
 from anthropic_reasoning_filter import proxy_handler_instance as reasoning_filter
 from smart_router import proxy_handler_instance as smart_router
+from glm_loop_breaker import proxy_handler_instance as loop_breaker
 assert 'async_post_call_streaming_iterator_hook' in AnthropicStreamGuard.__dict__
 print('plugin import OK:', type(proxy_handler_instance).__name__)
 print('reasoning filter import OK:', type(reasoning_filter).__name__)
 print('smart router import OK:', type(smart_router).__name__)
+print('loop breaker import OK:', type(loop_breaker).__name__)
 " || die "plugin import failed inside container"
   echo
   echo "Install complete. Next steps: see server/README.md"
