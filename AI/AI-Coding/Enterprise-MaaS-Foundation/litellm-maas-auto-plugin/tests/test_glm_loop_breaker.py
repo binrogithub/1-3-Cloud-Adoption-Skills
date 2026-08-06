@@ -122,6 +122,13 @@ check("coding-auto aliases are covered",
       run(looping_payload(5, model="coding-auto", temperature=0))["temperature"], 0.7)
 check("meli-coding aliases are covered",
       run(looping_payload(5, model="meli-coding-fast", temperature=0))["temperature"], 0.7)
+d = run(dict(looping_payload(5, temperature=0), metadata=None))
+check("a null metadata is replaced, not assigned into",
+      d["metadata"]["glm_loop_breaker"]["period"], 2)
+check("a null metadata still gets the temperature floor", d["temperature"], 0.7)
+d = run(dict(looping_payload(5, temperature=0), metadata={"user": "x"}))
+check("existing metadata keys are preserved", d["metadata"]["user"], "x")
+
 check("malformed messages pass through",
       run({"model": "glm-5.2", "messages": "not-a-list"})["messages"], "not-a-list")
 check("a missing model key passes through",

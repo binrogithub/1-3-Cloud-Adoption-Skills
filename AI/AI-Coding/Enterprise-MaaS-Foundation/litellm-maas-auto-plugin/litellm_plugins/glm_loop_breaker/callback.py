@@ -217,7 +217,14 @@ class GLMLoopBreaker(CustomLogger):
             _append_nudge(data)
             nudged = True
 
-        data.setdefault("metadata", {})["glm_loop_breaker"] = {
+        # A caller may send `"metadata": null`, in which case setdefault keeps the
+        # None and assigning into it raises. Losing the audit record would also
+        # make the intervention uncountable in spend logs.
+        meta = data.get("metadata")
+        if not isinstance(meta, dict):
+            meta = {}
+            data["metadata"] = meta
+        meta["glm_loop_breaker"] = {
             "period": period,
             "repetitions": reps,
             "temperature_before": before,
