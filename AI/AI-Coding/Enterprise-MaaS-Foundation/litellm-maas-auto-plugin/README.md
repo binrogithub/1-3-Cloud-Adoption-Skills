@@ -30,8 +30,10 @@ upstream model is an Anthropic Claude model.
 | `litellm_plugins/smart_router/callback.py` | Four-language deterministic model router |
 | `litellm_plugins/smart_router/smart_router_rules.json` | Versioned multilingual rules and observational score weights |
 | `litellm_plugins/smart_router/smart_router_rules.schema.json` | Strict rules schema |
+| `litellm_plugins/glm_loop_breaker/callback.py` | Agent tool-call loop circuit breaker |
 | `tests/test_anthropic_stream_guard.py` | Callback regression tests |
 | `tests/test_smart_router.py` | Language, intent, and 198K boundary tests |
+| `tests/test_glm_loop_breaker.py` | Cycle detection and circuit-breaker tests |
 | `tests/live_smoke.py` | Live message, stream, and tool-call probes |
 | `docs/PRD-lean-glm51.md` | Current product requirements and acceptance criteria |
 | `docs/PRD-huawei-meli-compat-router.md` | Huawei/Meli compatibility and advisor-routing requirements |
