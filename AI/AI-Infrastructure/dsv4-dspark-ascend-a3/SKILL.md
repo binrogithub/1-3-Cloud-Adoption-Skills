@@ -226,7 +226,8 @@ multi-turn/prefix-reuse workloads or conflict with DSpark.
 ## Files in this skill
 
 ```
-dsv4-dspark-skill/
+dsv4-dspark-ascend-a3/
+├── README.md                                   ← human-readable overview
 ├── SKILL.md                                    ← this file
 ├── scripts/
 │   ├── dspark-serve.sh                         ← vllm serve command (mount into container)
