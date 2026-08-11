@@ -34,7 +34,3 @@ Migrate NoSQL and in-memory databases from AWS and Azure to Huawei Cloud managed
 
 | Directory | Source | Target | Status |
 |---|---|---|---|
-| [AWS-DocumentDB-to-Huawei-DDS](./AWS-DocumentDB-to-Huawei-DDS/) | AWS DocumentDB | Huawei Cloud DDS (MongoDB) | Beta |
-| [AWS-DynamoDB-to-Huawei-GeminiDB](./AWS-DynamoDB-to-Huawei-GeminiDB/) | AWS DynamoDB | Huawei Cloud GeminiDB (Cassandra) | Beta |
-| [AWS-ElastiCache-to-Huawei-DCS](./AWS-ElastiCache-to-Huawei-DCS/) | AWS ElastiCache (Redis) | Huawei Cloud DCS (Redis) | Beta |
-| [Azure-CosmosDB-to-Huawei-GeminiDB](./Azure-CosmosDB-to-Huawei-GeminiDB/) | Azure Cosmos DB | Huawei Cloud GeminiDB (MongoDB) | Beta |

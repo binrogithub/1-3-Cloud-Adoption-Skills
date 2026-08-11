@@ -6,4 +6,3 @@ This directory covers skills and tools for migrating virtual machines and server
 
 - [huaweicloud-sms-migration](./huaweicloud-sms-migration/) — Server Migration Service (SMS) skill for migrating on-premises or cloud VMs to Huawei Cloud ECS.
 - [Vmware-Migration](./Vmware-Migration/) — VMware to Huawei Cloud migration guidance and references.
-- [AWS-EC2-to-Huawei-ECS](./AWS-EC2-to-Huawei-ECS/) — Migrate AWS EC2 instances to Huawei Cloud ECS using hcloud MCP.
