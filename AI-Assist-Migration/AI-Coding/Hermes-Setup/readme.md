@@ -49,6 +49,5 @@ prueba y reemplazar los placeholders antes de ejecutar los comandos MCP.
 
 ## References
 
-- floci Local Cloud Emulators: `../../Cloud-Foundation/Local-Cloud-Emulators/`
 - OpenCode skills directory: `~/.config/opencode/skills/`
 - AWS to Huawei Cloud service mapping: `~/.config/opencode/skills/aws-huaweicloud-migration/SKILL.md`

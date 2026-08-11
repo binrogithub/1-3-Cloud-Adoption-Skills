@@ -5,7 +5,7 @@ description: Detailed AWS to Huawei Cloud service mapping with side-by-side comm
 
 # AWS ↔ Huawei Cloud Migration Guide
 
-Detailed service-by-service mapping between AWS (floci) and Huawei Cloud (hcloud), with side-by-side commands, step-by-step migration flows, and cross-references to hcloud skills.
+Detailed service-by-service mapping between AWS and Huawei Cloud (hcloud), with side-by-side commands, step-by-step migration flows, and cross-references to hcloud skills.
 
 ## Related Skills
 
@@ -20,9 +20,6 @@ Detailed service-by-service mapping between AWS (floci) and Huawei Cloud (hcloud
 | `hcloud-functiongraph-setup` | FunctionGraph serverless functions, triggers, workflows |
 | `hcloud-rfs-aos-guide` | RFS/AOS IaC, HCL templates, stacks, execution plans |
 | `hcloud-obs-setup` | OBS object storage, buckets, lifecycle, policies |
-| `floci-aws-mcp-setup` | floci local AWS emulator + MCP setup |
-| `floci-eks-setup` | EKS cluster on floci for local testing |
-| `floci-services-quickstart` | 69 floci AWS services quick reference |
 
 ---
 
@@ -68,7 +65,7 @@ Detailed service-by-service mapping between AWS (floci) and Huawei Cloud (hcloud
 
 ## EKS ↔ CCE Migration
 
-> **See also:** `hcloud-cce-setup` skill for detailed CCE setup, and `floci-eks-setup` for local EKS testing.
+> **See also:** `hcloud-cce-setup` skill for detailed CCE setup.
 
 ### Step-by-Step: EKS → CCE
 
@@ -907,10 +904,10 @@ AWS RDS (primary) → RDS (read replica) via DRS (Data Replication Service)
 
 ## Side-by-Side: Full Stack Migration
 
-### AWS Stack (floci)
+### AWS Stack
 
 ```bash
-# 1. VPC (use default in floci)
+# 1. VPC (use default VPC)
 # 2. IAM role for EKS
 aws iam create-role --role-name eks-role --assume-role-policy-document file://trust.json
 # 3. EKS cluster
@@ -997,7 +994,6 @@ hcloud CES CreateAlarm --cli-region=la-north-2 --alarm_name high-cpu ...
 
 | Tool | Purpose | Location |
 |------|---------|----------|
-| `aws` CLI | AWS operations (floci or real) | `~/.local/bin/aws` |
 | `hcloud` CLI | Huawei Cloud operations | `/usr/local/bin/hcloud` |
 | `obs` (obsutil) | OBS operations (S3-compatible) | bundled with hcloud |
 | `kubectl` | K8s operations (EKS or CCE) | system |
