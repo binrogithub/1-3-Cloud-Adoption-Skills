@@ -1,11 +1,12 @@
-# Virtual Machine Migration
+# VM Migration
 
-This directory covers skills and tools for migrating virtual machines and server workloads to Huawei Cloud ECS.
+This directory covers skills and tools for migrating virtual machines from source clouds to Huawei Cloud ECS.
 
 ## Scenarios
 
-- [Vmware-Migration](./Vmware-Migration/) - VMware to Huawei Cloud migration using MGC/SMS with Terraform automation. Includes cross-region migration skill with runbook, lessons learned, and reusable bundles.
 - [huaweicloud-sms-migration](./huaweicloud-sms-migration/) - Server Migration Service (SMS) skill for migrating on-premises or cloud VMs to Huawei Cloud ECS.
+
+> **Future scenarios:** AWS EC2 to Huawei ECS, Azure VM to Huawei ECS, GCP GCE to Huawei ECS, and other cloud-to-cloud VM migrations will be added under this category.
 
 ## Format
 
