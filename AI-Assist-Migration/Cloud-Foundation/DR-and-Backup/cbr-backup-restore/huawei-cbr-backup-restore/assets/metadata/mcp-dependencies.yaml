@@ -1,0 +1,77 @@
+required_mcps: []
+
+optional_mcps:
+  - name: huaweicloud-pricing
+    version: "0.1.0"
+    path: ../../../../shared/mcps/huaweicloud-pricing
+    runtime: node
+    entry_point: src/server.mjs
+    transport: stdio
+    tools_used:
+      - EstimateArchitectureOnDemandPrice
+      - EstimateArchitecturePeriodPrice
+    tools_not_used:
+      - QueryCloudServiceTypes
+      - QueryResourceTypes
+      - QueryServiceResources
+      - QueryUsageTypes
+      - QueryMeasurementUnits
+      - QueryElbFlavors
+      - QueryElbAvailabilityZones
+      - QueryRdsFlavors
+      - QueryRdsStorageTypes
+      - QueryEcsFlavors
+      - QueryEvsVolumeTypes
+      - PricingHealthCheck
+      - ListPricingTemplates
+      - ExplainRequiredTemplate
+      - EstimateArchitectureCostDraft
+      - EstimateTemplateOnDemandPrice
+      - EstimateTemplatePeriodPrice
+      - QueryOnDemandPrice
+      - QueryPeriodPrice
+      - RenderProductInfosFromTemplate
+      - PricingProductInfoGuide
+      - EvaluateEcsFlavorAvailability
+      - FindEcsFlavorCandidates
+    write_operations: []
+    validation_status: VERIFIED_FROM_CODE
+
+  - name: huaweicloud-ticket
+    version: "0.1.0"
+    path: ../../../../shared/mcps/huaweicloud-ticket
+    runtime: node
+    entry_point: src/server.mjs
+    transport: stdio
+    tools_used:
+      - prepare_ticket
+      - create_ticket
+    tools_not_used:
+      - init_session
+      - list_service_categories
+      - list_issue_categories
+      - get_ticket_form_schema
+      - list_regions
+      - list_severities
+      - check_create_privilege
+      - list_tickets
+    write_operations:
+      - create_ticket
+    validation_status: VERIFIED_FROM_CODE
+
+  - name: huaweicloud-deploy
+    version: "0.1.0"
+    path: ../../../../shared/mcps/huaweicloud-deploy
+    runtime: node
+    entry_point: src/server.mjs
+    transport: stdio
+    tools_used:
+      - GenerateTerraformFromArchitecture
+      - ValidateTerraformConfiguration
+      - RunTerraformPlan
+      - ExplainTerraformPlan
+    tools_not_used: []
+    write_operations:
+      - GenerateTerraformFromArchitecture
+    validation_status: VERIFIED_FROM_CODE
+    notes: "Use ONLY for VPC/subnet/SG prerequisites. Do NOT use for CBR resources."

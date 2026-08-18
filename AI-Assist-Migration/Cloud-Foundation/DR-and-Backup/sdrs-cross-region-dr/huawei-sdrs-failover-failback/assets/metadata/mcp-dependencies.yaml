@@ -1,0 +1,61 @@
+required_mcps: []
+
+optional_mcps:
+  - name: huaweicloud-pricing
+    version: "0.1.0"
+    path: ../../../../shared/mcps/huaweicloud-pricing
+    runtime: node
+    entry_point: src/server.mjs
+    transport: stdio
+    tools_used:
+      - EstimateArchitectureOnDemandPrice
+      - EstimateArchitecturePeriodPrice
+    write_operations: []
+    validation_status: VERIFIED_FROM_CODE
+
+  - name: huaweicloud-ticket
+    version: "0.1.0"
+    path: ../../../../shared/mcps/huaweicloud-ticket
+    runtime: node
+    entry_point: src/server.mjs
+    transport: stdio
+    tools_used:
+      - prepare_ticket
+      - create_ticket
+    write_operations:
+      - create_ticket
+    validation_status: VERIFIED_FROM_CODE
+
+  - name: huaweicloud-deploy
+    version: "0.1.0"
+    path: ../../../../shared/mcps/huaweicloud-deploy
+    runtime: node
+    entry_point: src/server.mjs
+    transport: stdio
+    tools_used:
+      - GenerateTerraformFromArchitecture
+      - ValidateTerraformConfiguration
+      - RunTerraformPlan
+      - ExplainTerraformPlan
+    write_operations:
+      - GenerateTerraformFromArchitecture
+    validation_status: VERIFIED_FROM_CODE
+    notes: "Use ONLY for VPC/subnet/SG prerequisites. Do NOT use for SDRS resources. SDRS is NOT supported."
+
+shared_skills:
+  - name: mcp-capability-builder
+    path: ../../../../shared/skills/mcp-capability-builder
+    required: true
+    purpose: "Design future SDRS MCP when automation is requested"
+    validation_status: VERIFIED_FROM_CODE
+
+integrations:
+  - name: playwright
+    type: external
+    purpose: "Console exploration for failover verification"
+    constraints:
+      - read_only_only
+      - never_accept_dialogs
+      - never_execute_writes
+      - never_confirm_operations
+    validation_status: OPTIONAL_INTEGRATION

@@ -1,0 +1,18 @@
+{
+  "name": "huaweicloud-pricing-mcp",
+  "version": "0.1.0",
+  "description": "Local MCP server for Huawei Cloud pricing estimation for architects",
+  "type": "module",
+  "private": true,
+  "main": "src/server.mjs",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test:unit": "node test-cbr-backup-vaults.mjs && node test-cce-standard-cluster.mjs && node test-cfw-instance.mjs && node test-dcs-redis-instance.mjs && node test-dds-instance.mjs && node test-ecs-flavor-and-os-license.mjs && node test-ecs-linux-system-disk-payg.mjs && node test-ecs-period-billing.mjs && node test-elb-service-cost-breakdown.mjs && node test-evs-gpssd.mjs && node test-find-ecs-flavor-candidates.mjs && node test-hss-host-protection.mjs && node test-hss-period-billing.mjs && node test-include-unavailable-reference-pricing.mjs && node test-lts-instance.mjs && node test-nat-gateway-public.mjs && node test-resolve-project-id.mjs && node test-sfs-turbo-standard.mjs && node test-vpc-bandwidth-traffic.mjs && node test-vpn-gateway.mjs && node test-waf-instance.mjs",
+    "test:integration": "RUN_LIVE_API=true node test-cbr-backup-vaults.mjs && RUN_LIVE_API=true node test-cce-standard-cluster.mjs && RUN_LIVE_API=true node test-cfw-instance.mjs && RUN_LIVE_API=true node test-dcs-redis-instance.mjs && RUN_LIVE_API=true node test-dds-instance.mjs && RUN_LIVE_API=true node test-ecs-flavor-and-os-license.mjs && RUN_LIVE_API=true node test-ecs-linux-system-disk-payg.mjs && RUN_LIVE_API=true node test-ecs-period-billing.mjs && RUN_LIVE_API=true node test-elb-service-cost-breakdown.mjs && RUN_LIVE_API=true node test-evs-gpssd.mjs && RUN_LIVE_API=true node test-find-ecs-flavor-candidates.mjs && RUN_LIVE_API=true node test-hss-host-protection.mjs && RUN_LIVE_API=true node test-hss-period-billing.mjs && RUN_LIVE_API=true node test-include-unavailable-reference-pricing.mjs && RUN_LIVE_API=true node test-lts-instance.mjs && RUN_LIVE_API=true node test-nat-gateway-public.mjs && node test-resolve-project-id.mjs && RUN_LIVE_API=true node test-sfs-turbo-standard.mjs && RUN_LIVE_API=true node test-vpc-bandwidth-traffic.mjs && RUN_LIVE_API=true node test-vpn-gateway.mjs && RUN_LIVE_API=true node test-waf-instance.mjs",
+    "test:all": "RUN_LIVE_API=true node test-cbr-backup-vaults.mjs && RUN_LIVE_API=true node test-cce-standard-cluster.mjs && RUN_LIVE_API=true node test-cfw-instance.mjs && RUN_LIVE_API=true node test-dcs-redis-instance.mjs && RUN_LIVE_API=true node test-dds-instance.mjs && RUN_LIVE_API=true node test-ecs-flavor-and-os-license.mjs && RUN_LIVE_API=true node test-ecs-linux-system-disk-payg.mjs && RUN_LIVE_API=true node test-ecs-period-billing.mjs && RUN_LIVE_API=true node test-elb-service-cost-breakdown.mjs && RUN_LIVE_API=true node test-evs-gpssd.mjs && RUN_LIVE_API=true node test-find-ecs-flavor-candidates.mjs && RUN_LIVE_API=true node test-hss-host-protection.mjs && RUN_LIVE_API=true node test-hss-period-billing.mjs && RUN_LIVE_API=true node test-include-unavailable-reference-pricing.mjs && RUN_LIVE_API=true node test-lts-instance.mjs && RUN_LIVE_API=true node test-nat-gateway-public.mjs && node test-resolve-project-id.mjs && RUN_LIVE_API=true node test-sfs-turbo-standard.mjs && RUN_LIVE_API=true node test-vpc-bandwidth-traffic.mjs && RUN_LIVE_API=true node test-vpn-gateway.mjs && RUN_LIVE_API=true node test-waf-instance.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "latest",
+    "axios": "^1.16.1"
+  }
+}

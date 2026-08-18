@@ -1,8 +1,0 @@
-{
-  "playwright": {
-    "type": "local",
-    "enabled": true,
-    "command": ["npx", "-y", "@playwright/mcp@0.0.78"],
-    "timeout": 30000
-  }
-}

@@ -1,0 +1,99 @@
+name: huawei-sdrs-failover-failback
+version: 1.0.0
+category: migration
+status: EXPERIMENTAL
+risk_level: critical
+requires_explicit_approval: true
+
+domain: Cloud-Foundation
+family: DR-and-Backup
+service: SDRS
+canonical_name: Storage Disaster Recovery Service
+aliases:
+  - SDR
+  - SDRS
+  - Storage Disaster Recovery Service
+
+scenario:
+  source: validated-sdrs-protection-setup
+  target: dr-site-assuming-production-role
+  topology: cross-region-replication
+  mechanism: sdrs-failover-failback-manual-console
+  scope: failover_and_failback_only
+  prerequisite_skill: huawei-sdrs-protection-setup
+
+mcps:
+  required: []
+  optional:
+    - huaweicloud-pricing
+    - huaweicloud-ticket
+    - huaweicloud-deploy
+
+shared_skills:
+  required:
+    - mcp-capability-builder
+
+capability_gap:
+  builder_skill: mcp-capability-builder
+  allow_new_mcp_scaffolding: false
+  allow_live_activation: false
+  require_manual_review: true
+  known_gaps:
+    - id: GAP-SDR-001
+      description: "No SDRS CLI support in hcloud 6.2.9; failover operations are MANUAL_CONSOLE"
+      phase: all
+      decision: MANUAL_CONSOLE
+    - id: GAP-SDR-002
+      description: "No SDRS MCP exists"
+      phase: all
+      decision: CREATE_NEW_MCP_CANDIDATE
+    - id: GAP-SDR-003
+      description: "Failover, reverse reprotection, and failback are critical operations with no automation safeguard"
+      phase: execution
+      decision: MANUAL_CONSOLE
+    - id: GAP-SDR-005
+      description: "SDRS not in huaweicloud-deploy supported services"
+      phase: plan_generation
+      decision: EXTEND_EXISTING_MCP
+
+phases:
+  - name: parse_failover_intent
+    automation: AUTOMATED
+  - name: validate_last_replication_state
+    automation: ASSISTED
+  - name: evaluate_primary_site
+    automation: ASSISTED
+  - name: impact_plan
+    automation: AUTOMATED
+  - name: critical_approval
+    automation: MANUAL
+  - name: execute_failover
+    automation: MANUAL
+  - name: validate_dr_site
+    automation: ASSISTED
+  - name: measure_rpo_rto
+    automation: ASSISTED
+  - name: prevent_split_brain
+    automation: ASSISTED
+  - name: reverse_reprotection
+    automation: MANUAL
+  - name: failback_planning
+    automation: AUTOMATED
+  - name: failback_approval
+    automation: MANUAL
+  - name: execute_failback
+    automation: MANUAL
+  - name: dns_restoration_plan
+    automation: AUTOMATED
+  - name: closure
+    automation: AUTOMATED
+
+hcloud:
+  service: SDRS
+  verified_version: 6.2.9
+  sdrs_cli_support: NOT_AVAILABLE
+  sdrs_mcp_support: NOT_AVAILABLE
+
+execution:
+  primary_mechanism: manual_console
+  automation_blocker: missing_sdrs_cli_and_mcp

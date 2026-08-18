@@ -1,0 +1,97 @@
+name: huawei-sdrs-protection-setup
+version: 1.0.0
+category: migration
+status: EXPERIMENTAL
+risk_level: high
+requires_explicit_approval: true
+
+domain: Cloud-Foundation
+family: DR-and-Backup
+service: SDRS
+canonical_name: Storage Disaster Recovery Service
+aliases:
+  - SDR
+  - SDRS
+  - Storage Disaster Recovery Service
+
+scenario:
+  source: ecs-evs-production-region
+  target: ecs-evs-dr-region
+  topology: cross-region-replication
+  mechanism: sdrs-protection-group-protected-instance-replication-pair
+  scope: protection_setup_only
+
+mcps:
+  required: []
+  optional:
+    - huaweicloud-pricing
+    - huaweicloud-ticket
+    - huaweicloud-deploy
+
+shared_skills:
+  required:
+    - mcp-capability-builder
+
+capability_gap:
+  builder_skill: mcp-capability-builder
+  allow_new_mcp_scaffolding: false
+  allow_live_activation: false
+  require_manual_review: true
+  create_new_mcp_candidate: true
+  known_gaps:
+    - id: GAP-SDR-001
+      description: "No SDRS CLI support in hcloud 6.2.9; all SDRS operations are MANUAL_CONSOLE"
+      phase: all
+      decision: MANUAL_CONSOLE
+    - id: GAP-SDR-002
+      description: "No SDRS MCP exists; no automation possible for SDRS operations"
+      phase: all
+      decision: CREATE_NEW_MCP_CANDIDATE
+    - id: GAP-SDR-005
+      description: "SDRS not in huaweicloud-deploy supported services"
+      phase: plan_generation
+      decision: EXTEND_EXISTING_MCP
+    - id: GAP-SDR-006
+      description: "Region pair support must be verified manually"
+      phase: readiness
+      decision: REGION_DEPENDENT
+    - id: GAP-SDR-007
+      description: "DR gateway installation and configuration are manual operations"
+      phase: execution
+      decision: MANUAL_CONSOLE
+
+phases:
+  - name: parse_intent
+    automation: AUTOMATED
+  - name: validate_service_topology
+    automation: ASSISTED
+  - name: discover_production
+    automation: ASSISTED
+  - name: discover_dr_site
+    automation: ASSISTED
+  - name: dependency_analysis
+    automation: AUTOMATED
+  - name: rpo_rto_plan
+    automation: ASSISTED
+  - name: architecture_plan
+    automation: AUTOMATED
+  - name: readiness_review
+    automation: ASSISTED
+  - name: prepare_gateway
+    automation: MANUAL
+  - name: configure_protection
+    automation: MANUAL
+  - name: monitor_replication
+    automation: ASSISTED
+  - name: closure
+    automation: AUTOMATED
+
+hcloud:
+  service: SDRS
+  verified_version: 6.2.9
+  sdrs_cli_support: NOT_AVAILABLE
+  sdrs_mcp_support: NOT_AVAILABLE
+
+execution:
+  primary_mechanism: manual_console
+  automation_blocker: missing_sdrs_cli_and_mcp

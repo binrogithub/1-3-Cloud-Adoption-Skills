@@ -1,0 +1,82 @@
+name: huawei-sdrs-dr-drill
+version: 1.0.0
+category: migration
+status: EXPERIMENTAL
+risk_level: high
+requires_explicit_approval: true
+
+domain: Cloud-Foundation
+family: DR-and-Backup
+service: SDRS
+canonical_name: Storage Disaster Recovery Service
+aliases:
+  - SDR
+  - SDRS
+  - Storage Disaster Recovery Service
+
+scenario:
+  source: validated-sdrs-protection-setup
+  target: dr-site-temporary-drill-resources
+  topology: cross-region-replication
+  mechanism: sdrs-dr-drill-manual-console
+  scope: dr_drill_only
+  prerequisite_skill: huawei-sdrs-protection-setup
+
+mcps:
+  required: []
+  optional:
+    - huaweicloud-pricing
+    - huaweicloud-ticket
+
+shared_skills:
+  required:
+    - mcp-capability-builder
+
+capability_gap:
+  builder_skill: mcp-capability-builder
+  allow_new_mcp_scaffolding: false
+  allow_live_activation: false
+  require_manual_review: true
+  known_gaps:
+    - id: GAP-SDR-001
+      description: "No SDRS CLI support in hcloud 6.2.9; drill operations are MANUAL_CONSOLE"
+      phase: all
+      decision: MANUAL_CONSOLE
+    - id: GAP-SDR-002
+      description: "No SDRS MCP exists"
+      phase: all
+      decision: CREATE_NEW_MCP_CANDIDATE
+    - id: GAP-SDR-004
+      description: "Replication monitoring requires manual console checks"
+      phase: monitoring
+      decision: MANUAL_CONSOLE
+
+phases:
+  - name: parse_drill_intent
+    automation: AUTOMATED
+  - name: validate_replication_readiness
+    automation: ASSISTED
+  - name: define_drill_scope
+    automation: AUTOMATED
+  - name: obtain_approval
+    automation: MANUAL
+  - name: execute_dr_drill
+    automation: MANUAL
+  - name: validate_drill_results
+    automation: ASSISTED
+  - name: measure_rpo_rto
+    automation: ASSISTED
+  - name: cleanup_drill_resources
+    automation: MANUAL
+  - name: closure
+    automation: AUTOMATED
+
+hcloud:
+  service: SDRS
+  verified_version: 6.2.9
+  sdrs_cli_support: NOT_AVAILABLE
+  sdrs_mcp_support: NOT_AVAILABLE
+
+execution:
+  primary_mechanism: manual_console
+  automation_blocker: missing_sdrs_cli_and_mcp

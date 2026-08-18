@@ -1,0 +1,14 @@
+node_modules/
+.venv/
+.env
+.env.*
+*.log
+.DS_Store
+__pycache__/
+*.pyc
+coverage/
+tmp/
+.cache/
+*.bak
+*.bak.*
+*.backup
