@@ -1,6 +1,6 @@
 ---
 name: litellm-maas-auto-plugin
-description: Deploy, configure, verify, upgrade, troubleshoot, or remove a LiteLLM bridge for native Claude Code and OpenCode backed by Huawei MaaS GLM-5.1 and OpenRouter. Use for Anthropic Messages compatibility, GLM reasoning filtering, structured tool calls, multilingual smart routing, 198K context escalation, vision routing, virtual keys, agent tool-call loop protection, or end-to-end gateway validation.
+description: Deploy, configure, verify, upgrade, troubleshoot, or remove a LiteLLM bridge for native Claude Code and OpenCode backed by Huawei MaaS GLM-5.2 and OpenRouter. Use for Anthropic Messages compatibility, GLM reasoning filtering, structured tool calls, multilingual smart routing, context length-band policy, prefix-affinity hashing, vision routing, virtual keys, agent tool-call loop protection, or end-to-end gateway validation.
 ---
 
 # LiteLLM MaaS Auto Plugin
@@ -15,19 +15,23 @@ Claude Code → /v1/messages
             → smart_router
             → anthropic_stream_guard
             → anthropic_reasoning_filter
-            → GLM-5.1 or OpenRouter
+            → GLM-5.2 or OpenRouter
 
 OpenCode   → /v1/chat/completions
            → smart_router
-           → GLM-5.1 or OpenRouter
+           → GLM-5.2 or OpenRouter
 ```
 
 Use three model roles:
 
-- `glm-5.1`: code generation, fixes, tests, documentation, and refactoring.
-- `premium-openrouter`: architecture, database design, complex debugging,
-  security review, production incidents, infrastructure changes, and input
-  above 198000 tokens.
+- `glm-5.2`: the mainline. Code generation, fixes, tests, architecture,
+  refactoring, and all ordinary engineering work. Keyword-based premium
+  escalation was removed (it bare-token-matched `auth`/`payment`/`design` and
+  routed ordinary coding to premium at full cold-prefill cost).
+- `premium-openrouter`: cross-provider fallback target for the mainline, used
+  only when an upstream 5xx replays a bounded conversation. No longer a routing
+  destination; the capability-gap branch (phase 4) will use it for measured
+  failures.
 - `vision-openrouter`: screenshots, images, and visual/UI design.
 
 Recognize routing intent in Chinese, English, Brazilian Portuguese, and
@@ -36,7 +40,7 @@ Spanish. Keep unmatched execution work on the requested GLM-backed alias.
 ## Required inputs
 
 - LiteLLM deployment directory and Compose service/container names.
-- Working `glm-5.1`, `premium-openrouter`, and `vision-openrouter` groups.
+- Working `glm-5.2`, `premium-openrouter`, and `vision-openrouter` groups.
 - MaaS and OpenRouter credentials in server-side environment files.
 - LiteLLM master key for issuing scoped virtual keys.
 
@@ -63,11 +67,11 @@ Preview and apply:
 
 ```bash
 server/install-litellm-plugin.sh \
-  --litellm-dir /root/LiteLLM-Huawei-MaaS-Proxy \
+  --litellm-dir <your-litellm-dir> \
   --dry-run
 
 server/install-litellm-plugin.sh \
-  --litellm-dir /root/LiteLLM-Huawei-MaaS-Proxy
+  --litellm-dir <your-litellm-dir>
 ```
 
 Register callbacks in this order:
@@ -122,7 +126,7 @@ iterations: 12 of 12 runs looped with thinking disabled, 1 of 6 with it enabled.
 Verify thinking is actually live by reading `reasoning_tokens` and the length of
 `reasoning_content` in a response — a model-level `extra_body` overrides a
 request-level `thinking` parameter, so the request is not evidence. See
-`docs/PRD-glm-loop-breaker.md`.
+`docs/archive/PRD-glm-loop-breaker.md`.
 
 ### Loop breaker
 
@@ -133,51 +137,71 @@ detects repeating cycles of period 1-3 at the tail of the history, then raises
 
 Register it last so it sees the request after routing has chosen a model.
 
-Its default model pattern covers `glm` and `*-coding-*` aliases such as
-`coding-auto`, which resolve to a GLM upstream under a name containing no "glm".
-Check `GLM_LOOP_MODEL_PATTERN` against the deployment's own `model_list`.
+Its default model pattern covers `glm` and `claude-glm-5.2` (the public GLM
+model group). Check `GLM_LOOP_MODEL_PATTERN` against the deployment's own
+`model_list`.
 
 ### Smart router
 
-Use `litellm_plugins/smart_router/callback.py`. Apply hard rules in order:
+Use `litellm_plugins/smart_router/callback.py`. GLM-5.2 owns every final
+response. The router never routes a whole turn to Vision or Premium — those
+are bounded Sidecars that inject structured context into the same GLM request.
 
-1. Image content → `vision-openrouter`.
-2. Estimated input `> 198000` → `premium-openrouter`.
-3. Visual/UI intent → `vision-openrouter`.
-4. Premium reasoning intent → `premium-openrouter`.
-5. Everything else remains on GLM.
+**Sidecar flow (PRD product contract):**
 
-At the exact boundary, 198000 stays on GLM and 198001 routes to Premium.
-Treat payment/authentication/PCI, race conditions, repeated failed fixes,
-CODEOWNERS-protected paths, and production or infrastructure migrations as
-non-downgradable Premium work.
+1. **GLM mainline**: every request stays on `claude-glm-5.2`.
+2. **Vision Sidecar**: if the request carries image content, the sidecar
+   extracts images, sends each to Luna (`vision-openrouter`) for a structured
+   description, injects the caption text in-place, and GLM-5.2 produces the
+   sole user-facing answer. Exactly one Luna attempt; on failure, exactly one
+   Luna Pro (`vision-openrouter-secondary`) attempt — inherited LiteLLM
+   retries/fallbacks are disabled for these internal calls. If both fail, the
+   request returns an explicit `VISION_SIDECAR_UNAVAILABLE` error; GLM never
+   guesses image content. Successful descriptions are cached by image SHA-256
+   in the LiteLLM-mounted local volume; a repeated image makes zero new Vision
+   calls.
+3. **Premium Sidecar**: on a tool-call failure or loop, the sidecar makes at
+   most one bounded Premium (`premium-openrouter`) advisory call, injects the
+   advice, and returns control to GLM-5.2 for the final response.
+
+Length is never a routing trigger. Estimated input is classified into bands
+(normal/advisory/oversize), tagged in metadata and counted in a metric, but
+the request stays on GLM. Never escalate to another model on length alone.
 
 Load multilingual intent rules from
 `litellm_plugins/smart_router/smart_router_rules.json`. Validate edits against
 `smart_router_rules.schema.json`; the callback also rejects unknown keys,
-invalid regexes, duplicate rule IDs, and scoring weights that do not sum to
-one. Keep `complexity_score` observational: never let it override the hard
-routing order.
+invalid regexes, and duplicate rule IDs.
 
-Record `estimated_tokens`, `matched_rule`, `complexity_score`, `router_version`,
+Record `estimated_tokens`, `matched_rule`, `router_version`, `length_band`,
 and the selected request-scoped fallback chain under `metadata.smart_router`.
 
-Use capability- and residency-safe request fallbacks:
+Same-provider fallback (GLM → `glm-5.1-fallback`) is token-capped at
+`SMART_ROUTER_FALLBACK_TOKEN_CAP`. Cross-border fallback is gated on a
+`data_residency` tag read from the virtual key/team context
+(`user_api_key_dict.metadata.data_residency == "china-only"`) or the server-side
+`SMART_ROUTER_DEFAULT_DATA_RESIDENCY` env — not from client request metadata.
 
-- GLM execution → Premium unless a sensitive/data-residency rule blocks the
-  China-to-US fallback.
-- Premium → GLM only at `<= 198000` and only for a matched rule marked
-  `allow_downgrade`.
-- Vision → `vision-openrouter-secondary`; never fall back to a text-only model.
+When `SMART_ROUTER_DEPLOYMENT_COUNT` is greater than `1`, mainline traffic is
+pinned to a stable `SMART_ROUTER_MAINLINE_PREFIX-<idx>` alias via a stateless
+SHA-256 consistent hash over `metadata.session_id` (preferred) or the system
+prompt plus first user text. The hash is plain SHA-256, so it is stable across
+restarts. The pinned alias falls back to the `SMART_ROUTER_MAINLINE_GROUP`
+same-provider group.
 
-Allow virtual keys to access every configured fallback model.
+A normal client virtual key may access ONLY `claude-glm-5.2`. The internal
+Sidecar key (server-admin operation only) accesses the Sidecar and fallback
+groups (`vision-openrouter`, `vision-openrouter-secondary`,
+`premium-openrouter`, `glm-5.1-fallback`) — never grant these to a client
+key. Do not reuse the LiteLLM master key or MaaS key on clients.
 
 Expose and monitor:
 
 - `smart_router_requests_total{route,matched_rule,router_version}`
 - `smart_router_fallbacks_total{source,target,reason}`
-- `smart_router_cross_border_blocks_total{matched_rule}`
-- `smart_router_complexity_score{route}`
+- `smart_router_cross_border_blocks_total{matched_rule}` (residency blocks via key/env tag)
+- `smart_router_length_band_total{band}`
+- `mainline_deployment_selected_total{deployment}`
 
 ### Retry and budget controls
 
@@ -194,58 +218,58 @@ Expose and monitor:
 
 ## Model routes
 
-Configure the GLM-backed Claude alias:
+The public GLM model group (the only model a client key may access):
 
 ```yaml
-- model_name: "claude-*"
+- model_name: "claude-glm-5.2"
   litellm_params:
-    model: openai/glm-5.1
+    model: openai/glm-5.2
     api_base: os.environ/HUAWEI_MAAS_API_BASE
     api_key: os.environ/HUAWEI_MAAS_API_KEY_0
     extra_body:
       thinking:
         type: enabled
   model_info:
-    max_tokens: 198000
-    max_input_tokens: 198000
+    max_input_tokens: 1000000
     max_output_tokens: 128000
 ```
 
-Use separate OpenRouter groups so premium reasoning does not randomly share a
-vision deployment:
+Internal Sidecar groups (server-only, accessed by a dedicated internal key —
+never by a client key). Vision (Luna/Luna-Pro) and Premium (Opus 5) are
+bounded sidecars that never produce the final user-facing response:
 
 ```yaml
 - model_name: vision-openrouter
   litellm_params:
-    model: openrouter/openai/gpt-4o
+    model: openrouter/openai/gpt-5.6-luna
 
 - model_name: vision-openrouter-secondary
   litellm_params:
-    model: openrouter/google/gemini-2.5-pro
+    model: openrouter/openai/gpt-5.6-luna-pro
 
 - model_name: premium-openrouter
   litellm_params:
-    model: openrouter/anthropic/claude-opus-4
+    model: openrouter/anthropic/claude-opus-5
 ```
 
-Supply credentials, limits, and pricing through the deployment configuration.
+Native Claude (`default`, `opus`, `sonnet`, `haiku`) bypasses LiteLLM entirely
+and is never remapped. Supply credentials, limits, and pricing through the
+deployment configuration.
 
 ## Virtual keys
 
-Issue one scoped key per client or host.
-
-Claude Code key models:
+Issue one scoped key per client or host. A normal client key may access ONLY
+`claude-glm-5.2`:
 
 ```json
-["claude-*", "vision-openrouter", "vision-openrouter-secondary",
- "premium-openrouter"]
+["claude-glm-5.2"]
 ```
 
-OpenCode key models:
+The internal Sidecar key (server-admin operation only) may access exactly the
+Sidecar groups:
 
 ```json
-["glm-5.1", "vision-openrouter", "vision-openrouter-secondary",
- "premium-openrouter"]
+["vision-openrouter", "vision-openrouter-secondary", "premium-openrouter"]
 ```
 
 Store key responses in separate `0600` files. Do not reuse the LiteLLM master
@@ -255,15 +279,32 @@ key or MaaS key on clients.
 
 ### Claude Code
 
+Install the isolated GLM-5.2 launcher (native `claude` is never modified):
+
 ```bash
-client/configure-claude-code.sh sk-virtual-key \
-  --base-url http://127.0.0.1:4000 \
-  --model claude-opus-4-6 \
-  --verify
+echo "sk-virtual-key" | client/claude-litellm-setup.sh \
+  --base-url http://127.0.0.1:4000
+client/claude-litellm-setup.sh --verify
+claude-litellm   # start a GLM session
 ```
 
-The `claude-*` name is a compatibility alias; do not describe it as an actual
-Anthropic model.
+The gateway key is read from stdin or `CLAUDE_LITELLM_KEY` — never from argv.
+`claude-glm-5.2` is the one public GLM model group; native Claude model names
+are not remapped. To migrate from the old global-remapping setup, first preview
+with `client/claude-litellm-migrate.sh --dry-run`. Model mappings are removed
+automatically; legacy URL and credential fields require exact ownership
+evidence, so apply with the full 64-char SHA-256 fingerprint of the old
+gateway key:
+
+```bash
+FP=$(printf '%s' "$OLD_GATEWAY_KEY" | sha256sum | cut -d' ' -f1)
+client/claude-litellm-migrate.sh --apply \
+  --old-base-url http://127.0.0.1:4000 \
+  --old-key-fingerprint "$FP"
+```
+
+A plain `--apply` without these flags only removes model mappings; it does
+NOT complete migration if legacy URL/credentials remain.
 
 ### OpenCode
 
@@ -272,7 +313,7 @@ Use `@ai-sdk/openai-compatible` and `/v1/chat/completions`:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "enterprise-maas/glm-5.1",
+  "model": "enterprise-maas/glm-5.2",
   "provider": {
     "enterprise-maas": {
       "npm": "@ai-sdk/openai-compatible",
@@ -281,8 +322,8 @@ Use `@ai-sdk/openai-compatible` and `/v1/chat/completions`:
         "apiKey": "{env:LITELLM_OPENCODE_KEY}"
       },
       "models": {
-        "glm-5.1": {
-          "name": "GLM 5.1 Thinking",
+        "glm-5.2": {
+          "name": "GLM 5.2 Thinking",
           "limit": {"context": 198000, "output": 128000}
         }
       }
@@ -327,7 +368,7 @@ Confirm:
 - OpenAI chat responses retain `reasoning_content`;
 - Claude Messages contain no thinking blocks and start visible content at
   index 0;
-- 198000/198001 routing tests pass;
+- length-band tagging and fallback-cap tests pass;
 - spend logs show the actual provider model, not only the requested alias;
 - all core services remain healthy;
 - logs contain no credentials.
@@ -366,8 +407,9 @@ command whose output never varies. Check in this order.
 1. Is provider thinking actually live on the route? Read `reasoning_tokens` and
    `len(reasoning_content)` from a response, not the request parameters. Zero
    reasoning tokens means thinking is off regardless of what the request said.
-2. Is `glm_loop_breaker` registered, and does `GLM_LOOP_MODEL_PATTERN` match the
-   alias the client requested?
+2. Is `glm_loop_breaker` registered, and does `GLM_LOOP_MODEL_PATTERN` match
+   the model the client requested? The default `glm|coding-|claude-` covers
+   `claude-glm-5.2` (the public GLM model group).
 3. Does the looping tool report success on failure? A `sleep` that returns
    `done` tells the model the step worked and gives it no reason to change.
 
@@ -378,7 +420,7 @@ back does not break the loop.
 
 ```bash
 server/install-litellm-plugin.sh \
-  --litellm-dir /root/LiteLLM-Huawei-MaaS-Proxy \
+  --litellm-dir <your-litellm-dir> \
   --uninstall
 ```
 

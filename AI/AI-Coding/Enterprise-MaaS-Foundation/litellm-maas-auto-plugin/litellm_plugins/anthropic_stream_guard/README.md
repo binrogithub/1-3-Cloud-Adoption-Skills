@@ -96,3 +96,31 @@ retired).
 Env: `ASG_STRIP_THINKING` (default true), `ASG_NORMALIZE_IMAGE_URL` (default
 true), `ASG_TRANSLATE_TOOL_CHOICE` (default false), `ASG_MAX_PARSE_BYTES`
 (default 262144).
+
+## Tool Argument Guard integration (PRD-tool-argument-guard)
+
+The stream guard integrates the Tool Argument Guard library
+(`/app/tool_argument_guard.py`) for schema-aware tool argument validation at
+the gateway response boundary. The guard reads the tool schemas Claude Code
+sent in the current request, buffers model-generated tool argument deltas
+until the complete tool call is available, validates the assembled arguments,
+and follows this ordered policy:
+
+1. Pass valid arguments through byte-identically.
+2. Apply deterministic, schema-directed normalizations (snake→camel, enum
+   aliases, lossless primitive coercion, schema defaults, unknown field
+   removal, Todo/Task activeForm copy).
+3. If still invalid, call the Premium Tool-Repair Sidecar once (bounded
+   payload: tool name, schema, invalid args, validation errors).
+4. Validate the repaired arguments against the original schema.
+5. If repair still fails, replace the tool call with a safe text result and
+   terminate the assistant turn without tool execution.
+
+Modes (`TOOL_ARG_GUARD_MODE`):
+- `off` — no buffering or validation (emergency rollback).
+- `observe` (default) — validate and record redacted metrics, no output change.
+- `enforce` — buffer, normalize, repair, reject. All tool blocks in a message
+  are accepted or rejected atomically (no partial tool-call emission).
+
+The guard is a library imported by the stream guard, not a registered callback.
+Enforce mode refuses to start if `jsonschema` is unavailable.

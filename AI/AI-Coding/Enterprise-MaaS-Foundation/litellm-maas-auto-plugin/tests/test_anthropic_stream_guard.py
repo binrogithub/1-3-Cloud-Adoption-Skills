@@ -1,4 +1,5 @@
 import asyncio, sys, json
+import importlib.util
 import logging, types
 
 if "litellm" not in sys.modules:
@@ -18,17 +19,15 @@ if "litellm" not in sys.modules:
     sys.modules.setdefault("litellm.integrations.custom_logger", custom_logger)
 
 from pathlib import Path
-sys.path.insert(
-    0,
-    str(Path(__file__).resolve().parents[1] / "litellm_plugins" / "anthropic_stream_guard"),
-)
-from callback import (
-    apply_stop_sequences,
-    normalize_image_url_blocks,
-    proxy_handler_instance,
-    _normalize_thinking_signatures,
-    _sse,
-)
+_ASG_PATH = Path(__file__).resolve().parents[1] / "litellm_plugins" / "anthropic_stream_guard" / "callback.py"
+_asg_spec = importlib.util.spec_from_file_location("asg_callback", _ASG_PATH)
+_cbmod = importlib.util.module_from_spec(_asg_spec)
+_asg_spec.loader.exec_module(_cbmod)
+apply_stop_sequences = _cbmod.apply_stop_sequences
+normalize_image_url_blocks = _cbmod.normalize_image_url_blocks
+proxy_handler_instance = _cbmod.proxy_handler_instance
+_normalize_thinking_signatures = _cbmod._normalize_thinking_signatures
+_sse = _cbmod._sse
 
 def sse(e): return _sse(e)
 
@@ -359,12 +358,12 @@ tail=b"".join(c for c in out if isinstance(c,(bytes,bytearray)))
 assert b'"type": "message_stop"' not in tail
 print("T18 fake terminal marker suppresses synthesis: PASS")
 
-# T19 raw <tool_call markup in text with tools declared: metric+log only,
-# stream must pass through byte-identical (no rewrite of improvised markup)
-import callback as _cbmod
+# T19 raw <tool_call markup in text with tools declared → raises 502
+# (PRD-remove-tool-disabling §5.4: never forward markup as prose)
 class _Rec:
     def __init__(self): self.n = 0
     def inc(self, *_a, **_k): self.n += 1
+_MarkupErr = _cbmod.UnparsedToolMarkupError
 _rec = _Rec(); _old_markup = _cbmod.TOOL_MARKUP; _cbmod.TOOL_MARKUP = _rec
 MARKUP=[sse(e) for e in [
  {"type":"message_start","message":{"id":"m5"}},
@@ -375,13 +374,17 @@ MARKUP=[sse(e) for e in [
  {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":9}},
  {"type":"message_stop"},
 ]]
-out=asyncio.run(run(MARKUP, {"tools":[{"name":"Bash"}]}))
-assert out==MARKUP, "markup detection must never rewrite the stream"
+_t19_raised = False
+try:
+    asyncio.run(run(MARKUP, {"tools":[{"name":"Bash"}]}))
+except _MarkupErr:
+    _t19_raised = True
+assert _t19_raised, "T19: raw markup must raise UnparsedToolMarkupError"
 assert _rec.n==1, f"TOOL_MARKUP should increment once per stream, got {_rec.n}"
 _cbmod.TOOL_MARKUP=_old_markup
-print("T19 unparsed tool markup detected without rewrite: PASS")
+print("T19 unparsed tool markup raises 502: PASS")
 
-# T20 raw <tool_call marker split across byte chunks is still diagnosed
+# T20 raw <tool_call marker split across byte chunks is still caught
 _rec = _Rec(); _old_markup = _cbmod.TOOL_MARKUP; _cbmod.TOOL_MARKUP = _rec
 SPLIT_MARKUP=[sse(e) for e in [
  {"type":"message_start","message":{"id":"m6"}},
@@ -392,13 +395,17 @@ SPLIT_MARKUP=[sse(e) for e in [
  {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":9}},
  {"type":"message_stop"},
 ]]
-out=asyncio.run(run(SPLIT_MARKUP, {"tools":[{"name":"Bash"}]}))
-assert out==SPLIT_MARKUP, "split markup detection must never rewrite bytes"
+_t20_raised = False
+try:
+    asyncio.run(run(SPLIT_MARKUP, {"tools":[{"name":"Bash"}]}))
+except _MarkupErr:
+    _t20_raised = True
+assert _t20_raised, "T20: split markup must raise UnparsedToolMarkupError"
 assert _rec.n==1, f"TOOL_MARKUP should increment once per stream, got {_rec.n}"
 _cbmod.TOOL_MARKUP=_old_markup
-print("T20 split unparsed tool markup detected without rewrite: PASS")
+print("T20 split unparsed tool markup raises 502: PASS")
 
-# T21 dict-mode text deltas are diagnosed too
+# T21 dict-mode text deltas raise too
 _rec = _Rec(); _old_markup = _cbmod.TOOL_MARKUP; _cbmod.TOOL_MARKUP = _rec
 DICT_MARKUP=[
  {"type":"message_start","message":{"id":"m7"}},
@@ -408,14 +415,19 @@ DICT_MARKUP=[
  {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":9}},
  {"type":"message_stop"},
 ]
-out=asyncio.run(run(DICT_MARKUP, {"tools":[{"name":"Bash"}]}))
-assert out==DICT_MARKUP, "dict markup detection must never rewrite events"
+_t21_raised = False
+try:
+    asyncio.run(run(DICT_MARKUP, {"tools":[{"name":"Bash"}]}))
+except _MarkupErr:
+    _t21_raised = True
+assert _t21_raised, "T21: dict-mode markup must raise UnparsedToolMarkupError"
 assert _rec.n==1, f"TOOL_MARKUP should increment once per stream, got {_rec.n}"
 _cbmod.TOOL_MARKUP=_old_markup
-print("T21 dict-mode unparsed tool markup detected without rewrite: PASS")
+print("T21 dict-mode unparsed tool markup raises 502: PASS")
 
 # T22 queued mid-task user message (#115): re-surfaced as top-level text
-from callback import amplify_user_interjections, AMPLIFIED_HEADER
+amplify_user_interjections = _cbmod.amplify_user_interjections
+AMPLIFIED_HEADER = _cbmod.AMPLIFIED_HEADER
 REMINDER = ("<system-reminder>\nThe user sent the following message: "
             "still compacting? you are not compacting just now?\n"
             "IMPORTANT: After completing your current task, you MUST address "
@@ -463,7 +475,7 @@ assert json.dumps(req3) == before3
 print("T24 historical reminders not resurrected: PASS")
 
 # T25 Anthropic server tools stripped; client tools untouched
-from callback import strip_server_tools
+strip_server_tools = _cbmod.strip_server_tools
 req_t = {"tools": [
     {"type": "web_search_20250305", "name": "web_search", "max_uses": 8},
     {"name": "Bash", "description": "run", "input_schema": {"type": "object"}},
@@ -562,4 +574,78 @@ for metric_name in (
     setattr(_cbmod, metric_name, old_metric)
 print("T32 compatibility metrics degrade through inc-compatible counters: PASS")
 
+# ── PRD-remove-tool-disabling §6.1(4): raw tool markup must raise 502 ──────
+#
+# The old behavior (T19/T20/T21) was diagnose-and-pass-through: the markup
+# reached the client as prose, producing a fabricated success.  The new
+# behavior is a structural 502 UNPARSED_TOOL_MARKUP — even when the request
+# did NOT declare tools (the §2.3 bite point: hard-stop deleted tools →
+# request_has_tools=False → detection was disabled).
+
+_MarkupError = getattr(_cbmod, "UnparsedToolMarkupError", None)
+assert _MarkupError is not None, "UnparsedToolMarkupError must be defined"
+assert getattr(_MarkupError, "http_status", None) == 502, "markup error must be 502"
+assert getattr(_MarkupError, "error_code", None) == "UNPARSED_TOOL_MARKUP", \
+    "markup error code must be UNPARSED_TOOL_MARKUP"
+
+# T33 raw markup WITH tools declared → raises (no longer passes through)
+_rec = _Rec(); _old_markup = _cbmod.TOOL_MARKUP; _cbmod.TOOL_MARKUP = _rec
+MARKUP_33 = [sse(e) for e in [
+    {"type": "message_start", "message": {"id": "m33"}},
+    {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}},
+    {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "done.<tool_call>Write_tool>"}},
+    {"type": "content_block_stop", "index": 0},
+    {"type": "message_delta", "delta": {"stop_reason": "end_turn"}, "usage": {"output_tokens": 5}},
+    {"type": "message_stop"},
+]]
+_raised33 = False
+try:
+    asyncio.run(run(MARKUP_33, {"tools": [{"name": "Write"}]}))
+except _MarkupError:
+    _raised33 = True
+assert _raised33, "T33: raw markup with tools must raise UnparsedToolMarkupError"
+_cbmod.TOOL_MARKUP = _old_markup
+print("T33 raw markup with tools raises 502: PASS")
+
+# T34 raw markup WITHOUT tools declared → raises (§2.3 bite point)
+_rec = _Rec(); _old_markup = _cbmod.TOOL_MARKUP; _cbmod.TOOL_MARKUP = _rec
+MARKUP_34 = [sse(e) for e in [
+    {"type": "message_start", "message": {"id": "m34"}},
+    {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}},
+    {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "✅ 脚本已写好<tool_call>Write_tool>"}},
+    {"type": "content_block_stop", "index": 0},
+    {"type": "message_delta", "delta": {"stop_reason": "end_turn"}, "usage": {"output_tokens": 8}},
+    {"type": "message_stop"},
+]]
+_raised34 = False
+try:
+    asyncio.run(run(MARKUP_34, {}))  # NO tools declared — the bite point
+except _MarkupError:
+    _raised34 = True
+assert _raised34, "T34: raw markup without tools must still raise (bite point)"
+_cbmod.TOOL_MARKUP = _old_markup
+print("T34 raw markup without tools raises 502 (bite point): PASS")
+
+# T35 non-streaming response with raw markup → raises
+_raised35 = False
+try:
+    asyncio.run(proxy_handler_instance.async_post_call_success_hook(
+        data={"messages": [{"role": "user", "content": "hi"}]},
+        user_api_key_dict=None,
+        response={"id": "m35", "content": [
+            {"type": "text", "text": "✅ done.<tool_call>Write_tool>"},
+        ], "stop_reason": "end_turn"},
+    ))
+except _MarkupError:
+    _raised35 = True
+assert _raised35, "T35: non-streaming raw markup must raise UnparsedToolMarkupError"
+print("T35 non-streaming raw markup raises 502: PASS")
+
 print("ALL TESTS PASS")
+
+
+def test_all_pass():
+    """Pytest entry point: module-level asserts (T1–T35) ran at import."""
+    # All T1–T35 assertions execute at module import time. Reaching this
+    # function means none raised AssertionError.
+    assert True

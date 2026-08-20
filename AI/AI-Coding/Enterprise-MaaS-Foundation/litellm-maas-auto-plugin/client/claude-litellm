@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# claude-litellm — launch native Claude Code with an isolated GLM-5.2 profile.
+#
+# Sets GLM environment variables ONLY in the child process. Preserves the
+# parent environment (proxy, MCP, SSH, terminal, locale, temp, XDG, editor,
+# cloud variables) and removes only conflicting Anthropic gateway/auth/model
+# variables before setting the GLM values.
+#
+# PRD: docs/PRD-release-closure-native-claude-litellm.md §4 Work Package B
+#
+# Usage:
+#   claude-litellm [normal Claude Code arguments]
+
+CONFIG_DIR="${CLAUDE_LITELLM_CONFIG_DIR:-$HOME/.config/claude-litellm}"
+ENV_FILE="$CONFIG_DIR/env"
+
+die() { printf 'claude-litellm: %s\n' "$*" >&2; exit 1; }
+
+# ── Verify the GLM profile exists ────────────────────────────────────────────
+if [ ! -f "$ENV_FILE" ]; then
+    die "GLM profile not found at $ENV_FILE.
+Run claude-litellm-setup.sh to create it."
+fi
+if [ ! -r "$ENV_FILE" ]; then
+    die "GLM profile at $ENV_FILE is not readable (check file permissions)."
+fi
+
+# ── Security: reject symlinks, wrong ownership, insecure modes ───────────────
+# Resolve the env file — reject symlinks.
+real_env="$(readlink -f "$ENV_FILE" 2>/dev/null || echo "$ENV_FILE")"
+[ "$real_env" = "$ENV_FILE" ] || die "GLM profile must not be a symlink."
+
+# Check file mode (must be 0600).
+file_mode="$(stat -c '%a' "$ENV_FILE" 2>/dev/null || stat -f '%Lp' "$ENV_FILE" 2>/dev/null || echo '000')"
+[ "$file_mode" = "600" ] || die "GLM profile must have mode 0600 (got $file_mode)."
+
+# Check ownership (must be owned by current user).
+file_owner="$(stat -c '%u' "$ENV_FILE" 2>/dev/null || stat -f '%u' "$ENV_FILE" 2>/dev/null || echo '0')"
+[ "$file_owner" = "$(id -u)" ] || die "GLM profile must be owned by the current user."
+
+# ── Parse the profile file (allowlist, no sourcing, no unquoted expansion) ───
+# Only these keys are accepted; anything else is rejected.
+ALLOWED_KEYS="ANTHROPIC_BASE_URL ANTHROPIC_API_KEY ANTHROPIC_MODEL"
+
+GLM_BASE_URL=""
+GLM_API_KEY=""
+GLM_MODEL=""
+
+while IFS='=' read -r key value; do
+    # Skip comments and blank lines.
+    case "$key" in
+        ''|\#*) continue ;;
+    esac
+    # Reject CR/LF in values.
+    case "$value" in
+        *$'\r'*) die "GLM profile: CR/LF not allowed in $key." ;;
+        *$'\n'*) die "GLM profile: newline not allowed in $key." ;;
+    esac
+    # P1: Exact key matching (not substring match).
+    case "$key" in
+        ANTHROPIC_BASE_URL|ANTHROPIC_API_KEY|ANTHROPIC_MODEL) ;;
+        *) die "GLM profile: unknown key '$key'." ;;
+    esac
+    # P1: Reject duplicate keys.
+    case "$key" in
+        ANTHROPIC_BASE_URL) [ -z "$GLM_BASE_URL" ] || die "GLM profile: duplicate ANTHROPIC_BASE_URL." ;;
+        ANTHROPIC_API_KEY) [ -z "$GLM_API_KEY" ] || die "GLM profile: duplicate ANTHROPIC_API_KEY." ;;
+        ANTHROPIC_MODEL) [ -z "$GLM_MODEL" ] || die "GLM profile: duplicate ANTHROPIC_MODEL." ;;
+    esac
+    case "$key" in
+        ANTHROPIC_BASE_URL)
+            [ -n "$value" ] || die "GLM profile: ANTHROPIC_BASE_URL is empty."
+            GLM_BASE_URL="$value" ;;
+        ANTHROPIC_API_KEY)
+            [ -n "$value" ] || die "GLM profile: ANTHROPIC_API_KEY is empty."
+            GLM_API_KEY="$value" ;;
+        ANTHROPIC_MODEL)
+            [ -n "$value" ] || die "GLM profile: ANTHROPIC_MODEL is empty."
+            GLM_MODEL="$value" ;;
+    esac
+done < "$ENV_FILE"
+
+# Validate required keys.
+[ -n "$GLM_BASE_URL" ] || die "GLM profile: ANTHROPIC_BASE_URL is missing."
+[ -n "$GLM_API_KEY" ] || die "GLM profile: ANTHROPIC_API_KEY is missing."
+[ -n "$GLM_MODEL" ] || die "GLM profile: ANTHROPIC_MODEL is missing."
+
+# P0: Enforce the canonical model — a tampered profile must not launch with an
+# internal or arbitrary model (PRD-release-closure §3.3). The launcher is the
+# last boundary before exec; the profile is a file on disk that can be modified
+# out-of-band. Only claude-glm-5.2 is a valid user-facing GLM session model.
+[ "$GLM_MODEL" = "claude-glm-5.2" ] || die "GLM profile model is '$GLM_MODEL' — only claude-glm-5.2 is permitted."
+
+# P1: Validate the URL (PRD §3.3). Require a syntactically valid http:// or
+# https:// URL with no control characters, whitespace, embedded credentials,
+# or empty host. Rejects "not-a-url" and similar.
+case "$GLM_BASE_URL" in
+    http://*|https://*) ;;
+    *) die "GLM profile ANTHROPIC_BASE_URL must start with http:// or https:// (got '$GLM_BASE_URL')." ;;
+esac
+case "$GLM_BASE_URL" in
+    *$'\r'*|*$'\n'*|*$'\t'*|*' '*) die "GLM profile ANTHROPIC_BASE_URL contains control/whitespace characters." ;;
+esac
+case "$GLM_BASE_URL" in
+    *'@'*) die "GLM profile ANTHROPIC_BASE_URL must not contain embedded credentials." ;;
+esac
+_host_part="${GLM_BASE_URL#*://}"
+_host_part="${_host_part%%/*}"
+_host_part="${_host_part%%:*}"
+[ -n "$_host_part" ] || die "GLM profile ANTHROPIC_BASE_URL has an empty host."
+
+# ── Find the native claude binary ────────────────────────────────────────────
+# Resolve 'claude' from PATH by file identity, not by skipping a directory.
+SELF_PATH="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+
+CLAUDE_BIN=""
+IFS=':'
+for dir in $PATH; do
+    IFS=' '
+    [ -x "$dir/claude" ] || continue
+    candidate="$(readlink -f "$dir/claude" 2>/dev/null || echo "$dir/claude")"
+    # Skip if this candidate IS this launcher (by file identity).
+    [ "$candidate" = "$SELF_PATH" ] && continue
+    CLAUDE_BIN="$candidate"
+    break
+done
+IFS=' '
+
+if [ -z "$CLAUDE_BIN" ]; then
+    die "native claude binary not found in PATH."
+fi
+
+# ── Construct the child environment ──────────────────────────────────────────
+# Start from the FULL parent environment (preserving proxy, MCP, SSH, temp,
+# locale, XDG, editor, cloud variables). Remove only conflicting Anthropic
+# gateway/auth/model variables, then set the validated GLM values.
+#
+# PRD §6.3: "It must remove conflicting inherited Anthropic gateway/API
+# variables from the child before setting the GLM values."
+# P1: Do NOT pass the key in env's argv — use shell export then exec, so the
+# key never appears in the process argument list.
+
+# Unset conflicting inherited Anthropic vars.
+unset ANTHROPIC_BASE_URL ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN \
+      ANTHROPIC_MODEL ANTHROPIC_DEFAULT_OPUS_MODEL \
+      ANTHROPIC_DEFAULT_SONNET_MODEL ANTHROPIC_DEFAULT_HAIKU_MODEL \
+      ANTHROPIC_SMALL_FAST_MODEL
+
+# Set the validated GLM values in the shell environment.
+export ANTHROPIC_BASE_URL="$GLM_BASE_URL"
+export ANTHROPIC_API_KEY="$GLM_API_KEY"
+export ANTHROPIC_MODEL="$GLM_MODEL"
+export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+# GLM-5.2 supports 1M context. The model name "claude-glm-5.2" starts with
+# "claude-", so Claude Code treats it as a built-in Claude model and ignores
+# CLAUDE_CODE_MAX_CONTEXT_TOKENS unless DISABLE_COMPACT is also set. This
+# pair makes Claude Code report contextWindow=1000000 instead of 200000.
+# Trade-off: auto-compaction is disabled; at 1M the session uses the full
+# window. If compaction is needed, rename the LiteLLM model to not start
+# with "claude-" (see docs/PRD-rollback-closure.md).
+export DISABLE_COMPACT=1
+export CLAUDE_CODE_MAX_CONTEXT_TOKENS=1000000
+export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
+
+# exec the native binary — signals, exit codes, and terminal behavior preserved.
+exec "$CLAUDE_BIN" "$@"

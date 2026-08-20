@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# claude-select — optional provider selector for Claude Code.
+#
+# Dispatches to either native Claude or the GLM-5.2 launcher.
+# Does NOT persist a default — the provider must be specified every time.
+#
+# PRD: docs/PRD-native-claude-litellm-selection.md §5.3
+#
+# Usage:
+#   claude-select native [claude arguments]
+#   claude-select glm [claude arguments]
+#   claude-select status
+
+CONFIG_DIR="${CLAUDE_LITELLM_CONFIG_DIR:-$HOME/.config/claude-litellm}"
+ENV_FILE="$CONFIG_DIR/env"
+
+die() { printf 'claude-select: %s\n' "$*" >&2; exit 1; }
+
+if [ $# -eq 0 ]; then
+    die "no provider specified.
+Usage:
+  claude-select native [claude arguments]
+  claude-select glm [claude arguments]
+  claude-select status"
+fi
+
+subcommand="$1"
+shift
+
+case "$subcommand" in
+    native)
+        # Execute the unmodified native command.
+        exec claude "$@"
+        ;;
+    glm)
+        # Execute the GLM launcher.
+        if ! command -v claude-litellm >/dev/null 2>&1; then
+            die "claude-litellm not found. Run claude-litellm-setup.sh first."
+        fi
+        exec claude-litellm "$@"
+        ;;
+    status)
+        echo "=== claude-select status ==="
+        # Native claude
+        if command -v claude >/dev/null 2>&1; then
+            echo "  native: available ($(command -v claude))"
+        else
+            echo "  native: NOT FOUND"
+        fi
+        # GLM launcher
+        if command -v claude-litellm >/dev/null 2>&1; then
+            echo "  glm launcher: available ($(command -v claude-litellm))"
+        else
+            echo "  glm launcher: NOT INSTALLED"
+        fi
+        # GLM profile
+        if [ -f "$ENV_FILE" ]; then
+            echo "  glm profile: present"
+            url=$(grep '^ANTHROPIC_BASE_URL=' "$ENV_FILE" | sed 's/^ANTHROPIC_BASE_URL=//')
+            if [ -n "$url" ]; then
+                echo "  endpoint: $url"
+                if curl -s --max-time 5 -o /dev/null -w "%{http_code}" "$url/health/readiness" 2>/dev/null | grep -q 200; then
+                    echo "  reachable: yes"
+                else
+                    echo "  reachable: no"
+                fi
+            fi
+        else
+            echo "  glm profile: NOT FOUND"
+        fi
+        ;;
+    *)
+        die "unknown subcommand: $subcommand
+Usage: claude-select native|glm|status [args]"
+        ;;
+esac

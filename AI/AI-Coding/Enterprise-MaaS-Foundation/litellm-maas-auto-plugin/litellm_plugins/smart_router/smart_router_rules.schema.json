@@ -4,75 +4,9 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "router_version",
-    "vision_rules",
-    "premium_rules",
-    "cross_border_block_rules",
-    "complexity"
+    "router_version"
   ],
   "properties": {
-    "router_version": {"type": "string", "minLength": 1},
-    "vision_rules": {"$ref": "#/$defs/rules"},
-    "cross_border_block_rules": {"$ref": "#/$defs/rules"},
-    "premium_rules": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["id", "languages", "pattern", "allow_downgrade"],
-        "properties": {
-          "id": {"type": "string", "minLength": 1},
-          "languages": {
-            "type": "array",
-            "minItems": 1,
-            "items": {"enum": ["zh", "en", "pt-BR", "es"]}
-          },
-          "pattern": {"type": "string", "minLength": 1},
-          "allow_downgrade": {"type": "boolean"}
-        }
-      }
-    },
-    "complexity": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["weights", "code_pattern", "reasoning_pattern", "multistep_pattern"],
-      "properties": {
-        "weights": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["token_ratio", "code", "reasoning", "multistep", "premium_intent"],
-          "properties": {
-            "token_ratio": {"type": "number", "minimum": 0, "maximum": 1},
-            "code": {"type": "number", "minimum": 0, "maximum": 1},
-            "reasoning": {"type": "number", "minimum": 0, "maximum": 1},
-            "multistep": {"type": "number", "minimum": 0, "maximum": 1},
-            "premium_intent": {"type": "number", "minimum": 0, "maximum": 1}
-          }
-        },
-        "code_pattern": {"type": "string", "minLength": 1},
-        "reasoning_pattern": {"type": "string", "minLength": 1},
-        "multistep_pattern": {"type": "string", "minLength": 1}
-      }
-    }
-  },
-  "$defs": {
-    "rule": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["id", "languages", "pattern"],
-      "properties": {
-        "id": {"type": "string", "minLength": 1},
-        "languages": {
-          "type": "array",
-          "minItems": 1,
-          "items": {"enum": ["zh", "en", "pt-BR", "es"]}
-        },
-        "pattern": {"type": "string", "minLength": 1}
-      }
-    },
-    "rules": {
-      "type": "array",
-      "items": {"$ref": "#/$defs/rule"}
-    }
+    "router_version": {"type": "string", "minLength": 1}
   }
 }
