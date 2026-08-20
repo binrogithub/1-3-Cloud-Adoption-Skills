@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Fake claude binary for launcher tests.
+#
+# Serializes argv and a whitelist of environment variable names to a single
+# JSON object on stdout so the test suite can assert exactly what the
+# claude-maas wrapper injected into the child process.
+#
+# Output shape:
+#   {"argv": ["arg1", "arg2"], "env": {"NAME": "value", ...}}
+#
+# The env whitelist is intentionally narrow: only the variables the wrapper
+# is contractually allowed to set/unset are captured, so tests can prove no
+# other ANTHROPIC_* or provider-switch variables leak through.
+set -euo pipefail
+
+# Whitelist of environment variable names to capture.
+ENV_NAMES=(
+    ANTHROPIC_BASE_URL
+    ANTHROPIC_AUTH_TOKEN
+    ANTHROPIC_API_KEY
+    ANTHROPIC_MODEL
+    ANTHROPIC_DEFAULT_OPUS_MODEL
+    ANTHROPIC_DEFAULT_SONNET_MODEL
+    ANTHROPIC_DEFAULT_HAIKU_MODEL
+    CLAUDE_CONFIG_DIR
+    CLAUDE_CODE_MAX_CONTEXT_TOKENS
+    CLAUDE_CODE_USE_BEDROCK
+    CLAUDE_CODE_USE_VERTEX
+    PATH
+)
+
+# Build the JSON using python3 stdlib so quoting is unambiguous.
+exec python3 - "$@" <<'PYEOF'
+import json
+import os
+import sys
+
+whitelist = [
+    "ANTHROPIC_BASE_URL",
+    "ANTHROPIC_AUTH_TOKEN",
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_MODEL",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+    "CLAUDE_CONFIG_DIR",
+    "CLAUDE_CODE_MAX_CONTEXT_TOKENS",
+    "CLAUDE_CODE_USE_BEDROCK",
+    "CLAUDE_CODE_USE_VERTEX",
+    "PATH",
+]
+
+captured = {}
+for name in whitelist:
+    if name in os.environ:
+        captured[name] = os.environ[name]
+
+payload = {
+    "argv": sys.argv[1:],
+    "env": captured,
+}
+sys.stdout.write(json.dumps(payload))
+sys.stdout.write("\n")
+PYEOF

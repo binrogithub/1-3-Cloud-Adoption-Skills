@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# fake-claude — minimal stub for setup-installer tests.
+#
+# Echoes a JSON object with argv and a whitelist of environment variables so
+# tests can assert what the installer/launcher injected. Exits 0 on normal
+# invocations. This file exists primarily as a placeholder so the manifest
+# recording logic has a real source to point at during setup tests.
+set -euo pipefail
+
+exec python3 - "$@" <<'PYEOF'
+import json
+import os
+import sys
+
+whitelist = [
+    "ANTHROPIC_BASE_URL",
+    "ANTHROPIC_AUTH_TOKEN",
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_MODEL",
+    "CLAUDE_CONFIG_DIR",
+    "CLAUDE_CODE_MAX_CONTEXT_TOKENS",
+    "PATH",
+]
+
+captured = {}
+for name in whitelist:
+    if name in os.environ:
+        captured[name] = os.environ[name]
+
+payload = {
+    "argv": sys.argv[1:],
+    "env": captured,
+}
+sys.stdout.write(json.dumps(payload))
+sys.stdout.write("\n")
+PYEOF
