@@ -1,0 +1,4 @@
+interface:
+  display_name: "Discover Databricks Assets"
+  short_description: "Inventory Databricks assets for migration"
+  default_prompt: "Use $discover-databricks-assets to inventory this Databricks workspace and prepare migration discovery outputs."
