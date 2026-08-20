@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LiteLLM MaaS model registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["registry_version", "fallback", "models"],
+  "properties": {
+    "registry_version": {"type": "string", "minLength": 1},
+    "fallback": {"$ref": "#/$defs/profile"},
+    "models": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/profile"},
+      "minProperties": 1
+    }
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family", "upstream", "max_input_tokens", "max_output_tokens",
+        "vision", "sampling_params", "thinking", "effort",
+        "loop_breaker", "affinity", "reasoning_filter", "internal", "display_name"
+      ],
+      "properties": {
+        "family": {"type": "string", "enum": ["glm", "anthropic_sonnet", "anthropic_haiku", "other"]},
+        "upstream": {"type": ["string", "null"]},
+        "max_input_tokens": {"type": "integer", "minimum": 1},
+        "max_output_tokens": {"type": "integer", "minimum": 1},
+        "vision": {"type": "boolean"},
+        "sampling_params": {"type": "string", "enum": ["pass", "reject"]},
+        "thinking": {"type": "string", "enum": ["strip", "adaptive", "budget_tokens", "pass"]},
+        "effort": {"type": "string", "enum": ["strip", "pass"]},
+        "loop_breaker": {"type": "boolean"},
+        "affinity": {"type": "boolean"},
+        "reasoning_filter": {"type": "boolean"},
+        "internal": {"type": "boolean"},
+        "display_name": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

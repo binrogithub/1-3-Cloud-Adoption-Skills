@@ -1,31 +1,38 @@
 # Tests
 
-## Unit tests
+## Full suite (one command)
 
-`test_anthropic_stream_guard.py` is a self-contained regression script. It
-covers request normalization, queued user
-interjections, Anthropic streaming block repair, terminal event synthesis,
-Huawei pretty-JSON SSE repair, trailing `[DONE]` suppression, forced
-`tool_choice` translation, raw tool-markup detection, fail-open behavior, and
-Prometheus counters.
+The complete unit + integration suite is composable under pytest:
 
-Run with Python 3.7+:
+```bash
+python3 -m pytest
+```
+
+This discovers and runs every `tests/test_*.py` module with no collection
+errors. `tests/conftest.py` centralizes the litellm stub so collection order
+does not matter.
+
+## Individual scripts
+
+Each `test_*.py` is also a self-contained script (no pytest required):
 
 ```bash
 python3 tests/test_anthropic_stream_guard.py
 python3 tests/test_anthropic_reasoning_filter.py
 python3 tests/test_smart_router.py
 python3 tests/test_glm_loop_breaker.py
+python3 tests/test_sidecar.py
+python3 tests/test_tool_argument_guard.py
 ```
 
-On an older host Python, run it in the pinned LiteLLM image:
+On an older host Python, run in the pinned LiteLLM image:
 
 ```bash
 docker run --rm \
   --entrypoint /app/.venv/bin/python \
   -v "$PWD:/workspace:ro" -w /workspace \
   ghcr.io/berriai/litellm:v1.83.14-stable.patch.3 \
-  tests/test_anthropic_stream_guard.py
+  -m pytest
 ```
 
 ## Live tests
