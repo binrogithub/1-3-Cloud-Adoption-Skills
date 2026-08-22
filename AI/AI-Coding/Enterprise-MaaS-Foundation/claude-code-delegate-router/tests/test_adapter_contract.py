@@ -219,15 +219,19 @@ class TestCandidateGreen:
         assert any("tool_use" in str(e) for e in events)
 
     def test_tool_malformed_not_degraded_to_empty(self, candidate_adapter):
-        """G-CLOSE5: malformed tool args must NOT become {}."""
+        """G-CLOSE5: malformed tool args must NOT emit a tool_use block.
+        Strengthened in V7: was 'not degraded to {}', now 'no tool_use block
+        at all' — forbids any fabricated input, not just empty {}."""
         status, body = _post_stream(candidate_adapter, "tool_malformed")
         events = _parse_sse_events(body)
-        # The candidate must not emit a successful tool_use with empty input.
-        # It should either error or refuse the malformed args.
-        has_error = any(e["type"] == "error" for e in events)
-        # If there's a tool_use, its input must not be a fabricated {} from malformed JSON.
-        # The candidate sets protocolError on malformed args.
-        assert has_error or "message_stop" not in [e["type"] for e in events] or status != 200
+        # No tool_use block may be emitted on malformed args.
+        has_tool_use = any(
+            e.get("type") == "content_block_start"
+            and e.get("data", {}).get("content_block", {}).get("type") == "tool_use"
+            for e in events
+        )
+        assert not has_tool_use, \
+            "tool_use block emitted on malformed args — contract violation"
 
     def test_status_endpoint_loopback(self, candidate_adapter):
         """G-CLOSE7: /status is available on loopback."""

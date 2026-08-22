@@ -112,6 +112,117 @@ const scenarios = {
     res.end("data: [DONE]\n\n");
   },
 
+  // Tool call with truncated-but-closeable JSON args + clean finish.
+  // '{"city":"Beijing"' is missing the closing } but the last token is a
+  // complete value.  Repair should close it to {"city":"Beijing"}.
+  tool_truncated_closeable(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    res.write(openaiChunk({ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "get_weather", arguments: '{"city":"Beijing"' } }] } }));
+    res.write(openaiChunk({ finish_reason: "tool_calls" }));
+    res.end("data: [DONE]\n\n");
+  },
+
+  // Tool call with mid-string truncation — NOT repairable (gate 2).
+  // '{"city":"Beij' has an unterminated string; closing it would silently
+  // drop characters.
+  tool_truncated_midstring(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    res.write(openaiChunk({ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "get_weather", arguments: '{"city":"Beij' } }] } }));
+    res.write(openaiChunk({ finish_reason: "tool_calls" }));
+    res.end("data: [DONE]\n\n");
+  },
+
+  // Tool call with closeable JSON but finish_reason=length (gate 1).
+  // The args look repairable but the model was cut off by max_tokens —
+  // the params are genuinely incomplete, repair would be fabrication.
+  tool_truncated_by_length(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    res.write(openaiChunk({ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "get_weather", arguments: '{"city":"Beijing"' } }] } }));
+    res.write(openaiChunk({ finish_reason: "length" }));
+    res.end("data: [DONE]\n\n");
+  },
+
+  // Tool call with single-quote dialect (Python dict style) — NOT valid JSON.
+  // JSON.parse → "Expected property name or '}'" → dialect_property_name.
+  tool_single_quote(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    res.write(openaiChunk({ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "get_weather", arguments: "{'city':'Beijing'}" } }] } }));
+    res.write(openaiChunk({ finish_reason: "tool_calls" }));
+    res.end("data: [DONE]\n\n");
+  },
+
+  // Tool call with non-JSON args (function-call syntax) — NOT valid JSON.
+  // JSON.parse → "Unexpected token 'g'..." → not_json.
+  tool_not_json(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    res.write(openaiChunk({ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "get_weather", arguments: "get_weather(city=Beijing)" } }] } }));
+    res.write(openaiChunk({ finish_reason: "tool_calls" }));
+    res.end("data: [DONE]\n\n");
+  },
+
+  // Tool call with trailing comma — NOT valid JSON.
+  // JSON.parse → "Expected double-quoted property name" → expected_quoted_name.
+  tool_trailing_comma(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    res.write(openaiChunk({ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "get_weather", arguments: '{"a":1,' } }] } }));
+    res.write(openaiChunk({ finish_reason: "tool_calls" }));
+    res.end("data: [DONE]\n\n");
+  },
+
+  // Tool call with canary in non-JSON args — for leak gate testing.
+  // The canary must NEVER appear in adapter stderr (structured log).
+  tool_not_json_canary(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    const canary = "CANARY-7f3a9c2e1b8d4f60-xyzzy-plugh";
+    res.write(openaiChunk({ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "get_weather", arguments: `get_weather(${canary})` } }] } }));
+    res.write(openaiChunk({ finish_reason: "tool_calls" }));
+    res.end("data: [DONE]\n\n");
+  },
+
+  // Tool call with raw markup as arguments — NOT valid JSON.
+  // The model emitted markup text instead of structured tool calls.
+  // X2: must be classified as "tool_markup_as_args", not "tool_args_malformed".
+  tool_markup_args(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    const lt = String.fromCharCode(0x3C);
+    const gt = String.fromCharCode(0x3E);
+    const markup = lt + "tool_call" + gt + '\n' + JSON.stringify({name: "get_weather", arguments: {city: "Beijing"}}) + '\n' + lt + "/tool_call" + gt;
+    res.write(openaiChunk({ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "get_weather", arguments: markup } }] } }));
+    res.write(openaiChunk({ finish_reason: "tool_calls" }));
+    res.end("data: [DONE]\n\n");
+  },
+
+  // Tool call with arguments split across 3 chunks, NO index in any delta.
+  // First chunk carries id + name; subsequent chunks carry only arguments.
+  // Fragments concatenate to {"city":"Beijing"}.
+  // Reproduces the V5 defect: index absent → toolCalls.size increments per
+  // fragment → one call split into three → JSON.parse fails on each fragment.
+  tool_fragments_no_index(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    res.write(openaiChunk({ delta: { tool_calls: [{ id: "call_1", function: { name: "get_weather", arguments: '{"city"' } }] } }));
+    res.write(openaiChunk({ delta: { tool_calls: [{ function: { arguments: ': "Beij' } }] } }));
+    res.write(openaiChunk({ delta: { tool_calls: [{ function: { arguments: 'ing"}' } }] } }));
+    res.write(openaiChunk({ finish_reason: "tool_calls" }));
+    res.end("data: [DONE]\n\n");
+  },
+
+  // Two tool calls, NO index in any delta.  Each call's first chunk carries
+  // id + name; continuation chunks carry only arguments.
+  // Call 1: {"city":"Tokyo"}  Call 2: {"zone":"JST"}
+  tool_two_calls_no_index(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    // Call 1, fragment 1 (id + name + first args fragment)
+    res.write(openaiChunk({ delta: { tool_calls: [{ id: "call_1", function: { name: "get_weather", arguments: '{"city":' } }] } }));
+    // Call 1, fragment 2 (args only)
+    res.write(openaiChunk({ delta: { tool_calls: [{ function: { arguments: '"Tokyo"}' } }] } }));
+    // Call 2, fragment 1 (id + name + first args fragment)
+    res.write(openaiChunk({ delta: { tool_calls: [{ id: "call_2", function: { name: "get_time", arguments: '{"zone":' } }] } }));
+    // Call 2, fragment 2 (args only)
+    res.write(openaiChunk({ delta: { tool_calls: [{ function: { arguments: '"JST"}' } }] } }));
+    res.write(openaiChunk({ finish_reason: "tool_calls" }));
+    res.end("data: [DONE]\n\n");
+  },
+
   // Upstream HTTP error.
   http_error(res, status) {
     res.writeHead(status || 500, { "content-type": "application/json" });
@@ -166,6 +277,76 @@ const scenarios = {
       choices: [{ index: 0, message: { role: "assistant", content: "OK" }, finish_reason: "stop" }],
       usage: { prompt_tokens: 5, completion_tokens: 1 },
     }));
+  },
+
+  // Slow reasoning: initial usage chunk (so fetch() resolves), then 1
+  // reasoning chunk every 10s for a few rounds, then text + finish.
+  // Used by time-driven keepalive reverse gate (PRD TIME_DRIVEN_KEEPALIVE §4.1).
+  // Without keepalive, client gaps ≈10s. With keepalive (2s), gaps ≤3s.
+  slow_reasoning(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    // Initial usage chunk so fetch() resolves the response immediately.
+    res.write(openaiChunk({ usage: { prompt_tokens: 10, completion_tokens: 0 } }));
+    let count = 0;
+    const iv = setInterval(() => {
+      try {
+        if (count < 3) {
+          res.write(openaiChunk({ delta: { reasoning_content: `slow step ${count + 1}` } }));
+          count += 1;
+        } else {
+          clearInterval(iv);
+          res.write(openaiChunk({ delta: { content: "Done." } }));
+          res.write(openaiChunk({ finish_reason: "stop", usage: { prompt_tokens: 10, completion_tokens: 5 } }));
+          res.end("data: [DONE]\n\n");
+        }
+      } catch { clearInterval(iv); }
+    }, 10000); // 10s between reasoning chunks
+    res.on("close", () => clearInterval(iv));
+  },
+
+  // Usage-only trickle: initial chunk, then 1 usage chunk every 10s,
+  // no content or reasoning. Used by keepalive reverse gate (§4.2).
+  usage_only_trickle(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    // Initial usage chunk so fetch() resolves.
+    res.write(openaiChunk({ usage: { prompt_tokens: 10, completion_tokens: 0 } }));
+    let count = 0;
+    const iv = setInterval(() => {
+      try {
+        if (count < 3) {
+          res.write(openaiChunk({ usage: { prompt_tokens: 10, completion_tokens: count + 1 } }));
+          count += 1;
+        } else {
+          clearInterval(iv);
+          res.write(openaiChunk({ finish_reason: "stop", usage: { prompt_tokens: 10, completion_tokens: 4 } }));
+          res.end("data: [DONE]\n\n");
+        }
+      } catch { clearInterval(iv); }
+    }, 10000); // 10s between usage chunks
+    res.on("close", () => clearInterval(iv));
+  },
+
+  // Slow reasoning with high-entropy canary for zero-leakage test (§4.5).
+  // Initial usage chunk, then 1 canary-bearing reasoning chunk every 5s.
+  slow_reasoning_canary(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    res.write(openaiChunk({ usage: { prompt_tokens: 10, completion_tokens: 0 } }));
+    const canary = "CANARY-7f3a9c2e1b8d4f60-xyzzy-plugh";
+    let count = 0;
+    const iv = setInterval(() => {
+      try {
+        if (count < 3) {
+          res.write(openaiChunk({ delta: { reasoning_content: `${canary} slow step ${count + 1}` } }));
+          count += 1;
+        } else {
+          clearInterval(iv);
+          res.write(openaiChunk({ delta: { content: "Done." } }));
+          res.write(openaiChunk({ finish_reason: "stop", usage: { prompt_tokens: 10, completion_tokens: 5 } }));
+          res.end("data: [DONE]\n\n");
+        }
+      } catch { clearInterval(iv); }
+    }, 5000); // 5s between reasoning chunks
+    res.on("close", () => clearInterval(iv));
   },
 };
 
