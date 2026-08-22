@@ -290,6 +290,9 @@ def test_error_counts_single_count(upstream):
             adapter_proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
             adapter_proc.kill()
+
+
+def test_client_bytes_forward_gate(upstream):
     """D3 forward gate: a normal request must log client_bytes > 0.
 
     Pre-fix (res.bytesWritten which is undefined on http.ServerResponse):
