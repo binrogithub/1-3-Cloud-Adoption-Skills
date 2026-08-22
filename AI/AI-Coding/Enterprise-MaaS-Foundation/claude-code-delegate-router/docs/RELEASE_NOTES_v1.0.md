@@ -85,6 +85,8 @@ touching the user's plain `claude` session.
   `unsupported_capability:image` at delegation time.
 - No multi-host, k8s, or non-systemd init in v1.
 - Exa web search is optional (`--with-exa`).
+- `MAAS_TOTAL_TIMEOUT=600s` is a hard ceiling that legacy (LiteLLM) did not
+  have — extra-long thinking turns are cut off. Legacy would wait indefinitely.
 
 ## Install
 

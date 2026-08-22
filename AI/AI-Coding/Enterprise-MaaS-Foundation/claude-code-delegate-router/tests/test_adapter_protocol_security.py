@@ -357,8 +357,8 @@ class TestEnumObservability:
 
     VALID_STATES = {
         "accepted", "connecting", "upstream_active_hidden", "visible_streaming",
-        "completing", "completed", "client_aborted", "connect_timeout",
-        "idle_timeout", "total_timeout", "upstream_failed",
+        "completing", "completed", "client_starving", "client_aborted",
+        "connect_timeout", "idle_timeout", "total_timeout", "upstream_failed",
     }
     VALID_ERROR_CODES = {
         None, "MAAS_CONNECT_TIMEOUT", "MAAS_IDLE_TIMEOUT", "MAAS_TOTAL_TIMEOUT",

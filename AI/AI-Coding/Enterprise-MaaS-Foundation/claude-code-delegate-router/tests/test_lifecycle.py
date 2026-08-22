@@ -65,12 +65,12 @@ def test_initial_state_accepted():
     assert r["state"] == "accepted"
 
 
-def test_states_enum_has_11():
+def test_states_enum_has_12():
     r = _run_node("__result.list = Object.values(m.State);")
     assert set(r["list"]) == {
         "accepted", "connecting", "upstream_active_hidden", "visible_streaming",
-        "completing", "completed", "client_aborted", "connect_timeout",
-        "idle_timeout", "total_timeout", "upstream_failed",
+        "completing", "completed", "client_starving", "client_aborted",
+        "connect_timeout", "idle_timeout", "total_timeout", "upstream_failed",
     }
 
 

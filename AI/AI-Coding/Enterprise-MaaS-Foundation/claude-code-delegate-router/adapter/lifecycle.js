@@ -58,6 +58,7 @@ const State = {
   VISIBLE_STREAMING: "visible_streaming",
   COMPLETING: "completing",
   COMPLETED: "completed",
+  CLIENT_STARVING: "client_starving",
   CLIENT_ABORTED: "client_aborted",
   CONNECT_TIMEOUT: "connect_timeout",
   IDLE_TIMEOUT: "idle_timeout",
@@ -89,13 +90,14 @@ class RequestLifecycleController {
     this.errorCode = null;
     this.finishReason = null;
     this.protocolError = false;
+    this.protocolErrorReason = null;  // D5: which branch triggered protocolError
 
     // Timers (active watchdogs, not passive checks).
     this._connectTimer = null;
     this._idleTimer = null;
     this._totalTimer = null;
     this._connectTimeout = opts.connectTimeout ?? 60_000;
-    this._idleTimeout = opts.idleTimeout ?? 180_000;
+    this._idleTimeout = opts.idleTimeout ?? 150_000;
     this._totalTimeout = opts.totalTimeout ?? 600_000;
 
     // Upstream cancellation.
@@ -124,6 +126,8 @@ class RequestLifecycleController {
     this._startedAt = Date.now();
     this._connectedAt = null;
     this._lastActivityAt = null;
+    this._lastClientByteAt = null;
+    this._preStarvingState = null;
     this._finalized = false;
 
     // Callbacks for state changes and errors.
@@ -140,6 +144,16 @@ class RequestLifecycleController {
 
   isTerminal() {
     return TERMINAL_STATES.has(this.state);
+  }
+
+  // D5 (PRD RELEASE_CLOSURE_V3): set protocolError with a reason string for
+  // log diagnostics.  Idempotent — first call wins so the root cause is
+  // preserved, not overwritten by cascading failures.
+  _setProtocolError(reason) {
+    if (this.protocolError) return false;
+    this.protocolError = true;
+    this.protocolErrorReason = reason;
+    return true;
   }
 
   // --- Timers ---
@@ -210,6 +224,31 @@ class RequestLifecycleController {
     if (this.state !== State.COMPLETING) this._setState(State.VISIBLE_STREAMING);
   }
 
+  // --- Client byte tracking + starvation (PRD TIME_DRIVEN_KEEPALIVE D2) ---
+
+  recordClientByte() {
+    if (this.isTerminal()) return;
+    this._lastClientByteAt = Date.now();
+    // Recover from starvation if we were in that state.
+    if (this.state === State.CLIENT_STARVING && this._preStarvingState) {
+      this._setState(this._preStarvingState);
+      this._preStarvingState = null;
+    }
+  }
+
+  checkStarvation(limit) {
+    if (this.isTerminal()) return false;
+    if (this._lastClientByteAt === null) return false;
+    return Date.now() - this._lastClientByteAt > limit;
+  }
+
+  markStarving() {
+    if (this.isTerminal()) return;
+    if (this.state === State.CLIENT_STARVING) return;
+    this._preStarvingState = this.state;
+    this._setState(State.CLIENT_STARVING);
+  }
+
   // --- SSE termination state machine ---
 
   feedMessageStart() {
@@ -220,8 +259,8 @@ class RequestLifecycleController {
 
   feedBlockStart(index, blockType) {
     if (this.protocolError) return false;
-    if (this._everOpened.has(index)) { this.protocolError = true; return false; }
-    if (this._openBlocks.has(index)) { this.protocolError = true; return false; }
+    if (this._everOpened.has(index)) { this._setProtocolError("block_duplicate_open"); return false; }
+    if (this._openBlocks.has(index)) { this._setProtocolError("block_overlap"); return false; }
     this._everOpened.add(index);
     this._openBlocks.set(index, blockType);
     return true;
@@ -230,16 +269,16 @@ class RequestLifecycleController {
   feedBlockDelta(index, deltaType) {
     if (this.protocolError) return false;
     const expected = this._openBlocks.get(index);
-    if (expected === undefined) { this.protocolError = true; return false; }
-    if (deltaType === "text_delta" && expected !== "text") { this.protocolError = true; return false; }
-    if (deltaType === "input_json_delta" && expected !== "tool_use") { this.protocolError = true; return false; }
-    if (deltaType === "thinking_delta" && expected !== "thinking") { this.protocolError = true; return false; }
+    if (expected === undefined) { this._setProtocolError("delta_without_block"); return false; }
+    if (deltaType === "text_delta" && expected !== "text") { this._setProtocolError("delta_type_mismatch_text"); return false; }
+    if (deltaType === "input_json_delta" && expected !== "tool_use") { this._setProtocolError("delta_type_mismatch_tool"); return false; }
+    if (deltaType === "thinking_delta" && expected !== "thinking") { this._setProtocolError("delta_type_mismatch_thinking"); return false; }
     return true;
   }
 
   feedBlockStop(index) {
     if (this.protocolError) return false;
-    if (!this._openBlocks.has(index)) { this.protocolError = true; return false; }
+    if (!this._openBlocks.has(index)) { this._setProtocolError("stop_without_block"); return false; }
     this._openBlocks.delete(index);
     return true;
   }
@@ -260,7 +299,7 @@ class RequestLifecycleController {
 
   feedMessageDelta(stopReason) {
     if (this.protocolError) return false;
-    if (this._messageDeltaSent) { this.protocolError = true; return false; }
+    if (this._messageDeltaSent) { this._setProtocolError("duplicate_message_delta"); return false; }
     this._messageDeltaSent = true;
     if (TRUSTWORTHY_FINISH_REASONS.has(stopReason)) {
       this.finishReason = stopReason;
@@ -270,8 +309,8 @@ class RequestLifecycleController {
 
   feedMessageStop() {
     if (this.protocolError) return false;
-    if (this._messageStopSent) { this.protocolError = true; return false; }
-    if (!this._messageStartSent) { this.protocolError = true; return false; }
+    if (this._messageStopSent) { this._setProtocolError("duplicate_message_stop"); return false; }
+    if (!this._messageStartSent) { this._setProtocolError("stop_before_start"); return false; }
     this._messageStopSent = true;
     return true;
   }
@@ -326,6 +365,7 @@ class RequestLifecycleController {
     if (this.isTerminal()) return;
     this._cleanup();
     try { this.abortController.abort(); } catch {}
+    this.errorCode = ErrorCodes.CLIENT_ABORTED;
     this._setState(State.CLIENT_ABORTED);
     this.metrics.outcome = "client_aborted";
     this.metrics.error_code = ErrorCodes.CLIENT_ABORTED;
