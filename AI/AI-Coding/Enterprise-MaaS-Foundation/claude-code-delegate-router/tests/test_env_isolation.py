@@ -67,6 +67,8 @@ def _start_adapter(upstream_port: int) -> tuple[subprocess.Popen, int]:
     env["PROXY_HOST"] = "127.0.0.1"
     env["ANTHROPIC_PROXY_BASE_URL"] = f"http://127.0.0.1:{upstream_port}/v1/chat/completions"
     env["CLAUDE_CODE_PROXY_API_KEY"] = "test-key"
+    env["MAAS_TEST_UPSTREAM"] = "1"
+    env["MAAS_CLIENT_KEY_FILE"] = str(Path(__file__).parent / "no-client.key")
     env["MAAS_CONNECT_TIMEOUT"] = "5"
     env["MAAS_IDLE_TIMEOUT"] = "30"
     env["MAAS_TOTAL_TIMEOUT"] = "60"

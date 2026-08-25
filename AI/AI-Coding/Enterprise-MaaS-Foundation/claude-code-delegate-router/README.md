@@ -34,14 +34,17 @@ This installs:
 | Layer | Where | What |
 | --- | --- | --- |
 | Adapter env | `/etc/claude-code-proxy/maas.env` (root:root 0600) | Real MaaS key + URL + model |
-| systemd unit | `/etc/systemd/system/claude-code-maas-proxy.service` | Loopback adapter service |
+| Client key | `/etc/claude-code-proxy/client.key` (root:root 0600) | Per-install random key the client must present |
+| systemd unit | `/etc/systemd/system/claude-code-maas-proxy.service` | Loopback adapter service (sandboxed) |
 | Adapter code | `/opt/claude-code-maas-proxy/` | `server.js` + `lifecycle.js` |
-| Client config | `~/.config/claude-maas/` (user 0600) | Dummy key + loopback URL |
+| Client config | `~/.config/claude-maas/` (user 0600) | Client key copy + loopback URL |
 | Launchers | `~/.local/bin/` | `claude-maas`, `claude-select`, `delegate`, `workflow` |
 
 The real MaaS key lives only in the root-owned env file. The client holds a
-dummy `maas-local-proxy` key; the adapter injects the real key. The key never
-enters the user's home directory, argv, or logs.
+per-install random client key; the adapter verifies it (constant-time) and
+injects the real upstream key itself. Requests without the client key are
+rejected with 401 — anonymous local processes cannot spend the MaaS key.
+The key never enters the user's home directory, argv, or logs.
 
 ### Prerequisites
 
@@ -49,6 +52,8 @@ enters the user's home directory, argv, or logs.
 - root or sudo access
 - Node.js ≥ 22 on PATH
 - The official `claude` CLI on PATH
+- Python ≥ 3.7 for the install-time canary (runtime is 3.6-safe; CentOS 8:
+  `dnf install python39` + `--python /usr/bin/python3.9`)
 
 ### With Exa web search (optional)
 
@@ -69,8 +74,9 @@ printf '%s\n%s\n' "$HUAWEI_MAAS_API_KEY" "$EXA_API_KEY" \
 4. Deploys `adapter/server.js` + `adapter/lifecycle.js` to `/opt/claude-code-maas-proxy/`
    (via `adapter/deploy.sh`, which verifies SHA-256 and saves rollback copies).
 5. Enables and starts the service.
-6. Installs the client config (`~/.config/claude-maas/`) with a dummy key and
-   `anthropic_base_url=http://127.0.0.1:3000` (via `client/claude-maas-setup.sh`).
+6. Installs the client config (`~/.config/claude-maas/`) with the per-install
+   client key and `anthropic_base_url=http://127.0.0.1:3000` (via
+   `client/claude-maas-setup.sh`).
 7. Optionally installs Exa (`--with-exa`).
 8. **Verifies** (hard gate): polls local `/status`, checks the launcher is on
    PATH, and runs an upstream MaaS canary. If any check fails, bootstrap exits
@@ -169,6 +175,10 @@ Rotation is idempotent (atomic temp-file + rename, 0600 preserved, service
 restarted). Rotate after any interactive-channel key exposure. See
 `docs/SECURITY.md`.
 
+To rotate the **client key** (the one the local client presents to the
+adapter): delete `/etc/claude-code-proxy/client.key` and re-run bootstrap —
+a fresh random key is generated and re-issued to the client in the same run.
+
 ## Exa web search (claude-maas only, isolated)
 
 `claude-maas` can search the web and fetch pages through the official Exa
@@ -219,6 +229,9 @@ response, and 429 governance.
 make verify-offline   # prohibited-dependency scan + full test suite
 printf '%s\n' "$HUAWEI_MAAS_API_KEY" | make verify-live   # live MaaS canary + E2E
 ```
+
+`verify-live` runs 8 gates, including `auth-enforcement` (an anonymous
+messages request against the deployed adapter must be rejected with 401).
 
 ## Project layout
 

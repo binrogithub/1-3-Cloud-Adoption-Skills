@@ -15,7 +15,7 @@
 | --- | --- |
 | V10 隔离生效 | `tests/conftest.py` autouse 设 `ENV_FILE` 指向空文件；`test_env_isolation.py` 已建 |
 | **生产配置未被迁就** | `/etc/claude-code-proxy/maas.env` 中 `MAAS_TOOL_ARG_MODE=enforce` **保持不变**（V10 §3.2 的关键条件） |
-| **窗口完整** | `/opt` 与仓库 `server.js` SHA 仍为 `7edc1ae0…`；MainPID 仍为 509396；`ActiveEnterTimestamp` 仍为 01:50:47 —— 未产生新制品、未重启 |
+| **窗口完整** | `/opt` 与仓库 `server.js` SHA 仍为 `7edc1ae0…`；MainPID 仍为 509396；`ActiveEnterTimestamp` 仍为 01:50:47 —— 未产生新制品、未重启。**（M9 注：此为核查时快照，该窗口后被 V1/V2 部署打断，当前窗口见 §3.7）** |
 | 工作树 | `git status` 干净；`git tag` 仅 `v1.0`，未提前打标 |
 
 **窗口内首次降级（`b5117fa4`）**：
@@ -158,16 +158,25 @@ V8 §D2 判读表 + V9 §D1 的 0/0 出口规则不变。当前落在 1–4 降�
 
 运行态取证：
 
-7. 24h 窗口届满（**2026-08-24 01:50:47**）
+7. 24h 窗口届满（**2026-08-25 04:33:40 CST**）
+   **M9 (PRD LOOP_CONTINUITY_V2)：原窗口 2026-08-23 01:50:47 → 2026-08-24 01:50:47
+   已被部署打断两次（01:25:15 及 04:33:40），且被观测的代码已实质变更（新增
+   L1-A 重试与 L1-B 错误终止）。旧窗口数据对新构建无效，以 V2 部署时刻重开窗口。**
 8. 窗口内 `request_end` ≥ 200
 9. 按 V8 §D2 + V9 §D1 判读，写明落入哪一格
-10. `/root/.claude-maas/projects/` 下按 `isApiErrorMessage === true` **全量**统计，
-    窗口内 `stream protocol error` 新增为 0
+10. `/root/.claude-maas/projects/` 下按 `isApiErrorMessage === true` **全量**统计。
+    **M4 (PRD LOOP_CONTINUITY_V2)：原「stream protocol error 新增为 0」标准与
+    L1-B 直接冲突——L1-B 的设计意图就是产生可自愈的 protocol error。**
+    改写为两条正交标准：
+    (a) 窗口内 `stop_reason=end_turn` 且正文仅为降级文本的回合数 = 0（任务连续性）
+    (b) 窗口内 protocol error 中，客户端自动恢复比例 ≥ 32%（失败可自愈性）
+    (b) 的 32% 基线取自本项目历史实测（n=25，8 次自动恢复）
 11. 降级率写入 Known limitations；> 12% 阻塞发布（当前 0.58%）
 12. 窗口有效性证据：窗口内至少一条 `repair.mode == "enforce"`
     （**已具备**：`b5117fa4`）
-13. 6h 容量观察（**2026-08-23 07:50:47** 届满）：`ss -tnp | grep :3000` 为空时
-    `active_requests` 为 0，采样 ≥ 3 次（已有 2 次：01:56、04:04）
+13. 6h 容量观察（**2026-08-24 10:33:40 CST** 届满）：`ss -tnp | grep :3000` 为空时
+    `active_requests` 为 0，采样 ≥ 3 次。
+    **M9：旧采样（01:56、04:04）取自 PID 509396，进程已不在，作废。需在新窗口内重新采样。**
 14. V9 §D3 的发布后守望项写入 release notes
 
 发布动作：
@@ -202,5 +211,5 @@ release notes 里发出去，比不写更糟。
 | Deployment mode 表述 | ✅ | 「distribution」改为「single data point, not a distribution」 |
 | §3.1 verify-offline | ✅ | 706 passed / 0 failed（V10 交付，文档变更不影响） |
 | §3.3 窗口完整性 | ✅ | 仅改 `docs/`，`adapter/` 未动，窗口继续计时 |
-| §3.2 verify-live | ⏳ | 需在 `7edc1ae0…` 构建上重跑，需 MaaS key |
-| §3.7 窗口届满 | ⏳ | 2026-08-24 01:50:47 |
+| §3.2 verify-live | ⏳ | 需在 `b8c7069b…` 构建上重跑，需 MaaS key |
+| §3.7 窗口届满 | ⏳ | 2026-08-25 04:33:40 CST（M9 重开） |

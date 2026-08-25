@@ -14,7 +14,8 @@
     "run_id": {
       "type": "string",
       "minLength": 1,
-      "description": "Stable identifier for this workflow run. Used as the per-run directory name under ~/.claude-hybrid/workflows/."
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+      "description": "Stable identifier for this workflow run. Used as the per-run directory name under ~/.claude-hybrid/workflows/. Restricted to a safe filename charset (no path separators)."
     },
     "items": {
       "type": "array",
@@ -116,7 +117,8 @@
         },
         "item_id": {
           "type": "string",
-          "description": "Optional stable identifier for this item. When omitted, a stable zero-padded index id (item-000, item-001, ...) is assigned."
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+          "description": "Optional stable identifier for this item. When omitted, a stable zero-padded index id (item-000, item-001, ...) is assigned. Restricted to a safe filename charset (no path separators)."
         }
       }
     }

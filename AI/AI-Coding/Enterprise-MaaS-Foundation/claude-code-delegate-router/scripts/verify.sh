@@ -5,28 +5,18 @@
 # 1 if any required gate fails.  Image-unsupported is a known condition, not a
 # failure.
 #
-# Gates (in order):
-#   1. config-modes           — config file/dir modes are 0600/0700
-#   2. direct-api             — live_maas_probe.py --probe all (text/stream/thinking/tools)
-#   3. token-only-claude-cli  — claude_e2e_probe.sh (Claude CLI reaches MaaS as glm-5.2)
-#   4. tool-round-trip        — claude_e2e_probe.sh (Bash tool executes in temp dir)
-#   5. plain-claude-isolation — plain `claude` env has no ANTHROPIC_* leaked
-#   6. prohibited-dependency-scan — check-prohibited-dependencies.py
-#   7. launcher-entry         — claude_maas_launcher_probe.sh (user entry via claude-maas)
+# Gates (in order): 1 config-modes, 2 auth-enforcement (401 on anonymous
+# /v1/messages — N/A when the base URL is not the loopback adapter),
+# 3 direct-api, 4 token-only-claude-cli, 5 tool-round-trip,
+# 6 plain-claude-isolation, 7 prohibited-dependency-scan, 8 launcher-entry.
 #
-# Security:
-#   * Reads the MaaS key from stdin (NEVER argv, NEVER echoed).
-#   * Redacts any substring matching the key from ALL output (stdout + stderr).
-#   * The key is passed to sub-probes via their stdin, never via argv or env.
+# Security: the MaaS key is read from stdin (never argv, never echoed) and
+# redacted from all output; sub-probes receive it on stdin only.
 #
-# Script resolution:
-#   Release helpers are resolved exclusively from PROJECT_ROOT (the verified
-#   checkout) — never from PATH.  Each helper must be a Git-tracked regular
-#   file; its SHA-256 is logged as provenance.  Tests may inject controlled
-#   stubs via the VERIFY_TEST_HELPERS_DIR env var, but results under that
-#   override are marked UNTRUSTED_TEST_RESULT and can never produce a release
-#   PASS.  Scripts with a #! shebang are executed directly; scripts without
-#   one are run with python3.
+# Script resolution: release helpers come exclusively from PROJECT_ROOT (the
+# verified checkout, Git-tracked), never from PATH.  Test stubs via
+# VERIFY_TEST_HELPERS_DIR are marked UNTRUSTED_TEST_RESULT and can never
+# produce a release PASS.
 set -euo pipefail
 
 ###############################################################################
@@ -253,12 +243,120 @@ fi
 echo ""
 
 ###############################################################################
-# Gate 2: direct-api — live_maas_probe.py --probe all
+# Gate 1b: model self-consistency (PRD UPSTREAM_PROFILE_V1 D2 / G1)
+#
+# COMPLETION_MODEL (deployment env) == config.json.model (client) — the
+# probe's modelUsage check (gate 4) closes the triangle against the live
+# response. Asserting the RELATION, never a literal: any model passes as
+# long as the deployment agrees with itself.
+###############################################################################
+
+echo "[model-consistency]"
+GATE1B_OK=1
+DEPLOY_ENV_FILE="${EV_DEPLOY_ENV:-/etc/claude-code-proxy/maas.env}"
+DEPLOY_MODEL=""
+if [[ -f "$DEPLOY_ENV_FILE" ]]; then
+    DEPLOY_MODEL="$(grep -m1 '^COMPLETION_MODEL=' "$DEPLOY_ENV_FILE" | cut -d= -f2-)"
+fi
+CLIENT_MODEL=""
+if [[ -f "$CONFIG_FILE" ]]; then
+    CLIENT_MODEL="$(python3 - "$CONFIG_FILE" <<'PYM' 2>/dev/null || echo ""
+import json, sys
+try:
+    print(json.load(open(sys.argv[1])).get("model", ""))
+except Exception:
+    print("")
+PYM
+)" || true
+fi
+
+if [[ -z "$DEPLOY_MODEL" || -z "$CLIENT_MODEL" ]]; then
+    echo "  cannot read model from deployment ($DEPLOY_MODEL) or client ($CLIENT_MODEL)"
+    echo "  model-consistency: FAIL"
+    OVERALL_OK=0
+    GATE1B_OK=0
+elif [[ "$DEPLOY_MODEL" == "$CLIENT_MODEL" ]]; then
+    echo "  deployment model == client model == $DEPLOY_MODEL"
+    echo "  model-consistency: PASS"
+else
+    echo "  MISMATCH: deployment COMPLETION_MODEL=$DEPLOY_MODEL but client config.json.model=$CLIENT_MODEL"
+    echo "  the client and the adapter disagree on the model — requests will still"
+    echo "  reach the adapter's model (the adapter ignores the request model field),"
+    echo "  but --model flags and modelUsage reporting will be inconsistent."
+    echo "  model-consistency: FAIL"
+    OVERALL_OK=0
+    GATE1B_OK=0
+fi
+echo ""
+
+###############################################################################
+# Gate 2: auth-enforcement — anonymous /v1/messages must be rejected (401)
+#
+# PRD SECURITY_HARDENING V1 §D2: with client-key auth active, a request with
+# NO credential must receive 401 authentication_error. A 200 here means the
+# adapter is running in legacy (open) mode — any local process could spend
+# the real MaaS key. The gate reads the base URL from the client config so it
+# exercises the deployed loopback adapter, not the direct endpoint.
+###############################################################################
+
+echo "[auth-enforcement]"
+GATE2_OK=1
+AUTH_BASE_URL=""
+
+if [[ -f "$CONFIG_FILE" ]]; then
+    AUTH_BASE_URL="$(python3 - "$CONFIG_FILE" <<'PYEOF'
+import json, sys
+try:
+    with open(sys.argv[1]) as f:
+        print(json.load(f).get("anthropic_base_url", ""))
+except Exception:
+    print("")
+PYEOF
+)" || true
+fi
+
+if [[ -z "$AUTH_BASE_URL" ]]; then
+    echo "  no base URL from config — cannot test auth enforcement"
+    echo "  auth-enforcement: FAIL"
+    OVERALL_OK=0
+    GATE2_OK=0
+elif [[ "$AUTH_BASE_URL" != *"127.0.0.1"* && "$AUTH_BASE_URL" != *"localhost"* ]]; then
+    # Client-key enforcement lives on the loopback adapter only. A direct
+    # (non-adapter) base URL means this deployment has no adapter to test —
+    # report as not-applicable rather than fail the release.
+    echo "  base URL is not the loopback adapter — auth-enforcement N/A"
+    echo "  auth-enforcement: N/A"
+else
+    _AUTH_CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
+        -X POST "$AUTH_BASE_URL/v1/messages" \
+        -H 'content-type: application/json' \
+        -d '{"model":"probe","max_tokens":1,"messages":[{"role":"user","content":"hi"}]}' \
+        2>/dev/null || echo 000)"
+    if [[ "$_AUTH_CODE" == "401" ]]; then
+        echo "  anonymous request rejected with 401"
+        echo "  auth-enforcement: PASS"
+    elif [[ "$_AUTH_CODE" == "000" ]]; then
+        echo "  adapter unreachable (curl failed)"
+        echo "  auth-enforcement: FAIL"
+        OVERALL_OK=0
+        GATE2_OK=0
+    else
+        echo "  anonymous request returned HTTP $_AUTH_CODE (expected 401)"
+        echo "  adapter is in legacy/open mode — any local process can spend the real key"
+        echo "  auth-enforcement: FAIL"
+        OVERALL_OK=0
+        GATE2_OK=0
+    fi
+fi
+echo ""
+
+###############################################################################
+# Gate 3: direct-api — live_maas_probe.py --probe all
 ###############################################################################
 
 echo "[direct-api]"
-GATE2_RC=0
-GATE2_OUTPUT=""
+GATE3_RC=0
+GATE3_OUTPUT=""
 # Read base_url from config.json so the live probe hits the configured endpoint.
 DIRECT_BASE_URL=""
 if [[ -f "$CONFIG_FILE" ]]; then
@@ -272,17 +370,26 @@ except Exception:
 PYEOF
 )" || true
 fi
+# D2: when the configured endpoint is the loopback adapter, the adapter
+# enforces the CLIENT key (it injects the real upstream key itself). Probe
+# with the client key from the installed config instead of the upstream key.
+PROBE_KEY="$VERIFY_KEY"
+if [[ "$DIRECT_BASE_URL" == *"127.0.0.1"* || "$DIRECT_BASE_URL" == *"localhost"* ]]; then
+    if [[ -f "$KEY_FILE" ]]; then
+        PROBE_KEY="$(head -n1 "$KEY_FILE")"
+    fi
+fi
 if [[ -n "$DIRECT_BASE_URL" ]]; then
-    GATE2_OUTPUT="$(printf '%s\n' "$VERIFY_KEY" | run_script "$LIVE_MAAS_PROBE" --probe all --base-url "$DIRECT_BASE_URL" 2>&1)" || GATE2_RC=$?
+    GATE3_OUTPUT="$(printf '%s\n' "$PROBE_KEY" | run_script "$LIVE_MAAS_PROBE" --probe all --base-url "$DIRECT_BASE_URL" 2>&1)" || GATE3_RC=$?
 else
-    GATE2_OUTPUT="$(printf '%s\n' "$VERIFY_KEY" | run_script "$LIVE_MAAS_PROBE" --probe all 2>&1)" || GATE2_RC=$?
+    GATE3_OUTPUT="$(printf '%s\n' "$PROBE_KEY" | run_script "$LIVE_MAAS_PROBE" --probe all 2>&1)" || GATE3_RC=$?
 fi
 
 # Redact the key from the output.
-GATE2_OUTPUT="$(redact "$GATE2_OUTPUT")"
-echo "$GATE2_OUTPUT"
+GATE3_OUTPUT="$(redact "$GATE3_OUTPUT")"
+echo "$GATE3_OUTPUT"
 
-if [[ $GATE2_RC -eq 0 ]]; then
+if [[ $GATE3_RC -eq 0 ]]; then
     echo "  direct-api: PASS"
 else
     echo "  direct-api: FAIL"
@@ -322,7 +429,13 @@ PYEOF
 fi
 
 E2E_OUTPUT="$(
-    export ANTHROPIC_AUTH_TOKEN="$VERIFY_KEY"
+    # D2: against the loopback adapter, authenticate with the installed
+    # client key (the adapter injects the real upstream key itself).
+    if [[ "$E2E_BASE_URL" == *"127.0.0.1"* || "$E2E_BASE_URL" == *"localhost"* ]] && [[ -f "$KEY_FILE" ]]; then
+        export ANTHROPIC_AUTH_TOKEN="$(head -n1 "$KEY_FILE")"
+    else
+        export ANTHROPIC_AUTH_TOKEN="$VERIFY_KEY"
+    fi
     export ANTHROPIC_BASE_URL="$E2E_BASE_URL"
     unset ANTHROPIC_API_KEY 2>/dev/null || true
     run_script "$CLAUDE_E2E_PROBE" 2>&1
@@ -532,48 +645,105 @@ if [[ -n "${VERIFY_EVIDENCE_PATH:-}" && -z "${VERIFY_TEST_HELPERS_DIR:-}" ]]; th
     fi
 
     _gate_status() {
+        # Note: the gate VARIABLES kept their historical names through the
+        # renumberings (GATE5_OK = plain-claude-isolation, GATE6_RC =
+        # prohibited-scan, GATE7_RC = launcher-entry). The map matches the
+        # actual variables; a stale name here previously crashed evidence
+        # generation with an unbound-variable error.
         case "$1" in
             1) [[ $GATE1_OK -eq 1 ]] && echo PASS || echo FAIL ;;
-            2) [[ $GATE2_RC -eq 0 ]] && echo PASS || echo FAIL ;;
-            3) [[ $E2E_RC -eq 0 ]] && echo PASS || echo FAIL ;;
+            2) [[ $GATE2_OK -eq 1 ]] && echo PASS || echo FAIL ;;
+            3) [[ $GATE3_RC -eq 0 ]] && echo PASS || echo FAIL ;;
             4) [[ $E2E_RC -eq 0 ]] && echo PASS || echo FAIL ;;
-            5) [[ $GATE5_OK -eq 1 ]] && echo PASS || echo FAIL ;;
-            6) [[ $GATE6_RC -eq 0 ]] && echo PASS || echo FAIL ;;
-            7) [[ $GATE7_RC -eq 0 ]] && echo PASS || echo FAIL ;;
+            5) [[ $E2E_RC -eq 0 ]] && echo PASS || echo FAIL ;;
+            6) [[ $GATE5_OK -eq 1 ]] && echo PASS || echo FAIL ;;
+            7) [[ $GATE6_RC -eq 0 ]] && echo PASS || echo FAIL ;;
+            8) [[ $GATE7_RC -eq 0 ]] && echo PASS || echo FAIL ;;
         esac
     }
 
-    python3 - "$PROJECT_ROOT/scripts/write-release-evidence.py" "$VERIFY_EVIDENCE_PATH" <<PYEOF
-import json, subprocess, sys, os
+    # D10 (PRD SECURITY_HARDENING V1): all dynamic values cross into Python
+    # via environment variables — nothing untrusted is interpolated into the
+    # Python source text itself.
+    # D3 (PRD UPSTREAM_PROFILE_V1): release evidence must record what was
+    # ACTUALLY verified — parse the deployment env file, never hardcode.
+    EV_DEPLOY_ENV="${EV_DEPLOY_ENV:-/etc/claude-code-proxy/maas.env}"
+    if [[ -f "$EV_DEPLOY_ENV" ]]; then
+        EV_MODEL="$(grep -m1 '^COMPLETION_MODEL=' "$EV_DEPLOY_ENV" | cut -d= -f2-)"
+        EV_UPSTREAM_URL="$(grep -m1 '^ANTHROPIC_PROXY_BASE_URL=' "$EV_DEPLOY_ENV" | cut -d= -f2-)"
+        EV_ENDPOINT_HOST="$(python3 - "$EV_UPSTREAM_URL" <<'PYURL' 2>/dev/null || echo unknown
+from urllib.parse import urlparse
+import sys
+try:
+    print(urlparse(sys.argv[1]).hostname or "unknown")
+except Exception:
+    print("unknown")
+PYURL
+)"
+        EV_ENDPOINT_PATH="$(python3 - "$EV_UPSTREAM_URL" <<'PYURL' 2>/dev/null || echo unknown
+from urllib.parse import urlparse
+import sys
+try:
+    print(urlparse(sys.argv[1]).path or "/")
+except Exception:
+    print("unknown")
+PYURL
+)"
+        export EV_MODEL EV_ENDPOINT_HOST EV_ENDPOINT_PATH
+    fi
+
+    EV_COMMIT="$_git_commit" \
+    EV_TREE="$_git_tree" \
+    EV_CLEAN="$_worktree_clean" \
+    EV_VERSION="${_version_out:-unknown}" \
+    EV_DIGEST="${_plain_digest:-unknown}" \
+    EV_PROBE_LIVE="$(sha256_file "$LIVE_MAAS_PROBE")" \
+    EV_PROBE_E2E="$(sha256_file "$CLAUDE_E2E_PROBE")" \
+    EV_PROBE_LAUNCHER="$(sha256_file "$LAUNCHER_PROBE")" \
+    EV_PROBE_SCAN="$(sha256_file "$CHECK_PROHIBITED")" \
+    EV_G1="$(_gate_status 1)" \
+    EV_G2="$(_gate_status 2)" \
+    EV_G3="$(_gate_status 3)" \
+    EV_G4="$(_gate_status 4)" \
+    EV_G5="$(_gate_status 5)" \
+    EV_G6="$(_gate_status 6)" \
+    EV_G7="$(_gate_status 7)" \
+    EV_G8="$(_gate_status 8)" \
+    python3 - "$PROJECT_ROOT/scripts/write-release-evidence.py" "$VERIFY_EVIDENCE_PATH" <<'PYEOF'
+import json, os, subprocess, sys
 from pathlib import Path
 
 writer = Path(sys.argv[1])
 evidence_path = Path(sys.argv[2])
 
+def _env(name: str, default: str = "unknown") -> str:
+    return os.environ.get(name, default)
+
 results = {
-    "commit": "$_git_commit",
-    "tree": "$_git_tree",
-    "generated_at_utc": __import__("datetime").datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-    "worktree_clean": $( [[ "$_worktree_clean" == true ]] && echo True || echo False ),
-    "claude_code_version": "${_version_out:-unknown}",
-    "binary_digest": "${_plain_digest:-unknown}",
-    "endpoint_host": "api-ap-southeast-1.modelarts-maas.com",
-    "endpoint_path": "/anthropic",
-    "model": "glm-5.2",
+    "commit": _env("EV_COMMIT", ""),
+    "tree": _env("EV_TREE", ""),
+    "generated_at_utc": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "worktree_clean": _env("EV_CLEAN", "false") == "true",
+    "claude_code_version": _env("EV_VERSION"),
+    "binary_digest": _env("EV_DIGEST"),
+    "endpoint_host": _env("EV_ENDPOINT_HOST"),
+    "endpoint_path": _env("EV_ENDPOINT_PATH"),
+    "model": _env("EV_MODEL"),
     "helpers": {
-        "tests/live_maas_probe.py": "$(sha256_file "$LIVE_MAAS_PROBE")",
-        "tests/claude_e2e_probe.sh": "$(sha256_file "$CLAUDE_E2E_PROBE")",
-        "tests/claude_maas_launcher_probe.sh": "$(sha256_file "$LAUNCHER_PROBE")",
-        "scripts/check-prohibited-dependencies.py": "$(sha256_file "$CHECK_PROHIBITED")",
+        "tests/live_maas_probe.py": _env("EV_PROBE_LIVE"),
+        "tests/claude_e2e_probe.sh": _env("EV_PROBE_E2E"),
+        "tests/claude_maas_launcher_probe.sh": _env("EV_PROBE_LAUNCHER"),
+        "scripts/check-prohibited-dependencies.py": _env("EV_PROBE_SCAN"),
     },
     "gates": [
-        {"name": "config-modes", "status": "$(_gate_status 1)", "duration_ms": 0},
-        {"name": "direct-api", "status": "$(_gate_status 2)", "duration_ms": 0},
-        {"name": "token-only-claude-cli", "status": "$(_gate_status 3)", "duration_ms": 0},
-        {"name": "tool-round-trip", "status": "$(_gate_status 4)", "duration_ms": 0},
-        {"name": "plain-claude-isolation", "status": "$(_gate_status 5)", "duration_ms": 0},
-        {"name": "prohibited-dependency-scan", "status": "$(_gate_status 6)", "duration_ms": 0},
-        {"name": "launcher-entry", "status": "$(_gate_status 7)", "duration_ms": 0},
+        {"name": "config-modes", "status": _env("EV_G1"), "duration_ms": 0},
+        {"name": "auth-enforcement", "status": _env("EV_G2"), "duration_ms": 0},
+        {"name": "direct-api", "status": _env("EV_G3"), "duration_ms": 0},
+        {"name": "token-only-claude-cli", "status": _env("EV_G4"), "duration_ms": 0},
+        {"name": "tool-round-trip", "status": _env("EV_G5"), "duration_ms": 0},
+        {"name": "plain-claude-isolation", "status": _env("EV_G6"), "duration_ms": 0},
+        {"name": "prohibited-dependency-scan", "status": _env("EV_G7"), "duration_ms": 0},
+        {"name": "launcher-entry", "status": _env("EV_G8"), "duration_ms": 0},
     ],
     "image_probe": {"status": "KNOWN_UNSUPPORTED", "http_status": 400, "fallback": False},
 }

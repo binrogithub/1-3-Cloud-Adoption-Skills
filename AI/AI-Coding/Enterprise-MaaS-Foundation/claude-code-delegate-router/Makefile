@@ -1,4 +1,4 @@
-.PHONY: test verify-offline verify-live scan verify-exa-offline verify-exa-live verify-stream-reliability verify-adapter verify-bootstrap verify-thinking-visibility verify-config-protection
+.PHONY: test verify-offline verify-live scan verify-exa-offline verify-exa-live verify-stream-reliability verify-adapter verify-bootstrap verify-thinking-visibility verify-config-protection window-check window-open
 
 test:
 	pytest -q
@@ -31,3 +31,12 @@ verify-stream-reliability:
 
 verify-thinking-visibility:
 	pytest -q tests/test_thinking_visibility.py
+
+# PRD RELEASE_V12 release gates: N1-G (single listener), N2-G (capture
+# offline), N4-G (/status == journald request_end). N5 is a time gate.
+window-check:
+	bash scripts/window-check-v12.sh
+
+# Open/refresh the v1.2 soak window (records baseline + commit).
+window-open:
+	bash scripts/window-check-v12.sh --record

@@ -24,7 +24,27 @@
 # testing the launcher's config, not bypassing it.
 set -euo pipefail
 
-MODEL="glm-5.2"
+# Pin the profile: these probes verify the MAIN claude-maas deployment. An
+# ambient CLAUDE_MAAS_PROFILE (e.g. a glm session shell) must not redirect
+# the probe to a different profile's config (PRD UPSTREAM_PROFILE_V1 D7).
+CLAUDE_MAAS_PROFILE=claude-maas
+export CLAUDE_MAAS_PROFILE
+
+# D2 (PRD UPSTREAM_PROFILE_V1): the expected model is NOT a literal. It is
+# read from the deployment (config.json), with an env override for tests.
+# The gate asserts deployment self-consistency, not a historical constant.
+MODEL="${PROBE_MODEL:-}"
+if [[ -z "$MODEL" && -f "${HOME}/.config/${CLAUDE_MAAS_PROFILE:-claude-maas}/config.json" ]]; then
+    MODEL="$(python3 - "${HOME}/.config/${CLAUDE_MAAS_PROFILE:-claude-maas}/config.json" <<'PYCFG'
+import json, sys
+try:
+    print(json.load(open(sys.argv[1])).get("model", ""))
+except Exception:
+    print("")
+PYCFG
+)" || true
+fi
+[[ -n "$MODEL" ]] || MODEL="glm-5.2"
 
 ###############################################################################
 # Helpers

@@ -85,6 +85,26 @@ fallback text blocks.
 - **V1 aggregation key fix**: `tool_call_index_absent` = `false` in all
   production requests. V1 fixed a real adapter defect that is not the
   production root cause.
+- **Loop continuity (PRD LOOP_CONTINUITY_V1)**: in the initial v1.1 `enforce`
+  deployment, malformed tool args caused the turn to end silently with
+  `stop_reason: end_turn` and only the degradation text — the agent loop
+  stopped with 0% self-recovery (vs. 32% for the old hard failure). Observation
+  rate: 1.07% (6/559 turns). This is a regression relative to v1.0 on the
+  task-completion dimension. **Fixed post-v1.1 by L1-A (upstream retry) +
+  L1-B (error termination instead of silent end_turn) + L2 (continue instead
+  of break, so subsequent valid tools are not dropped).** The fix restores
+  ≥32% self-recovery while keeping X1's "never execute the tool" guarantee.
+- **Tool args retry (PRD LOOP_CONTINUITY_V2 §3)**: when tool args are
+  malformed, the adapter retries the call once via a non-streaming directed
+  request (`stream: false` + `tool_choice`). Production success rate: **17/18
+  (94%)** in the first window, 9/10 (90%) in the current window. If retry
+  fails, the turn terminates with a protocol error (historically ~32%
+  self-recovered by the client) instead of a silent `end_turn`. The retry's
+  token consumption is **not currently included** in the `usage` returned to
+  the client (M6, deferred to v1.2). The retry does not include the current
+  turn's already-streamed text in its context (M7, deferred to v1.2). The
+  retry occupies a concurrency slot for up to 30s; its interaction with the
+  total-timeout watchdog is not yet gated (M8, deferred to v1.2).
 
 ## Release criteria (V7 §4)
 
@@ -127,8 +147,10 @@ notes and do not require code changes unless triggered.
 
 Shipped in `observe` mode (default), then switched to `enforce` via
 `/etc/claude-code-proxy/maas.env` (`MAAS_TOOL_ARG_MODE=enforce`) at
-2026-08-23 01:50:47. The `enforce` window is in progress (24h criterion
-ends 2026-08-24 01:50:47). One production observation (`b5117fa4`,
-`first_char_code: 0x7B`) is recorded — see Known limitations. This is a
-single data point, not a distribution; the historical cluster's
-`first_char_code` was never recorded.
+2026-08-23 01:50:47. The original 24h window was interrupted twice by
+deployments (LOOP_CONTINUITY_V1 at 01:25:15, V2 at 04:33:40) that changed
+the code under observation. **The current window started at 2026-08-24
+04:33:40 CST and ends 2026-08-25 04:33:40 CST** (build `b8c7069b…`).
+One production observation (`b5117fa4`, `first_char_code: 0x7B`) is
+recorded — see Known limitations. This is a single data point, not a
+distribution; the historical cluster's `first_char_code` was never recorded.

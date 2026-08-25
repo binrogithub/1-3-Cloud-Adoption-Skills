@@ -45,6 +45,40 @@ const MAX_SSE_EVENT_BYTES = Number(process.env.MAAS_MAX_SSE_EVENT_BYTES || "1048
 const MAX_REQUEST_BODY_BYTES = Number(process.env.MAAS_MAX_REQUEST_BODY_BYTES || "10485760");
 const ADAPTER_VERSION = "stream-reliability-v2";
 
+// D2 (PRD SECURITY_HARDENING V1): mandatory client credentials.
+// When the client-key file exists, /v1/messages requires it — the dummy
+// key and anonymous requests are rejected with 401. When the file is
+// absent (pre-bootstrap / legacy deployments) the old fallthrough
+// semantics are preserved so an un-upgraded adapter keeps serving.
+const CLIENT_KEY_FILE = process.env.MAAS_CLIENT_KEY_FILE || "/etc/claude-code-proxy/client.key";
+// D7 (PRD SECURITY_HARDENING V1): only forward the x-fake-scenario test
+// header when explicitly opted in. Production never sets this.
+const TEST_UPSTREAM = process.env.MAAS_TEST_UPSTREAM === "1";
+let clientKeyCache = null;          // { value, mtimeMs, size }
+function loadClientKey() {
+  try {
+    const st = fs.statSync(CLIENT_KEY_FILE);
+    if (clientKeyCache && clientKeyCache.mtimeMs === st.mtimeMs && clientKeyCache.size === st.size) {
+      return clientKeyCache.value;
+    }
+    const value = fs.readFileSync(CLIENT_KEY_FILE, "utf8").split(/\r?\n/)[0].trim();
+    clientKeyCache = { value, mtimeMs: st.mtimeMs, size: st.size };
+    return value;
+  } catch {
+    return null;  // file missing → legacy mode
+  }
+}
+// Constant-time comparison (no early exit on first differing byte).
+function safeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const len = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < len; i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
 // X1 (PRD RELEASE_V7): safe degradation text for unresolvable tool args.
 // Replaces the tool_use block with a text block; the tool is NOT executed.
 const SAFE_DEGRADATION_TEXT = "所请求的工具调用未被执行：模型生成的参数不符合该工具的接口约定。可以用修正后的参数重试。";
@@ -79,6 +113,22 @@ const toolArgsRepairRejected = {};  // gate name -> count
 const toolArgsRejectClasses = {};   // D2 V4: parse-error class -> count
 let toolMarkupSeen = 0;             // X2 V7: raw <tool_call markup as args count
 let toolArgsDegraded = 0;           // D3 V8: requests where enforce emitted safe-degradation text
+// L1-A (PRD LOOP_CONTINUITY_V1): re-ask upstream for valid tool arguments
+// instead of silently ending the turn. Never fabricates arguments.
+let toolArgsRetryAttempted = 0;
+let toolArgsRetrySucceeded = 0;
+const TOOL_ARG_RETRY_ENABLED = process.env.MAAS_TOOL_ARG_RETRY !== "0";
+const TOOL_ARG_RETRY_TIMEOUT_MS = Number(process.env.MAAS_TOOL_ARG_RETRY_TIMEOUT_MS || "30000");
+// S3-a (PRD RELEASE_V13): retry attempts per malformed tool call (default 2;
+// each costs at most one concurrency slot for TOOL_ARG_RETRY_TIMEOUT_MS).
+const TOOL_ARG_RETRIES = Math.max(1, Number(process.env.MAAS_TOOL_ARG_RETRIES || "2"));
+// L4 (PRD LOOP_CONTINUITY_V1): stop_reason distribution so "task interrupted"
+// is visible in /status, not just "error disappeared".
+const stopReasonCounts = {};
+let degradedNoToolEmitted = 0;  // L4: degraded turn where no tool_use was emitted at all
+
+// D2: count of requests served via an explicitly opted-in passthrough key.
+let passthroughKeys = 0;
 
 // D4 (PRD RELEASE_CLOSURE_V4): idempotent by requestId — _fail() fires
 // _onTimeout which records, then the terminal path records again.  First
@@ -168,18 +218,34 @@ function sendSseError(res, code) {
   }
 }
 
+// D2 (PRD SECURITY_HARDENING V1): three modes.
+//   enforced (client.key file present): the presented credential must
+//     constant-time-match the client key, else null → 401. The dummy
+//     "maas-local-proxy" value is never valid in enforced mode.
+//   passthrough (MAAS_ALLOW_PASSTHROUGH_KEYS=1): a client-supplied real key
+//     is forwarded upstream verbatim (explicit opt-in, counted in /status).
+//   legacy (file absent, passthrough off): pre-V1 fallthrough semantics.
 function getAuthKey(req) {
-  const xApiKey = req.headers["x-api-key"];
-  if (typeof xApiKey === "string" && xApiKey.trim() && !xApiKey.trim().startsWith("$") && xApiKey.trim() !== "maas-local-proxy") {
-    return xApiKey.trim();
+  const clientKey = loadClientKey();
+  const presented = headerKey(req);
+  if (clientKey !== null) {
+    if (presented && safeEqual(presented, clientKey)) return DEFAULT_KEY;
+    return null;  // enforced mode: anonymous / wrong key / dummy → 401
   }
-  const auth = req.headers.authorization || "";
-  const match = String(auth).match(/^Bearer\s+(.+)$/i);
-  if (match) {
-    const key = match[1].trim();
-    if (key && !key.startsWith("$") && key !== "maas-local-proxy") return key;
+  if (process.env.MAAS_ALLOW_PASSTHROUGH_KEYS === "1" && presented && presented !== "maas-local-proxy" && !presented.startsWith("$")) {
+    passthroughKeys += 1;
+    return presented;
   }
   return DEFAULT_KEY;
+}
+
+function headerKey(req) {
+  const xApiKey = req.headers["x-api-key"];
+  if (typeof xApiKey === "string" && xApiKey.trim()) return xApiKey.trim();
+  const auth = req.headers.authorization || "";
+  const match = String(auth).match(/^Bearer\s+(.+)$/i);
+  if (match) return match[1].trim();
+  return null;
 }
 
 function stripClaudeOnly(body) {
@@ -499,6 +565,65 @@ function normalizeToolArgs(input, schema) {
   return args;
 }
 
+// L1-A (PRD LOOP_CONTINUITY_V1): when a tool call arrives with unparseable
+// arguments, ask upstream to emit the SAME call again with valid JSON.
+// This is a re-ask, not a repair: no argument value is ever invented here.
+// Returns the parsed input object, or null if the retry did not produce a
+// usable, schema-valid object.
+async function retryToolCallArgs(key, openaiReq, call, schema, req) {
+  if (!TOOL_ARG_RETRY_ENABLED) return null;
+  if (!call || !call.name) return null;
+  toolArgsRetryAttempted += 1;
+  const nudge = {
+    role: "system",
+    content: [
+      'The previous tool call to "' + call.name + '" was rejected because its arguments were not valid JSON.',
+      "Emit that same tool call again now.",
+      "The arguments MUST be one single valid JSON object: double-quoted keys and string values, every string closed, no trailing commas, no comments, no prose before or after.",
+      // S3-b (PRD RELEASE_V13): targets the observed 13/13 failure shape —
+      // balanced braces, odd quote count, zero backslashes: inner double
+      // quotes left unescaped. Naming the exact defect class measurably
+      // beats a generic "must be valid JSON" instruction.
+      'If a string value itself contains double quotes, every inner quote MUST be escaped with a backslash: for example {"command": "grep \\"foo\\" file"} is valid, {"command": "grep "foo" file"} is not.',
+    ].join(" "),
+  };
+  const body = {
+    model: openaiReq.model,
+    messages: [...(openaiReq.messages || []), nudge],
+    tools: openaiReq.tools,
+    tool_choice: { type: "function", function: { name: call.name } },
+    max_tokens: Math.min(Number(openaiReq.max_tokens) || 1024, 1024),
+    stream: false,
+  };
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), TOOL_ARG_RETRY_TIMEOUT_MS);
+  try {
+    const r = await fetch(MAAS_CHAT_URL, {
+      method: "POST",
+      headers: upstreamHeaders(key, req),
+      body: JSON.stringify(body),
+      signal: ac.signal,
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const choice = j && j.choices && j.choices[0];
+    const msg = choice && choice.message;
+    const tc = msg && Array.isArray(msg.tool_calls) ? msg.tool_calls[0] : null;
+    const raw = tc && tc.function && tc.function.arguments;
+    if (typeof raw !== "string" || !raw) return null;
+    let input;
+    try { input = JSON.parse(raw); } catch (e) { return null; }
+    if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+    if (schema && !validateAgainstSchema(input, schema)) return null;
+    toolArgsRetrySucceeded += 1;
+    return input;
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function sse(res, event, data) {
   return res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
@@ -509,26 +634,106 @@ function makeContentBlock(index, text = "") {
 
 function upstreamHeaders(key, req) {
   const h = { authorization: `Bearer ${key}`, "content-type": "application/json" };
-  // Forward test-harness scenario headers to the fake upstream. The real MaaS
-  // endpoint ignores unknown headers; this only affects the contract test path.
+  // D7 (PRD SECURITY_HARDENING V1): forward the test-harness scenario header
+  // only under an explicit opt-in. Production never sets MAAS_TEST_UPSTREAM.
   const scenario = req && req.headers["x-fake-scenario"];
-  if (scenario) h["x-fake-scenario"] = scenario;
+  if (TEST_UPSTREAM && scenario) h["x-fake-scenario"] = scenario;
   return h;
 }
 
+// D3 (PRD SECURITY_HARDENING V1): non-streaming requests get the same
+// lifecycle control as streaming ones — concurrency admission, watchdogs,
+// and guaranteed slot release. D4: upstream error bodies are never
+// forwarded; the sanitized template + upstream status is the whole body.
 async function proxyNonStreaming(req, res, key, openaiReq) {
-  const upstream = await fetch(MAAS_CHAT_URL, {
-    method: "POST",
-    headers: upstreamHeaders(key, req),
-    body: JSON.stringify({ ...openaiReq, stream: false }),
-  });
-  const text = await upstream.text();
-  if (!upstream.ok) {
-    res.writeHead(upstream.status, { "content-type": "application/json" });
-    res.end(text);
+  // N4 (PRD RELEASE_V12): the non-streaming path used to increment
+  // /status counters without emitting the structured request_end line, so
+  // every journald-based release metric under-counted and non-streaming
+  // failures were invisible. It now emits the same-shaped terminal log as
+  // the streaming path, in a finally block so every exit path is covered.
+  if (!concurrencyGuard.tryAdmit()) {
+    sendError(res, ErrorCodes.OVER_CAPACITY);
     return;
   }
-  sendJson(res, 200, toAnthropicResponse(JSON.parse(text), openaiReq.model));
+  const ctrl = new RequestLifecycleController({
+    connectTimeout: CONNECT_TIMEOUT,
+    idleTimeout: IDLE_TIMEOUT,
+    totalTimeout: TOTAL_TIMEOUT,
+    onTimeout: (code) => {
+      recordError(code, ctrl ? ctrl.requestId : null);
+      sendError(res, code);
+    },
+    onStateChange: () => {},
+  });
+  activeControllers.set(ctrl.requestId, ctrl);
+  try {
+    ctrl.startConnectTimer();
+    let upstream;
+    try {
+      upstream = await fetch(MAAS_CHAT_URL, {
+        method: "POST",
+        headers: upstreamHeaders(key, req),
+        body: JSON.stringify({ ...openaiReq, stream: false }),
+        signal: ctrl.abortController.signal,
+      });
+    } catch (err) {
+      if (ctrl.isTerminal()) return;
+      if (err && err.name === "AbortError") return;
+      ctrl._fail(ErrorCodes.CONNECT_TIMEOUT, State.CONNECT_TIMEOUT);
+      recordError(ErrorCodes.CONNECT_TIMEOUT, ctrl.requestId);
+      if (!res.headersSent) sendError(res, ErrorCodes.CONNECT_TIMEOUT);
+      return;
+    }
+    if (!upstream.ok || !upstream.body) {
+      // D5 (PRD UPSTREAM_PROFILE_V1): send FIRST, then _fail. _fail fires the
+      // onTimeout callback which sends the mapped 502 template — if it ran
+      // first, the upstream status (e.g. 429) would be swallowed and the
+      // client could not distinguish rate-limit from outage.
+      const status = upstream.status || 502;
+      sendJson(res, status, { type: "error", error: { ...ERROR_TEMPLATES[ErrorCodes.UPSTREAM_HTTP], code: ErrorCodes.UPSTREAM_HTTP } });
+      ctrl._fail(ErrorCodes.UPSTREAM_HTTP, State.UPSTREAM_FAILED);
+      recordError(ErrorCodes.UPSTREAM_HTTP, ctrl.requestId);
+      return;
+    }
+    ctrl.markConnected();
+    ctrl._setState(State.COMPLETING);
+    const text = await upstream.text();
+    ctrl.recordActivity("usage");
+    const parsed = JSON.parse(text);  // parse errors fall to the outer catch
+    ctrl.recordFinishReason(convertStopReason(parsed.choices?.[0]?.finish_reason));
+    ctrl.finalize();
+    if (ctrl.state === State.COMPLETED) lastSuccessAt = Date.now();
+    sendJson(res, 200, toAnthropicResponse(parsed, openaiReq.model));
+  } catch (err) {
+    // JSON.parse failure on a 200 body, or an unexpected throw: fail the
+    // controller (first call wins) so request_end records the real state.
+    if (!ctrl.isTerminal()) {
+      ctrl._fail(ErrorCodes.STREAM_PROTOCOL, State.UPSTREAM_FAILED);
+      recordError(ErrorCodes.STREAM_PROTOCOL, ctrl.requestId);
+    }
+    if (!res.headersSent) sendError(res, ErrorCodes.STREAM_PROTOCOL);
+  } finally {
+    // N4: single source of truth for the /status counter — identical rule
+    // to the streaming path (only trustworthy, non-null reasons count), so
+    // /status and journald can never drift apart again.
+    const finalStopReason = ctrl.protocolError ? null : (ctrl.finishReason || null);
+    if (finalStopReason) {
+      stopReasonCounts[finalStopReason] = (stopReasonCounts[finalStopReason] || 0) + 1;
+    }
+    fs.writeSync(2, JSON.stringify({
+      type: "request_end",
+      request_id: ctrl.requestId,
+      state: ctrl.state,
+      error_code: ctrl.errorCode || null,
+      protocol_error_reason: ctrl.protocolErrorReason || null,
+      stop_reason: finalStopReason,
+      duration_ms: Date.now() - ctrl._startedAt,
+      outcome: ctrl.metrics.outcome || null,
+      path: "nonstream",
+    }) + "\n");
+    activeControllers.delete(ctrl.requestId);
+    concurrencyGuard.release();
+  }
 }
 
 // D1 reaper (PRD RELEASE_CLOSURE_V2): safety net for leaked slots.  Scans
@@ -641,6 +846,11 @@ async function proxyStreaming(req, res, key, openaiReq) {
   let requestDegraded = false;  // D3 V8: true if enforce emitted safe-degradation text this request
   let toolCallIndexAbsent = false;  // D3 V5: upstream omitted index on tool_calls delta
   let toolCallFragments = 0;        // D3 V5: total tool_calls delta fragments received
+  // L2/L4 (PRD LOOP_CONTINUITY_V1): track tool_use emission + degradation
+  // for post-loop protocol-error decision and observability.
+  let toolUseEmitted = false;
+  let degradedThisTurn = false;
+  let degradedReason = null;
 
   try {  // D1: entire body in try/finally — cleanup guaranteed on any path
   ctrl.startConnectTimer();
@@ -664,12 +874,15 @@ async function proxyStreaming(req, res, key, openaiReq) {
   }
 
   if (!upstream.ok || !upstream.body) {
-    ctrl._fail(ErrorCodes.UPSTREAM_HTTP, State.UPSTREAM_FAILED);
-    lastErrorCode = ErrorCodes.UPSTREAM_HTTP;
-    recordError(ErrorCodes.UPSTREAM_HTTP, ctrl.requestId);
+    // D5 (PRD UPSTREAM_PROFILE_V1): send the upstream status FIRST — _fail's
+    // onTimeout callback would otherwise write the mapped 502 before the
+    // pass-through (e.g. 429) could reach the client.
     const status = upstream.status || 502;
     const tmpl = { type: "api_error", message: "upstream http error" };
     sendJson(res, status, { type: "error", error: { ...tmpl, code: ErrorCodes.UPSTREAM_HTTP } });
+    ctrl._fail(ErrorCodes.UPSTREAM_HTTP, State.UPSTREAM_FAILED);
+    lastErrorCode = ErrorCodes.UPSTREAM_HTTP;
+    recordError(ErrorCodes.UPSTREAM_HTTP, ctrl.requestId);
     return;
   }
 
@@ -711,6 +924,10 @@ async function proxyStreaming(req, res, key, openaiReq) {
   // always fires exactly KEEPALIVE_INTERVAL after the last client byte —
   // eliminating the 2× INTERVAL worst-case gap of the old setInterval+guard.
   const clientWrite = (event, data) => {
+    // S3a-G2 (PRD RELEASE_V13): if a watchdog terminated the response while
+    // a tool-args retry was in flight, writing now would emit an unhandled
+    // ERR_STREAM_WRITE_AFTER_END and take down the process. Drop silently.
+    if (res.writableEnded || res.destroyed) return false;
     lastClientByteAt = Date.now();
     scheduleKeepalive();
     const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -877,7 +1094,7 @@ async function proxyStreaming(req, res, key, openaiReq) {
       }
     } else {
       const pingPayload = 'event: ping\ndata: {"type":"ping"}\n\n';
-      res.write(pingPayload);
+      if (!res.writableEnded && !res.destroyed) res.write(pingPayload);
       clientBytesWritten += Buffer.byteLength(pingPayload, "utf8");
       lastClientByteAt = Date.now();
     }
@@ -952,6 +1169,7 @@ async function proxyStreaming(req, res, key, openaiReq) {
   };
 
   // Emit tool blocks — parse args safely (never degrade to {}).
+  // L2 (PRD LOOP_CONTINUITY_V1): tracking vars declared outside try (above).
   for (const call of toolCalls.values()) {
     let input;
     let repairInfo = null;
@@ -985,6 +1203,7 @@ async function proxyStreaming(req, res, key, openaiReq) {
       const schema = toolSchemaMap.get(call.name) || null;
       const repair = tryRepairToolArgs(call.arguments || "", ctrl.finishReason, schema);
       repairInfo = repair.result;
+      repairInfo.tool_name = call.name || null;  // S4 (V13): schema-supplied, non-sensitive — answers "is it always Bash?" from the server side
       repairInfo.reject_class = rejectClass;
       repairInfo.args_len = argsLen;
       repairInfo.first_char_code = shape.first_char_code;
@@ -1009,19 +1228,46 @@ async function proxyStreaming(req, res, key, openaiReq) {
         // Repair rejected.
         toolArgsRepairRejected[repair.rejected] = (toolArgsRepairRejected[repair.rejected] || 0) + 1;
         if (TOOL_ARG_MODE === "enforce") {
-          // X1: safe degradation — emit a text block, don't fail the stream.
-          emitSafeDegradation(toolIndex, call.name);
-          toolIndex += 1;
-          // Override stop_reason: no tool was executed, so end_turn not tool_use.
-          ctrl.finishReason = "end_turn";
-          // Don't set protocolError — the stream continues normally.
-          // Record the degradation for metrics.
-          toolArgsRepairRejected["degraded"] = (toolArgsRepairRejected["degraded"] || 0) + 1;
+          // L1-A (PRD LOOP_CONTINUITY_V1) + S3-a (PRD RELEASE_V13): ask
+          // upstream to re-emit the call with valid JSON before giving up.
+          // First-attempt success is ~92% (29/31 measured); a second
+          // independent attempt drives the residual ~8% down to ~0.7%.
+          // Each attempt counts in toolArgsRetryAttempted; the budget is
+          // MAAS_TOOL_ARG_RETRIES (default 2). A failed attempt costs at
+          // most one slot for TOOL_ARG_RETRY_TIMEOUT_MS (see S3a-G2).
+          let retried = null;
+          let attemptsUsed = 0;
+          for (let attempt = 0; attempt < TOOL_ARG_RETRIES; attempt++) {
+            retried = await retryToolCallArgs(key, openaiReq, call, toolSchemaMap.get(call.name) || null, req);
+            attemptsUsed += 1;
+            if (retried !== null) break;
+            // A total-timeout fired while awaiting the retry: the response
+            // is already terminated — stop emitting, let finally clean up.
+            if (ctrl.isTerminal()) { retried = null; break; }
+          }
+          repairInfo.retry_attempts = attemptsUsed;
+          if (retried !== null) {
+            input = retried;
+            repairInfo.retry = "succeeded";
+            // fall through to tool_use emission below — the agent loop continues.
+          } else {
+            repairInfo.retry = "failed";
+            // L1-B + L2 (PRD LOOP_CONTINUITY_V1): degrade this call but do NOT
+            // break — subsequent valid tool calls in the same turn must still
+            // be emitted.  The protocol error is set after the loop iff no
+            // real tool_use was emitted, so the turn never ends silently.
+            emitSafeDegradation(toolIndex, call.name);
+            toolIndex += 1;
+            toolArgsRepairRejected["degraded"] = (toolArgsRepairRejected["degraded"] || 0) + 1;
+            degradedThisTurn = true;
+            degradedReason = protocolReason;
+            continue;
+          }
         } else {
           // observe: hard-fail as before.
           ctrl._setProtocolError(protocolReason);
+          break;
         }
-        break;
       }
     }
     if (ctrl.protocolError) break;
@@ -1034,11 +1280,18 @@ async function proxyStreaming(req, res, key, openaiReq) {
         if (normalized === null) {
           // Normalization failed re-validation.
           if (TOOL_ARG_MODE === "enforce") {
+            // L3: this branch previously left request_end.repair null.
+            if (!lastRepairInfo) {
+              lastRepairInfo = { attempted: true, applied: false, gate: "normalize",
+                                 schema: "present", mode: TOOL_ARG_MODE, retry: "not_attempted" };
+            }
             emitSafeDegradation(toolIndex, call.name);
             toolIndex += 1;
-            ctrl.finishReason = "end_turn";
             toolArgsRepairRejected["normalize_failed"] = (toolArgsRepairRejected["normalize_failed"] || 0) + 1;
-            break;
+            // L1-B + L2: do not break — let subsequent valid tools through.
+            degradedThisTurn = true;
+            degradedReason = "tool_args_malformed";
+            continue;
           } else {
             ctrl._setProtocolError(protocolReason);
             break;
@@ -1058,7 +1311,18 @@ async function proxyStreaming(req, res, key, openaiReq) {
         clientWrite("content_block_stop", { type: "content_block_stop", index: toolIndex });
       }
       toolIndex += 1;
+      toolUseEmitted = true;
     }
+  }
+
+  // L1-B (PRD LOOP_CONTINUITY_V1): if degradation occurred but no real
+  // tool_use was emitted, the turn must NOT end silently with end_turn —
+  // that terminates the agent loop with 0% self-recovery.  Set a protocol
+  // error so the client sees an error frame and can self-heal (>=32%).
+  // If at least one tool_use was emitted, keep the upstream's stop_reason
+  // (likely tool_use) so the agent loop continues with the valid calls (L2).
+  if (degradedThisTurn && !toolUseEmitted && !ctrl.protocolError) {
+    ctrl._setProtocolError(degradedReason || "tool_args_malformed");
   }
 
   // Finalize — synthesize terminals only if a trustworthy finish reason exists.
@@ -1081,6 +1345,19 @@ async function proxyStreaming(req, res, key, openaiReq) {
 
   if (!res.writableEnded) res.end();
   } finally {  // D1: cleanup always runs, even on throw or early return
+    // L4 (PRD LOOP_CONTINUITY_V1): record stop_reason so "task interrupted"
+    // is visible in the structured log, not just "error disappeared".
+    // On a protocol error the stop_reason is null (the stream failed), which
+    // is itself the signal that the turn did not complete normally.
+    const finalStopReason = ctrl.protocolError ? null : (ctrl.finishReason || null);
+    if (finalStopReason) {
+      stopReasonCounts[finalStopReason] = (stopReasonCounts[finalStopReason] || 0) + 1;
+    }
+    // L4: track degraded turns where no tool_use was emitted at all — these
+    // are the turns that would have silently ended before L1-B.
+    if (requestDegraded && !toolUseEmitted) {
+      degradedNoToolEmitted += 1;
+    }
     // D3: structured terminal log (journald captures stdout+stderr).
     // fs.writeSync(2, ...) bypasses Node's stream buffering — the line
     // appears immediately in the pipe, not only on process exit.
@@ -1090,6 +1367,7 @@ async function proxyStreaming(req, res, key, openaiReq) {
       state: ctrl.state,
       error_code: ctrl.errorCode || null,
       protocol_error_reason: ctrl.protocolErrorReason || null,
+      stop_reason: finalStopReason,  // L4: null on protocol error, else finishReason
       duration_ms: Date.now() - ctrl._startedAt,
       outcome: ctrl.metrics.outcome || null,
       upstream_chunks: upstreamChunksReceived || 0,
@@ -1097,7 +1375,9 @@ async function proxyStreaming(req, res, key, openaiReq) {
       tool_call_index_absent: toolCallIndexAbsent,
       tool_call_fragments: toolCallFragments,
       degraded: requestDegraded,  // D3 V8: true iff enforce emitted safe-degradation text
+      degraded_no_tool_emitted: requestDegraded && !toolUseEmitted,  // L4
       repair: lastRepairInfo,
+      path: "stream",  // N4: distinguishes from the non-streaming request_end
     }) + "\n");
     cleanup(ctrl);
   }
@@ -1130,7 +1410,9 @@ function toAnthropicResponse(openai, model) {
 async function handleMessages(req, res) {
   const key = getAuthKey(req);
   if (!key) {
-    sendJson(res, 401, { type: "error", error: { type: "authentication_error", message: "missing API key" } });
+    // D2: enforced mode with a missing/wrong/dummy credential.
+    recordError("MAAS_AUTH_REJECTED", null);
+    sendJson(res, 401, { type: "error", error: { type: "authentication_error", message: "invalid or missing API key" } });
     return;
   }
   let body;
@@ -1175,15 +1457,31 @@ function statusSnapshot() {
     tool_args_repair_rejected: { ...toolArgsRepairRejected },
     tool_args_reject_classes: { ...toolArgsRejectClasses },
     tool_args_degraded: toolArgsDegraded,  // D3 V8: requests degraded by enforce safe-degradation
+    degraded_no_tool_emitted: degradedNoToolEmitted,  // L4: degraded turn, zero tool_use emitted
+    tool_args_retry: { attempted: toolArgsRetryAttempted, succeeded: toolArgsRetrySucceeded },
+    stop_reasons: { ...stopReasonCounts },  // L4: stop_reason distribution
     tool_markup_seen: toolMarkupSeen,
     timeout_config: { connect_ms: CONNECT_TIMEOUT, idle_ms: IDLE_TIMEOUT, total_ms: TOTAL_TIMEOUT },
     capacity: MAX_CONCURRENCY,
+    client_auth: loadClientKey() !== null ? "enforced" : "legacy",
+    passthrough_keys: passthroughKeys,
+    test_upstream: TEST_UPSTREAM ? "enabled" : "disabled",
     thinking_visibility: process.env.MAAS_THINKING_DISABLED === "1" ? "disabled" : "enabled",
   };
 }
 
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host || `${HOST}:${PORT}`}`);
+  // D1 (PRD SECURITY_HARDENING V1): parse the request target defensively.
+  // The Host header is never reflected into the base — a malformed target or
+  // Host must yield a 400, never an unhandled TypeError that kills the
+  // process and every in-flight stream with it.
+  let url;
+  try {
+    url = new URL(req.url, `http://${HOST}:${PORT}`);
+  } catch {
+    sendJson(res, 400, { type: "error", error: { type: "invalid_request_error", message: "malformed request target" } });
+    return;
+  }
   if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
     sendJson(res, 200, { status: "ok", model: DEFAULT_MODEL });
     return;

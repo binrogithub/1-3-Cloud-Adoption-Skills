@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # claude-maas — isolated launcher for the official Claude Code CLI.
 #
-# Injects ONLY the Huawei MaaS Anthropic endpoint, Bearer token, and fixed
-# glm-5.2 model into the child process environment, then execs the real
-# claude binary. Starts no service, converts no protocol, listens on no port.
+# Injects ONLY the configured Anthropic-compatible endpoint, Bearer token, and
+# model into the child process environment, then execs the real claude binary.
+# Starts no service, converts no protocol, listens on no port.
 #
-# Configuration:
-#   ~/.config/claude-maas/config.json  (mode 0600) — non-secret settings
-#   ~/.config/claude-maas/api-key      (mode 0600) — raw single-line MaaS key
+# Configuration (PRD UPSTREAM_PROFILE_V1 D7): all paths derive from a single
+# profile name so the same launcher serves any upstream without forking:
+#   CLAUDE_MAAS_PROFILE  (default: claude-maas)
+#   ~/.config/$PROFILE/config.json  (mode 0600) — non-secret settings
+#   ~/.config/$PROFILE/api-key      (mode 0600) — raw single-line key
+#   ~/.$PROFILE/                    — isolated CLAUDE_CONFIG_DIR
 #
 # The key file is read as DATA (IFS= read -r), never sourced or eval'd.
 # The key never appears in argv, logs, or error messages.
@@ -23,10 +26,13 @@ die() {
     exit 1
 }
 
-config_dir="$HOME/.config/claude-maas"
+# D7: a single profile variable derives every path. Default keeps the
+# historical claude-maas layout byte-for-byte.
+profile="${CLAUDE_MAAS_PROFILE:-claude-maas}"
+config_dir="$HOME/.config/$profile"
 config_file="$config_dir/config.json"
 key_file="$config_dir/api-key"
-claude_config_dir="$HOME/.claude-maas"
+claude_config_dir="$HOME/.$profile"
 
 ###############################################################################
 # Locate the real claude binary, excluding this script itself
@@ -40,13 +46,8 @@ self_path=$(readlink -f "$0" 2>/dev/null || echo "$0")
 claude_bin=""
 while IFS= read -r candidate; do
     candidate_resolved=$(readlink -f "$candidate" 2>/dev/null || echo "$candidate")
-    # Skip if this resolves to our own script.
+    # Skip if this resolves to our own script (by path, not by name).
     if [[ "$candidate_resolved" == "$self_path" ]]; then
-        continue
-    fi
-    # Skip if the basename is claude-maas (a symlink to us, etc.).
-    cand_base=$(basename "$candidate_resolved")
-    if [[ "$cand_base" == "claude-maas" ]]; then
         continue
     fi
     claude_bin="$candidate_resolved"
@@ -63,8 +64,6 @@ if [[ -z "$claude_bin" ]]; then
         [[ -x "$_candidate" ]] || continue
         _resolved=$(readlink -f "$_candidate" 2>/dev/null || echo "$_candidate")
         [[ "$_resolved" == "$self_path" ]] && continue
-        _base=$(basename "$_resolved")
-        [[ "$_base" == "claude-maas" ]] && continue
         claude_bin="$_resolved"
         break
     done

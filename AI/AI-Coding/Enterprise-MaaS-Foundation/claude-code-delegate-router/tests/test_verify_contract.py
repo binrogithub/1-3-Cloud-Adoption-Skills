@@ -33,9 +33,10 @@ VERIFY = ROOT / "scripts" / "verify.sh"
 KEY_VALUE = "super-secret-maas-key-DO-NOT-LEAK"
 MODEL = "glm-5.2"
 
-# The six gate names in the exact order verify.sh must report them.
+# The gate names in the exact order verify.sh must report them.
 EXPECTED_GATES = [
     "config-modes",
+    "auth-enforcement",
     "direct-api",
     "token-only-claude-cli",
     "tool-round-trip",
@@ -197,8 +198,10 @@ def test_each_gate_reports_pass_or_fail(fake_home, fake_bin_dir):
         # Find the line containing this gate name.
         gate_lines = [ln for ln in result.stdout.splitlines() if gate in ln]
         assert gate_lines, f"no output line for gate '{gate}'"
-        # At least one of those lines must mention PASS or FAIL.
-        assert any("PASS" in ln or "FAIL" in ln for ln in gate_lines), (
+        # At least one of those lines must mention PASS, FAIL, or N/A
+        # (auth-enforcement is N/A when the base URL is not the loopback
+        # adapter — the stub environment cannot host one).
+        assert any("PASS" in ln or "FAIL" in ln or "N/A" in ln for ln in gate_lines), (
             f"gate '{gate}' line lacks PASS/FAIL verdict:\n{gate_lines}"
         )
 

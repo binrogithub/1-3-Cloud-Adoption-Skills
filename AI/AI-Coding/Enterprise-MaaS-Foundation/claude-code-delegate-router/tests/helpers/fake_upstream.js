@@ -279,6 +279,52 @@ const scenarios = {
     }));
   },
 
+  // Non-streaming response with a valid tool call — used by L1-A retry tests.
+  // The adapter's retryToolCallArgs sends stream:false with tool_choice.
+  nonstream_tool_valid(res) {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({
+      id: "chatcmpl-retry", model: "glm-5.2",
+      choices: [{ index: 0, message: { role: "assistant", content: null,
+        tool_calls: [{ id: "call_retry", function: { name: "get_weather", arguments: '{"city":"Beijing"}' } }] },
+        finish_reason: "tool_calls" }],
+      usage: { prompt_tokens: 5, completion_tokens: 1 },
+    }));
+  },
+
+  // Non-streaming response with STILL-malformed tool args — retry fails.
+  nonstream_tool_malformed(res) {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({
+      id: "chatcmpl-retry", model: "glm-5.2",
+      choices: [{ index: 0, message: { role: "assistant", content: null,
+        tool_calls: [{ id: "call_retry", function: { name: "get_weather", arguments: '{"city":' } }] },
+        finish_reason: "tool_calls" }],
+      usage: { prompt_tokens: 5, completion_tokens: 1 },
+    }));
+  },
+
+  // Two tool calls in one stream: first malformed, second valid.
+  // G2 (PRD LOOP_CONTINUITY_V1): the second valid call must NOT be dropped.
+  tool_malformed_then_valid(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    res.write(openaiChunk({ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "get_weather", arguments: '{"city":' } }] } }));
+    res.write(openaiChunk({ delta: { tool_calls: [{ index: 1, id: "call_2", function: { name: "get_time", arguments: '{"zone":"UTC"}' } }] } }));
+    res.write(openaiChunk({ finish_reason: "tool_calls" }));
+    res.end("data: [DONE]\n\n");
+  },
+
+  // Visible text THEN a malformed tool call in the same stream.
+  // M3-G (PRD LOOP_CONTINUITY_V2): the adapter's non-streaming retry must not
+  // cause the already-streamed text to appear twice on the client.
+  text_then_malformed_tool(res) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    res.write(openaiChunk({ delta: { content: "Let me check the weather." } }));
+    res.write(openaiChunk({ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "get_weather", arguments: '{"city":' } }] } }));
+    res.write(openaiChunk({ finish_reason: "tool_calls" }));
+    res.end("data: [DONE]\n\n");
+  },
+
   // Slow reasoning: initial usage chunk (so fetch() resolves), then 1
   // reasoning chunk every 10s for a few rounds, then text + finish.
   // Used by time-driven keepalive reverse gate (PRD TIME_DRIVEN_KEEPALIVE §4.1).
@@ -372,6 +418,20 @@ const server = http.createServer(async (req, res) => {
     if (m) scenario = m[1];
   }
   if (!scenario) scenario = "reasoning_then_text";
+
+  // L1-A retry detection (PRD LOOP_CONTINUITY_V1): the adapter sends a
+  // non-streaming request (stream:false) with tool_choice when retrying
+  // malformed tool args.  Route these to a valid non-streaming tool response
+  // so the retry succeeds.  The "retry_fail" scenario still returns malformed.
+  if (parsed.stream === false && parsed.tool_choice) {
+    if (scenario === "retry_fail") {
+      scenarios.nonstream_tool_malformed(res);
+    } else {
+      scenarios.nonstream_tool_valid(res);
+    }
+    return;
+  }
+
   const handler = scenarios[scenario];
   if (!handler) { res.writeHead(400, { "content-type": "application/json" }); res.end(JSON.stringify({ error: `unknown scenario: ${scenario}` })); return; }
 

@@ -148,6 +148,13 @@ NO model fallback chain
 （`adapter/server.js`）用于 `claude-maas`。它单模型单上游、无路由决策、无 fallback、
 无网关依赖，不是 Sidecar 或 HTTP proxy。详见
 `docs/PRD_MAAS_STREAM_RELIABILITY_PRODUCTION_CLOSURE_V2.md`。
+**不变量的准确含义（PRD UPSTREAM_PROFILE_V1 D4 澄清）**：「单模型单上游」
+约束的是**每个适配器实例的基数**——一个实例在任一时刻只服务一个模型、
+对接一个上游、无路由、无 fallback——**不是**绑定 `glm-5.2` 这个字面量，
+也不是全局只允许一个实例。模型、URL、key 由部署配置（env 文件）决定；
+多个 profile 实例（如 `claude-glm`）各自独立且须满足同等安全水位，
+由 `scripts/window-check-v12.sh` 的 N1-G 门禁逐实例校验。
+
 
 ## 6. MaaS 直连契约
 
