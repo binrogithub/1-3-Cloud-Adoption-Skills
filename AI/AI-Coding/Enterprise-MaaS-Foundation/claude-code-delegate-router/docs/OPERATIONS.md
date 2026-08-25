@@ -94,7 +94,18 @@ printf '%s\n' "$HUAWEI_MAAS_API_KEY" \
 ```
 
 Prerequisites: Linux with systemd, root/sudo, Node ≥ 22, the official `claude`
-CLI on PATH.
+CLI on PATH, **Python ≥ 3.7**.
+
+> Python ≥ 3.7 is needed by the install-time canary probe
+> (`tests/live_maas_probe.py` uses `from __future__ import annotations` and
+> `dataclasses`). The runtime launcher and the installer's inline python are
+> 3.6-safe — only the canary needs 3.7+. On CentOS/RHEL 8 the default
+> `python3` is 3.6: `dnf install python39` (it does **not** replace the
+> system `python3`) and re-run bootstrap with
+> `--python /usr/bin/python3.9`. Bootstrap preflights the version before
+> writing anything and fails with an explicit version message — a canary
+> that cannot execute is reported as such, never as "MaaS rejected the
+> request".
 
 What bootstrap does:
 
@@ -207,12 +218,28 @@ printf '%s\n' "$NEW_HUAWEI_MAAS_API_KEY" \
 
 Rotation is idempotent: bootstrap atomically rewrites the env file (temp file +
 rename, 0600 preserved), redeploys adapter artifacts, and restarts the service.
-The client config is unchanged (dummy key + loopback URL), so no `--force` is
-needed. After rotation, run `./scripts/verify.sh` to confirm the new key works.
+The client config is unchanged (same client key + loopback URL), so no `--force`
+is needed. After rotation, run `./scripts/verify.sh` to confirm the new key works.
 
 **Rotate the key after any interactive-channel exposure** (e.g. a key pasted
 into a chat for testing). The deployment acceptance in this project's release
 used a test key that should be rotated before production use.
+
+### Client-key rotation (adapter auth)
+
+`/v1/messages` requires the per-install client key (401 otherwise). To
+rotate it:
+
+```bash
+sudo rm /etc/claude-code-proxy/client.key
+printf '%s\n' "$HUAWEI_MAAS_API_KEY" \
+  | sudo bash scripts/bootstrap.sh \
+      --maas-url https://api-ap-southeast-1.modelarts-maas.com/v2/chat/completions
+```
+
+A fresh random key is generated and re-issued to the client in the same run.
+`--legacy-auth` keeps the pre-v1.2 open behavior if an un-migrated local
+client still depends on it — remove the flag once migrated.
 
 ## Uninstall
 
@@ -220,6 +247,98 @@ used a test key that should be rotated before production use.
 ./scripts/uninstall.sh            # default: remove wrappers/hooks, keep key + audit
 ./scripts/uninstall.sh --purge    # explicit: also remove ~/.claude-maas and audit
 ```
+
+## Local temporary profiles (e.g. claude-glm)
+
+`client/claude-glm` is **not part of the release** (PRD
+UPSTREAM_PROFILE_V1 P-B). Local-only profile wrappers live outside the
+repository — e.g. `/usr/local/lib/claude-glm-local/claude-glm`, a one-line
+shim: `CLAUDE_MAAS_PROFILE=claude-glm exec <repo>/client/claude-maas "$@"`.
+
+Rules for a local profile:
+
+- **Not in the release support matrix** — no release-notes coverage, no
+  repo-tracked code (S9 stays closed: no untracked executable enters PATH
+  from the repo).
+- **Must meet the same security bar** as the main profile. Every backing
+  listener must: match the repo build (`sha256(server.js)`), enforce
+  client-key auth (anonymous and cross-profile requests → 401), and run
+  under a systemd unit with the full hardening set.
+  `scripts/window-check-v12.sh` (N1-G) checks all three per listener —
+  a noncompliant clone fails the release gate.
+- Install the backing instance with
+  `bootstrap.sh --profile claude-glm --maas-url <url> --model <model> --port <p>`,
+  which derives `/etc/claude-glm-proxy/`, `/opt/claude-glm-proxy/`,
+  `claude-glm-proxy.service`, `~/.config/claude-glm/`, and an independent
+  client key.
+- Upstream behavior differences (e.g. Zhipu's tight 429 rate limiting) are
+  documented in `docs/UPSTREAMS.md`.
+
+## Auto-continue on stream protocol error (WP-B)
+
+When a headless task dies on `API Error: stream protocol error`, the
+supervisor (`scripts/auto_continue.py`) waits 100s and resumes the **same
+session** with `continue`, up to 2 retries, then gives up. This automates
+the single most common manual intervention (48% of historical incidents).
+
+Env knobs:
+
+| Var | Default | Meaning |
+| --- | --- | --- |
+| `MAAS_AUTO_CONTINUE` | `1` | `0` disables supervision entirely |
+| `MAAS_AUTO_CONTINUE_MAX` | `2` | retry budget after the initial attempt |
+| `MAAS_AUTO_CONTINUE_DELAY` | `100` | seconds to wait before each retry |
+
+Consumers: `scripts/delegate`, `scripts/workflow`, and
+`client/claude-maas-run` (ad-hoc headless tasks) — all three share the same
+supervisor module; there is no second implementation.
+
+Scope limits (by design):
+
+- **Only stream-protocol errors retry.** 401/400/503-OVER_CAPACITY and
+  client aborts are terminal — retrying them is useless or harmful.
+- **429 is not covered yet**: the adapter currently masks upstream 429 as
+  502 (PRD_UPSTREAM_PROFILE_V1 §D5); until that is fixed the marker is not
+  reliably distinguishable.
+- **Interactive TUI sessions are not supported** — the supervisor cannot
+  reliably inject keystrokes into a running TUI. Headless `-p` only.
+  Consequence (PRD RELEASE_V13 S3-c, known and intentional): when the
+  adapter's retry chain (now 2 attempts) still cannot recover a malformed
+  tool call, an **interactive** session shows the API error and needs a
+  manual `continue` — there is no automatic recovery on that path. The
+  observed residual after the second retry is ~0.7% of malformed-args
+  events.
+
+**Side-effect warning**: `continue` may re-run tools that already executed
+earlier in the same turn. On the specific failure path covered here the
+triggering tool call was never executed (the adapter degraded it before
+execution — LOOP_CONTINUITY_V1 §L1-B), so the retry itself is clean at the
+moment it fires; but tools completed *before* the malformed call in the same
+turn can be redone. For high-side-effect tasks (publish, destructive
+writes) set `MAAS_AUTO_CONTINUE=0`.
+
+Observability: every retry decision and final outcome is appended to
+`~/.claude-hybrid/auto-continue-audit.jsonl` (mode 0600) as
+`{"type":"auto_continue","session_id":…,"attempt":…,"trigger":…,"outcome":…}`.
+In-process counters `auto_continue_{attempted,succeeded,abandoned}` are
+exposed by the module — without them you cannot tell rescue from spin.
+
+## Release soak window (v1.2 gates)
+
+`make window-check` evaluates the RELEASE_V12 host gates any time:
+
+- **N1-G** — no project-derived listener besides `:3000` (guards against
+  unmanaged adapter clones like the retired `claude-glm-proxy`/`server_capture`).
+- **N2-G** — `:3001` capture clone stays offline, no autostart entries.
+- **N4-G** — `/status` stop_reasons sum equals journald `request_end` since
+  service boot (both sides reset together; fails if non-streaming logging
+  drifts again).
+
+`make window-open` stamps a 24h soak window
+(`/etc/claude-code-proxy/window-v12.json`); a later `make window-check`
+reports elapsed time, `request_end` volume (needs ≥200), and
+`MAAS_AUTH_REJECTED` count (each must be explainable). Tag `v1.2` only when
+the window has elapsed and all gates are green.
 
 Default uninstall removes the project marker block, owned hook entry, wrapper
 symlinks, and agent/skill files. It **retains** `~/.claude-maas`, the key, and
@@ -265,6 +384,12 @@ If `verify.sh` fails on a protocol canary gate:
 
 Fails immediately. No retry, no OAuth fallback. Check key rotation. The key is
 never printed in error output.
+
+**Since v1.2** a 401 from the adapter (`http://127.0.0.1:3000`) usually means
+a client-key mismatch, not an upstream problem: the client's
+`~/.config/claude-maas/api-key` must match `/etc/claude-code-proxy/client.key`.
+Re-run bootstrap to re-issue both sides. `GET /status` shows
+`client_auth: "enforced" | "legacy"` and `test_upstream` state.
 
 ### Failed delegation
 

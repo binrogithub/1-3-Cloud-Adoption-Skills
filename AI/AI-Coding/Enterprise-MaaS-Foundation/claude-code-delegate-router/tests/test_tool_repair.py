@@ -62,6 +62,8 @@ def _start_adapter(upstream_port: int, extra_env: dict | None = None) -> tuple[s
     env["PROXY_HOST"] = "127.0.0.1"
     env["ANTHROPIC_PROXY_BASE_URL"] = f"http://127.0.0.1:{upstream_port}/v1/chat/completions"
     env["CLAUDE_CODE_PROXY_API_KEY"] = "test-key"
+    env["MAAS_TEST_UPSTREAM"] = "1"
+    env["MAAS_CLIENT_KEY_FILE"] = str(Path(__file__).parent / "no-client.key")
     env["MAAS_CONNECT_TIMEOUT"] = "5"
     env["MAAS_IDLE_TIMEOUT"] = "30"
     env["MAAS_TOTAL_TIMEOUT"] = "60"
@@ -233,15 +235,20 @@ _REVERSE_SCENARIOS = [
 @pytest.mark.parametrize("mode", ["observe", "enforce"])
 @pytest.mark.parametrize("scenario,desc", _REVERSE_SCENARIOS)
 def test_unresolvable_args_no_tool_use(upstream, mode, scenario, desc):
-    """D1 reverse (PRD RELEASE_V10 D2): unresolvable tool args must never produce
-    a tool_use block or fabricated input — in BOTH observe and enforce modes.
+    """D1 reverse (PRD RELEASE_V10 D2) + L1-B (PRD LOOP_CONTINUITY_V1):
+    unresolvable tool args must never produce a tool_use block with fabricated
+    input — in BOTH observe and enforce modes.  Retry is disabled to isolate
+    the degradation path (with retry, the adapter may get a valid tool_use
+    from upstream — that path is tested in test_loop_continuity.py).
 
     observe: hard-fail (error frame, outcome upstream_failed).
-    enforce: safe-degrade (text block, outcome completed, degraded true).
+    enforce: degrade + error (no silent end_turn, degraded true).
     """
     upstream_port = upstream
-    adapter_proc, adapter_port = _start_adapter(
-        upstream_port, extra_env={"MAAS_TOOL_ARG_MODE": mode})
+    extra = {"MAAS_TOOL_ARG_MODE": mode}
+    if mode == "enforce":
+        extra["MAAS_TOOL_ARG_RETRY"] = "0"  # isolate degradation path
+    adapter_proc, adapter_port = _start_adapter(upstream_port, extra_env=extra)
     try:
         status, body = _post_stream_with_tools(adapter_port, scenario)
         events = _parse_sse_events(body)
@@ -265,29 +272,30 @@ def test_unresolvable_args_no_tool_use(upstream, mode, scenario, desc):
                 f"{scenario} [observe]: degraded={entry.get('degraded')} expected False"
             )
         else:
-            # enforce: safe degradation — no error, message_stop, stop_reason end_turn.
+            # enforce after L1 (PRD LOOP_CONTINUITY_V1): the retry could not
+            # produce valid args, so the turn degrades — but it MUST surface an
+            # error rather than end silently.  A silent end_turn terminates the
+            # Claude Code agent loop with 0% self-recovery, which is the defect
+            # this contract now forbids.
             has_error = any(e.get("type") == "error" for e in events)
-            assert not has_error, (
-                f"{scenario} [enforce]: unexpected error in degradation: {body[:300]}"
-            )
-            has_message_stop = any(e.get("type") == "message_stop" for e in events)
-            assert has_message_stop, (
-                f"{scenario} [enforce]: no message_stop — stream did not end cleanly: {body[:300]}"
+            assert has_error, (
+                f"{scenario} [enforce]: degradation ended the turn without an "
+                f"error frame — the agent loop would stop silently: {body[:300]}"
             )
             message_deltas = [e for e in events if e.get("type") == "message_delta"]
-            if message_deltas:
-                stop_reason = message_deltas[0].get("data", {}).get("delta", {}).get("stop_reason")
-                assert stop_reason == "end_turn", (
-                    f"{scenario} [enforce]: stop_reason={stop_reason} expected end_turn"
+            for md in message_deltas:
+                stop_reason = md.get("data", {}).get("delta", {}).get("stop_reason")
+                assert stop_reason != "end_turn", (
+                    f"{scenario} [enforce]: silent end_turn on a degraded turn"
                 )
-            # Structured log: outcome completed, degraded true.
+            # Structured log: degraded true, protocol error reason recorded.
             entry = _read_request_end(adapter_proc)
             assert entry is not None, f"{scenario} [enforce]: no request_end log"
             assert entry.get("degraded") is True, (
                 f"{scenario} [enforce]: degraded={entry.get('degraded')} expected True"
             )
-            assert entry.get("outcome") == "completed", (
-                f"{scenario} [enforce]: outcome={entry.get('outcome')} expected completed"
+            assert entry.get("protocol_error_reason"), (
+                f"{scenario} [enforce]: protocol_error_reason missing: {entry}"
             )
     finally:
         adapter_proc.terminate()
@@ -304,14 +312,17 @@ def test_unresolvable_args_no_tool_use(upstream, mode, scenario, desc):
 
 @pytest.mark.parametrize("mode", ["observe", "enforce"])
 def test_schema_gate_no_tool_use(upstream, mode):
-    """D1 schema gate (PRD RELEASE_V10 D2): repaired args missing a required
-    field → gate 3 rejects.  No tool_use block in either mode.
+    """D1 schema gate (PRD RELEASE_V10 D2) + L1-B: repaired args missing a
+    required field → gate 3 rejects.  No tool_use block in either mode.
+    Retry disabled to isolate the degradation path.
 
     Schema requires city+unit; repair only produces city.
     """
     upstream_port = upstream
-    adapter_proc, adapter_port = _start_adapter(
-        upstream_port, extra_env={"MAAS_TOOL_ARG_MODE": mode})
+    extra = {"MAAS_TOOL_ARG_MODE": mode}
+    if mode == "enforce":
+        extra["MAAS_TOOL_ARG_RETRY"] = "0"  # isolate degradation path
+    adapter_proc, adapter_port = _start_adapter(upstream_port, extra_env=extra)
     try:
         tools = [{
             "name": "get_weather",
@@ -338,13 +349,11 @@ def test_schema_gate_no_tool_use(upstream, mode):
                 f"schema_gate [observe]: expected error frame: {body[:300]}"
             )
         else:
+            # L1-B: the degraded turn must surface an error, never end silently.
             has_error = any(e.get("type") == "error" for e in events)
-            assert not has_error, (
-                f"schema_gate [enforce]: unexpected error in degradation: {body[:300]}"
-            )
-            has_message_stop = any(e.get("type") == "message_stop" for e in events)
-            assert has_message_stop, (
-                f"schema_gate [enforce]: no message_stop: {body[:300]}"
+            assert has_error, (
+                f"schema_gate [enforce]: degradation ended the turn without an "
+                f"error frame — the agent loop would stop silently: {body[:300]}"
             )
     finally:
         adapter_proc.terminate()

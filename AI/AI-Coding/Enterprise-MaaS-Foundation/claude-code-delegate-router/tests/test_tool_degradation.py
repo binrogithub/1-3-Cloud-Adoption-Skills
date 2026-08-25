@@ -4,8 +4,9 @@ Tests that in enforce mode, unresolvable tool args produce a text block
 with a safe message instead of killing the stream.  The tool is NOT executed.
 
 Three gates:
-  §3.1 forward: tool_malformed in enforce → 0 error frames, 1 text block,
-                message_stop, stop_reason: end_turn
+  §3.1 forward: tool_malformed in enforce → 1 text block explaining the
+                skipped call, AND an error frame so the agent loop does not
+                stop silently (PRD LOOP_CONTINUITY_V1 L1-B)
   §3.2 reverse: same scenario → NO tool_use block emitted at all
   §3.3 observe: same scenario in observe → behavior identical to current
                 (1 error frame, no text degradation) — proves the switch is real
@@ -64,6 +65,8 @@ def _start_adapter(upstream_port: int, extra_env: dict | None = None) -> tuple[s
     env["PROXY_HOST"] = "127.0.0.1"
     env["ANTHROPIC_PROXY_BASE_URL"] = f"http://127.0.0.1:{upstream_port}/v1/chat/completions"
     env["CLAUDE_CODE_PROXY_API_KEY"] = "test-key"
+    env["MAAS_TEST_UPSTREAM"] = "1"
+    env["MAAS_CLIENT_KEY_FILE"] = str(Path(__file__).parent / "no-client.key")
     env["MAAS_CONNECT_TIMEOUT"] = "5"
     env["MAAS_IDLE_TIMEOUT"] = "30"
     env["MAAS_TOTAL_TIMEOUT"] = "60"
@@ -132,19 +135,29 @@ def _parse_sse_events(raw: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def test_enforce_degrades_to_text_not_error(upstream):
-    """X1 §3.1: tool_malformed in enforce mode → 0 error frames, 1 text block
-    with safe message, message_stop present, stop_reason: end_turn."""
+def test_enforce_degrades_to_text_and_signals_error(upstream):
+    """X1 §3.1 as amended by PRD LOOP_CONTINUITY_V1 L1-B.
+
+    When retry is disabled (MAAS_TOOL_ARG_RETRY=0), tool_malformed in enforce
+    mode → a text block with the safe message AND an error frame.  The text
+    alone is not enough: a turn that ends with stop_reason end_turn and only
+    that text terminates the Claude Code agent loop, and was measured at 0%
+    self-recovery against 32% for a hard error.
+    """
     upstream_port = upstream
     adapter_proc, adapter_port = _start_adapter(
-        upstream_port, extra_env={"MAAS_TOOL_ARG_MODE": "enforce"})
+        upstream_port, extra_env={"MAAS_TOOL_ARG_MODE": "enforce",
+                                  "MAAS_TOOL_ARG_RETRY": "0"})  # isolate L1-B degradation path
     try:
         status, body = _send_stream(adapter_port, "tool_malformed")
         events = _parse_sse_events(body)
 
-        # No error frames.
+        # An error frame MUST be present — the turn must not end silently.
         has_error = any(e.get("type") == "error" for e in events)
-        assert not has_error, f"enforce mode should not emit error: {body[:300]}"
+        assert has_error, (
+            f"enforce degradation emitted no error frame — the agent loop "
+            f"would stop silently: {body[:300]}"
+        )
 
         # Has a text block with the safe degradation message.
         text_deltas = [e for e in events if e.get("type") == "content_block_delta"
@@ -153,16 +166,12 @@ def test_enforce_degrades_to_text_not_error(upstream):
         assert "未被执行" in text_deltas[0]["data"]["delta"]["text"], \
             f"safe degradation text missing: {text_deltas[0]['data']['delta']['text'][:100]}"
 
-        # message_stop present — stream ended cleanly.
-        has_message_stop = any(e.get("type") == "message_stop" for e in events)
-        assert has_message_stop, f"no message_stop — stream did not end cleanly: {body[:300]}"
-
-        # stop_reason should be end_turn (not tool_use).
+        # No silent end_turn: that is exactly the stop that killed the loop.
         message_deltas = [e for e in events if e.get("type") == "message_delta"]
-        if message_deltas:
-            stop_reason = message_deltas[0].get("data", {}).get("delta", {}).get("stop_reason")
-            assert stop_reason == "end_turn", \
-                f"stop_reason={stop_reason} expected end_turn (no tool executed)"
+        for md in message_deltas:
+            stop_reason = md.get("data", {}).get("delta", {}).get("stop_reason")
+            assert stop_reason != "end_turn", \
+                "degraded turn ended with a silent end_turn"
     finally:
         adapter_proc.terminate()
         try:
@@ -177,12 +186,14 @@ def test_enforce_degrades_to_text_not_error(upstream):
 
 
 def test_enforce_no_tool_use_block(upstream):
-    """X1 §3.2: tool_malformed in enforce mode → NO tool_use block emitted at all.
-    Neither {} nor any fabricated input.  The contract is stronger than
-    'not degraded to {}' — it's 'no tool_use block whatsoever'."""
+    """X1 §3.2: with retry disabled, tool_malformed in enforce mode → NO
+    tool_use block emitted at all (degradation path).  With retry enabled
+    (default), the adapter re-asks upstream and may emit a real tool_use —
+    that path is tested in test_loop_continuity.py::test_g3."""
     upstream_port = upstream
     adapter_proc, adapter_port = _start_adapter(
-        upstream_port, extra_env={"MAAS_TOOL_ARG_MODE": "enforce"})
+        upstream_port, extra_env={"MAAS_TOOL_ARG_MODE": "enforce",
+                                  "MAAS_TOOL_ARG_RETRY": "0"})  # isolate degradation path
     try:
         status, body = _send_stream(adapter_port, "tool_malformed")
         events = _parse_sse_events(body)
@@ -350,11 +361,12 @@ def _status(adapter_port: int) -> dict:
 
 
 def test_d3_enforce_marks_degraded_true(upstream):
-    """D3 forward gate: enforce + tool_malformed → degraded:true in request_end
-    and tool_args_degraded increments on /status."""
+    """D3 forward gate: enforce + tool_malformed (retry disabled) → degraded:true
+    in request_end and tool_args_degraded increments on /status."""
     upstream_port = upstream
     adapter_proc, adapter_port = _start_adapter(
-        upstream_port, extra_env={"MAAS_TOOL_ARG_MODE": "enforce"})
+        upstream_port, extra_env={"MAAS_TOOL_ARG_MODE": "enforce",
+                                  "MAAS_TOOL_ARG_RETRY": "0"})  # isolate degradation path
     try:
         before = _status(adapter_port).get("tool_args_degraded", 0)
         _send_stream(adapter_port, "tool_malformed", timeout=10.0)

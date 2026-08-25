@@ -257,49 +257,167 @@ def _extract_retry_after(stderr_text: str) -> float | None:
 
 
 def _make_real_client(client_bin: str = DEFAULT_CLIENT_BIN, **_: Any) -> ClientCallable:
-    """Build a callable that runs the real claude-maas subprocess."""
+    """Build a callable that runs the real claude-maas subprocess.
+
+    D8 (PRD SECURITY_HARDENING_V1): the goal text travels on stdin, not in
+    argv — ``-p`` with no argument reads the prompt from stdin, so the task
+    text is invisible to other local users via /proc/<pid>/cmdline.
+
+    WP-B (PRD RUNTIME_RESILIENCE_V1): the invocation is supervised for
+    stream-protocol errors — on that marker the supervisor resumes the SAME
+    session (--resume <uuid> -p continue), up to MAAS_AUTO_CONTINUE_MAX
+    retries. Disable with MAAS_AUTO_CONTINUE=0. Only the goal-carrying first
+    attempt reads stdin; retries are fed the literal "continue".
+    """
 
     def _run(goal: str, *, model: str, max_turns: int, timeout: float,
               cwd: str | None = None, client_bin: str = client_bin) -> dict:
-        argv = [
-            client_bin, "-p", goal,
-            "--model", model,
-            "--max-turns", str(max_turns),
-        ]
+        supervisor = _load_supervisor()
+        if supervisor is None or not supervisor.auto_continue_enabled():
+            return _plain_run(goal, model, max_turns, timeout, cwd, client_bin)
+
+        def build(session_id: str, is_resume: bool, prompt: str) -> list[str]:
+            argv = [client_bin, "--model", model, "--max-turns", str(max_turns)]
+            if is_resume:
+                argv += ["--resume", session_id, "-p", prompt]
+            else:
+                argv += ["--session-id", session_id, "-p"]
+            return argv
+
+        home = os.environ.get("HOME", str(Path.home()))
+        cfg_dir = Path(os.environ.get("CLAUDE_CONFIG_DIR") or (Path(home) / ".claude-maas"))
+        return _supervised_run(supervisor, build, goal, cfg_dir, timeout, cwd)
+
+    return _run
+
+
+def _plain_run(goal: str, model: str, max_turns: int, timeout: float,
+               cwd: str | None, client_bin: str) -> dict:
+    argv = [
+        client_bin, "-p",
+        "--model", model,
+        "--max-turns", str(max_turns),
+    ]
+    try:
+        proc = subprocess.run(
+            argv,
+            input=goal,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=cwd,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "ok": False, "stdout": "", "stderr": "client timed out",
+            "status_code": None, "retry_after": None,
+            "tokens_in": 0, "tokens_out": 0,
+            "files_changed": [], "timed_out": True,
+        }
+    stderr_text = proc.stderr or ""
+    status_code = _extract_status_code(stderr_text)
+    retry_after = _extract_retry_after(stderr_text)
+    return {
+        "ok": proc.returncode == 0,
+        "stdout": proc.stdout,
+        "stderr": stderr_text,
+        "status_code": status_code,
+        "retry_after": retry_after,
+        "tokens_in": 0, "tokens_out": 0,
+        "files_changed": [],
+        "timed_out": False,
+    }
+
+
+def _load_supervisor():
+    """Import scripts/auto_continue.py lazily; None when unavailable."""
+    try:
+        import importlib.util
+        import importlib.machinery
+        path = Path(__file__).resolve().parent / "auto_continue.py"
+        if not path.is_file():
+            return None
+        loader = importlib.machinery.SourceFileLoader("auto_continue_supervisor", str(path))
+        spec = importlib.util.spec_from_loader("auto_continue_supervisor", loader)
+        mod = importlib.util.module_from_spec(spec)
+        loader.exec_module(mod)
+        return mod
+    except Exception:
+        return None
+
+
+def _supervised_run(supervisor, build, goal: str, cfg_dir: Path,
+                    timeout: float, cwd: str | None) -> dict:
+    """Run under the auto-continue supervisor while preserving the
+    capture/timeout contract of _plain_run.
+
+    The supervisor's subprocess.run is swapped for a capturing variant for
+    the duration of the call: the first attempt is fed the goal on stdin,
+    retries are fed the literal "continue" (the supervisor owns that
+    prompt; --resume carries the session id).
+    """
+    holder = {"stdout": "", "stderr": "", "timed_out": False}
+    # Bind the REAL subprocess.run before any patching: tests monkeypatch
+    # delegate.subprocess.run, and delegate + supervisor share the same
+    # subprocess module object — resolving the name at call time would
+    # recurse into the patched (this) function.
+    _real_run = subprocess.run
+
+    def _capturing_run(argv, *a, **kw):
+        is_first = "--session-id" in argv
+        stdin_text = goal if is_first else "continue"
         try:
-            proc = subprocess.run(
+            proc = _real_run(
                 argv,
+                input=stdin_text,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
                 cwd=cwd,
             )
+            holder["stdout"] += proc.stdout or ""
+            holder["stderr"] += proc.stderr or ""
+            return proc
         except subprocess.TimeoutExpired:
-            return {
-                "ok": False, "stdout": "", "stderr": "client timed out",
-                "status_code": None, "retry_after": None,
-                "tokens_in": 0, "tokens_out": 0,
-                "files_changed": [], "timed_out": True,
-            }
-        # Parse HTTP status code and Retry-After from stderr.  Claude Code
-        # surfaces upstream HTTP errors in stderr (e.g. "Error: 429 rate limit"
-        # or "HTTP 500").  We scan for a 3-digit status to drive retry logic.
-        stderr_text = proc.stderr or ""
-        status_code = _extract_status_code(stderr_text)
-        retry_after = _extract_retry_after(stderr_text)
-        return {
-            "ok": proc.returncode == 0,
-            "stdout": proc.stdout,
-            "stderr": stderr_text,
-            "status_code": status_code,
-            "retry_after": retry_after,
-            "tokens_in": 0,
-            "tokens_out": 0,
-            "files_changed": [],
-            "timed_out": False,
-        }
+            holder["timed_out"] = True
 
-    return _run
+            class _TimedOut:
+                returncode = 124
+                stdout = ""
+                stderr = "client timed out"
+
+            return _TimedOut()
+
+    orig_run = supervisor.subprocess.run
+    supervisor.subprocess.run = _capturing_run
+    try:
+        result = supervisor.run_with_auto_continue(
+            build,
+            claude_config_dir=cfg_dir,
+        )
+    finally:
+        supervisor.subprocess.run = orig_run
+
+    if holder["timed_out"]:
+        return {
+            "ok": False, "stdout": holder["stdout"],
+            "stderr": "client timed out", "status_code": None,
+            "retry_after": None, "tokens_in": 0, "tokens_out": 0,
+            "files_changed": [], "timed_out": True,
+        }
+    stderr_text = holder["stderr"]
+    status_code = _extract_status_code(stderr_text)
+    retry_after = _extract_retry_after(stderr_text)
+    return {
+        "ok": bool(result.get("ok")),
+        "stdout": holder["stdout"],
+        "stderr": stderr_text,
+        "status_code": status_code,
+        "retry_after": retry_after,
+        "tokens_in": 0, "tokens_out": 0,
+        "files_changed": [],
+        "timed_out": False,
+    }
 
 
 # ---------------------------------------------------------------------------

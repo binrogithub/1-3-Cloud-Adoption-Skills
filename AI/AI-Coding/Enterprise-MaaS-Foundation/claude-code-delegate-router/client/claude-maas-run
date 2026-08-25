@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+"""claude-maas-run — headless wrapper around claude-maas -p with auto-continue.
+
+PRD RUNTIME_RESILIENCE_V1 §B8: the supervisor for stream-protocol-error
+auto-resume, exposed as a CLI for ad-hoc headless tasks. delegate and
+workflow use the same scripts/auto_continue.py module — this wrapper is the
+third consumer, NOT a fourth implementation.
+
+Usage:
+    claude-maas-run "do the task"            # prompt as argument
+    echo "task" | claude-maas-run            # prompt on stdin
+    claude-maas-run --max-turns 12 "task"
+
+Behavior:
+    * First attempt: claude-maas --session-id <uuid> -p (prompt on stdin).
+    * On stream-protocol error: wait MAAS_AUTO_CONTINUE_DELAY (default 100s),
+      retry with --resume <uuid> -p "continue", up to
+      MAAS_AUTO_CONTINUE_MAX (default 2) retries.
+    * MAAS_AUTO_CONTINUE=0 disables supervision entirely.
+    * Only stream-protocol errors are retried (see PRD §B6).
+    * Interactive TUI sessions are NOT supported (PRD §B8).
+
+Side-effect warning (PRD §B7): `continue` can re-run tools that already
+executed earlier in the same turn. For high-side-effect tasks (publish,
+destructive writes) set MAAS_AUTO_CONTINUE=0.
+
+Exit codes: 0 on success, 1 on failure/abandon, 2 on usage error.
+"""
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import importlib.machinery
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "scripts"
+SUPERVISOR_PATH = SCRIPTS_DIR / "auto_continue.py"
+
+
+def _load_supervisor():
+    loader = importlib.machinery.SourceFileLoader("auto_continue_cli", str(SUPERVISOR_PATH))
+    spec = importlib.util.spec_from_loader("auto_continue_cli", loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return mod
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="claude-maas-run",
+        description="Headless claude-maas -p with stream-protocol-error auto-resume.",
+    )
+    parser.add_argument("prompt", nargs="*", help="Task prompt (or pipe it on stdin).")
+    parser.add_argument("--max-turns", type=int, default=None,
+                        help="Pass-through --max-turns for claude-maas.")
+    parser.add_argument("--model", default=None,
+                        help="Pass-through --model for claude-maas.")
+    parser.add_argument("--client-bin", default="claude-maas",
+                        help="Client binary (default: claude-maas).")
+    args, extra = parser.parse_known_args(argv)
+
+    prompt = " ".join(args.prompt).strip()
+    if not prompt and not sys.stdin.isatty():
+        prompt = sys.stdin.read().strip()
+    if not prompt:
+        parser.error("no prompt given (argument or stdin)")
+        return 2
+
+    supervisor = _load_supervisor()
+
+    def build(session_id: str, is_resume: bool, retry_prompt: str) -> list[str]:
+        argv_out = [args.client_bin]
+        if args.model:
+            argv_out += ["--model", args.model]
+        if args.max_turns:
+            argv_out += ["--max-turns", str(args.max_turns)]
+        argv_out += extra
+        if is_resume:
+            argv_out += ["--resume", session_id, "-p", retry_prompt]
+        else:
+            argv_out += ["--session-id", session_id, "-p"]
+        return argv_out
+
+    home = os.environ.get("HOME", str(Path.home()))
+    profile = os.environ.get("CLAUDE_MAAS_PROFILE", "claude-maas")
+    cfg_dir = Path(os.environ.get("CLAUDE_CONFIG_DIR") or (Path(home) / f".{profile}"))
+
+    # Feed the prompt on stdin for the first attempt; retries get the
+    # literal "continue" (the supervisor owns that prompt).
+    real_run = subprocess.run
+
+    def capturing_run(proc_argv, *a, **kw):
+        is_first = "--session-id" in proc_argv
+        return real_run(proc_argv, input=prompt if is_first else "continue",
+                        capture_output=True, text=True, **kw)
+
+    supervisor.subprocess.run = capturing_run
+    result = supervisor.run_with_auto_continue(
+        build,
+        claude_config_dir=cfg_dir,
+    )
+    supervisor.subprocess.run = real_run
+
+    print(json.dumps(result, sort_keys=True))
+    return 0 if result.get("ok") else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

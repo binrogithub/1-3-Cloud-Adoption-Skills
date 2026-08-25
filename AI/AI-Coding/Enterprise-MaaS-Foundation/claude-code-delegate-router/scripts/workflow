@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -58,6 +59,10 @@ WORKFLOWS_DIR = HYBRID_DIR / "workflows"
 AUDIT_FILE = HYBRID_DIR / "route-audit.jsonl"
 
 VALID_MODES = ("fanout", "suborchestrate")
+# D5 (PRD SECURITY_HARDENING V1): run_id and item_id become directory and
+# file names under ~/.claude-hybrid/workflows/. Restrict them to a safe
+# charset so "../" traversal cannot escape the run directory.
+_SAFE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 # Must stay in sync with assets/brief-schema.json task_type enum.  We load the
 # schema at runtime so the two never drift.
 VALID_TASK_TYPES = (
@@ -183,6 +188,8 @@ def _validate_manifest(manifest: Any) -> list[str]:
     run_id = manifest.get("run_id")
     if not isinstance(run_id, str) or not run_id:
         errors.append("run_id must be a non-empty string")
+    elif not _SAFE_ID_RE.match(run_id):
+        errors.append("run_id must match [A-Za-z0-9][A-Za-z0-9._-]{0,63}")
 
     if mode == "fanout":
         items = manifest.get("items")
@@ -232,7 +239,7 @@ def _validate_manifest(manifest: Any) -> list[str]:
         elif verification_timeout < 0:
             errors.append("verification_timeout must be >= 0")
 
-    # Validate per-item max_turns if present.
+    # Validate per-item max_turns and item_id if present.
     if mode == "fanout" and isinstance(manifest.get("items"), list):
         for i, item in enumerate(manifest["items"]):
             if isinstance(item, dict):
@@ -242,6 +249,10 @@ def _validate_manifest(manifest: Any) -> list[str]:
                         errors.append(f"items[{i}].max_turns must be an integer")
                     elif imt < 1:
                         errors.append(f"items[{i}].max_turns must be >= 1")
+                iid = item.get("item_id")
+                if iid is not None:
+                    if not isinstance(iid, str) or not _SAFE_ID_RE.match(iid):
+                        errors.append(f"items[{i}].item_id must match [A-Za-z0-9][A-Za-z0-9._-]{{0,63}}")
 
     return errors
 
@@ -307,6 +318,10 @@ def _ensure_run_dir(run_id: str) -> Path:
 
 def _write_item_result(run_dir: Path, item_id: str, payload: dict) -> Path:
     """Write a per-item result JSON file with mode 0600. Atomic via tmp+rename."""
+    # Defense in depth (D5): even if validation is bypassed, refuse any id
+    # that is not a plain filename component.
+    if not _SAFE_ID_RE.match(item_id or ""):
+        raise ValueError(f"unsafe item_id: {item_id!r}")
     target = run_dir / f"{item_id}.json"
     tmp = target.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(payload, sort_keys=True))

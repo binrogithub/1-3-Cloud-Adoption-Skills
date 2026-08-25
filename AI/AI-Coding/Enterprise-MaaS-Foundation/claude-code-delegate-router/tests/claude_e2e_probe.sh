@@ -24,7 +24,27 @@
 #   PATH                  — must contain the real claude binary
 set -euo pipefail
 
-MODEL="glm-5.2"
+# Pin the profile: these probes verify the MAIN claude-maas deployment. An
+# ambient CLAUDE_MAAS_PROFILE (e.g. a glm session shell) must not redirect
+# the probe to a different profile's config (PRD UPSTREAM_PROFILE_V1 D7).
+CLAUDE_MAAS_PROFILE=claude-maas
+export CLAUDE_MAAS_PROFILE
+
+# D2 (PRD UPSTREAM_PROFILE_V1): the expected model is NOT a literal. It is
+# read from the deployment (config.json), with an env override for tests.
+# The gate asserts deployment self-consistency, not a historical constant.
+MODEL="${PROBE_MODEL:-}"
+if [[ -z "$MODEL" && -f "${HOME}/.config/${CLAUDE_MAAS_PROFILE:-claude-maas}/config.json" ]]; then
+    MODEL="$(python3 - "${HOME}/.config/${CLAUDE_MAAS_PROFILE:-claude-maas}/config.json" <<'PYCFG'
+import json, sys
+try:
+    print(json.load(open(sys.argv[1])).get("model", ""))
+except Exception:
+    print("")
+PYCFG
+)" || true
+fi
+[[ -n "$MODEL" ]] || MODEL="glm-5.2"
 
 ###############################################################################
 # Helpers
@@ -79,6 +99,15 @@ export CLAUDE_CONFIG_DIR
 
 # Ensure ANTHROPIC_API_KEY is NOT exported to the child.
 unset ANTHROPIC_API_KEY 2>/dev/null || true
+
+# Single-model isolation: drop any inherited model-mapping overrides so a
+# background/helper-model request cannot resolve to a different model id and
+# pollute modelUsage (the assertion below requires exactly {glm-5.2}).  The
+# only model instruction the child sees is --model on the command line.
+unset ANTHROPIC_MODEL 2>/dev/null || true
+unset ANTHROPIC_DEFAULT_OPUS_MODEL 2>/dev/null || true
+unset ANTHROPIC_DEFAULT_SONNET_MODEL 2>/dev/null || true
+unset ANTHROPIC_DEFAULT_HAIKU_MODEL 2>/dev/null || true
 
 ###############################################################################
 # Step 1: Invoke claude with a simple prompt and check modelUsage

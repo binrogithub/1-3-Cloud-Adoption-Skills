@@ -77,6 +77,8 @@ def _start_adapter(
     env["PROXY_HOST"] = "127.0.0.1"
     env["ANTHROPIC_PROXY_BASE_URL"] = f"http://127.0.0.1:{upstream_port}/v1/chat/completions"
     env["CLAUDE_CODE_PROXY_API_KEY"] = api_key
+    env["MAAS_TEST_UPSTREAM"] = "1"
+    env["MAAS_CLIENT_KEY_FILE"] = str(Path(__file__).parent / "no-client.key")
     env["MAAS_CONNECT_TIMEOUT"] = "5"
     env["MAAS_IDLE_TIMEOUT"] = "300"  # high so idle doesn't fire during slow tests
     env["MAAS_TOTAL_TIMEOUT"] = "600"
@@ -361,6 +363,7 @@ def test_idle_timeout_default_is_150(upstream):
     env["PROXY_HOST"] = "127.0.0.1"
     env["ANTHROPIC_PROXY_BASE_URL"] = f"http://127.0.0.1:{upstream_port}/v1/chat/completions"
     env["CLAUDE_CODE_PROXY_API_KEY"] = "test-key"
+    env["MAAS_TEST_UPSTREAM"] = "1"
     env.pop("MAAS_IDLE_TIMEOUT", None)
     proc = subprocess.Popen(
         ["node", str(CANDIDATE)],

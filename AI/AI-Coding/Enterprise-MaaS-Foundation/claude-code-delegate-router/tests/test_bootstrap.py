@@ -300,14 +300,19 @@ def test_bootstrap_deploys_adapter_artifacts(run_bootstrap):
 # ---------------------------------------------------------------------------
 
 
-def test_bootstrap_client_config_has_dummy_key(run_bootstrap):
+def test_bootstrap_client_config_has_client_key(run_bootstrap):
     run, paths = run_bootstrap
     result = run(stdin_lines=[MAAS_KEY])
     assert result.returncode == 0, result.stderr
 
     client_key = paths["user_home"] / ".config" / "claude-maas" / "api-key"
     assert client_key.is_file()
-    assert client_key.read_text(encoding="utf-8").strip() == "maas-local-proxy"
+    # D2: the client receives the per-install random client key — 64 hex
+    # chars, NOT the legacy dummy.
+    value = client_key.read_text(encoding="utf-8").strip()
+    assert value != "maas-local-proxy"
+    assert len(value) == 64
+    int(value, 16)  # hex
 
 
 def test_bootstrap_client_config_points_at_loopback(run_bootstrap):
@@ -511,7 +516,7 @@ def test_g7_config_dir_override(run_bootstrap, tmp_path):
     # Config must be at the custom dir, not the default.
     custom_key = custom_config_dir / "api-key"
     assert custom_key.is_file()
-    assert custom_key.read_text(encoding="utf-8").strip() == "maas-local-proxy"
+    assert custom_key.read_text(encoding="utf-8").strip() != "maas-local-proxy"
 
     # Default location should NOT have the config.
     default_key = paths["user_home"] / ".config" / "claude-maas" / "api-key"
