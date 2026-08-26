@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  web:
+    image: nginx:1.25-alpine
+    ports:
+      - "8080:80"
+    environment:
+      - API_HOST=api
+      - API_PORT=3000
+    depends_on:
+      - api
+    restart: always
+    cpus: "0.25"
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  api:
+    image: node:18-alpine
+    ports:
+      - "3000"
+    environment:
+      - REDIS_HOST=redis
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=appdb
+      - DB_USER=appuser
+      - DB_PASSWORD=demopass123
+      - NODE_ENV=production
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+    cpus: "0.5"
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    command: ["node", "-e", "const http=require('http');const s=http.createServer((req,res)=>{if(req.url==='/health'){res.writeHead(200);res.end('OK')}else{res.writeHead(200);res.end('API running')}});s.listen(3000,()=>console.log('API on :3000'))"]
+
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: demopass123
+    restart: always
+    cpus: "0.5"
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "appuser", "-d", "appdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:

@@ -1,287 +1,205 @@
-# Huawei Cloud CCI — Serverless Container Migration
+# Huawei Cloud CCI — Docker Compose to Serverless Container Migration
 
-Migrate Docker Compose applications to Huawei Cloud CCI (Cloud Container Instance) serverless containers using the v2 API. This guide walks through the complete end-to-end flow: local deployment, destination setup, and migration.
+Migrate Docker Compose applications to Huawei Cloud CCI (Cloud Container Instance) serverless containers. The migration is **fully AI-assisted** — the AI does practically everything, from parsing the Compose file to deploying workloads on CCI.
 
-## What is CCI?
+## What is Docker Compose?
 
-CCI (Cloud Container Instance) is Huawei Cloud's serverless container service — similar to AWS Fargate and Azure Container Instances. Key characteristics:
+Docker Compose is a tool for defining and running multi-container applications locally via a YAML file (`docker-compose.yaml`). It lets you declare services (containers), volumes, networks, environment variables, ports, and inter-service dependencies in a single file. Ideal for local development and testing, but not designed for scalable production.
 
-- **Serverless** — no cluster nodes to manage (unlike CCE which requires node pools)
-- **Per-second billing** — pay only for the seconds your container is running
-- **Scale-to-zero** — containers can scale to zero when idle, cost goes to $0
-- **Kubernetes API compatible** — uses standard K8s resource models (Deployments, Services, ConfigMaps, Secrets)
-- **v2 API required** — the v1beta1 API strips `securityGroups` from Network spec; must use `cci/v2` for namespaces/workloads and `yangtse/v2` for networks
+## What is Huawei Cloud CCI?
 
-## Architecture
+CCI (Cloud Container Instance) is Huawei Cloud's **serverless** container service. Unlike CCE (which manages full Kubernetes clusters), CCI lets you run containers without managing servers or clusters. Pods are billed **per second** and can scale to zero when idle. Managed via the v2 API (`cci/v2` for workloads, `yangtse/v2` for networks).
+
+## Why Migrate?
+
+| Aspect | Docker Compose (local) | CCI (cloud) |
+|--------|------------------------|-------------|
+| Hosting | Single machine | Serverless (Huawei manages) |
+| Idle cost | Server always on | $0 (scale to zero) |
+| Scalability | None | Configurable replicas |
+| High availability | No | Yes (managed infra) |
+| Billing | Fixed server cost | Per second of active pod |
+
+## How the Migration Works
+
+The migration follows these steps, all executed by the AI:
 
 ```
-Source (Local)                          Destination (Huawei Cloud CCI)
-host:~/app$ docker compose up           CCI Namespace (cci/v2)
-  |- nginx (web)          ---------->     |- Deployment: web (nginx:1.25-alpine)
-  '- redis (cache)        ---------->     '- Deployment: redis (redis:7-alpine)
-                                           Network (yangtse/v2) + NAT Gateway + EIP
+Client: "migrate my docker-compose.yaml to CCI"
+  |
+  |  Step 0: SOURCE DISCOVERY
+  |  AI asks: do you have docker-compose? where? any .env? any data?
+  |
+  |  Step 1: PARSE
+  |  AI parses YAML with yaml.safe_load (correct parsing, no errors)
+  |
+  |  Step 2: DISCOVER HUAWEI CLOUD
+  |  AI discovers VPC, subnet, security groups, project ID, domain ID
+  |
+  |  Step 3: TRANSLATE
+  |  AI translates each Compose service to CCI v2 API resources:
+  |    services.web  -> Deployment (cci/v2)
+  |    .ports        -> Service LoadBalancer + ELB
+  |    .volumes      -> PVC SFS Turbo
+  |    .environment  -> ConfigMap
+  |    .secrets      -> Secret (base64)
+  |    .depends_on   -> init containers
+  |    .cpu/.mem     -> resources.limits (mandatory in CCI)
+  |
+  |  Step 4: PREPARE INFRA
+  |  AI creates: NAT Gateway + EIP + SNAT (internet), ELB (load balancer)
+  |  If build: -> docker build + push to SWR
+  |  If volume data -> obsutil upload to OBS -> SFS Turbo
+  |
+  |  Step 5: DEPLOY
+  |  AI deploys: namespace -> network -> configmaps -> secrets
+  |    -> deployments -> services
+  |
+  |  Step 6: VALIDATE
+  |  AI verifies: pods Running, network Ready, ELB responds
+  |
+  v
+Result: app running on CCI, public ELB URL
 ```
 
-## Prerequisites
+## Architecture: Parser + AI
 
-### One-time: CCI Agency Authorization (per region)
+This scenario uses a **Parser + AI** approach instead of a rigid translation script:
 
-This is the ONLY manual console step:
+```
+docker-compose.yaml
+      |
+      |  Parser (yaml.safe_load — deterministic, correct)
+      v
+  JSON dict (validated)
+      |
+      |  AI (translation logic — intelligent, adaptive)
+      v
+  CCI v2 API payloads (JSON)
+      |
+      |  cci_api_helper.py (deploy)
+      v
+  CCI namespace + network + workloads
+```
 
-1. Go to `https://console-intl.huaweicloud.com/cci/?region=<region>`
-2. Click "Authorize CCI"
-3. This creates `cci_admin_trust` and `cci_instance_trust` IAM agencies
+The parser handles YAML mechanics (anchors, merge keys, multi-line strings). The AI handles all translation logic, intelligent decisions (e.g., suggesting RDS for databases), and edge cases.
 
-### Tools and Credentials
+## What Gets Translated vs What Cannot
 
-- **Huawei Cloud AK/SK** with CCI permissions
-- **Project ID** and **Domain ID** for the target region
-- **KooCLI** (`hcloud`) installed and configured
-- **Python 3.6+** with PyYAML (`pip install pyyaml`)
-- **Docker** + Docker Compose (for the source workload)
-- **Existing VPC, Subnet, Security Group** in the target region
+### Automatically translated:
+
+| Docker Compose | CCI v2 API |
+|----------------|-----------|
+| `services.<name>` | Deployment |
+| `.image` | container.image |
+| `.ports` | Service LoadBalancer + ELB |
+| `.environment` | ConfigMap + env[] |
+| `.volumes` (named) | PVC SFS Turbo |
+| `.secrets` | Secret (base64) |
+| `.depends_on` | init containers |
+| `.healthcheck` | livenessProbe |
+| `.cpu` / `.mem` | resources.limits (mandatory) |
+| `.command` / `.entrypoint` | command / args |
+| `.restart: always` | replicas: 1 |
+| `.restart: "no"` | replicas: 0 (scale to zero) |
+
+### CCI limitations (cannot be migrated):
+
+| Docker Compose Feature | Reason |
+|------------------------|-------|
+| `privileged: true` | CCI does not allow privileged pods |
+| `network_mode: host` | Serverless, no host namespace |
+| `devices` | No device access |
+| `cap_add` / `cap_drop` | No Linux capabilities |
+| `pid: host` | No host PID namespace |
+| DaemonSets | CCI does not support |
+| ClusterIP / NodePort | Only LoadBalancer + ExternalName |
+| Multiple isolated networks | 1 network per namespace in CCI |
+
+The AI detects these cases, explains why they are impossible, and suggests alternatives (CCE, ECS, RDS, etc.). See [`docker-compose-to-cci/references/cci-limitations.md`](./docker-compose-to-cci/references/cci-limitations.md) for the complete list.
 
 ## Skills in This Repository
 
 | Skill | Path | Purpose |
 |-------|------|---------|
-| `cci-cli-deploy` | [`cci/cci-cli-deploy/`](./cci-cli-deploy) | Deploy CCI workloads from the CLI using v2 API with AK/SK signing |
-| `docker-compose-to-cci` | [`cci/docker-compose-to-cci/`](./docker-compose-to-cci) | Translate Docker Compose to CCI Deployments and migrate |
+| `cci-cli-deploy` | [`cci/cci-cli-deploy/`](./cci-cli-deploy) | Deploy CCI workloads from CLI using v2 API with AK/SK signing |
+| `docker-compose-to-cci` | [`cci/docker-compose-to-cci/`](./docker-compose-to-cci) | Migrate Docker Compose to CCI (Parser + AI approach) |
+| `docker-compose-local-demo` | [`cci/docker-compose-local-demo/`](./docker-compose-local-demo) | **(Optional)** Deploy a sample app locally to try the full migration flow |
 
-**Relationship**: `docker-compose-to-cci` depends on `cci-cli-deploy`. The migration skill uses the same `cci_api_helper.py` for CCI API access. You can also use `cci-cli-deploy` standalone to deploy any container to CCI.
-
----
-
-## Example Workload (Source)
-
-Let's migrate a simple web application running locally with Docker Compose.
-
-### docker-compose.yaml
-
-```yaml
-version: "3.8"
-
-services:
-  web:
-    image: nginx:1.25-alpine
-    ports:
-      - "8090:80"
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    depends_on:
-      - redis
-    restart: always
-    cpus: "0.25"
-    mem_limit: 512m
-
-  redis:
-    image: redis:7-alpine
-    restart: always
-    cpus: "0.25"
-    mem_limit: 256m
-```
-
-### Run locally
-
-```bash
-docker compose up -d
-```
-
-Verify:
-
-```bash
-curl -s -o /dev/null -w "%{http_code}" http://localhost:8090
-# -> 200
-
-docker exec <redis-container> redis-cli ping
-# -> PONG
-```
-
-Both services are running locally. Now let's migrate them to CCI.
+**Relationship**: `docker-compose-to-cci` depends on `cci-cli-deploy`. The `docker-compose-local-demo` skill is optional — it deploys a 3-service sample app (nginx + node + postgres) locally so clients without an existing Compose file can experience the migration end-to-end.
 
 ---
 
-## Step 1: Discover Infrastructure
+## Prerequisites
 
-Use KooCLI to find existing VPC, subnet, and security group:
+### Required
 
-```bash
-hcloud VPC ListVpcs --cli-region=sa-brazil-1
-hcloud VPC ListSubnets --cli-region=sa-brazil-1 --vpc_id=<vpc-id>
-hcloud VPC ListSecurityGroups --cli-region=sa-brazil-1
-```
+1. **Huawei Cloud AK/SK** with CCI permissions
+2. **docker-compose.yaml** — your application
+3. **CCI Agency Authorization** (one-time, per region)
+   - Go to: `https://console-intl.huaweicloud.com/cci/?region=<region>`
+   - Click "Authorize CCI"
+   - This creates IAM agencies `cci_admin_trust` and `cci_instance_trust`
 
-Extract these values (needed for all subsequent steps):
+### Optional
 
-| Value | Example | Source |
-|-------|---------|---------|
-| VPC ID | `d277896b-...` | `ListVpcs` |
-| Neutron Subnet ID | `a550f6e0-...` | `ListSubnets` (neutron_subnet_id field) |
-| Security Group ID | `e7078087-...` | `ListSecurityGroups` |
-| VPC CIDR | `192.168.0.0/16` | `ListVpcs` |
-| Project ID | `522793ebec...` | `IAM ListProjects` |
-| Domain ID | `248d91ce30...` | `IAM ListDomains` |
+- **Docker installed** — needed if `build:` is present (to build and push images to SWR)
+- **obsutil** — needed if migrating volume data (upload to OBS -> SFS Turbo)
+- **`docker-compose-local-demo` skill** — only if you want to create a demo app from scratch
 
 ---
 
-## Step 2: Setup CCI Destination
+## Quick Start
 
-Using the **`cci-cli-deploy`** skill to create the destination infrastructure.
-
-### 2a. Create Namespace + Network
+### Scenario A: You already have docker-compose.yaml
 
 ```bash
-python3 cci-cli-deploy/scripts/cci_api_helper.py \
-  --ak <AK> --sk <SK> --project-id <PID> \
-  --region sa-brazil-1 --action setup \
-  --namespace my-app \
-  --network my-app-net \
-  --domain-id <DID> \
-  --subnet-id <neutron-subnet-id> \
-  --sg-id <sg-id>
+# 1. Open opencode
+opencode
+
+# 2. Request the migration
+> migrate my docker-compose.yaml to CCI in sa-brazil-1
 ```
 
-This creates:
-- **Namespace** `my-app` via `POST /apis/cci/v2/namespaces`
-- **Network** `my-app-net` via `POST /apis/yangtse/v2/namespaces/my-app/networks` with `securityGroups` and `networkType: "underlay_neutron"`
+The AI will ask for:
+- Path to docker-compose.yaml
+- Whether there are .env files or secrets
+- Whether there is volume data to migrate
+- AK/SK credentials (if not configured)
 
-### 2b. Create NAT Gateway + EIP (for internet access)
-
-CCI pods need a NAT gateway to pull images from Docker Hub:
+### Scenario B: Full demo (no docker-compose.yaml)
 
 ```bash
-# EIP (pay-per-use)
-hcloud EIP CreatePublicip --cli-region=sa-brazil-1 \
-  --bandwidth.size=5 --bandwidth.share_type=PER \
-  --bandwidth.name=cci-nat-bw --publicip.type=5_bgp
+# 1. Open opencode
+opencode
 
-# NAT gateway (small, pay-per-use)
-hcloud NAT CreateNatGateway --cli-region=sa-brazil-1 \
-  --nat_gateway.name=cci-nat-gw \
-  --nat_gateway.router_id=<vpc-id> \
-  --nat_gateway.internal_network_id=<subnet-id> \
-  --nat_gateway.spec=1
-
-# SNAT rule (allows VPC CIDR to access internet)
-hcloud NAT CreateNatGatewaySnatRule --cli-region=sa-brazil-1 \
-  --snat_rule.nat_gateway_id=<nat-gw-id> \
-  --snat_rule.floating_ip_id=<eip-id> \
-  --snat_rule.source_type=0 \
-  --snat_rule.cidr=192.168.0.0/16
+# 2. Request a demo
+> I want to try the migration to CCI
 ```
+
+The AI will:
+1. Deploy a sample app locally (nginx + node + postgres)
+2. Verify it works on localhost
+3. Migrate the app to CCI
+4. Provide the public URL of the result
+
+### Scenario C: Database migration to RDS
+
+If the AI detects a database container (postgres, mysql, etc.), it will suggest migrating to **RDS** (managed database) using **DRS** (Data Replication Service) instead of running it as a container in CCI. This provides automatic backup, high availability, and scaling.
 
 ---
 
-## Step 3: Migrate
+## Example Workload
 
-Using the **`docker-compose-to-cci`** skill to translate and deploy all services.
+The `docker-compose-local-demo` skill includes a 3-service sample application:
 
-### 3a. Parse (verify the Compose file is understood)
+| Service | Image | Port | CCI Translation |
+|---------|-------|------|-----------------|
+| web | nginx:1.25-alpine | 8080 | Deployment + Service LoadBalancer + ELB |
+| api | node:18-alpine | 3000 | Deployment (internal) |
+| db | postgres:15-alpine | 5432 | Deployment + PVC SFS Turbo (or RDS suggestion) |
 
-```bash
-python3 docker-compose-to-cci/scripts/compose-to-cci.py \
-  parse docker-compose.yaml
-```
-
-Output:
-
-```
-Services: 2
-  web: image=nginx:1.25-alpine ports=['8090:80'] env=2
-  redis: image=redis:7-alpine ports=[] env=0
-```
-
-### 3b. Translate (generate CCI v2 API payloads)
-
-```bash
-python3 docker-compose-to-cci/scripts/compose-to-cci.py \
-  translate docker-compose.yaml \
-  --namespace my-app \
-  --output cci-payloads/
-```
-
-This generates JSON payloads for each service: Deployment, Service (if ports exposed), and ConfigMap (if environment variables).
-
-### 3c. Full Migration (deploy to CCI)
-
-```bash
-python3 docker-compose-to-cci/scripts/compose-to-cci.py \
-  migrate docker-compose.yaml \
-  --namespace my-app \
-  --ak <AK> --sk <SK> --project-id <PID> \
-  --region sa-brazil-1 \
-  --domain-id <DID> \
-  --subnet-id <neutron-subnet-id> \
-  --sg-id <sg-id>
-```
-
-Output:
-
-```
-Creating namespace my-app...
-  Namespace: 201 - my-app
-Creating network...
-  Network: 201 - my-app-net
-
-Translating service: web
-  Deployment: 201
-  Waiting for pod...
-  RUNNING! podIP=192.168.10.102
-
-Translating service: redis
-  Deployment: 201
-  Waiting for pod...
-  RUNNING! podIP=192.168.10.125
-```
-
----
-
-## Step 4: Validate
-
-Verify all pods are running in CCI:
-
-```bash
-python3 cci-cli-deploy/scripts/cci_api_helper.py \
-  --ak <AK> --sk <SK> --project-id <PID> \
-  --region sa-brazil-1 --action status \
-  --namespace my-app
-```
-
-Output:
-
-```
-  redis-6779d664b6-r8cv5: Running ip=192.168.10.125
-  web-66dcfbc98f-sspbs: Running ip=192.168.10.102
-```
-
-Both pods are Running with distinct pod IPs. The `web` pod can reach `redis` via internal DNS: `redis.my-app.svc.cluster.local`.
-
----
-
-## Step 5: Cleanup
-
-### Clean up CCI (destination)
-
-```bash
-python3 cci-cli-deploy/scripts/cci_api_helper.py \
-  --ak <AK> --sk <SK> --project-id <PID> \
-  --region sa-brazil-1 --action cleanup \
-  --namespace my-app
-```
-
-Then delete NAT gateway and EIP:
-
-```bash
-hcloud NAT DeleteNatGateway --cli-region=sa-brazil-1 --nat_gateway_id=<nat-gw-id>
-hcloud EIP DeletePublicip --cli-region=sa-brazil-1 --publicip_id=<eip-id>
-```
-
-### Clean up Docker Compose (source)
-
-```bash
-docker compose down --remove-orphans
-```
+This sample covers: ports, environment, depends_on, volumes, restart, cpu/mem limits, healthchecks — the most common migration cases.
 
 ---
 
@@ -294,45 +212,68 @@ docker compose down --remove-orphans
 | CI/CD runner idle 22h/day | Server always on | $0 (scale to zero) |
 | Batch job 10 min/day | Server always on | Pay only 10 min/day |
 
-**Key insight**: CCI's per-second billing with scale-to-zero eliminates idle compute costs — the biggest advantage over always-on Docker Compose hosts.
+All CCI resources are pay-per-use:
+
+| Resource | Configuration | Billing |
+|----------|--------------|---------|
+| CCI Pods | CPU + memory requests | Per second |
+| EIP | 5_bgp, per-bandwidth | Per hour |
+| NAT Gateway | spec=1 (small) | Per hour |
+| SFS Turbo | PVC storage | Per GB/hour |
+| ELB | Load balancer | Per hour |
+| ConfigMap / Secret | - | Free |
 
 ---
 
-## Key Limitations
+## File Structure
 
-| Limitation | Impact | Workaround |
-|------------|--------|------------|
-| No ClusterIP or NodePort services | Compose `ports` need LoadBalancer | Create ELB and annotate with `kubernetes.io/elb.id` |
-| Only SFS Turbo for persistent storage | No EVS (block) or OBS (object) as PVC | Use SFS Turbo with `storageClassName: sfs-turbo` |
-| Resource limits mandatory | Compose files often omit CPU/memory | Script adds defaults: 250m CPU, 512Mi memory |
-| SWR internal endpoint may not be reachable | Image pulls from SWR can timeout | Use Docker Hub images with NAT gateway |
-| v1beta1 strips securityGroups | Network creation fails with 400 | Always use v2 API (`cci/v2` + `yangtse/v2`) |
-| Namespace store separation | v1 namespaces invisible to v2 APIs | Create namespaces via `cci/v2` only |
+```
+cci/
+  README.md                                    <- this file
+  cci-cli-deploy/                              <- base CCI deployment skill
+    SKILL.md
+    scripts/cci_api_helper.py
+    references/...
+    readme.md
+  docker-compose-to-cci/                       <- migration skill (Parser + AI)
+    SKILL.md
+    scripts/
+      cci_api_helper.py                        <- shared CCI API client
+      compose_parser.py                        <- YAML parser + validator
+    references/
+      translation-table.md                     <- field-by-field mapping
+      compose-examples.md                      <- worked examples
+      cci-limitations.md                       <- impossible features + alternatives
+      cci-networking.md                        <- networking via v2 API
+      cci-storage-sfs-turbo.md                 <- SFS Turbo storage
+      docker-compose-to-cci.md                 <- additional notes
+    readme.md
+  docker-compose-local-demo/                   <- optional demo skill
+    SKILL.md
+    readme.md
+    assets/
+      sample-compose.yaml                      <- 3-service sample app
+```
 
 ---
 
 ## AI Agent Usage
 
-Both skills can be used as tools by an AI agent (e.g., OpenCode, Claude Code) in a larger migration scenario:
+Both skills can be used as tools by an AI agent (e.g., OpenCode, Claude Code):
 
 ```
 User: "Migrate my Docker Compose app to Huawei Cloud CCI"
 
 AI Agent:
-  1. Reads docker-compose.yaml
-  2. Calls cci-cli-deploy skill:
-     - Discovers VPC/subnet/SG via hcloud
-     - Creates namespace + network via CCI v2 API
-     - Creates NAT gateway + EIP via hcloud
-  3. Calls docker-compose-to-cci skill:
-     - Parses docker-compose.yaml
-     - Translates services to CCI Deployments
-     - Deploys via CCI v2 API
-     - Waits for pods to be Running
-  4. Reports: "Migration complete. 2 pods running on CCI."
+  1. Step 0: Asks user about source environment
+  2. Step 1: Parses docker-compose.yaml with compose_parser.py
+  3. Step 2: Discovers VPC/subnet/SG via hcloud MCP tools
+  4. Step 3: Translates services to CCI v2 API payloads (AI does this)
+  5. Step 4: Creates NAT gateway + EIP + ELB via hcloud CLI
+  6. Step 5: Deploys via cci_api_helper.py (CCI v2 API)
+  7. Step 6: Validates pods are Running, network is Ready
+  8. Reports: "Migration complete. N pods running on CCI. URL: http://<elb-ip>"
 ```
-
-The skills share `cci_api_helper.py` for CCI API access, so the AI agent can reuse the same authenticated client across both skills.
 
 ### Skill Installation
 
@@ -340,6 +281,7 @@ The skills share `cci_api_helper.py` for CCI API access, so the AI agent can reu
 # Copy skills to opencode skills directory
 cp -r cci/cci-cli-deploy ~/.opencode/skills/huaweicloud-cci-cli-deploy
 cp -r cci/docker-compose-to-cci ~/.opencode/skills/huaweicloud-docker-compose-to-cci
+cp -r cci/docker-compose-local-demo ~/.opencode/skills/docker-compose-local-demo
 ```
 
 ---
@@ -348,8 +290,8 @@ cp -r cci/docker-compose-to-cci ~/.opencode/skills/huaweicloud-docker-compose-to
 
 - [CCI Product Page](https://www.huaweicloud.com/intl/en-us/product/cci.html)
 - [CCI Documentation](https://support.huaweicloud.com/intl/en-us/cci/index.html)
-- [`cci-cli-deploy/SKILL.md`](./cci-cli-deploy/SKILL.md) — Complete CCI deployment workflow
-- [`docker-compose-to-cci/SKILL.md`](./docker-compose-to-cci/SKILL.md) — Complete migration workflow
-- [`cci-cli-deploy/references/cci-v2-api-discovery.md`](./cci-cli-deploy/references/cci-v2-api-discovery.md) — Why v1beta1 fails
-- [`cci-cli-deploy/references/huaweicloud-signing.md`](./cci-cli-deploy/references/huaweicloud-signing.md) — SDK-HMAC-SHA256 signing
+- [`cci-cli-deploy/SKILL.md`](./cci-cli-deploy/SKILL.md) — CCI deployment workflow
+- [`docker-compose-to-cci/SKILL.md`](./docker-compose-to-cci/SKILL.md) — Migration workflow (Parser + AI)
+- [`docker-compose-to-cci/references/cci-limitations.md`](./docker-compose-to-cci/references/cci-limitations.md) — CCI limitations and alternatives
 - [`docker-compose-to-cci/references/translation-table.md`](./docker-compose-to-cci/references/translation-table.md) — Complete field mapping
+- [`docker-compose-local-demo/SKILL.md`](./docker-compose-local-demo/SKILL.md) — Optional demo skill
