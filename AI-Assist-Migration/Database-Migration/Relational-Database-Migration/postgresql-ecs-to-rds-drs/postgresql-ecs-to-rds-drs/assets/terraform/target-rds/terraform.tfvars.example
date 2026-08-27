@@ -1,0 +1,65 @@
+###############################################################################
+# Copy to terraform.tfvars and fill in with values discovered via the hcloud MCP.
+#
+# DO NOT put rds_password here. Pass it as an environment variable:
+#   export TF_VAR_rds_password='Migration@2026'
+#
+# Credentials also come from the environment:
+#   export HW_ACCESS_KEY='...'
+#   export HW_SECRET_KEY='...'
+#
+# Add terraform.tfvars, *.tfstate and *.tfstate.backup to .gitignore -
+# the state file contains sensitive values.
+###############################################################################
+
+# Target region - MUST differ from the source region
+region            = "la-north-2"
+availability_zone = "la-north-2a"
+
+#------------------------------------------------------------------------------
+# NETWORK - pick ONE of the two blocks below
+#------------------------------------------------------------------------------
+
+# --- Option A: create a new network (default) ---------------------------------
+create_network      = true
+vpc_name            = "target-vpc"
+vpc_cidr            = "10.0.0.0/16"
+subnet_name         = "target-subnet"
+subnet_cidr         = "10.0.0.0/24"
+subnet_gateway      = "10.0.0.1"
+security_group_name = "target-rds-sg"
+
+# --- Option B: use an existing network ----------------------------------------
+# Discover the IDs with:
+#   hcloud_list_vpcs(region="la-north-2")
+#   hcloud_list_subnets(region="la-north-2")
+#   hcloud_list_security_groups(region="la-north-2")
+#
+# create_network             = false
+# existing_vpc_id            = "..."
+# existing_subnet_id         = "..."
+# existing_security_group_id = "..."
+
+# Optional direct access to the target from one admin host.
+# Leave as "" unless genuinely needed. Must be /32 if set.
+admin_access_cidr = ""
+
+#------------------------------------------------------------------------------
+# RDS
+#------------------------------------------------------------------------------
+# Discover these first - they vary by region:
+#   hcloud_list_rds_datastores(region="la-north-2", database_name="PostgreSQL")
+#   hcloud_list_rds_flavors(region="la-north-2", database_name="PostgreSQL", version_name="16")
+#   hcloud_list_rds_storage_types(region="la-north-2", database_name="PostgreSQL", version_name="16")
+
+instance_name      = "target-rds-postgresql"
+postgresql_version = "16"
+flavor             = "rds.pg.n1.large.2"
+# CLOUDSSD recommended. GPSSD2 / ESSD2 need a provisioned iops value and are
+# rejected at plan time by this configuration.
+volume_type        = "CLOUDSSD"
+volume_size        = 40
+
+# Backups
+backup_start_time = "02:00-03:00"
+backup_keep_days  = 7

@@ -1,0 +1,17 @@
+# terraform.tfvars.example
+# Copy to terraform.tfvars and fill in values.
+# NEVER commit terraform.tfvars with real secrets.
+
+region = "la-north-2"
+
+# Set ECS admin pass via env: export TF_VAR_ecs_admin_password="..."
+# Do NOT uncomment the line below with a real value:
+# ecs_admin_password = "REPLACE_WITH_STRONG_PASSWORD"
+
+# Set RDS pass via env: export TF_VAR_rds_password="..."
+# Do NOT uncomment the line below with a real value:
+# rds_password = "CHANGE_ME_DO_NOT_COMMIT_REAL_PASSWORD"
+
+admin_ssh_cidr = "YOUR_IP/32"
+
+eip_bandwidth_mbps = 10
