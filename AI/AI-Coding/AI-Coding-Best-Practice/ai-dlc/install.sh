@@ -34,7 +34,7 @@ WS_SKILLS_DIR="${SUPERVISOR_DIR}/workspace"
 BIN_DIR="${SCRIPT_DIR}/bin"
 PY=python3.12
 OPENSPEC_VERSION="1.10.0"
-MANIFEST_FILE="${SCRIPT_DIR}/.ai-dlc/install-manifest.json"
+MANIFEST_FILE="${AI_DLC_MANIFEST_FILE:-${SCRIPT_DIR}/.ai-dlc/install-manifest.json}"
 WORKSPACE_SKILLS_DIR="${AI_DLC_SKILLS_DIR:-${HOME}/.jiuwenswarm/agent/workspace/skills}"
 
 # the plane runtime (docs/plane-runtime.md is the living record). The
@@ -718,6 +718,34 @@ GINTRO
   return 0
 }
 
+# ── Copy the whole toolkit + generate SKILL.md at an exact destination ──
+# (K1, K3, K6). Shared by codex-native-skill and claude-native-skill so
+# a self-contained install (SKILL.md alongside bin/plan.py, config/,
+# openspec/ — everything a `/ai-dlc` or Codex-skill invocation needs to
+# actually run, not just read) never drifts between the two targets.
+# Args: target_name kind config_dir dest (absolute path — caller decides
+# whether that's <config_dir>/ai-dlc or <config_dir>/skills/ai-dlc).
+install_full_toolkit() {
+  local target_name="$1" kind="$2" config_dir="$3" dest="$4"
+  info "Installing full toolkit to ${target_name} → ${dest}/"
+  rm -rf "${dest}"
+  mkdir -p "${dest}"
+  cp -r "${SCRIPT_DIR}"/. "${dest}/"
+  rm -rf "${dest}/.git" "${dest}/.ai-dlc" "${dest}/.pytest_cache" "${dest}/PUBLISH_NOTES.md"
+  find "${dest}" -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+  gen_root_skill "${dest}/SKILL.md" || { fail "could not generate SKILL.md at ${dest}"; return 1; }
+  # K6: read-back assert — the toolkit travelled, not just the SKILL.md
+  if [[ ! -f "${dest}/SKILL.md" || ! -f "${dest}/bin/plan.py" ]]; then
+    fail "read-back failed: ${dest}/SKILL.md or bin/plan.py missing after install"
+    return 1
+  fi
+  local dst_sha; dst_sha=$(sha256_file "${dest}/SKILL.md")
+  manifest_update "${target_name}" "${kind}" "${config_dir}" "ai-dlc" \
+    "${dest}/SKILL.md" "${dst_sha}" "."
+  ok "Full toolkit installed for ${target_name} (sha ${dst_sha:0:8}…)"
+  return 0
+}
+
 # Dispatches by the target's `kind` field:
 #   claude-skill         — copy SKILL.md into <config_dir>/skills/<name>/ (existing)
 #   agents-md            — write AGENTS.md with BEGIN/END markers (idempotent)
@@ -726,6 +754,11 @@ GINTRO
 #   codex-native-skill    — copy the whole toolkit into <config_dir>/ai-dlc/
 #                          and generate SKILL.md there (Codex's own native
 #                          skill-directory discovery, done locally)
+#   claude-native-skill   — copy the whole toolkit into
+#                          <config_dir>/skills/ai-dlc/ (config_dir is the
+#                          agent's home, e.g. ~/.claude, matching the
+#                          claude-skill convention) so /ai-dlc is
+#                          self-contained instead of prose with no tools
 install_skills_to_target() {
   local target_name="$1" config_dir="$2" kind="${3:-claude-skill}"
 
@@ -781,24 +814,14 @@ install_skills_to_target() {
   # convention where config_dir is the agent's home and the function
   # appends the per-skill subdirectory itself.
   if [[ "${kind}" == "codex-native-skill" ]]; then
-    local dest="${config_dir}/ai-dlc"
-    info "Installing full toolkit to ${target_name} → ${dest}/"
-    rm -rf "${dest}"
-    mkdir -p "${dest}"
-    cp -r "${SCRIPT_DIR}"/. "${dest}/"
-    rm -rf "${dest}/.git" "${dest}/.ai-dlc" "${dest}/.pytest_cache" "${dest}/PUBLISH_NOTES.md"
-    find "${dest}" -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
-    gen_root_skill "${dest}/SKILL.md" || { fail "could not generate SKILL.md at ${dest}"; return 1; }
-    # K6: read-back assert — the toolkit travelled, not just the SKILL.md
-    if [[ ! -f "${dest}/SKILL.md" || ! -f "${dest}/bin/plan.py" ]]; then
-      fail "read-back failed: ${dest}/SKILL.md or bin/plan.py missing after install"
-      return 1
-    fi
-    local dst_sha; dst_sha=$(sha256_file "${dest}/SKILL.md")
-    manifest_update "${target_name}" "${kind}" "${config_dir}" "ai-dlc" \
-      "${dest}/SKILL.md" "${dst_sha}" "."
-    ok "Full toolkit installed for ${target_name} (sha ${dst_sha:0:8}…)"
-    return 0
+    install_full_toolkit "${target_name}" "${kind}" "${config_dir}" "${config_dir}/ai-dlc"
+    return $?
+  fi
+
+  # ── claude-native-skill: same idea, Claude Code's own directory layout ──
+  if [[ "${kind}" == "claude-native-skill" ]]; then
+    install_full_toolkit "${target_name}" "${kind}" "${config_dir}" "${config_dir}/skills/ai-dlc"
+    return $?
   fi
 
   # ── Non-claude-skill kinds: collect SKILL.md bodies (frontmatter stripped) ──
@@ -1275,8 +1298,20 @@ QEOF
   else
     local tfile="${TARGETS_DIR}/claude.json"
     local tconfig tkind
-    tconfig=$("$PY" -c "import json; print(json.load(open('${tfile}'))['config_dir'])" 2>/dev/null || echo "${HOME}/.claude")
-    tconfig="$(expand_tilde "${tconfig}")"
+    if [[ -n "${CLAUDE_CONFIG_DIR:-}" ]]; then
+      # A launcher (claude-glm, claude-maas, ...) exports its own
+      # CLAUDE_CONFIG_DIR before exec'ing the real claude binary — that
+      # is the calling build's actual skill directory, which may not be
+      # ~/.claude at all. Prefer it over the static targets/claude.json
+      # value so a plain `./install.sh` run from inside any launcher's
+      # session lands the skill where that build will actually look for
+      # it, with no --target guessing required.
+      tconfig="${CLAUDE_CONFIG_DIR}"
+      info "CLAUDE_CONFIG_DIR is set — installing into the calling Claude Code build's own config dir: ${tconfig}"
+    else
+      tconfig=$("$PY" -c "import json; print(json.load(open('${tfile}'))['config_dir'])" 2>/dev/null || echo "${HOME}/.claude")
+      tconfig="$(expand_tilde "${tconfig}")"
+    fi
     tkind=$("$PY" -c "import json; print(json.load(open('${tfile}')).get('kind','claude-skill'))" 2>/dev/null || echo "claude-skill")
     install_skills_to_target "claude-code" "${tconfig}" "${tkind}" || rc=1
     install_workspace_skills || rc=1

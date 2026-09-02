@@ -77,6 +77,26 @@ N=$(find .claude/skills -maxdepth 1 -type d -name 'openspec-*' 2>/dev/null | wc 
 #    dir to add exactly one entry in each — the install.sh class
 #    exactly (naming the paths IS the deploy record; the runtime
 #    never executes this script).
+#    scripts/setup-maas-key.sh (install-onboarding PRD) is a HOST step
+#    a person runs to write the gateway's own credential file: it names
+#    the gateway's .env path and its systemd unit to restart after
+#    writing — the install.sh class exactly (naming the paths IS the
+#    credential-entry record; the runtime never executes this script).
+#    tests/collapse/doctor_opendesign_check.sh (install-onboarding PRD)
+#    is a doctor-check test that builds a fake gateway .env under a
+#    fixture $HOME to assert the OpenDesign-tree warn behaviour — the
+#    l4_doctor.sh class exactly (naming the fixture path IS the test,
+#    no execution against the real gateway).
+#    README.md's "MaaS gateway key is shared, not per-agent" section
+#    (shared-maas-key PRD) documents ensure_maas_key()'s real behaviour
+#    for the reader who just asked "why wasn't I prompted for a key" —
+#    naming the real .env path and explaining the shared-gateway
+#    architecture IS the documentation; no execution is instructed.
+#    tests/collapse/maas_key_shared.sh (shared-maas-key PRD) is a
+#    doctor-class test that builds a fake gateway .env under a fixture
+#    $HOME to assert ensure_maas_key()'s present/missing behaviour —
+#    the doctor_opendesign_check.sh class exactly (naming the fixture
+#    path IS the test, no execution against the real gateway).
 BAD=$(grep -rn "openspec_gateway\|runtime_bridge\|jiuwenswarm" \
       --include="*.py" --include="*.md" --include="*.sh" --include="*.yaml" \
       --exclude="glue_surface.sh" --exclude="plan.py" \
@@ -93,7 +113,11 @@ BAD=$(grep -rn "openspec_gateway\|runtime_bridge\|jiuwenswarm" \
       --exclude="prd-install-targets.md" \
       --exclude="prd-deliver-measures-work.md" \
       --exclude="prd-uidesigner-reliable-fast.md" \
-      --exclude="prd-devteam-workflow-hardening.md" . 2>/dev/null \
+      --exclude="prd-devteam-workflow-hardening.md" \
+      --exclude="setup-maas-key.sh" \
+      --exclude="doctor_opendesign_check.sh" \
+      --exclude="README.md" \
+      --exclude="maas_key_shared.sh" . 2>/dev/null \
       | grep -vE '^(\./)?(evidence/|CHANGELOG\.md:|openspec/changes/|openspec/specs/|\.ai-dlc/)' \
       | grep -v 'jiuwenswarm source' || true)
 [[ -z "$BAD" ]] || { echo "FAIL: dead-wiring references survive the 1.7 audit:"; echo "$BAD"; exit 1; }
