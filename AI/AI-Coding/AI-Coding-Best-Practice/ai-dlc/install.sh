@@ -569,6 +569,26 @@ with open(mfile, "w", encoding="utf-8") as f:
 MFEOF
 }
 
+# ── Expand a leading ~ or ~/ in a path read from JSON ──────────
+# targets/*.json config_dir values use `~` for portability (no
+# machine-specific absolute paths in the shipped config). But a JSON
+# string read via `python -c ... | var=$(...)` never passes through
+# bash's own tilde expansion — that only happens for a literal
+# unquoted tilde in shell source text, never for a variable's stored
+# value — so config_dir would otherwise stay the literal 2-byte
+# string "~/..." and every path built from it would be wrong. Expand
+# it explicitly wherever a target's config_dir is read.
+expand_tilde() {
+  local p="$1"
+  if [[ "${p}" == "~" ]]; then
+    printf '%s' "${HOME}"
+  elif [[ "${p}" == "~/"* ]]; then
+    printf '%s/%s' "${HOME}" "${p#\~/}"
+  else
+    printf '%s' "${p}"
+  fi
+}
+
 # ── Validate a config dir (K7) ────────────────────────────────
 # Rejects nonexistent or unwritable dirs. Per R4, a legitimate but
 # unrelated dir will be accepted — that is the cost of "any client".
@@ -969,6 +989,7 @@ run_bootstrap() {
   local tfile="${TARGETS_DIR}/claude.json"
   local tconfig tkind
   tconfig=$("$PY" -c "import json; print(json.load(open('${tfile}'))['config_dir'])" 2>/dev/null || echo "${HOME}/.claude")
+  tconfig="$(expand_tilde "${tconfig}")"
   tkind=$("$PY" -c "import json; print(json.load(open('${tfile}')).get('kind','claude-skill'))" 2>/dev/null || echo "claude-skill")
   install_skills_to_target "claude-code" "${tconfig}" "${tkind}" || rc=1
   install_workspace_skills || rc=1
@@ -1095,6 +1116,7 @@ QEOF
       [[ -f "${tfile}" ]] || continue
       tname=$("$PY" -c "import json; print(json.load(open('${tfile}'))['name'])" 2>/dev/null || basename "${tfile}" .json)
       tconfig=$("$PY" -c "import json; print(json.load(open('${tfile}'))['config_dir'])" 2>/dev/null || echo "")
+      tconfig="$(expand_tilde "${tconfig}")"
       tkind=$("$PY" -c "import json; print(json.load(open('${tfile}')).get('kind','claude-skill'))" 2>/dev/null || echo "claude-skill")
       if [[ -z "${tconfig}" ]]; then
         fail "target ${tname}: no config_dir in ${tfile}"
@@ -1110,6 +1132,7 @@ QEOF
     [[ -f "${tfile}" ]] || { fail "Unknown target: ${target}"; exit 1; }
     local tconfig tkind
     tconfig=$("$PY" -c "import json; print(json.load(open('${tfile}'))['config_dir'])" 2>/dev/null || echo "")
+    tconfig="$(expand_tilde "${tconfig}")"
     tkind=$("$PY" -c "import json; print(json.load(open('${tfile}')).get('kind','claude-skill'))" 2>/dev/null || echo "claude-skill")
     if [[ -z "${tconfig}" ]]; then
       fail "target ${target}: no config_dir in ${tfile}"
@@ -1126,6 +1149,7 @@ QEOF
     local tfile="${TARGETS_DIR}/claude.json"
     local tconfig tkind
     tconfig=$("$PY" -c "import json; print(json.load(open('${tfile}'))['config_dir'])" 2>/dev/null || echo "${HOME}/.claude")
+    tconfig="$(expand_tilde "${tconfig}")"
     tkind=$("$PY" -c "import json; print(json.load(open('${tfile}')).get('kind','claude-skill'))" 2>/dev/null || echo "claude-skill")
     install_skills_to_target "claude-code" "${tconfig}" "${tkind}" || rc=1
     install_workspace_skills || rc=1
