@@ -640,6 +640,64 @@ WMEOF
 }
 
 # ── Install CC skills to a target (K1, K3, K6) ────────────────
+# ── Build combined skill body (frontmatter-stripped, all CC skills) ──
+# Sets the COMBINED_SKILL_BODY global to the concatenation of every
+# supervisor/skills/claude/*/SKILL.md body (frontmatter stripped, blank-line
+# separated). Returns 0 on success, 1 if any skill source is missing its
+# SKILL.md. Shared by install_skills_to_target() (agents-md / cursor-rules /
+# copilot-instructions) and gen_root_skill() so the two can never drift apart.
+build_combined_skill_body() {
+  COMBINED_SKILL_BODY=""
+  local rc=0
+  for skill_dir in "${CC_SKILLS_DIR}"/*/; do
+    [[ -d "${skill_dir}" ]] || continue
+    local skill_name; skill_name=$(basename "${skill_dir}")
+    [[ -f "${skill_dir}/SKILL.md" ]] || { fail "skill source missing SKILL.md: ${skill_name}"; rc=1; continue; }
+    local body
+    body="$(strip_frontmatter "${skill_dir}/SKILL.md")"
+    if [[ -n "${COMBINED_SKILL_BODY}" ]]; then
+      COMBINED_SKILL_BODY="${COMBINED_SKILL_BODY}
+${body}"
+    else
+      COMBINED_SKILL_BODY="${body}"
+    fi
+  done
+  return "${rc}"
+}
+
+# ── Generate root SKILL.md for Codex native skill discovery ──────────
+# Codex's built-in skill-installer downloads the entire repo directory to
+# ~/.codex/skills/<name>/ and looks for a SKILL.md at that directory root.
+# This writes such a file from the same combined body the other kinds use,
+# with a frontmatter (name + description) and a note that the skill's own
+# directory carries the full toolkit (bin/plan.py etc.) — run from there
+# with --repo pointing at the project under development.
+# Args: [out_file] — defaults to ${SCRIPT_DIR}/SKILL.md (repo root).
+gen_root_skill() {
+  local out_file="${1:-${SCRIPT_DIR}/SKILL.md}"
+  build_combined_skill_body || { fail "could not build combined skill body"; return 1; }
+  local combined_body="${COMBINED_SKILL_BODY}"
+  [[ -n "${combined_body}" ]] || { fail "combined skill body is empty"; return 1; }
+  {
+    printf -- '---\n'
+    printf 'name: ai-dlc\n'
+    printf 'description: Spec-driven coding lifecycle for AI coding agents — executes a task through ROUTE→WORK→[DESIGN]→CHECK→REPORT→MERGE_GATE with a spec validator and a human-held merge gate. Use for multi-step or planned software engineering work in a git repo that wants a structured, auditable delivery flow with a signed spec verdict and an approved merge. Not for one-off quick answers, pure Q&A, or non-coding chat.\n'
+    printf -- '---\n\n'
+    cat <<'GINTRO'
+This skill's own directory (wherever it was installed — e.g.
+`~/.codex/skills/ai-dlc/`) also contains the full toolkit: `bin/plan.py`,
+`bin/report.py`, `config/`, `openspec/`. Run those from this skill's own
+directory, targeting whatever project you're actually developing with
+`--repo <path-to-that-project>` — this skill's directory itself is the
+tool, not the thing being worked on.
+
+GINTRO
+    printf '%s\n' "${combined_body}"
+  } > "${out_file}"
+  ok "Root SKILL.md generated → ${out_file}"
+  return 0
+}
+
 # Dispatches by the target's `kind` field:
 #   claude-skill         — copy SKILL.md into <config_dir>/skills/<name>/ (existing)
 #   agents-md            — write AGENTS.md with BEGIN/END markers (idempotent)
@@ -692,20 +750,9 @@ install_skills_to_target() {
 
   # ── Non-claude-skill kinds: collect SKILL.md bodies (frontmatter stripped) ──
   info "Installing skills to ${target_name} (kind=${kind}) → ${config_dir}"
-  local combined_body="" rc=0
-  for skill_dir in "${CC_SKILLS_DIR}"/*/; do
-    [[ -d "${skill_dir}" ]] || continue
-    local skill_name; skill_name=$(basename "${skill_dir}")
-    [[ -f "${skill_dir}/SKILL.md" ]] || { fail "skill source missing SKILL.md: ${skill_name}"; rc=1; continue; }
-    local body
-    body="$(strip_frontmatter "${skill_dir}/SKILL.md")"
-    if [[ -n "${combined_body}" ]]; then
-      combined_body="${combined_body}
-${body}"
-    else
-      combined_body="${body}"
-    fi
-  done
+  local rc=0
+  build_combined_skill_body || rc=$?
+  local combined_body="${COMBINED_SKILL_BODY}"
   [[ "${rc}" != "0" ]] && return "${rc}"
 
   local dest_file=""
@@ -996,6 +1043,7 @@ main() {
       --setup-maas-key) mode="setup-maas-key"; shift ;;
       --bootstrap) mode="bootstrap"; shift ;;
       --quickstart) mode="quickstart"; shift ;;
+      --gen-root-skill) mode="gen-root-skill"; shift ;;
       --target) target="$2"; shift 2 ;;
       --target-dir) target_dir="$2"; shift 2 ;;
       --all-targets) all_targets=1; shift ;;
@@ -1015,6 +1063,8 @@ Usage: install.sh [OPTIONS]
   --bootstrap                fresh-environment setup (openspec → jiuwenswarm → MaaS key → OpenDesign → skills)
   --setup-maas-key           interactive MaaS credential entry for the gateway
   --quickstart               print a minimal task sequence (N8)
+  --gen-root-skill           (re)generate SKILL.md at the repo root for Codex
+                             native skill-directory discovery
 HEOF
         exit 0 ;;
       *) shift ;;
@@ -1022,6 +1072,10 @@ HEOF
   done
   if [[ "${mode}" == "doctor" ]]; then run_doctor; exit $?; fi
   if [[ "${mode}" == "provision-plane" ]]; then provision_plane; exit $?; fi
+  if [[ "${mode}" == "gen-root-skill" ]]; then
+    gen_root_skill
+    exit $?
+  fi
   if [[ "${mode}" == "quickstart" ]]; then
     cat <<'QEOF'
 AI-DLC quickstart — a minimal task (sourced from SKILL.md L0, not a second manual)
