@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "product": "claude-maas-delegate",
+  "product_version": "3.1.0",
+  "files": [
+    {
+      "path": "README.md",
+      "size": 4102,
+      "executable": false,
+      "sha256": "cd71acac42068e1ae13623feff961ea5454c52c3f9d4fc7be6281428ab823a47"
+    },
+    {
+      "path": "SKILL.md",
+      "size": 3422,
+      "executable": false,
+      "sha256": "b64d90e3e84d87552396d50c2ac0c2e40259432cd9bbe5660500d0c2ac057380"
+    },
+    {
+      "path": "VERSION",
+      "size": 6,
+      "executable": false,
+      "sha256": "b2f44d3b6e29f8b1b73ea4735f006affc4d198e1fd9c7d50e736159b1ef636c6"
+    },
+    {
+      "path": "assets/brief-schema.json",
+      "size": 2086,
+      "executable": false,
+      "sha256": "2e449cc642e14343d3663132e1c80e7a26db116cea5e2c3ce5cee7fcb986aba4"
+    },
+    {
+      "path": "assets/manifest-schema.json",
+      "size": 4525,
+      "executable": false,
+      "sha256": "e37885f5a04d6e9c367bae82e1c5d8905d3840df0f3ae63a84f3476cd68c01cb"
+    },
+    {
+      "path": "assets/orchestrator-policy.md",
+      "size": 4327,
+      "executable": false,
+      "sha256": "764f19d2c8673657ef8ffe6f2d01d52f20234af3421c11202f55721fdcadc99f"
+    },
+    {
+      "path": "client/claude-maas",
+      "size": 9795,
+      "executable": true,
+      "sha256": "d3cb70c3771e96e0286605b6e16dee0d1d7a1fd5f9481e852ee379b2baff05f3"
+    },
+    {
+      "path": "client/claude-maas-run",
+      "size": 4263,
+      "executable": true,
+      "sha256": "6165d6035f41a7b54e2fe18413bb626208a3ce475f74d0ef33c0bdeafe1da4e2"
+    },
+    {
+      "path": "client/claude-maas-setup.sh",
+      "size": 12808,
+      "executable": true,
+      "sha256": "8633b6a3716f7eb5b8c580ff70d8428c3c571415362e1f5b9fe5bf2d5f5a2823"
+    },
+    {
+      "path": "client/claude-select",
+      "size": 2933,
+      "executable": true,
+      "sha256": "279e7c35663fb5afa57813f4bc659ba6dae11c92ed1f1789038d1ad04ded6082"
+    },
+    {
+      "path": "references/ARCHITECTURE.md",
+      "size": 11112,
+      "executable": false,
+      "sha256": "f9c185ab8aaae8b7cffa8ca23b08189bbe1c6c535846e0ab872346bb0d229e55"
+    },
+    {
+      "path": "references/INSTALL.md",
+      "size": 3098,
+      "executable": false,
+      "sha256": "8a44e43daadd318aaee2d1ff55d4f1418f3c86822192d69148e40704d0ee7d11"
+    },
+    {
+      "path": "references/OPERATIONS.md",
+      "size": 7775,
+      "executable": false,
+      "sha256": "de9c76cc0e71e83c079e37e7f5f9613b92dcb2b8d8322dfd3876720bf23767df"
+    },
+    {
+      "path": "references/RELEASE-NOTES.md",
+      "size": 6170,
+      "executable": false,
+      "sha256": "f6eb242e6e4e58694fe9e2ed963736b5cb5087a0e3e2265c203d430daac6dc69"
+    },
+    {
+      "path": "references/SECURITY.md",
+      "size": 5370,
+      "executable": false,
+      "sha256": "3db0feb9fadd6b3f70e3c2f8b5bdbfc8ebbba929e45d6c5e9e5a082b758d4a44"
+    },
+    {
+      "path": "references/brief-contract.md",
+      "size": 2642,
+      "executable": false,
+      "sha256": "a5f6218c50b5972befca1b6dfe25adb61d3ef235845c8ba360b4e95c063679f0"
+    },
+    {
+      "path": "references/commands.md",
+      "size": 2666,
+      "executable": false,
+      "sha256": "de19c7bcabfe9821f85e62ca24d0258fe91fdb12a5e0a520a37b6e045042aaf9"
+    },
+    {
+      "path": "references/quickstart.md",
+      "size": 2096,
+      "executable": false,
+      "sha256": "bc7ee99810cc7bbf681bcd77f769cdaf6d4401a33e1181b7f3e809a579b2cf1b"
+    },
+    {
+      "path": "references/result-contract.md",
+      "size": 847,
+      "executable": false,
+      "sha256": "79b88d0ba619535835ce21abb1a96fc24f7996493de6788bb5eb06d5d7d5b2ed"
+    },
+    {
+      "path": "references/routing-policy.md",
+      "size": 1182,
+      "executable": false,
+      "sha256": "ed744e2c984fbafd2ca66cffa8cd2935d89c7573ab2d7358933739ed520b0f0a"
+    },
+    {
+      "path": "scripts/auto_continue.py",
+      "size": 11636,
+      "executable": false,
+      "sha256": "5dd0f3c11d5564901eb14984d48a7a30b8038a1d6eb2739116557cac32a705ca"
+    },
+    {
+      "path": "scripts/configure-agents.py",
+      "size": 11136,
+      "executable": false,
+      "sha256": "7ac8d7e9bc39071baa53e5c1a0ee6d11b417b34ce45825ccb41c3055eededa13"
+    },
+    {
+      "path": "scripts/delegate",
+      "size": 36527,
+      "executable": true,
+      "sha256": "08a8d51152886a6137969e8d46a72a72d6cf959aa53794f7e29497828686ce41"
+    },
+    {
+      "path": "scripts/delegate_core.py",
+      "size": 2736,
+      "executable": false,
+      "sha256": "437c329d3383904142fb39df490a58791bb18acb464ea80aa3e5de3771e35afd"
+    },
+    {
+      "path": "scripts/detect-host.sh",
+      "size": 573,
+      "executable": true,
+      "sha256": "6b7af06e4cb913681bf6eac2b14cdadc9968af862fcf23dab262a47abb58fc13"
+    },
+    {
+      "path": "scripts/install.sh",
+      "size": 4139,
+      "executable": true,
+      "sha256": "14136a1cb1fff5f98a13f821eb7e7be141b9b35dfbda4e23fdf52931dda13758"
+    },
+    {
+      "path": "scripts/maas-delegate",
+      "size": 7255,
+      "executable": true,
+      "sha256": "9dbd801aa4dfcbb172eafb347749dae97e7cd9d227cdc91a8b3b6efbd1b496be"
+    },
+    {
+      "path": "scripts/session_registry.py",
+      "size": 13764,
+      "executable": false,
+      "sha256": "bea8fc2c224c3881cfe97ce40c66cba4f0373d656b31a67bb30c6abcf4564df0"
+    },
+    {
+      "path": "scripts/uninstall.sh",
+      "size": 16047,
+      "executable": true,
+      "sha256": "a7bc22c34abc8bef2ecc4a4f929fc41193535124603665a30304c14a2b2d48f4"
+    },
+    {
+      "path": "scripts/verify-skill-release.py",
+      "size": 8594,
+      "executable": false,
+      "sha256": "003084d4e342960c3ea11abf3ecdd4f9ff99598c563f47cf0ef36fd816c9b78e"
+    },
+    {
+      "path": "scripts/workflow",
+      "size": 24472,
+      "executable": true,
+      "sha256": "9a091ddbf1babd867bfe14d481e14146e9780a14926428eeb32b23724eb4e3b2"
+    }
+  ]
+}

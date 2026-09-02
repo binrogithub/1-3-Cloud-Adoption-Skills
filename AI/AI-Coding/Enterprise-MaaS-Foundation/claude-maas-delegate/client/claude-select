@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# claude-select — explicit provider selector.
+#
+# Usage:
+#   claude-select native [args...]   -> exec claude "$@"
+#   claude-select maas   [args...]   -> exec claude-maas "$@"
+#   claude-select status             -> print endpoint host, model, key fingerprint
+#
+# The status subcommand prints an irreversible SHA-256 fingerprint of the key,
+# never the key itself.
+set -euo pipefail
+
+die() {
+    echo "claude-select: $*" >&2
+    exit 1
+}
+
+usage() {
+    cat >&2 <<'EOF'
+Usage: claude-select <subcommand> [args...]
+
+Subcommands:
+  native [args...]   Run the official claude with OAuth credentials.
+  maas   [args...]   Run claude-maas with isolated MaaS credentials.
+  status             Print endpoint host, model, and key fingerprint.
+EOF
+    exit 2
+}
+
+[[ ${#} -ge 1 ]] || usage
+
+subcommand="$1"
+shift
+
+case "$subcommand" in
+    native)
+        # Exec the real claude with the user's args. Do not inject any env.
+        claude_bin=$(command -v claude 2>/dev/null) || die "claude not found on PATH"
+        exec "$claude_bin" "$@"
+        ;;
+    maas)
+        # Exec claude-maas, which handles env injection and --model.
+        maas_bin=$(command -v claude-maas 2>/dev/null) || die "claude-maas not found on PATH"
+        exec "$maas_bin" "$@"
+        ;;
+    status)
+        config_dir="$HOME/.config/claude-maas"
+        config_file="$config_dir/config.json"
+        key_file="$config_dir/api-key"
+
+        [[ -f "$config_file" ]] || die "config not found: $config_file"
+        [[ -f "$key_file" ]] || die "api-key not found: $key_file"
+
+        # Read config and compute key fingerprint in one python3 invocation.
+        # The fingerprint is SHA-256 of the key — irreversible.
+        python3 - "$config_file" "$key_file" <<'PYEOF'
+import hashlib
+import json
+import os
+import sys
+from urllib.parse import urlparse
+
+config_path = sys.argv[1]
+key_path = sys.argv[2]
+
+with open(config_path, "r", encoding="utf-8") as fh:
+    cfg = json.load(fh)
+
+base_url = cfg.get("anthropic_base_url", "")
+model = cfg.get("model", "")
+context_tokens = cfg.get("context_tokens", "")
+
+# Extract host from the base URL.
+parsed = urlparse(base_url)
+host = parsed.hostname or base_url
+
+# Read the key as data and compute an irreversible fingerprint.
+with open(key_path, "r", encoding="utf-8") as fh:
+    key = fh.readline().strip()
+
+if not key:
+    sys.stderr.write("claude-select: api-key file is empty\n")
+    sys.exit(1)
+
+fingerprint = hashlib.sha256(key.encode("utf-8")).hexdigest()
+# Show only the first 16 hex chars — enough to identify, not enough to reverse.
+short_fp = fingerprint[:16]
+
+print(f"endpoint:  {host}")
+print(f"base_url:  {base_url}")
+print(f"model:     {model}")
+if context_tokens:
+    print(f"context:   {context_tokens} tokens")
+print(f"key fingerprint (sha256:16):  {short_fp}")
+PYEOF
+        ;;
+    *)
+        die "unknown subcommand: '$subcommand' (expected: native, maas, status)"
+        ;;
+esac

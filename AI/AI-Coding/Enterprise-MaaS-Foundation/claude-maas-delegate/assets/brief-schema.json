@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Delegate brief",
+  "description": "Structured brief for a single bounded claude-maas task delegation. See PRD section 8.1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task_type", "goal"],
+  "properties": {
+    "task_type": {
+      "type": "string",
+      "description": "Category of work. 'image' is always rejected (MaaS glm-5.2 has no vision). Write-op types with empty scope are rejected.",
+      "enum": [
+        "code_generation",
+        "unit_test_generation",
+        "bug_fix",
+        "refactor",
+        "docs",
+        "review",
+        "ci_fix",
+        "format_migration",
+        "repo_summary",
+        "batch",
+        "suborchestrate",
+        "image"
+      ]
+    },
+    "goal": {
+      "type": "string",
+      "description": "Self-contained task description. Must not copy entire OAuth conversation history.",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "array",
+      "description": "File paths the task may touch. Empty scope is rejected for write-op task types.",
+      "items": { "type": "string" }
+    },
+    "constraints": {
+      "type": "array",
+      "description": "Task constraints (e.g. do not modify public API).",
+      "items": { "type": "string" }
+    },
+    "acceptance": {
+      "type": "string",
+      "description": "Shell command run with an explicit cwd and timeout to verify the task. Only the command name/fingerprint and a truncated non-sensitive evidence tail are recorded in audit."
+    },
+    "context_notes": {
+      "type": "string",
+      "description": "Minimal additional context required to complete the task."
+    },
+    "max_attempts": {
+      "type": "integer",
+      "description": "Maximum model attempts. Clamped to the range 1..2 by the runner; the caller cannot raise this.",
+      "minimum": 1,
+      "maximum": 2
+    },
+    "max_turns": {
+      "type": "integer",
+      "description": "Maximum agentic turns for the claude-maas subprocess. Clamped to 1..MAX_TURNS by the runner.",
+      "minimum": 1
+    }
+  }
+}

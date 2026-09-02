@@ -1,0 +1,984 @@
+#!/usr/bin/env python3
+"""delegate — structured single-task delegation to claude-maas (glm-5.2).
+
+Accepts a JSON brief (from stdin or --file), validates it against
+assets/brief-schema.json, runs a single bounded ``claude-maas -p`` invocation,
+executes the acceptance command with an explicit cwd and timeout, and writes a
+redacted JSONL audit record.
+
+Product invariants (PRD sections 8, 10, 11, 12):
+
+  * Model is ALWAYS ``glm-5.2``. No fallback, no model switching.
+  * ``fallback`` in audit is ALWAYS ``false``.
+  * Brief text, goal text, and tool arguments are NEVER stored in audit.
+  * Image briefs are rejected before the client is launched.
+  * Empty scope on a write-op task type is rejected as ``invalid_brief``.
+  * ``max_attempts`` is clamped to 1..2; the caller cannot raise it.
+  * ``max_turns`` is clamped to 1..MAX_TURNS.
+  * 401/403 fail immediately (no retry). 429 honors a bounded Retry-After
+    (max 60s). 5xx/timeout get one retry. Total attempts never exceed 2.
+  * Audit file mode is 0600.
+
+This file is both an executable script and an importable module (tests load it
+via importlib). It uses only the Python standard library.
+"""
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+import time
+import uuid
+from pathlib import Path
+from typing import Any, Callable
+
+
+sys.dont_write_bytecode = True
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+MODEL = "glm-5.2"
+MAX_TURNS = 64  # hard upper bound on agentic turns
+MIN_ATTEMPTS = 1
+MAX_ATTEMPTS = 2
+MAX_RETRY_AFTER = 60.0  # seconds; Retry-After is bounded to this
+DEFAULT_TIMEOUT = 0.0  # automatic 15–120 minute budget per client attempt
+ACCEPTANCE_TIMEOUT = 120.0  # seconds for the acceptance command
+EVIDENCE_TAIL_LINES = 20
+EVIDENCE_TAIL_CHARS = 2000
+
+# Task types that modify files: empty scope is rejected for these.
+WRITE_OP_TYPES = frozenset({
+    "code_generation",
+    "unit_test_generation",
+    "bug_fix",
+    "refactor",
+    "ci_fix",
+    "format_migration",
+})
+
+VALID_STATUSES = frozenset({
+    "success",
+    "needs_escalation",
+    "budget_exhausted",
+    "capacity_error",
+    "invalid_brief",
+    "unsupported_capability",
+})
+
+# Audit location. Tests monkeypatch these to point at a tmp_path.
+_HOME = Path(os.environ.get("HOME", str(Path.home())))
+AUDIT_DIR = _HOME / ".claude-hybrid"
+AUDIT_FILE = AUDIT_DIR / "route-audit.jsonl"
+
+# Schema path (relative to this file).
+_SCHEMA_PATH = Path(__file__).resolve().parent.parent / "assets" / "brief-schema.json"
+
+# Client binary default (overridable via env for testing).
+DEFAULT_CLIENT_BIN = os.environ.get("DELEGATE_CLIENT_BIN", "claude-maas")
+
+# C5 (PRD PROJECT_CLOSURE_V2 §6): the delegate does NOT inject --allowedTools
+# by default — that was a product behavior change snuck in to make the live
+# gate pass. Only the gate scripts (check_delegate_live.sh /
+# check_workflow_live.sh) set DELEGATE_ALLOWED_TOOLS in their own process env
+# to widen the toolbox. The product path is back to the pre-change state.
+DEFAULT_ALLOWED_TOOLS = os.environ.get("DELEGATE_ALLOWED_TOOLS", "")
+
+
+# ---------------------------------------------------------------------------
+# Bounded helpers
+# ---------------------------------------------------------------------------
+
+
+def bounded_attempts(n: Any) -> int:
+    """Clamp n to the range [MIN_ATTEMPTS, MAX_ATTEMPTS] (1..2)."""
+    try:
+        v = int(n)
+    except (TypeError, ValueError):
+        return MIN_ATTEMPTS
+    return max(MIN_ATTEMPTS, min(MAX_ATTEMPTS, v))
+
+
+def bounded_turns(n: Any) -> int:
+    """Clamp n to the range [1, MAX_TURNS]."""
+    try:
+        v = int(n)
+    except (TypeError, ValueError):
+        return 1
+    return max(1, min(MAX_TURNS, v))
+
+
+def adaptive_timeout(requested: float | int | None, max_turns: int) -> float:
+    """Use a generous bounded budget when callers request automatic timing."""
+    try:
+        value = float(requested or 0)
+    except (TypeError, ValueError):
+        value = 0.0
+    if value > 0:
+        return value
+    return min(7200.0, max(900.0, float(max_turns) * 120.0))
+
+
+def _sleep(seconds: float) -> None:
+    """Sleep for ``seconds``. Overridable by tests to avoid real waiting."""
+    if seconds > 0:
+        time.sleep(seconds)
+
+
+# ---------------------------------------------------------------------------
+# Schema validation (manual, stdlib only — no jsonschema dependency)
+# ---------------------------------------------------------------------------
+
+
+def _load_schema() -> dict:
+    return json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
+
+
+def _validate_brief(brief: Any, schema: dict) -> list[str]:
+    """Validate ``brief`` against ``schema`` manually.
+
+    Returns a list of human-readable error strings (empty == valid). We
+    implement just enough of JSON Schema draft-07 (type, required, enum,
+    minimum, maximum, minLength, additionalProperties, array items) for our
+    specific schema. We deliberately do NOT import ``jsonschema``.
+    """
+    errors: list[str] = []
+
+    if not isinstance(brief, dict):
+        errors.append("brief must be a JSON object")
+        return errors
+
+    props = schema.get("properties", {})
+    required = schema.get("required", [])
+
+    for field in required:
+        if field not in brief:
+            errors.append(f"missing required field: {field}")
+
+    if schema.get("additionalProperties") is False:
+        for key in brief:
+            if key not in props:
+                errors.append(f"unexpected field: {key}")
+
+    for key, value in brief.items():
+        if key not in props:
+            continue  # already reported if additionalProperties is False
+        spec = props[key]
+        err = _validate_value(key, value, spec)
+        errors.extend(err)
+
+    return errors
+
+
+# Fields whose out-of-range values are clamped by the runner rather than
+# rejected by the validator. The schema documents their intended range, but
+# the runner must accept and clamp any integer the caller supplies.
+_CLAMPED_FIELDS = frozenset({"max_attempts", "max_turns"})
+
+
+def _validate_value(key: str, value: Any, spec: dict) -> list[str]:
+    errors: list[str] = []
+    typ = spec.get("type")
+
+    if typ == "string":
+        if not isinstance(value, str):
+            errors.append(f"{key}: expected string, got {type(value).__name__}")
+            return errors
+        min_len = spec.get("minLength")
+        if min_len is not None and len(value) < min_len:
+            errors.append(f"{key}: string too short (min {min_len})")
+    elif typ == "integer":
+        if isinstance(value, bool) or not isinstance(value, int):
+            errors.append(f"{key}: expected integer, got {type(value).__name__}")
+            return errors
+        # Range checks are skipped for clamped fields — the runner clamps them.
+        if key not in _CLAMPED_FIELDS:
+            mn = spec.get("minimum")
+            mx = spec.get("maximum")
+            if mn is not None and value < mn:
+                errors.append(f"{key}: value {value} below minimum {mn}")
+            if mx is not None and value > mx:
+                errors.append(f"{key}: value {value} above maximum {mx}")
+    elif typ == "array":
+        if not isinstance(value, list):
+            errors.append(f"{key}: expected array, got {type(value).__name__}")
+            return errors
+        item_spec = spec.get("items")
+        if item_spec is not None:
+            for i, item in enumerate(value):
+                errors.extend(_validate_value(f"{key}[{i}]", item, item_spec))
+    elif typ == "object":
+        if not isinstance(value, dict):
+            errors.append(f"{key}: expected object, got {type(value).__name__}")
+
+    if "enum" in spec and value not in spec["enum"]:
+        errors.append(f"{key}: {value!r} not in enum {spec['enum']}")
+
+    return errors
+
+
+# ---------------------------------------------------------------------------
+# Client factory
+# ---------------------------------------------------------------------------
+
+# A client callable takes (goal, *, model, max_turns, timeout, cwd, client_bin)
+# and returns a dict with keys: ok, stdout, stderr, status_code, retry_after,
+# tokens_in, tokens_out, files_changed, timed_out.
+ClientCallable = Callable[..., dict]
+
+# Tests call set_client_factory to inject a fake. By default we build a real
+# subprocess client.
+_client_factory: Callable[..., ClientCallable] | None = None
+
+
+def set_client_factory(factory: Callable[..., ClientCallable]) -> None:
+    """Test hook: inject a custom client factory."""
+    global _client_factory
+    _client_factory = factory
+
+
+def _get_client(**kwargs: Any) -> ClientCallable:
+    if _client_factory is not None:
+        return _client_factory(**kwargs)
+    return _make_real_client(**kwargs)
+
+
+def _extract_status_code(stderr_text: str) -> int | None:
+    """Extract an HTTP status code from client stderr.
+
+    Claude Code prints upstream HTTP errors to stderr in forms like
+    "Error: 429", "HTTP 500", or "status 503".  We look for the first
+    3-digit number in the 400–599 range that appears near a status keyword.
+    Returns None if no status can be determined.
+    """
+    import re
+    for m in re.finditer(r"(?:status|HTTP|Error[:\s])(\d{3})", stderr_text, re.IGNORECASE):
+        code = int(m.group(1))
+        if 400 <= code <= 599:
+            return code
+    # Fallback: any standalone 3-digit number in the 400–599 range.
+    for m in re.finditer(r"\b([45]\d{2})\b", stderr_text):
+        return int(m.group(1))
+    return None
+
+
+def _extract_retry_after(stderr_text: str) -> float | None:
+    """Extract a Retry-After hint (seconds) from stderr, if present."""
+    import re
+    m = re.search(r"[Rr]etry[- ]?[Aa]fter[:\s]*(\d+(?:\.\d+)?)", stderr_text)
+    if m:
+        try:
+            return float(m.group(1))
+        except ValueError:
+            return None
+    return None
+
+
+def _parse_stream_json(stdout: str, *, exit_code: int) -> dict:
+    """Parse claude --output-format stream-json --verbose output.
+
+    Scans each line for a JSON object.  The terminal result line has
+    ``type == "result"`` and carries ``subtype``, ``is_error``, ``session_id``,
+    ``result``, and ``usage``.  Success is classified from the exit code AND
+    the terminal result: ``exit_code == 0`` and ``subtype == "success"`` and
+    ``is_error is False``.
+
+    Returns a dict with keys: ok, result_text, session_id, tokens_in,
+    tokens_out, cache_creation_input_tokens, cache_read_input_tokens,
+    subtype, is_error.
+    """
+    result_text = ""
+    session_id: str | None = None
+    subtype = None
+    is_error = None
+    tokens_in = 0
+    tokens_out = 0
+    cache_creation = 0
+    cache_read = 0
+    saw_creation = False
+    saw_read = False
+    found_terminal = False
+
+    for raw in (stdout or "").splitlines():
+        raw = raw.strip()
+        if not raw or not raw.startswith("{"):
+            continue
+        try:
+            obj = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        usage = obj.get("usage") if isinstance(obj, dict) else None
+        if isinstance(usage, dict):
+            tokens_in += int(usage.get("input_tokens", 0) or 0)
+            tokens_out += int(usage.get("output_tokens", 0) or 0)
+            if "cache_creation_input_tokens" in usage:
+                cache_creation += int(usage.get("cache_creation_input_tokens") or 0)
+                saw_creation = True
+            if "cache_read_input_tokens" in usage:
+                cache_read += int(usage.get("cache_read_input_tokens") or 0)
+                saw_read = True
+        if isinstance(obj, dict) and obj.get("type") == "result":
+            found_terminal = True
+            subtype = obj.get("subtype")
+            is_error = obj.get("is_error")
+            session_id = obj.get("session_id")
+            if isinstance(obj.get("result"), str):
+                result_text = obj["result"]
+
+    ok = (
+        exit_code == 0
+        and found_terminal
+        and subtype == "success"
+        and is_error is False
+    )
+    return {
+        "ok": ok,
+        "result_text": result_text or (stdout or ""),
+        "session_id": session_id,
+        "tokens_in": tokens_in if tokens_in else None,
+        "tokens_out": tokens_out if tokens_out else None,
+        "cache_creation_input_tokens": cache_creation if saw_creation else None,
+        "cache_read_input_tokens": cache_read if saw_read else None,
+        "subtype": subtype,
+        "is_error": is_error,
+    }
+
+
+def _tools_from_allowed(allowed: str) -> str:
+    """Return built-in tool names covered by explicit approval rules."""
+    names: list[str] = []
+    for rule in allowed.split(","):
+        name = rule.strip().split("(", 1)[0].strip()
+        if name and name not in names:
+            names.append(name)
+    return ",".join(names)
+
+
+def _parse_json_usage(stdout: str) -> tuple[str, int | None, int | None]:
+    """Parse claude --output-format json output for token usage.
+
+    The CLI emits one JSON object per invocation. With auto-continue there may
+    be several concatenated objects. We sum input/output tokens (incl. cache)
+    across all parseable objects and return the last ``result`` text.
+
+    Returns (result_text, tokens_in, tokens_out). When no JSON can be parsed,
+    tokens are ``None`` (distinct from zero — PRD R5: "取不到时写 null 而不是 0")
+    and the raw stdout is returned as the text.
+    """
+    if not stdout:
+        return "", None, None
+    total_in = 0
+    total_out = 0
+    last_text = ""
+    parsed_any = False
+    for raw in stdout.splitlines():
+        raw = raw.strip()
+        if not raw or not raw.startswith("{"):
+            continue
+        try:
+            obj = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        parsed_any = True
+        usage = obj.get("usage") or {}
+        total_in += int(usage.get("input_tokens", 0) or 0)
+        total_in += int(usage.get("cache_creation_input_tokens", 0) or 0)
+        total_in += int(usage.get("cache_read_input_tokens", 0) or 0)
+        total_out += int(usage.get("output_tokens", 0) or 0)
+        if isinstance(obj.get("result"), str):
+            last_text = obj["result"]
+    if not parsed_any:
+        return stdout, None, None
+    return (last_text or stdout), total_in, total_out
+
+
+def _parse_cache_usage(stdout: str) -> tuple[int | None, int | None]:
+    """Return cache-create/read token totals, preserving unavailable as null."""
+    creation = 0
+    read = 0
+    saw_creation = False
+    saw_read = False
+    for raw in stdout.splitlines():
+        try:
+            obj = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        usage = obj.get("usage") if isinstance(obj, dict) else None
+        if not isinstance(usage, dict):
+            continue
+        if "cache_creation_input_tokens" in usage:
+            creation += int(usage.get("cache_creation_input_tokens") or 0)
+            saw_creation = True
+        if "cache_read_input_tokens" in usage:
+            read += int(usage.get("cache_read_input_tokens") or 0)
+            saw_read = True
+    return (creation if saw_creation else None, read if saw_read else None)
+
+
+def _make_real_client(client_bin: str = DEFAULT_CLIENT_BIN,
+                      claude_session_id: str | None = None,
+                      resume: bool = False, **_: Any) -> ClientCallable:
+    """Build a callable that runs the real claude-maas subprocess.
+
+    D8 (PRD SECURITY_HARDENING_V1): the goal text travels on stdin, not in
+    argv — ``-p`` with no argument reads the prompt from stdin, so the task
+    text is invisible to other local users via /proc/<pid>/cmdline.
+
+    WP-B (PRD RUNTIME_RESILIENCE_V1): the invocation is supervised for
+    stream-protocol errors — on that marker the supervisor resumes the SAME
+    session (--resume <uuid> -p continue), up to MAAS_AUTO_CONTINUE_MAX
+    retries. Disable with MAAS_AUTO_CONTINUE=0. Only the goal-carrying first
+    attempt reads stdin; retries are fed the literal "continue".
+    """
+
+    def _run(goal: str, *, model: str, max_turns: int, timeout: float,
+              cwd: str | None = None, client_bin: str = client_bin) -> dict:
+        supervisor = _load_supervisor()
+        # A fresh request must let Claude Code allocate its own session ID.
+        # Auto-continue is only safe once a returned ID has been bound.
+        if (claude_session_id is None or supervisor is None
+                or not supervisor.auto_continue_enabled()):
+            return _plain_run(
+                goal, model, max_turns, timeout, cwd, client_bin,
+                claude_session_id=claude_session_id, resume=resume,
+            )
+
+        def build(session_id: str, is_resume: bool, prompt: str) -> list[str]:
+            argv = [client_bin, "--output-format", "stream-json", "--verbose",
+                    "--model", model, "--max-turns", str(max_turns)]
+            if DEFAULT_ALLOWED_TOOLS:
+                argv += ["--allowedTools", DEFAULT_ALLOWED_TOOLS]
+                argv += ["--tools", _tools_from_allowed(DEFAULT_ALLOWED_TOOLS)]
+            if is_resume:
+                argv += ["--resume", session_id, "-p", prompt]
+            elif resume:
+                # The first resumed turn still receives the delegated goal on
+                # stdin; only retry prompts are safe to put in argv.
+                argv += ["--resume", session_id, "-p"]
+            else:
+                argv += ["--session-id", session_id, "-p"]
+            return argv
+
+        home = os.environ.get("HOME", str(Path.home()))
+        cfg_dir = Path(os.environ.get("CLAUDE_CONFIG_DIR") or (Path(home) / ".claude-maas"))
+        return _supervised_run(
+            supervisor, build, goal, cfg_dir, timeout, cwd,
+            claude_session_id=claude_session_id,
+        )
+
+    return _run
+
+
+def _plain_run(goal: str, model: str, max_turns: int, timeout: float,
+               cwd: str | None, client_bin: str,
+               *, claude_session_id: str | None = None,
+               resume: bool = False) -> dict:
+    argv = [
+        client_bin,
+        "--output-format", "stream-json",
+        "--verbose",
+        "--model", model,
+        "--max-turns", str(max_turns),
+    ]
+    if DEFAULT_ALLOWED_TOOLS:
+        argv += ["--allowedTools", DEFAULT_ALLOWED_TOOLS]
+        argv += ["--tools", _tools_from_allowed(DEFAULT_ALLOWED_TOOLS)]
+    if claude_session_id is not None:
+        argv += ["--resume" if resume else "--session-id", claude_session_id]
+    argv += ["-p"]
+    try:
+        proc = subprocess.run(
+            argv,
+            input=goal,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=cwd,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "ok": False, "stdout": "", "stderr": "client timed out",
+            "status_code": None, "retry_after": None,
+            "tokens_in": None, "tokens_out": None,
+            "files_changed": [], "timed_out": True,
+            "session_id": None,
+        }
+    stderr_text = proc.stderr or ""
+    status_code = _extract_status_code(stderr_text)
+    retry_after = _extract_retry_after(stderr_text)
+    parsed = _parse_stream_json(proc.stdout or "", exit_code=proc.returncode)
+    return {
+        "ok": parsed["ok"],
+        "stdout": parsed["result_text"],
+        "stderr": stderr_text,
+        "status_code": status_code,
+        "retry_after": retry_after,
+        "tokens_in": parsed["tokens_in"], "tokens_out": parsed["tokens_out"],
+        "cache_creation_input_tokens": parsed["cache_creation_input_tokens"],
+        "cache_read_input_tokens": parsed["cache_read_input_tokens"],
+        "files_changed": [],
+        "timed_out": False,
+        "session_id": parsed["session_id"],
+    }
+
+
+def _load_supervisor():
+    """Import scripts/auto_continue.py lazily; None when unavailable."""
+    try:
+        import importlib.util
+        import importlib.machinery
+        path = Path(__file__).resolve().parent / "auto_continue.py"
+        if not path.is_file():
+            return None
+        loader = importlib.machinery.SourceFileLoader("auto_continue_supervisor", str(path))
+        spec = importlib.util.spec_from_loader("auto_continue_supervisor", loader)
+        mod = importlib.util.module_from_spec(spec)
+        loader.exec_module(mod)
+        return mod
+    except Exception:
+        return None
+
+
+def _supervised_run(supervisor, build, goal: str, cfg_dir: Path,
+                    timeout: float, cwd: str | None,
+                    *, claude_session_id: str | None = None) -> dict:
+    """Run under the auto-continue supervisor while preserving the
+    capture/timeout contract of _plain_run.
+
+    The supervisor's subprocess.run is swapped for a capturing variant for
+    the duration of the call: the first attempt is fed the goal on stdin,
+    retries are fed the literal "continue" (the supervisor owns that
+    prompt; --resume carries the session id).
+    """
+    holder = {"stdout": "", "stderr": "", "timed_out": False, "calls": 0}
+    # Bind the REAL subprocess.run before any patching: tests monkeypatch
+    # delegate.subprocess.run, and delegate + supervisor share the same
+    # subprocess module object — resolving the name at call time would
+    # recurse into the patched (this) function.
+    _real_run = subprocess.run
+
+    def _capturing_run(argv, *a, **kw):
+        stdin_text = goal if holder["calls"] == 0 else "continue"
+        holder["calls"] += 1
+        try:
+            proc = _real_run(
+                argv,
+                input=stdin_text,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=cwd,
+            )
+            holder["stdout"] += proc.stdout or ""
+            holder["stderr"] += proc.stderr or ""
+            return proc
+        except subprocess.TimeoutExpired:
+            holder["timed_out"] = True
+
+            class _TimedOut:
+                returncode = 124
+                stdout = ""
+                stderr = "client timed out"
+
+            return _TimedOut()
+
+    orig_run = supervisor.subprocess.run
+    supervisor.subprocess.run = _capturing_run
+    try:
+        result = supervisor.run_with_auto_continue(
+            build,
+            claude_config_dir=cfg_dir,
+            session_id=claude_session_id,
+        )
+    finally:
+        supervisor.subprocess.run = orig_run
+
+    if holder["timed_out"]:
+        return {
+            "ok": False, "stdout": holder["stdout"],
+            "stderr": "client timed out", "status_code": None,
+            "retry_after": None, "tokens_in": None, "tokens_out": None,
+            "files_changed": [], "timed_out": True,
+            "session_id": None,
+        }
+    stderr_text = holder["stderr"]
+    status_code = _extract_status_code(stderr_text)
+    retry_after = _extract_retry_after(stderr_text)
+    parsed = _parse_stream_json(
+        holder["stdout"], exit_code=int(result.get("last_returncode", 1))
+    )
+    return {
+        "ok": parsed["ok"],
+        "stdout": parsed["result_text"],
+        "stderr": stderr_text,
+        "status_code": status_code,
+        "retry_after": retry_after,
+        "tokens_in": parsed["tokens_in"], "tokens_out": parsed["tokens_out"],
+        "cache_creation_input_tokens": parsed["cache_creation_input_tokens"],
+        "cache_read_input_tokens": parsed["cache_read_input_tokens"],
+        "files_changed": [],
+        "timed_out": False,
+        "session_id": parsed["session_id"],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Audit
+# ---------------------------------------------------------------------------
+
+
+def _write_audit(record: dict) -> None:
+    """Append a redacted audit record as JSONL with mode 0600."""
+    AUDIT_DIR.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(record, separators=(",", ":")) + "\n"
+    # Atomic-ish: open for append, write, flush.
+    fd = os.open(str(AUDIT_FILE), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+    try:
+        os.write(fd, line.encode("utf-8"))
+    finally:
+        os.close(fd)
+    # Ensure mode is 0600 even if the file already existed with wider perms.
+    try:
+        os.chmod(str(AUDIT_FILE), 0o600)
+    except OSError:
+        pass
+
+
+def _audit_record(*, task_id: str, attempt: int, outcome: str,
+                  duration_s: float, tokens_in: int | None,
+                  tokens_out: int | None) -> dict:
+    """Build a redacted audit record.
+
+    CRITICAL: This must NEVER include brief text, goal text, tool arguments,
+    or any secret. Only non-sensitive metadata.
+    """
+    return {
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime()),
+        "task_id": task_id,
+        "route": "maas",
+        "model": MODEL,
+        "attempt": attempt,
+        "outcome": outcome,
+        "duration_s": round(duration_s, 3),
+        "tokens_in": tokens_in,
+        "tokens_out": tokens_out,
+        "fallback": False,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Acceptance
+# ---------------------------------------------------------------------------
+
+
+def _run_acceptance(cmd: str, *, cwd: str | None) -> dict:
+    """Run the acceptance command with an explicit cwd and timeout.
+
+    Returns {"cmd": cmd, "passed": bool, "evidence_tail": str}.
+    The evidence tail is the last N lines of combined output, truncated to a
+    bounded length. We do not store sensitive output in audit (the tail is only
+    returned in the result dict, not in audit).
+    """
+    if not cmd:
+        return {"cmd": "", "passed": True, "evidence_tail": ""}
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=ACCEPTANCE_TIMEOUT,
+            cwd=cwd,
+        )
+        passed = proc.returncode == 0
+        combined = proc.stdout + proc.stderr
+    except subprocess.TimeoutExpired:
+        passed = False
+        combined = "acceptance timed out"
+    except Exception as exc:  # noqa: BLE001
+        passed = False
+        combined = f"acceptance error: {exc}"
+
+    tail = _evidence_tail(combined)
+    return {"cmd": cmd, "passed": passed, "evidence_tail": tail}
+
+
+def _evidence_tail(text: str) -> str:
+    """Return the last EVIDENCE_TAIL_LINES lines, truncated to EVIDENCE_TAIL_CHARS."""
+    lines = text.splitlines()
+    tail_lines = lines[-EVIDENCE_TAIL_LINES:] if lines else []
+    tail = "\n".join(tail_lines)
+    if len(tail) > EVIDENCE_TAIL_CHARS:
+        tail = tail[-EVIDENCE_TAIL_CHARS:]
+    return tail
+
+
+# ---------------------------------------------------------------------------
+# Main run logic
+# ---------------------------------------------------------------------------
+
+
+def run(brief: Any, *, cwd: str | None = None,
+        client_bin: str = DEFAULT_CLIENT_BIN,
+        timeout: float = DEFAULT_TIMEOUT,
+        claude_session_id: str | None = None,
+        resume: bool = False,
+        audit_context: dict | None = None) -> dict:
+    """Run a single bounded delegation.
+
+    Returns a result dict with at least ``status``. See PRD section 8.2.
+    """
+    if resume and claude_session_id is None:
+        raise ValueError("resume requires claude_session_id")
+    if claude_session_id is not None:
+        try:
+            claude_session_id = str(uuid.UUID(claude_session_id))
+        except (AttributeError, TypeError, ValueError) as exc:
+            raise ValueError("claude_session_id must be a UUID") from exc
+
+    start = time.monotonic()
+    task_id = uuid.uuid4().hex[:8]
+
+    # --- Schema validation -------------------------------------------------
+    try:
+        schema = _load_schema()
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "status": "invalid_brief",
+            "summary": f"schema load error: {exc}",
+            "attempts": 0,
+            "duration_s": round(time.monotonic() - start, 3),
+            "model": MODEL,
+        }
+
+    errors = _validate_brief(brief, schema)
+    if errors:
+        return {
+            "status": "invalid_brief",
+            "summary": "; ".join(errors),
+            "attempts": 0,
+            "duration_s": round(time.monotonic() - start, 3),
+            "model": MODEL,
+        }
+
+    task_type = brief["task_type"]
+    goal = brief["goal"]
+    scope = brief.get("scope", [])
+    acceptance = brief.get("acceptance", "")
+    max_attempts = bounded_attempts(brief.get("max_attempts", MAX_ATTEMPTS))
+    max_turns = bounded_turns(brief.get("max_turns", MAX_TURNS))
+    timeout = adaptive_timeout(timeout, max_turns)
+
+    # --- Image rejection (before launch) -----------------------------------
+    if task_type == "image":
+        return {
+            "status": "unsupported_capability",
+            "summary": "image input is not supported by MaaS glm-5.2",
+            "attempts": 0,
+            "duration_s": round(time.monotonic() - start, 3),
+            "model": MODEL,
+        }
+
+    # --- Empty-scope write-op rejection ------------------------------------
+    if task_type in WRITE_OP_TYPES and not scope:
+        return {
+            "status": "invalid_brief",
+            "summary": "write-op task type requires a non-empty scope",
+            "attempts": 0,
+            "duration_s": round(time.monotonic() - start, 3),
+            "model": MODEL,
+        }
+
+    # --- Client attempts with bounded retry --------------------------------
+    # Transient errors (5xx, 429, timeout) get one retry → up to 2 total
+    # attempts. Auth errors (401, 403) fail immediately. The total attempt
+    # count is capped at MAX_ATTEMPTS (2).
+    total_budget = max(MAX_ATTEMPTS, max_attempts)  # always 2 for transient
+    attempt = 0
+    last_result: dict | None = None
+    outcome = "needs_escalation"
+
+    while attempt < total_budget:
+        attempt += 1
+        # A bounded outer retry must resume a caller-owned Claude session.
+        # Starting it again with --session-id makes Claude Code reject the
+        # duplicate ID before the retry can reach MaaS.
+        client = _get_client(
+            client_bin=client_bin,
+            claude_session_id=claude_session_id,
+            resume=resume or (claude_session_id is not None and attempt > 1),
+        )
+        res = client(
+            goal,
+            model=MODEL,
+            max_turns=max_turns,
+            timeout=timeout,
+            cwd=cwd,
+            client_bin=client_bin,
+        )
+        last_result = res
+
+        if res.get("ok"):
+            outcome = "success"
+            break
+
+        status_code = res.get("status_code")
+        timed_out = res.get("timed_out")
+
+        # Auth errors: no retry.
+        if status_code in (401, 403):
+            break
+
+        # 429: honor bounded Retry-After, then retry (if budget remains).
+        if status_code == 429:
+            # Only sleep if we have budget for another attempt; otherwise
+            # there's no point waiting before exhausting the budget.
+            if attempt < total_budget:
+                retry_after = res.get("retry_after") or 0.0
+                _sleep(min(retry_after, MAX_RETRY_AFTER))
+            continue
+
+        # 5xx or timeout: one retry.
+        if status_code is not None and 500 <= status_code < 600:
+            continue
+        if timed_out:
+            continue
+
+        # Unknown failure: no retry.
+        break
+
+    # If we exited the loop without success, the task needs escalation.
+    # (capacity_error is reserved for a future single-429-no-retry path; with
+    # our bounded retry budget, exhausting attempts always means escalation.)
+    if outcome != "success":
+        outcome = "needs_escalation"
+
+    duration = time.monotonic() - start
+
+    # --- Audit (redacted) ---------------------------------------------------
+    tokens_in = (last_result or {}).get("tokens_in", 0)
+    tokens_out = (last_result or {}).get("tokens_out", 0)
+    cache_creation = (last_result or {}).get("cache_creation_input_tokens")
+    cache_read = (last_result or {}).get("cache_read_input_tokens")
+    _write_audit(_audit_record(
+        task_id=task_id,
+        attempt=attempt,
+        outcome=outcome,
+        duration_s=duration,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
+    ))
+
+    # --- Build result dict --------------------------------------------------
+    if outcome != "success":
+        return {
+            "status": outcome,
+            "summary": (last_result or {}).get("stderr", "delegation failed"),
+            "attempts": attempt,
+            "duration_s": round(duration, 3),
+            "model": MODEL,
+            "tokens": {"in": tokens_in, "out": tokens_out},
+            "cache_creation_input_tokens": cache_creation,
+            "cache_read_input_tokens": cache_read,
+        }
+
+    files_changed = (last_result or {}).get("files_changed", [])
+
+    # --- Acceptance ---------------------------------------------------------
+    verification = _run_acceptance(acceptance, cwd=cwd)
+    if not verification["passed"]:
+        # Client succeeded but acceptance failed → needs escalation.
+        return {
+            "status": "needs_escalation",
+            "summary": "client succeeded but acceptance command failed",
+            "files_changed": files_changed,
+            "verification": verification,
+            "attempts": attempt,
+            "duration_s": round(duration, 3),
+            "model": MODEL,
+            "tokens": {"in": tokens_in, "out": tokens_out},
+            "cache_creation_input_tokens": cache_creation,
+            "cache_read_input_tokens": cache_read,
+        }
+
+    return {
+        "status": "success",
+        "summary": (last_result or {}).get("stdout", "delegation succeeded"),
+        "files_changed": files_changed,
+        "verification": verification,
+        "attempts": attempt,
+        "duration_s": round(duration, 3),
+        "tokens": {"in": tokens_in, "out": tokens_out},
+        "cache_creation_input_tokens": cache_creation,
+        "cache_read_input_tokens": cache_read,
+        "model": MODEL,
+        "session_id": (last_result or {}).get("session_id"),
+    }
+
+
+# ---------------------------------------------------------------------------
+# CLI entry point
+# ---------------------------------------------------------------------------
+
+
+def _read_brief() -> dict:
+    """Read the brief from --file or JSON stdin."""
+    args = sys.argv[1:]
+    # --help / -h: print usage and exit 0.
+    if any(a in ("--help", "-h") for a in args):
+        print(
+            "delegate — structured single-task delegation to claude-maas (glm-5.2).\n"
+            "\n"
+            "Usage:\n"
+            "  delegate --file <brief.json>       run the brief from a file\n"
+            "  delegate < brief.json              run a brief read from JSON stdin\n"
+            "  delegate --help                    show this help and exit\n"
+            "\n"
+            "The brief is a JSON object with at least:\n"
+            "  task_type  (e.g. code_generation, bug_fix, docs, review)\n"
+            "  goal       (self-contained task description)\n"
+            "  scope      (files the task may touch; required for write-ops)\n"
+            "  acceptance (shell command to verify the result, optional)\n"
+            "\n"
+            "See assets/brief-schema.json for the full schema. Model is always\n"
+            "glm-5.2; fallback is always false; image briefs are rejected."
+        )
+        raise SystemExit(0)
+    file_path: str | None = None
+    i = 0
+    while i < len(args):
+        if args[i] == "--file" and i + 1 < len(args):
+            file_path = args[i + 1]
+            i += 2
+        else:
+            i += 1
+
+    if file_path:
+        return json.loads(Path(file_path).read_text(encoding="utf-8"))
+    raw = sys.stdin.read()
+    if not raw.strip():
+        raise SystemExit("delegate: no brief provided (use --file or JSON stdin, --help for usage)")
+    return json.loads(raw)
+
+
+def main() -> int:
+    try:
+        brief = _read_brief()
+    except json.JSONDecodeError as exc:
+        print(json.dumps({"status": "invalid_brief", "summary": f"JSON error: {exc}"}))
+        return 1
+    try:
+        result = run(brief)
+    except Exception as exc:  # noqa: BLE001
+        print(json.dumps({"status": "needs_escalation", "summary": f"error: {exc}"}))
+        return 1
+    print(json.dumps(result, indent=2))
+    return 0 if result["status"] == "success" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

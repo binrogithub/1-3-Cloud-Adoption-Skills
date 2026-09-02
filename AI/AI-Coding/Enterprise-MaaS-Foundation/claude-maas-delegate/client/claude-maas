@@ -1,0 +1,255 @@
+#!/usr/bin/env bash
+# claude-maas — isolated launcher for the official Claude Code CLI.
+#
+# Injects ONLY the configured Anthropic-compatible endpoint, Bearer token, and
+# model into the child process environment, then execs the real claude binary.
+# Starts no service, converts no protocol, listens on no port.
+#
+# Configuration (PRD UPSTREAM_PROFILE_V1 D7): all paths derive from a single
+# profile name so the same launcher serves any upstream without forking:
+#   CLAUDE_MAAS_PROFILE  (default: claude-maas)
+#   ~/.config/$PROFILE/config.json  (mode 0600) — non-secret settings
+#   ~/.config/$PROFILE/api-key      (mode 0600) — raw single-line key
+#   ~/.$PROFILE/                    — isolated CLAUDE_CONFIG_DIR
+#
+# The key file is read as DATA (IFS= read -r), never sourced or eval'd.
+# The key never appears in argv, logs, or error messages.
+set -euo pipefail
+
+###############################################################################
+# Helpers
+###############################################################################
+
+die() {
+    # Print a safe error message (never the key) to stderr and exit 1.
+    echo "claude-maas: $*" >&2
+    exit 1
+}
+
+# D7: a single profile variable derives every path. Default keeps the
+# historical claude-maas layout byte-for-byte.
+profile="${CLAUDE_MAAS_PROFILE:-claude-maas}"
+config_dir="$HOME/.config/$profile"
+config_file="$config_dir/config.json"
+key_file="$config_dir/api-key"
+claude_config_dir="$HOME/.$profile"
+
+###############################################################################
+# Locate the real claude binary, excluding this script itself
+#
+# Done before config/key validation so that the resolve-binary diagnostic can
+# run without a key file (PRD FR-5.5: record version/digest, no OAuth metadata).
+###############################################################################
+
+self_path=$(readlink -f "$0" 2>/dev/null || echo "$0")
+
+claude_bin=""
+while IFS= read -r candidate; do
+    candidate_resolved=$(readlink -f "$candidate" 2>/dev/null || echo "$candidate")
+    # Skip if this resolves to our own script (by path, not by name).
+    if [[ "$candidate_resolved" == "$self_path" ]]; then
+        continue
+    fi
+    claude_bin="$candidate_resolved"
+    break
+done < <(command -v claude 2>/dev/null || true)
+
+# command -v may return nothing or a single path; handle the common case.
+if [[ -z "$claude_bin" ]]; then
+    # Fallback: search PATH manually for a 'claude' that isn't us.
+    IFS=':' read -ra _path_parts <<<"$PATH"
+    for _dir in "${_path_parts[@]}"; do
+        [[ -z "$_dir" ]] && continue
+        _candidate="$_dir/claude"
+        [[ -x "$_candidate" ]] || continue
+        _resolved=$(readlink -f "$_candidate" 2>/dev/null || echo "$_candidate")
+        [[ "$_resolved" == "$self_path" ]] && continue
+        claude_bin="$_resolved"
+        break
+    done
+fi
+
+###############################################################################
+# resolve-binary diagnostic mode
+#
+# Prints the canonical official CLI path and its SHA-256 digest.  This is a
+# non-secret diagnostic used by the release verifier's plain-claude-isolation
+# gate.  It must NOT load or print the API key, and it must NOT make a model
+# request.  Handled before config/key validation so a missing key is not fatal.
+###############################################################################
+
+if [[ ${1:-} == "resolve-binary" ]]; then
+    if [[ -z "$claude_bin" ]]; then
+        die "claude binary not found on PATH (excluding claude-maas itself)."
+    fi
+    _digest=""
+    if command -v sha256sum >/dev/null 2>&1; then
+        _digest="$(sha256sum "$claude_bin" 2>/dev/null | awk '{print $1}')"
+    fi
+    printf '%s\t%s\n' "$claude_bin" "${_digest:-unknown}"
+    exit 0
+fi
+
+if [[ -z "$claude_bin" ]]; then
+    die "claude binary not found on PATH (excluding claude-maas itself).
+Install the official Claude Code CLI, or ensure 'claude' is on PATH."
+fi
+
+###############################################################################
+# Validate configuration directory permissions (must not be wider than 0700)
+###############################################################################
+
+if [[ ! -d "$config_dir" ]]; then
+    die "configuration directory not found: $config_dir
+Run claude-maas-setup to create it, or see docs/OPERATIONS.md."
+fi
+
+dir_mode=$(stat -c '%a' "$config_dir" 2>/dev/null || stat -f '%A' "$config_dir" 2>/dev/null) || \
+    die "cannot stat configuration directory: $config_dir"
+# Strip any leading zeros from the mode string.
+dir_mode=$(( 8#$dir_mode & 8#777 ))
+if (( dir_mode & 8#077 )); then
+    die "configuration directory permissions too open: $config_dir (mode $(printf '%o' "$dir_mode")); expected 0700 or stricter.
+Run: chmod 700 '$config_dir'"
+fi
+
+###############################################################################
+# Validate and read config.json (via python3 stdlib json.load)
+###############################################################################
+
+if [[ ! -f "$config_file" ]]; then
+    die "config file not found: $config_file
+Run claude-maas-setup to create it."
+fi
+
+# Read all config values in one python3 invocation to avoid repeated subprocesses.
+# Outputs: base_url<TAB>model<TAB>context_tokens<TAB>max_output_tokens
+config_row=$(python3 - "$config_file" <<'PYEOF'
+import json
+import sys
+import os
+
+path = sys.argv[1]
+# Refuse to read a world/group-readable config file.
+st = os.stat(path)
+mode = st.st_mode & 0o777
+if mode & 0o077:
+    sys.stderr.write(f"config file permissions too open: {path} (mode {oct(mode)}); expected 0600\n")
+    sys.exit(1)
+
+try:
+    with open(path, "r", encoding="utf-8") as fh:
+        data = json.load(fh)
+except (OSError, json.JSONDecodeError) as exc:
+    sys.stderr.write(f"cannot read config: {exc}\n")
+    sys.exit(1)
+
+base_url = data.get("anthropic_base_url", "")
+model = data.get("model", "")
+context_tokens = data.get("context_tokens", "")
+max_output_tokens = data.get("max_output_tokens", "")
+
+if not base_url:
+    sys.stderr.write("config missing anthropic_base_url\n")
+    sys.exit(1)
+if not model:
+    sys.stderr.write("config missing model\n")
+    sys.exit(1)
+
+print(f"{base_url}\t{model}\t{context_tokens}\t{max_output_tokens}")
+PYEOF
+) || true
+if [[ $? -ne 0 || -z "$config_row" ]]; then
+    die "failed to parse config file: $config_file"
+fi
+
+# Parse the tab-separated row.
+IFS=$'\t' read -r ANTHROPIC_BASE_URL CFG_MODEL CFG_CONTEXT_TOKENS CFG_MAX_OUTPUT_TOKENS <<<"$config_row"
+
+###############################################################################
+# Validate and read the api-key file (as DATA, never source/eval)
+###############################################################################
+
+if [[ ! -f "$key_file" ]]; then
+    die "api-key file not found: $key_file
+Run claude-maas-setup with the key on stdin to create it."
+fi
+
+key_mode=$(stat -c '%a' "$key_file" 2>/dev/null || stat -f '%A' "$key_file" 2>/dev/null) || \
+    die "cannot stat api-key file: $key_file"
+key_mode=$(( 8#$key_mode & 8#777 ))
+if (( key_mode != 8#600 )); then
+    die "api-key file permissions incorrect: $key_file (mode $(printf '%o' "$key_mode")); expected 0600.
+Run: chmod 600 '$key_file'"
+fi
+
+# Read exactly one line as raw data. IFS= prevents trimming; -r prevents
+# backslash interpretation. This is NOT source/eval — the file content is
+# never executed as shell code.
+IFS= read -r ANTHROPIC_AUTH_TOKEN <"$key_file" || true
+
+if [[ -z "$ANTHROPIC_AUTH_TOKEN" ]]; then
+    die "api-key file is empty: $key_file"
+fi
+
+###############################################################################
+# Determine whether to insert --model glm-5.2
+#
+# --version, doctor, and mcp are management/subcommands where --model is
+# invalid or meaningless. For all other invocations (interactive, -p, etc.)
+# we insert --model <model> as the first argument.
+###############################################################################
+
+insert_model=true
+if [[ ${#} -gt 0 ]]; then
+    case "$1" in
+        --version|-V)
+            insert_model=false
+            ;;
+        doctor)
+            insert_model=false
+            ;;
+        mcp)
+            insert_model=false
+            ;;
+    esac
+fi
+
+###############################################################################
+# Export child-only environment variables
+###############################################################################
+
+export ANTHROPIC_BASE_URL
+export ANTHROPIC_AUTH_TOKEN
+export ANTHROPIC_MODEL="$CFG_MODEL"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="$CFG_MODEL"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="$CFG_MODEL"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="$CFG_MODEL"
+export CLAUDE_CONFIG_DIR="$claude_config_dir"
+
+# Huawei MaaS exposes the configured coding model only.  Claude Code normally
+# creates a background small/fast-model request to generate terminal/session
+# titles in print/SDK mode; disable that optional request so it cannot select
+# an unsupported helper model.  Keep background work enabled, but remove the
+# print-mode 600s wait ceiling so active workflows are allowed to finish.
+export CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1
+export CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0
+
+if [[ -n "$CFG_CONTEXT_TOKENS" ]]; then
+    export CLAUDE_CODE_MAX_CONTEXT_TOKENS="$CFG_CONTEXT_TOKENS"
+fi
+
+# Unset other provider credentials and switches — only one auth source.
+unset ANTHROPIC_API_KEY 2>/dev/null || true
+unset CLAUDE_CODE_USE_BEDROCK 2>/dev/null || true
+unset CLAUDE_CODE_USE_VERTEX 2>/dev/null || true
+
+###############################################################################
+# Exec the real claude with (optionally) --model inserted
+###############################################################################
+
+if $insert_model; then
+    exec "$claude_bin" --model "$CFG_MODEL" "$@"
+else
+    exec "$claude_bin" "$@"
+fi
