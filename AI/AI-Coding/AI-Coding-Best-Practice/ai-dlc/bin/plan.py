@@ -7009,8 +7009,9 @@ def cmd_design_select(change: str, repo: Path,
             f"Pick exactly one SKILL.md path from the list above. "
             f"Reply with the full path on the first line, then one line "
             f"explaining why you chose it. Nothing else.")
-        out, frames = run_plane_session(change, "design-select", select_prompt,
-                                        repo, task_dir, mode, 90)
+        out, _rc = run_plane_session(change, "design-select", select_prompt,
+                                     repo, task_dir, mode, 90)
+        frames = out.get("frames", [])
         if out.get("timed_out") or not out.get("round_complete") \
                 or out.get("interrupted"):
             chosen = _first_unflagged(scored, best)

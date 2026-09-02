@@ -89,9 +89,16 @@ def _assistant_frames(text: str) -> list:
     })]
 
 
-def _ok_session_out() -> dict:
+def _ok_session_out(frames: list | None = None) -> dict:
+    # run_plane_session's real contract: frames live INSIDE the dict
+    # (out["frames"]), and the second return value is an int exit code
+    # — never the frames list itself. A mock that returned
+    # (dict, frames_list) here would silently match the exact caller
+    # bug this fixture exists to catch (cmd_design_select once did
+    # `out, frames = run_plane_session(...)`, treating the int as
+    # frames — TypeError: 'int' object is not reversible).
     return {"timed_out": False, "round_complete": True,
-            "interrupted": False, "client_rc": 0}
+            "interrupted": False, "client_rc": 0, "frames": frames or []}
 
 
 # ═══ M1 — D0 SELECT produces a design_selection record ═════════════
@@ -116,7 +123,7 @@ class TestM1DesignSelect:
         monkeypatch.setattr(plan, "OPENDESIGN_ROOT", str(od_root))
 
         def fake_session(change, verb, prompt, repo, task_dir, mode, timeout):
-            return _ok_session_out(), _assistant_frames(skill_path)
+            return _ok_session_out(frames=_assistant_frames(skill_path)), 0
 
         monkeypatch.setattr(plan, "run_plane_session", fake_session)
 
@@ -171,7 +178,7 @@ class TestM1DesignSelect:
 
         def fake_timeout(change, verb, prompt, repo, task_dir, mode, timeout):
             return {"timed_out": True, "round_complete": False,
-                    "interrupted": False, "client_rc": None}, []
+                    "interrupted": False, "client_rc": None, "frames": []}, 0
 
         monkeypatch.setattr(plan, "run_plane_session", fake_timeout)
 
@@ -819,7 +826,7 @@ class TestNarrowAestheticGate:
 
         def fake_session(change, verb, prompt, repo, task_dir, mode, timeout):
             captured_prompt["text"] = prompt
-            return _ok_session_out(), _assistant_frames(generic_path)
+            return _ok_session_out(frames=_assistant_frames(generic_path)), 0
 
         monkeypatch.setattr(plan, "run_plane_session", fake_session)
 
@@ -920,7 +927,7 @@ class TestNarrowAestheticGate:
 
         def fake_timeout(change, verb, prompt, repo, task_dir, mode, timeout):
             return {"timed_out": True, "round_complete": False,
-                    "interrupted": False, "client_rc": None}, []
+                    "interrupted": False, "client_rc": None, "frames": []}, 0
 
         monkeypatch.setattr(plan, "run_plane_session", fake_timeout)
 
