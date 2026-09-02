@@ -1,0 +1,43 @@
+# ── AI-DLC collapsed configuration (v0.6.0) ──────────────────
+# The whole system in ≤10 keys (was 70). The delegated pipeline's
+# knobs lived with the components the collapse PRD retired to attic/.
+# Rollback restores config/ai-dlc.config.yaml from v0.5.1-delegated-final.
+
+execution:
+  route_default: inline        # routing-table fallback; a task too large for inline
+                               # routes to the planning plane (route: planned)
+  planning_threshold_files: 4  # the one number the routing table states: a change
+                               # whose measured product files reach this count goes
+                               # to the planning plane; deliver checks the recorded
+                               # route against it and stops for a person on a
+                               # contradiction (the skill states the same number)
+
+delivery:                      # G-DELIVER-1 product surface
+  product_excludes: [.ai-dlc/**, CLAUDE.md, findings.json, __pycache__/**,
+                     "*.pyc", .pytest_cache/**, audits/**, blueprint.json]
+
+gates:
+  merge_required: true         # MERGE_GATE: no auto-merge, rationale required
+
+review:                          # the adversarial design-review round (design-review)
+  max_axes: 3                    # the most reviewers one round carries; more is
+                                 # refused, never silently truncated
+  axis.security.stance: suspicious of anything that widens who can act or what a process can reach without a named owner
+  axis.security.accepts: paying convenience for containment, a slower path with a narrower blast radius
+  axis.security.refuses: unattended agents holding unrestricted shells side by side in one tree
+  axis.operability.stance: suspicious of anything that holds only while a single process stays alive
+  axis.operability.accepts: a rougher tool whose state survives restarts, concurrent runs and partial failure
+  axis.operability.refuses: shared state two separate invocations can corrupt and no operator can see
+  axis.performance.stance: suspicious of any cost that grows without a named ceiling
+  axis.performance.accepts: paying memory or duplication to keep the critical path short
+  axis.performance.refuses: unbounded concurrency and unmeasured claims of speed
+
+design:                           # v2 design architecture: D0 SELECT → D1 SPECIFY → D2 BUILD → D3 VERIFY
+                                  # design is a product code must conform to, not an action on finished code
+  select_timeout_s: 120           # D0 session timeout — small session judges pre-filter shortlist
+  specify_timeout_s: 600          # D1 session timeout — ui-designer produces concrete spec from SKILL.md
+  prefilter_top_k: 12             # D0 pre-filter shortlist size from the 428-candidate design-index
+  retrofit_timeout_s: 1800        # legacy full-rewrite path, --retrofit only; --shard N is the default
+  verify_checks: [tokens_used, skill_sha_match, components_conform, no_placeholder,
+                  design_artifacts_exist, tokens_json_valid]  # D3 mechanical checks, don't read frames
+  artifacts: [tokens.css, tokens.json, components.md, pages.md, assets.md]  # D1 product files → git

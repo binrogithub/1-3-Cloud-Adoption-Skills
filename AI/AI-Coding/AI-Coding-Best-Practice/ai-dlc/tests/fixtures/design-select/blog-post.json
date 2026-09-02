@@ -1,0 +1,7 @@
+{
+  "change": "ch-blog-article",
+  "proposal": "Write a long-form blog article with hero image, pull quotes, and author byline.",
+  "surface_class": "web",
+  "expect_top1": "design-templates/blog-post",
+  "expect_in_shortlist": ["design-templates/blog-post"]
+}

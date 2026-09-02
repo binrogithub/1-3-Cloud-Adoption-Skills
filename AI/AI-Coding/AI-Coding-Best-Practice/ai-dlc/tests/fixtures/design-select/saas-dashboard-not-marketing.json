@@ -1,0 +1,5 @@
+{"change": "saas-analytics-dashboard",
+ "proposal": "An internal analytics dashboard for a SaaS startup ops team — KPI cards, charts, and a data table for daily active users and revenue metrics. Admin-only, not a public marketing page.",
+ "surface_class": "web",
+ "expect_top1": null,
+ "expect_in_shortlist": ["design-templates/dashboard"]}

@@ -1,0 +1,7 @@
+{
+  "change": "ch-admin-dashboard",
+  "proposal": "构建一个管理后台，包含 KPI 卡片和数据图表。",
+  "surface_class": "web",
+  "expect_top1": "design-templates/dashboard",
+  "expect_in_shortlist": ["design-templates/dashboard"]
+}

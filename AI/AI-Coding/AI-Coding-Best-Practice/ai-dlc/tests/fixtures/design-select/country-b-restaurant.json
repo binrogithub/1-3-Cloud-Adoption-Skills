@@ -1,0 +1,5 @@
+{"change": "country-b-restaurant-site",
+ "proposal": "Build a marketing website for a country-b restaurant (churrasco / steakhouse, live country-b cuisine). Single page: hero, menu highlights, ambiance/gallery, reservations or contact call-to-action. Web surface — not a slide deck, not an internal admin dashboard.",
+ "surface_class": "web",
+ "expect_top1": null,
+ "assert_design_system_excludes": ["Dashboard"]}

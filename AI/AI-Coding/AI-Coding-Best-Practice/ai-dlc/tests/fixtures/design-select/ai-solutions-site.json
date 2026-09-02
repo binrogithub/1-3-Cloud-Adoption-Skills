@@ -1,0 +1,5 @@
+{"change": "ai-solutions-site",
+ "proposal": "Build a business/marketing website for an AI solutions company (an \"AI & LLM\" software vendor). English copy. A single polished landing page: hero, product/solutions overview, features, pricing or contact call-to-action. Prototype/template mode, web surface — not a slide deck, not an internal admin dashboard.",
+ "surface_class": "web",
+ "expect_top1": null,
+ "assert_margin_below": 0.25}

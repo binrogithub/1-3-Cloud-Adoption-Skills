@@ -1,0 +1,8 @@
+{
+  "name": "claude-maas",
+  "display_name": "Claude Code (MaaS)",
+  "kind": "claude-skill",
+  "config_dir": "~/.claude-maas",
+  "launcher": "~/.local/bin/claude-maas",
+  "role": "执行壳 — openjiuwen 默认客户端"
+}

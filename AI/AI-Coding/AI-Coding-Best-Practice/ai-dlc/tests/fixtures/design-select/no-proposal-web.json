@@ -1,0 +1,9 @@
+{
+  "change": "ch-some-web-change",
+  "proposal": "",
+  "surface_class": "web",
+  "expect_top1": null,
+  "expect_in_shortlist": null,
+  "assert_unique_top1": true,
+  "assert_no_tie": true
+}

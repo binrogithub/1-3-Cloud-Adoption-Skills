@@ -1,0 +1,8 @@
+{
+  "name": "claude-glm",
+  "display_name": "Claude Code (GLM direct)",
+  "kind": "claude-skill",
+  "config_dir": "~/.claude-glm",
+  "launcher": "~/.local/bin/claude-glm",
+  "role": "执行壳 — openjiuwen/workflow 的下游"
+}

@@ -1,0 +1,1 @@
+{"name": "codex", "display_name": "OpenAI Codex CLI", "kind": "agents-md", "config_dir": "<project-root>", "role": "交互壳 — Codex CLI 场景,读取仓库根目录的 AGENTS.md"}

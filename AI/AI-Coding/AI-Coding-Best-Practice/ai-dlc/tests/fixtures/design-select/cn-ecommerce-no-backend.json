@@ -1,0 +1,5 @@
+{"change": "cn-ecommerce-no-backend",
+ "proposal": "为一个中文跨境电商品牌设计一个商业网站,展示产品分类、促销活动和购物车入口。面向消费者的前台页面,不需要后台管理面板,不是仪表盘。",
+ "surface_class": "web",
+ "expect_top1": null,
+ "assert_not_dashboard_family": true}

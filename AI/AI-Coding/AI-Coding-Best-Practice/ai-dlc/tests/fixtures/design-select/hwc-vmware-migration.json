@@ -1,0 +1,5 @@
+{"change": "hwc-vmware-migration-site",
+ "proposal": "Build a business/marketing website for a Huawei Cloud VMware migration service (enterprise cloud migration, workload relocation, disaster recovery). Single landing page: hero, migration process/steps overview, benefits, case studies or proof, pricing or contact call-to-action. Web surface, not a slide deck, not an internal admin dashboard.",
+ "surface_class": "web",
+ "expect_top1": null,
+ "assert_raw_top1_is_flagged": "open-design-landing"}
