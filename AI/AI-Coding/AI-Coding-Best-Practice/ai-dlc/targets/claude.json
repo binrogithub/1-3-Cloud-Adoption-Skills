@@ -1,7 +1,7 @@
 {
   "name": "claude-code",
   "display_name": "Claude Code",
-  "kind": "claude-skill",
+  "kind": "claude-native-skill",
   "config_dir": "~/.claude",
   "launcher": "~/.local/bin/claude",
   "role": "交互壳 — 命令入口、人机交互、状态展示。不承担核心 coding，不连接 MaaS。"

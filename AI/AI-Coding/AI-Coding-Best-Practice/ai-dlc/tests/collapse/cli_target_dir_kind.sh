@@ -14,7 +14,7 @@ T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 # ── 1. --target codex --target-dir <dir> writes AGENTS.md ──────────────
 proj="$T/project"
 mkdir -p "$proj"
-bash "$ROOT/install.sh" --target codex --target-dir "$proj" >"$T/run1.out" 2>&1 \
+AI_DLC_MANIFEST_FILE="$T/manifest.json" bash "$ROOT/install.sh" --target codex --target-dir "$proj" >"$T/run1.out" 2>&1 \
   || { echo "FAIL: --target codex --target-dir exited non-zero"; cat "$T/run1.out"; exit 1; }
 
 AGENTS_MD="$proj/AGENTS.md"
