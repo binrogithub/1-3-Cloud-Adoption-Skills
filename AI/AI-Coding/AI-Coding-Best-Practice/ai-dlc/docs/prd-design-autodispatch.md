@@ -13,7 +13,7 @@
 
 ## 01 问题
 
-2026-09-01 在 217 上跑了一轮阿根廷网站（change `country-a-site`，repo
+2026-09-01 在 217 上跑了一轮country-a网站（change `country-a-site`，repo
 `/tmp/Argentia`）。产出是一个 25,777 字节的 `index.html`。**ui-designer
 一次都没被调用。**
 

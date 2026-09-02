@@ -33,7 +33,7 @@ D6/D12 两条今天绿着的反向门**语义会变**，必须在本轮同步改
 
 两轮真实运行，四个阻塞点，**没有一个是「模型不听话」**。
 
-### 巴拿马（`task-20260901093149-f93794`，09:31→09:48，claude-maas/glm-5.2）
+### country-d（`task-20260901093149-f93794`，09:31→09:48，claude-maas/glm-5.2）
 
 交付物本身很好：13 文件 / 114,938 字节，10 个 HTML + `assets/style.css`(12.3 KB)
 + `main.js`(2 KB)；**186 个本地资源引用 0 个解不出来**；零占位文本；
@@ -68,7 +68,7 @@ python3 bin/report.py deliver --task-dir … --repo … --outcome completed --no
 `approver: "human-at-terminal"`）。系统没骗人，但**「没用 ui-designer」
 和「spec 没验」混在一起，作为两行小字滑过去了**。
 
-### 阿根廷（`design-country-a-site-1`，手动派发，855 秒）
+### country-a（`design-country-a-site-1`，手动派发，855 秒）
 
 这一轮**跑了** ui-designer，角色干得不错：
 
@@ -96,13 +96,13 @@ python3 bin/report.py deliver --task-dir … --repo … --outcome completed --no
 
 | # | 闸 | 状态 |
 |---|---|---|
-| **闸1** | 判据在真实页面上判不出成功（F1/F2/F3） | **未修** — 阿根廷 855 秒证明 |
-| **闸2** | `no_change_id`：inline 例外路线拿不到 change id | **未修** — 巴拿马证明 |
-| **闸3** | `--no-design` 可被模型无理由关闭 | **未修** — 巴拿马证明 |
+| **闸1** | 判据在真实页面上判不出成功（F1/F2/F3） | **未修** — country-a 855 秒证明 |
+| **闸2** | `no_change_id`：inline 例外路线拿不到 change id | **未修** — country-d证明 |
+| **闸3** | `--no-design` 可被模型无理由关闭 | **未修** — country-d证明 |
 | **闸4** | design 不是交付判据，未验证也能进合并门 | **未修**（本轮的目标） |
 
 **修复次序不能颠倒**：先修闸4（上门）而不修闸1，
-结果是**每一个网站交付都被卡死**——因为阿根廷已经证明五条事实
+结果是**每一个网站交付都被卡死**——因为country-a已经证明五条事实
 在真实页面上判不过。这是本 PRD 唯一不能商量的排序。
 
 ---
@@ -113,11 +113,11 @@ python3 bin/report.py deliver --task-dir … --repo … --outcome completed --no
 
 | ID | 目标 |
 |---|---|
-| **H-0** | **判据先能在真实页面上判成功**——阿根廷那一轮的同一份帧重跑，五条事实全过。闸4 的前置 |
+| **H-0** | **判据先能在真实页面上判成功**——country-a那一轮的同一份帧重跑，五条事实全过。闸4 的前置 |
 | **H-A** | **web/deck 面上 `design_applied` 是交付成功的必要条件**；不满足即 `delivered: false`，且**合并门上人必须看得见这一条** |
 | **H-B** | **纯代码面完全不受影响**——测量判 `design_not_applicable`，不派发、不加时间、不参与判定 |
 | **H-C** | **没有静默跳过的路径**：`no_change_id` 补上，`--no-design` 需人署名 |
-| **H-D** | **放行必须是人的、具名的、带理由的**——模型不得签发绕过（巴拿马路由例外的教训） |
+| **H-D** | **放行必须是人的、具名的、带理由的**——模型不得签发绕过（country-d路由例外的教训） |
 
 ### 非目标
 
@@ -133,7 +133,7 @@ python3 bin/report.py deliver --task-dir … --repo … --outcome completed --no
 
 ## 03 判据的三处缺陷（闸1）
 
-阿根廷那一轮的原始产物在
+country-a那一轮的原始产物在
 `/tmp/country-a-design-probe.json`，帧在
 `<gateway-home>/agent/sessions/design-country-a-site-1/history.jsonl`（319 KB）。
 **重跑不需要再花 855 秒。**
@@ -207,24 +207,24 @@ python3 bin/report.py deliver --task-dir … --repo … --outcome completed --no
 
 | ID | 尝试 | 期望 | 今天 |
 |---|---|---|---|
-| **C1** | 拿**阿根廷那一轮已有的帧**重跑事实提取 | 五条全过，落签名记录 | **RED** — 今天三条判败零记录。**闸1 是否修对的唯一硬证据** |
+| **C1** | 拿**country-a那一轮已有的帧**重跑事实提取 | 五条全过，落签名记录 | **RED** — 今天三条判败零记录。**闸1 是否修对的唯一硬证据** |
 | **C2** | 帧里含 `grep -oE "<title>[^<]*</title>"` 与 `python3 -c "…r'</%s>'…"` | 零幻影候选；真实写入照常记 | **RED**（F1） |
 | **C3** | 角色起本地服务、日志落 `/tmp/*.log` | 不判 `writes_outside`；豁免逐条记进 `self_check_writes` | **RED**（F2） |
 | **C4** | 页面 `href="/favicon.svg"`，文件在仓库根 | `local_missing` 为空 | **RED**（F3） |
 | **C5** | 构造一条路径既在 `files` 有 sha256、又在 `local_missing` | 判败并指名 | **RED** — 今天这个矛盾静静通过 |
 | **C6** | **D8 回归**：帧里零上游读取、角色声称已美化 | 仍然拿不到记录 | **GREEN 回归门** — L1 的守卫，修完必须还绿 |
-| **C7** | `change_id: null` 的 inline 交付，面测出 web | **自动派发**，记录以 `task_id` 为键 | **RED**（闸2，巴拿马就是这个形状） |
+| **C7** | `change_id: null` 的 inline 交付，面测出 web | **自动派发**，记录以 `task_id` 为键 | **RED**（闸2，country-d就是这个形状） |
 | **C8** | `--no-design` 不带 `--no-design-by/--why` | **拒绝执行** | **RED**（闸3） |
-| **C9** | `--no-design-by "AI-DLC Executor"` | **拒绝**（L6：模型不得署名） | **RED** — 巴拿马路由例外的同型防护 |
+| **C9** | `--no-design-by "AI-DLC Executor"` | **拒绝**（L6：模型不得署名） | **RED** — country-d路由例外的同型防护 |
 | **C10** | web 面、无 design 记录、无 override → `deliver` | `delivered: false`，`outcome: design_required` | **RED**（闸4） |
 | **C11** | 纯后端 change → `deliver` | `design_not_applicable`，`delivered` **不受影响**，零派发、零延时 | **GREEN 回归门** — H-B 的守卫 |
 | **C12** | 合并门 request | `summary` 里能读到 `design_state` 与 `surface` | **RED**（L5，今天 `summary: {}`） |
 | **C13** | `--design-override --by human-at-terminal --why …` | `delivered: true`，`outcome: design_overridden`，who/why 原样承载 | **RED** |
-| **C14** | **判别力**：拿巴拿马这一轮重跑 `deliver` | 改前：`delivered:false` 但仍进合并门且 summary 空；改后：`design_required` + summary 带状态 | 改前一半**今天已实测成立** |
+| **C14** | **判别力**：拿country-d这一轮重跑 `deliver` | 改前：`delivered:false` 但仍进合并门且 summary 空；改后：`design_required` + summary 带状态 | 改前一半**今天已实测成立** |
 
 **C1 与 C10 缺一不可**：C1 证明门有东西可判过，C10 证明门真的会判。
 **C6 与 C11 缺一不可**：C6 防「为了让门变绿而放宽判据」，C11 防「为了上门而把纯代码也拖下水」。
-**C9 是本轮的态度**：巴拿马已经演示了「模型给自己签例外」是怎么发生的，
+**C9 是本轮的态度**：country-d已经演示了「模型给自己签例外」是怎么发生的，
 新加的 override 不能留同一个口子。
 
 > **附注（deliver-measures-work 补门）**：C10/C11 在 planned 路线上
@@ -239,7 +239,7 @@ python3 bin/report.py deliver --task-dir … --repo … --outcome completed --no
 
 | 期 | 内容 | 门 | 依赖 |
 |---|---|---|---|
-| **S0 · 探针** | 已完成：巴拿马四闸实测、阿根廷帧已在手 | 四个事实进记录 | — |
+| **S0 · 探针** | 已完成：country-d四闸实测、country-a帧已在手 | 四个事实进记录 | — |
 | **S1 · 判据修对** | M1 + M2 + M3 | **C1** C2 C3 C4 C5 **C6** | — |
 | **S2 · 通路** | M4 + M5 | C7 C8 **C9** | S1 |
 | **S3 · 上门** | M6 + M7 + M8 | **C10** **C11** C12 C13 C14 | **S1 必须先过** |
@@ -247,9 +247,9 @@ python3 bin/report.py deliver --task-dir … --repo … --outcome completed --no
 
 > **S1 未过之前绝不做 S3。**
 > 先上门后修判据 = 每一个网站交付都被卡死。
-> C1 是那道闸：阿根廷的帧重跑五条全过，才允许进 S3。
+> C1 是那道闸：country-a的帧重跑五条全过，才允许进 S3。
 
-**S3 落地当天应当用巴拿马复验**（C14）：那个仓库 186 个引用 0 缺失、零占位、
+**S3 落地当天应当用country-d复验**（C14）：那个仓库 186 个引用 0 缺失、零占位、
 十页全 200，是目前最干净的正向样本。
 
 ---
@@ -259,7 +259,7 @@ python3 bin/report.py deliver --task-dir … --repo … --outcome completed --no
 | ID | 风险 | 消化方式 |
 |---|---|---|
 | **R1** | **上门后网站交付全部卡死**（若 S1 没修好） | S1→S3 的硬依赖 + C1 作闸。**这是本轮最大的风险，也是唯一有明确防线的那个。** |
-| **R2** | **每个前端交付多一次十四分钟的会话**（阿根廷 855s） | 按 landing L1：**不设上限、不设告警、不报预算**，只在记录里存 `elapsed`。事件先落盘再开会话，人看得见它在跑。 |
+| **R2** | **每个前端交付多一次十四分钟的会话**（country-a 855s） | 按 landing L1：**不设上限、不设告警、不报预算**，只在记录里存 `elapsed`。事件先落盘再开会话，人看得见它在跑。 |
 | **R3** | **M2 的豁免滑成「`/tmp` 随便写」** | 口径写死：只豁免 `/tmp` 下、会话自己创建、不在产品面内的路径，逐条记账。**残余**：把真实产物写进 `/tmp` 的角色不会被这条抓住——该由产品面测量抓。 |
 | **R4** | **M1 的丢弃掩盖真实写入失败** | 丢弃项记进 `discarded_candidates`，人能看见。**残余**：一次真实的「写了但没落盘」会被当幻影丢掉；靠 C2 的正向一半兜。 |
 | **R5** | **override 变成新的橡皮图章** | L6 限定署名枚举 + 必须带 why + outcome 显式标 `design_overridden`（不是 `completed`）。**残余**：一个人可以每次都签。这是人的权力，不该由机器剥夺——但每一次都留痕、可统计。 |

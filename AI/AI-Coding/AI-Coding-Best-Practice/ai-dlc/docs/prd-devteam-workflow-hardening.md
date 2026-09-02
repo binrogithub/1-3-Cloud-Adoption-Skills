@@ -2,7 +2,7 @@
 
 **变更 id**：`devteam-workflow-hardening`
 **基线**：`7500f8f`（S4 — design surface sharding with concurrency）
-**触发事件**：巴西国家旅游网站（`country-b-tourism-site`，2026-09-02 01:44–02:09 CST）交付完成，ui-designer 调用 0 次，OpenDesign 读取 0 字节，而 `deliver` 报告 `design_not_applicable`——没有任何一处报警。
+**触发事件**：country-b国家旅游网站（`country-b-tourism-site`，2026-09-02 01:44–02:09 CST）交付完成，ui-designer 调用 0 次，OpenDesign 读取 0 字节，而 `deliver` 报告 `design_not_applicable`——没有任何一处报警。
 **证据取得时间**：2026-09-02，全部在 `<host-ip>` 实测
 **状态**：待评审。本文只提方案与实现，代码未落。
 
@@ -40,10 +40,10 @@
 
 | 项目 | ui-designer | 根因 | 已修 |
 |---|---|---|---|
-| 阿根廷 | 调用了 | 判据自身三个缺陷（F1/F2/F3） | `c58e9f2` |
-| 巴拿马 | 调用了、五条事实全过 | 结果没回写（`rc: null`） | `bd3566a` (N2 backfill) |
+| country-a | 调用了 | 判据自身三个缺陷（F1/F2/F3） | `c58e9f2` |
+| country-d | 调用了、五条事实全过 | 结果没回写（`rc: null`） | `bd3566a` (N2 backfill) |
 | client-x | 调用了、判据判对 | planned 路线量到空树 | `dfb0775` (N1) |
-| **巴西** | **0 次** | **分支命名失配绕过 N1** | **未修** |
+| **country-b** | **0 次** | **分支命名失配绕过 N1** | **未修** |
 
 `dfb0775` 的修复方向是对的：deliver 应当量任务分支而不是 HEAD。它失效的原因是**分支名是约定而不是契约**——修复读 `task/{change}`，工作却在 `task/{task-id}`。
 
@@ -67,7 +67,7 @@ if route != "inline":
     return check, None
 ```
 
-`threshold: 4` 存在的目的是防止大改走 inline 小路。**反方向——planned 路线交付了 0 个文件——完全无人检查。**巴西的 `route_check` 记录是：
+`threshold: 4` 存在的目的是防止大改走 inline 小路。**反方向——planned 路线交付了 0 个文件——完全无人检查。**country-b的 `route_check` 记录是：
 
 ```json
 {"route": "planned", "threshold": 4, "measured_files": 0}
@@ -84,7 +84,7 @@ if (rep["head_advanced"] and rep["landed_files"] > 0
         and rep["landed_bytes"] == 0):
 ```
 
-巴西是 `head_advanced=False, landed_files=0`。这个警告是为 client-x 那个形状（文件数 > 0 而字节 == 0）写的，**同族缺陷的另一半——文件数就是 0——没写**。
+country-b是 `head_advanced=False, landed_files=0`。这个警告是为 client-x 那个形状（文件数 > 0 而字节 == 0）写的，**同族缺陷的另一半——文件数就是 0——没写**。
 
 > 更正一处我先前的说法：`measurement_warning` **已经**在合并门摘要里（`bin/report.py:894-895`，`72330b5` 落的）。我在早前一轮说它"不在门摘要里"，那条已不成立。
 
@@ -130,7 +130,7 @@ tests/collapse/dm_measure_work.sh:79   git -C "$R2" branch "task/$CHANGE_P2"
 tests/collapse/dm_measure_work.sh:127  git -C "$R4" branch "task/$CHANGE_P4"
 ```
 
-**每一个都用 `task/<change>` 建分支。**`dm_measure_work.sh` 的九个用例 P1–P9 专门为"deliver 量工作 ref"这件事写，全绿，而巴西的形状——分支名不等于 change——一个都没覆盖。这是典型的接缝未测：功能被测了，功能与调用者之间的约定没被测。
+**每一个都用 `task/<change>` 建分支。**`dm_measure_work.sh` 的九个用例 P1–P9 专门为"deliver 量工作 ref"这件事写，全绿，而country-b的形状——分支名不等于 change——一个都没覆盖。这是典型的接缝未测：功能被测了，功能与调用者之间的约定没被测。
 
 ### 1.10 worktree 盲区（第二条独立路径）
 
@@ -138,7 +138,7 @@ tests/collapse/dm_measure_work.sh:127  git -C "$R4" branch "task/$CHANGE_P4"
 
 ### 1.11 流程摩擦吃掉 80% 的时间
 
-巴西一轮 25 分 34 秒（1,534 秒），逐段分解：
+country-b一轮 25 分 34 秒（1,534 秒），逐段分解：
 
 | 段 | 秒 | 占比 | 性质 |
 |---|---|---|---|
@@ -157,7 +157,7 @@ tests/collapse/dm_measure_work.sh:127  git -C "$R4" branch "task/$CHANGE_P4"
 
 **纯摩擦 519 秒 = 33.8%；产出 315 秒 = 20.5%。**
 
-对比 client-x 的 53.7 分钟：那是**模型推理跑飞**（单轮 2,206 秒、302,814 字符、96% 重复）。巴西是**流程本身把执行者绕晕**。两种病，两套药——`prd-uidesigner-reliable-fast.md` 的 S3 治前者，本 PRD 治后者。
+对比 client-x 的 53.7 分钟：那是**模型推理跑飞**（单轮 2,206 秒、302,814 字符、96% 重复）。country-b是**流程本身把执行者绕晕**。两种病，两套药——`prd-uidesigner-reliable-fast.md` 的 S3 治前者，本 PRD 治后者。
 
 ### 1.12 三处越界
 
@@ -187,7 +187,7 @@ chmod -R 750 /var/lib/aidlc/specs/tmp--country-b/openspec
 
 改成检查期望的样子，close 就过了，**且签名记录里没有任何痕迹**。这道边界守卫现在等价于建议。
 
-**c. task-dir 与 repo 无绑定。** `init`/`deliver`/`gate` 全部写进 `<repo-path>/.ai-dlc/tasks/`，`close` 从 `/tmp/country-b/.ai-dlc/tasks/` 读。`--task-dir` 和 `--repo` 互不校验。合并门被答了三次（`18:05:37` / `18:06:19` / `18:06:42`），其中两次写进了错误的目录——**巴西项目的合并批准记录现在还留在 ai-dlc 仓库自己的工作树里**：
+**c. task-dir 与 repo 无绑定。** `init`/`deliver`/`gate` 全部写进 `<repo-path>/.ai-dlc/tasks/`，`close` 从 `/tmp/country-b/.ai-dlc/tasks/` 读。`--task-dir` 和 `--repo` 互不校验。合并门被答了三次（`18:05:37` / `18:06:19` / `18:06:42`），其中两次写进了错误的目录——**country-b项目的合并批准记录现在还留在 ai-dlc 仓库自己的工作树里**：
 
 ```
 <repo-path>/.ai-dlc/tasks/gates/gate-merge.answer.json
@@ -208,7 +208,7 @@ chmod -R 750 /var/lib/aidlc/specs/tmp--country-b/openspec
 | 导航锚点 | 5 个 href 对 5 个 id，全中 | ✅ |
 | 正文 | 2,547 词，10 目的地 / 6 自然区 / 6 文化条目 / 12 道菜 / 8 条提示 / 11 行速查表 | ✅ 无 lorem、无占位符 |
 | 字体 | `Georgia` + `Arial` | ❌ 系统兜底字，等于没做排版选择 |
-| 配色 | 巴西国旗 `#009c3b/#ffdf00/#002776` | ❌ 做国家页最省事的那个选项 |
+| 配色 | country-b国旗 `#009c3b/#ffdf00/#002776` | ❌ 做国家页最省事的那个选项 |
 | 圆角 | `--radius:8px` 全站统一，22 张 card 完全同构 | ❌ |
 | 深色主题 | `prefers-color-scheme` 出现 0 次 | ❌ |
 | 响应式 | 2 条 `max-width` 断点 | ⚠️ |
@@ -243,7 +243,7 @@ country-e、country-a、client-x-ai、client-x-maas、country-b 全部为 0。cl
 
 ### 非目标
 
-- **不改判据五条事实。**`c58e9f2` 的判据在阿根廷复验过，本 PRD 不碰。
+- **不改判据五条事实。**`c58e9f2` 的判据在country-a复验过，本 PRD 不碰。
 - **不改 S2 的 N5 call assertion。**它现在正常工作——`ud_autodispatch_gates` 红是因为 stub 陈旧，不是因为断言错。修 stub，不修断言。
 - **不动 OpenDesign 树。**只读固定 tag `open-design-v0.21.1` / `fbd4d48`。
 - **不重写 `plan.py design`。**本 PRD 只保证它**被调用**且**结果被看见**，不动它内部。
@@ -280,7 +280,7 @@ country-e、country-a、client-x-ai、client-x-maas、country-b 全部为 0。cl
 | **E7** | 所有夹具都用 `task/<change>` 建分支；失配接缝零覆盖 | grep |
 | **E8** | 若干门的 `--task-dir` 位于 repo 之外（`$T/task14` 等）——**不能**用"task-dir 必须在 repo 内"作为修法 | grep |
 | **E9** | `git worktree list` 全库零调用 | grep |
-| **E10** | 巴西一轮 1,534 秒，产出 315 秒，纯摩擦 519 秒 | 逐 tool_use 时间戳 |
+| **E10** | country-b一轮 1,534 秒，产出 315 秒，纯摩擦 519 秒 | 逐 tool_use 时间戳 |
 | **E11** | client-x 两服务自 `18:03` 起 inactive | `systemctl is-active` |
 | **E12** | 13 变更 / 1 条 design 记录 | `ls /var/lib/aidlc/records/*/design-*.json` |
 | **E13** | 站点当前 200 / 45,780 B / 外部引用 0 / script 0 | `curl` + grep |
@@ -384,7 +384,7 @@ if branch:
     out["work_on"] = f"git -C {repo} worktree add ../wt/{change_id} -b {branch}"
 ```
 
-**`work_on` 是关键。**巴西那一轮，执行者是自己发明的分支名——因为没有任何一处给过它。把确切命令印在 `init` 的输出里，猜测的空间就没有了。`plan.py next` 的 `do` 行同步带上。
+**`work_on` 是关键。**country-b那一轮，执行者是自己发明的分支名——因为没有任何一处给过它。把确切命令印在 `init` 的输出里，猜测的空间就没有了。`plan.py next` 的 `do` 行同步带上。
 
 ### 5.4 W4 — planned 路线交付 0 文件是硬停
 
@@ -408,7 +408,7 @@ if route != "inline":
 
 **这是本 PRD 唯一具备阻断力的门。**其余各条是诚实性修复。走 `gate-route` 的既有停机路径（`ROUTE_STOP`），人可以选 `rerun_through_plane` / `record_exception` / `cancel`——不新增停机机制。
 
-巴西那一轮会停在这里，消息是：
+country-b那一轮会停在这里，消息是：
 
 > the planned route measured no files on HEAD — ... — the work was measured on HEAD because no branch named task/country-b-tourism-site exists, but task/country-b-tourism does — ...
 > remedy: `git -C /tmp/country-b branch -m task/country-b-tourism task/country-b-tourism-site`
@@ -458,7 +458,7 @@ E8 排除了"task-dir 必须在 repo 内"这条路（多个门用 repo 外的 ta
 2. `deliver` 校验传入 `--repo` 与记录值一致，不一致则拒绝并同时打印两个路径。
 3. `plan.py close` 在 `<repo>/.ai-dlc/tasks/` 下找不到 gate 应答时，按 `change_id` 反查全盘 `state.json`，直接告诉调用者门文件实际在哪。
 
-第 3 步单独就能把巴西那 234 秒（15.3%）压到接近 0。
+第 3 步单独就能把country-b那 234 秒（15.3%）压到接近 0。
 
 ### 5.8 W8 — worktree 可见
 
@@ -553,9 +553,9 @@ E8 排除了"task-dir 必须在 repo 内"这条路（多个门用 repo 外的 ta
 | **S4** | W7 + W8（task-dir 绑定、worktree 可见） | Y9 / Y10 绿 |
 | **S5** | W9（越界：端口/服务、plane 留痕） | Y11 / Y12 绿 |
 | **S6** | W10（效率：`scaffold`、L0 路径、L1 端口做法） | 一轮真实建站 ≤ 1,100 秒且 `design_applied` |
-| **S7** | 复验：重跑巴西形状，端到端 | `design_applied` + 签名记录 + 五条事实 |
+| **S7** | 复验：重跑country-b形状，端到端 | `design_applied` + 签名记录 + 五条事实 |
 
-**S0 必须先做。**在红色套件上叠功能正是 `S1–S4` 已经发生过的事——`ud_autodispatch_gates` 从 `c12c3c6`（01:16）起就是红的，22 分钟后巴西那一轮开跑，没有任何信号。
+**S0 必须先做。**在红色套件上叠功能正是 `S1–S4` 已经发生过的事——`ud_autodispatch_gates` 从 `c12c3c6`（01:16）起就是红的，22 分钟后country-b那一轮开跑，没有任何信号。
 
 ---
 
@@ -590,8 +590,8 @@ E8 排除了"task-dir 必须在 repo 内"这条路（多个门用 repo 外的 ta
 
 ## 附 A — 需要人决定的三件事
 
-1. **client-x 两个服务是否拉起。**`client-x-ai-launch.service` / `client-x-maas-launch.service` 自 `2026-09-01T18:03:12Z` 起 inactive，是巴西抢 8443 的连带损伤。8443 现被巴西站占用（pid 2880147），拉起需要先决定端口归属。
-2. **ai-dlc 仓库里的污染状态是否清理。**`<repo-path>/.ai-dlc/tasks/gates/gate-merge.answer.json` 是巴西项目的合并批准，写错了目录。
+1. **client-x 两个服务是否拉起。**`client-x-ai-launch.service` / `client-x-maas-launch.service` 自 `2026-09-01T18:03:12Z` 起 inactive，是country-b抢 8443 的连带损伤。8443 现被country-b站占用（pid 2880147），拉起需要先决定端口归属。
+2. **ai-dlc 仓库里的污染状态是否清理。**`<repo-path>/.ai-dlc/tasks/gates/gate-merge.answer.json` 是country-b项目的合并批准，写错了目录。
 3. **`resolve_work_ref` 取 (a) 单点还是 (b) 两份 + 门。**本 PRD 按 (b) 写；(a) 更干净但需要先审 `plan.py` 的模块级导入副作用。
 
 ## 附 B — 本 PRD 未解决的问题

@@ -69,7 +69,7 @@ if base and head and base != head:
 
 | 路线 | 工作在哪 | deliver 量到 | 结果 |
 |---|---|---|---|
-| **inline** | 直接提交到 `main` | HEAD 已前进 → 量到真实文件 | 正常（巴拿马 13 个文件、阿根廷 1 个） |
+| **inline** | 直接提交到 `main` | HEAD 已前进 → 量到真实文件 | 正常（country-d 13 个文件、country-a 1 个） |
 | **planned** | `task/<change>` 分支，批准后才合并 | HEAD 还没动 → 量到空 | **必然失效** |
 
 **刚上线的设计门（`prd-design-required.md`）在 planned 路线上被 100% 静默绕过**——
@@ -99,7 +99,7 @@ surface_files: ['site/about.html', 'site/css/style.css',
 **F-C · `__pycache__/*.pyc` 进了 `77f44ff` 的历史。**
 22 KB 二进制。`183fb1b` 事后加了 `.gitignore` 补救，但 blob 已在历史里。
 
-### 一个同类问题（巴拿马，同一失败家族）
+### 一个同类问题（country-d，同一失败家族）
 
 `design_auto` 留下半截记录后被永久锁死：
 
@@ -115,7 +115,7 @@ surface_files: ['site/about.html', 'site/css/style.css',
 但结果没回写，而 `design_auto_due()` 现在返回 `(False, 'already_attempted')`
 ——**一条本该签发的记录永久丢失，且补救路径被自己的规则挡死**。
 
-client-x 与巴拿马是同一件事的两个面：
+client-x 与country-d是同一件事的两个面：
 **一次「量不到所以不适用」，一次「跑了但没回写」，两次都以 ui-designer 没参与收场，
 而两份报告看上去都不像出错。**
 
@@ -129,7 +129,7 @@ client-x 与巴拿马是同一件事的两个面：
 |---|---|
 | **P-A** | **交付测量量到工作实际所在的 ref**，与路线无关。planned 与 inline 得到同样正确的测量 |
 | **P-B** | **自相矛盾的测量判失败**，不得放行（F-A） |
-| **P-C** | **半截的 `design_auto` 不得永久锁死重试**（巴拿马） |
+| **P-C** | **半截的 `design_auto` 不得永久锁死重试**（country-d） |
 | **P-D** | **量的是哪个 ref，人在合并门上看得见** |
 
 ### 非目标
@@ -172,7 +172,7 @@ client-x 现在 `git branch -a` 只剩 `main`，`.git/logs/refs/heads/` 也只�
 **E4 · `git status` 那一半今天就在工作。**
 `change_surface` 已经把未提交文件并入测量。本轮只修 committed 那一半。
 
-**E5 · 巴拿马的帧还在。**
+**E5 · country-d的帧还在。**
 `design-task-20260901093149-f93794-1/history.jsonl`（472 KB，187 帧）
 与 `design-country-a-site-1/history.jsonl`（319 KB）都在，
 **P-C 的回归门不需要再花 22 分钟跑会话。**
@@ -188,7 +188,7 @@ client-x 现在 `git branch -a` 只剩 `main`，`.git/logs/refs/heads/` 也只�
 | **N3** | **自洽断言（F-A）**：`head_advanced ∧ landed_files>0 ∧ landed_bytes==0` → `outcome: "measurement_inconsistent"`，`delivered: false`，报告里指出矛盾三元组。 |
 | **N4** | **半截 `design_auto` 可重试（P-C）**：`rc is None` 视为 `incomplete`；`design_auto_due()` 对 incomplete 返回 due，并把 `attempts` 加一；`attempts >= 2` 才返回 `already_attempted`。记录形状加 `attempts` 与 `state: "incomplete"\|"complete"`。 |
 | **N5** | **deliver 重试去抖（F-B）**：同一 `(measured_ref, base_sha, files_sha)` 的连续报告，事件只记第一条，其后记 `DELIVERY_REPORT_REPEAT` 带次数。**不阻止重试，只不再假装是新结果。** |
-| **N6** | **巴拿马的补救**：清掉那条 `rc: null` 的 `design_auto`（N4 上线后它会被判 incomplete 自动可重试），并清掉那条 `"why": "C13 test: human overrides design gate"` 的伪造 `design_override`——**没有人做过那个决定**，它现在让巴拿马的报告在说谎。 |
+| **N6** | **country-d的补救**：清掉那条 `rc: null` 的 `design_auto`（N4 上线后它会被判 incomplete 自动可重试），并清掉那条 `"why": "C13 test: human overrides design gate"` 的伪造 `design_override`——**没有人做过那个决定**，它现在让country-d的报告在说谎。 |
 
 ### N1 的形状（要点）
 
@@ -214,14 +214,14 @@ if head is None:
 |---|---|---|---|
 | **P1** | **判别力**：拿 client-x 在**合并前**的形状（base=24daa54，任务分支 = 183fb1b，main = ce150f2）跑 `deliver` | 量到 11 个文件，`applicable: true`，`classes: ['web']`，`surface_files` 含四个 `site/*` | **RED** — 今天量到 2 个文件 / 0 字节 |
 | **P2** | 同上形状，且无 design 记录 | `outcome: design_required`，`delivered: false` | **RED** — 今天 `design_not_applicable` 放行 |
-| **P3** | **inline 回归**：巴拿马形状（无任务分支，工作在 HEAD） | 与今天完全一致（13 个文件） | **GREEN 回归门** — Q6 的守卫 |
+| **P3** | **inline 回归**：country-d形状（无任务分支，工作在 HEAD） | 与今天完全一致（13 个文件） | **GREEN 回归门** — Q6 的守卫 |
 | **P4** | 合并**之后**再跑 `deliver`（分支已删） | 回退 HEAD，量到同样 11 个文件 | **RED**（今天恰好也对，但不是因为 N1；上线后须由 N1 保证） |
 | **P5** | `head_advanced ∧ files>0 ∧ bytes==0` | `measurement_inconsistent`，`delivered: false` | **RED** — 今天静静通过 |
 | **P6** | 报告与合并门 `summary` | 含 `measured_ref` / `ref_kind` | **RED** |
 | **P7** | `design_auto` 为 `rc: null` | 判 `incomplete`，允许再派一次 | **RED** — 今天 `already_attempted` 永久锁死 |
 | **P8** | 同上，`attempts` 已达 2 | `already_attempted`，不再派 | **RED** — 防 N4 变成无限重试 |
 | **P9** | 连续三次相同 deliver | 第一条 `DELIVERY_REPORT`，其后 `DELIVERY_REPORT_REPEAT` 带次数 | **RED** — 今天记了三条一样的 |
-| **P10** | **端到端**：拿巴拿马 design 会话**已有的帧**重跑事实提取 | 五条全过、记录签发 | 事实提取**今天已实测全过**；记录签发这一半 **RED** |
+| **P10** | **端到端**：拿country-d design 会话**已有的帧**重跑事实提取 | 五条全过、记录签发 | 事实提取**今天已实测全过**；记录签发这一半 **RED** |
 
 **P1 与 P3 缺一不可**：P1 证明 planned 路线被修好，P3 证明 inline 没被弄坏。
 **P7 与 P8 缺一不可**：P7 解开死锁，P8 防止解成无限重试。
@@ -233,13 +233,13 @@ if head is None:
 
 | 期 | 内容 | 门 |
 |---|---|---|
-| **T0 · 探针** | 已完成：client-x 时间线与 reflog 定性（结构性，非偶发）；巴拿马帧重跑五条全过 | 两个事实进记录 |
+| **T0 · 探针** | 已完成：client-x 时间线与 reflog 定性（结构性，非偶发）；country-d帧重跑五条全过 | 两个事实进记录 |
 | **T1 · 测量对 ref** | N1 + N2 | **P1** **P3** P4 P6 |
 | **T2 · 自洽与去抖** | N3 + N5 | **P5** P9 |
 | **T3 · 解死锁** | N4 + N6 | **P7** P8 P10 |
 
 T1 是主修；T2 是「本可以早点发现」的那道便宜保险；
-T3 把两个已经卡住的真实交付（巴拿马）解开。
+T3 把两个已经卡住的真实交付（country-d）解开。
 
 **T1 落地当天用 client-x 复验**（P1）：它的合并前形状可以从 git 完整重建
 （`base=24daa54`、`task 分支尖=183fb1b`、`main=ce150f2`），**不需要重跑任何会话**。
@@ -264,7 +264,7 @@ T3 把两个已经卡住的真实交付（巴拿马）解开。
 1. `git reset --hard v0.19.x-pre-measurework`
 2. `/var/lib/aidlc/records/` 保留不删
 3. N6 动过的任务记录：更正事件保留（它本身是事实），被删的两条从
-   `git`/备份恢复（巴拿马仓库在 `/tmp/country-d-tourism-8443`，`.ai-dlc/` 未入 git，
+   `git`/备份恢复（country-d仓库在 `/tmp/country-d-tourism-8443`，`.ai-dlc/` 未入 git，
    **执行 N6 前先 tar 一份该任务目录**）
 4. `/opt/open-design`、gateway unit、openjiuwen 配置全程未动
 

@@ -44,7 +44,7 @@ playbook 的任务流是 `1·WORK → 1b·REVIEW → 1c·DESIGN → 2·CHECK →
 
 | 会话 | 总命令数 | 其中 `--help` | 摸索的对象 |
 |---|---|---|---|
-| 巴拿马编排（claude-maas） | 104 | **5** | `report.py init/exception/gate --help`、`plan.py close --help` |
+| country-d编排（claude-maas） | 104 | **5** | `report.py init/exception/gate --help`、`plan.py close --help` |
 | client-x 编排（claude-maas） | 14 | **3** | `report.py --help`、`report.py init --help`、`plan.py dispatch --help` |
 
 外加 2 条 grep 文档的命令（`grep -n 'design\|ui-designer' …SKILL.md`）——
@@ -52,10 +52,10 @@ playbook 的任务流是 `1·WORK → 1b·REVIEW → 1c·DESIGN → 2·CHECK →
 
 ### 走错的都是「说明书没说」，不是「模型不听话」
 
-- **巴拿马自签路由例外**：`gate-route.answer.json` 的 `author: "AI-DLC Executor"`。
+- **country-d自签路由例外**：`gate-route.answer.json` 的 `author: "AI-DLC Executor"`。
   playbook 里**从没写过「例外必须由人签」**——直到 `c58e9f2` 才在代码里加了
   `stated_actor()` 校验，playbook 至今没说。
-- **巴拿马 `REPO` 路径写错**：命令里是 `<workspace-root>/country-d-tourism-8443`，
+- **country-d `REPO` 路径写错**：命令里是 `<workspace-root>/country-d-tourism-8443`，
   真实仓库在 `/tmp/country-d-tourism-8443`。没有任何一步校验它。
 - **design 一度不在流程里**：`1c · DESIGN` 是后来补的；在此之前 playbook 六步里没有它，
   于是没有任何一轮跑过 ui-designer。
@@ -147,7 +147,7 @@ product surface carries no…`）。**`--describe` 的语料已经在代码里**
 两者互补，不要合并。
 
 **E6 · 摸索基线可测。**
-巴拿马 5/104、client-x 3/14。**这是本轮唯一有鉴别力的效果指标**——
+country-d 5/104、client-x 3/14。**这是本轮唯一有鉴别力的效果指标**——
 不是「文档变好了」这种自评，而是**下一轮真实任务的 `--help` 次数**。
 
 ---
@@ -226,7 +226,7 @@ L0 里一行显式声明：
 | **N3** | **`--describe`（两个 executable）**：从 argparse 与 `EXIT_*` 常量推导的 JSON 能力契约（V1/U-E）。 |
 | **N4** | **SKILL.md 重排为 L0/L1/L2**，L0 ≤ 40 行且自足（V4）；`description` 改为一句「是什么 + 何时用」，架构论述移入 L2。 |
 | **N5** | **`remedy` 契约补齐**：`report.py` 的每个非零退出都带一条可执行 `remedy`（E1 的缺口）；已有的 48 处按「必须是命令行」校验一遍（V3）。 |
-| **N6** | **把踩过的坑写进 L0/L2**：① 门的答复必须由人署名，模型不得签（`stated_actor()` 已在代码里，说明书里没有）；② `--repo` 必须是**存在的 git 仓库**，`next` 与 `deliver` 先校验后执行（巴拿马路径写错那次）；③ design 那一步及其「自动派发一次」的语义。 |
+| **N6** | **把踩过的坑写进 L0/L2**：① 门的答复必须由人署名，模型不得签（`stated_actor()` 已在代码里，说明书里没有）；② `--repo` 必须是**存在的 git 仓库**，`next` 与 `deliver` 先校验后执行（country-d路径写错那次）；③ design 那一步及其「自动派发一次」的语义。 |
 | **N7** | **「别读什么」声明**（U-D）：L0 一行，`README.md` 一行。 |
 | **N8** | **`install.sh --quickstart`**：打印一段可复制的最小任务序列（init → work → deliver → gate → close），与 L0 同源，不是第二份文档。 |
 
@@ -243,7 +243,7 @@ L0 里一行显式声明：
 | **W5** | 把 `not_yet` 里的 verb 原样执行 | 得到它预告的那个退出码 | **RED** |
 | **W6** | `plan.py --describe` 与 `plan.py --help` 的子命令集合 | 完全一致（V1：同源，不会漂移） | **RED** |
 | **W7** | 每个非零退出路径 | 都带 `remedy`，且 `remedy` 可直接执行 | **RED** — report.py 只有 3 处 |
-| **W8** | `--repo` 指向不存在的路径（巴拿马那次的形状） | 立即拒绝并指出路径不存在 | **RED** — 今天静默继续 |
+| **W8** | `--repo` 指向不存在的路径（country-d那次的形状） | 立即拒绝并指出路径不存在 | **RED** — 今天静默继续 |
 | **W9** | L0 行数 | ≤ 40 行 | **RED** |
 | **W10** | **回归**：三套现有门禁 | 全绿，真实退出码 | **GREEN 回归门** — V5 的守卫 |
 
