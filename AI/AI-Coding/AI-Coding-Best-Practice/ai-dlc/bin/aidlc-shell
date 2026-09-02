@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# N5 — the CC runtime shell (PRD openspec-containment §7 N5).
+#
+# Claude Code — and anything else the caller runs — starts INSIDE a
+# systemd transient unit that makes the spec surface invisible to it:
+#
+#   NoNewPrivileges=yes        no privilege escalation from inside
+#   CapabilityBoundingSet=     every capability dropped, root included
+#   InaccessiblePaths=         every openspec entry on PATH, the node
+#                              module tree behind it, the plane's
+#                              specs home, the pinned OpenDesign
+#                              reference tree and every `od` on PATH —
+#                              G2/G3 (the tool), G4/G5 (the tree), and
+#                              the design reference's same rule bite
+#                              here, for real
+#
+# What stays OPEN is deliberate: the caller's own surface — the repo,
+# the task records, /var/lib/aidlc/records and /etc/aidlc/verdict.key
+# (the caller signs the records N2 has it judge from the frames; the
+# PRD's N5 list does not close the key, and closing it would move
+# signing into the very process being contained). The uid split and
+# the egress allowlist are P5, not this shell.
+#
+# Usage:
+#   aidlc-shell                      launch claude, interactive
+#   aidlc-shell -- <cmd> [args...]   run one command in the same unit
+#   aidlc-shell --print-mask         list the paths this host masks
+#
+# Every masked path must exist: systemd fails the unit with
+# 226/NAMESPACE on a nonexistent InaccessiblePaths entry (measured on
+# systemd 239), so the builder filters to what stands and REFUSES to
+# run if an openspec entry on PATH did not make the mask — a shell
+# that silently stopped containing would be worse than none.
+set -euo pipefail
+
+SPECS_HOME=${AI_DLC_SPECS:-/var/lib/aidlc/specs}
+
+die() { echo "aidlc-shell: $*" >&2; exit 2; }
+
+mask_paths() {  # the containment surface, printed one path per line
+  local entries=() e real root xs
+  # every openspec the caller could reach through PATH
+  while IFS= read -r e; do entries+=("$e"); done \
+    < <(type -ap openspec 2>/dev/null || true)
+  if [[ -x /usr/local/bin/openspec ]]; then entries+=(/usr/local/bin/openspec); fi
+  for e in "${entries[@]}"; do
+    if [[ ! -e "$e" ]]; then continue; fi
+    echo "$e"
+    # a symlinked CLI points into its module tree; mask the whole
+    # module so `node …/openspec.js` cannot reach it either (G3)
+    real=$(readlink -f "$e" 2>/dev/null || echo "$e")
+    if [[ "$real" == */bin/* ]]; then
+      root=$(dirname "$(dirname "$real")")
+      if [[ -d "$root" ]]; then echo "$root"; fi
+    fi
+  done
+  # the plane's specs home — every repo's tree lives under it (G4/G5)
+  if [[ -e "$SPECS_HOME" ]]; then echo "$SPECS_HOME"; fi
+  # the pinned OpenDesign reference tree and every `od` on PATH (N5 of
+  # uidesigner-opendesign, same rule as openspec): the design role
+  # reads the tree plane-side through a dispatch; the CC shell never
+  # sees it. `od` on this host is coreutils' octal dump — masked by
+  # name regardless; nothing in the flow uses it, and P4's daemon CLI
+  # would carry the same name
+  if [[ -n ${OPENDESIGN_ROOT:-} && -e "$OPENDESIGN_ROOT" ]]; then
+    echo "$OPENDESIGN_ROOT"
+  fi
+  if [[ -e /opt/open-design ]]; then echo /opt/open-design; fi
+  while IFS= read -r e; do
+    [[ -e "$e" ]] && echo "$e"
+  done < <(type -ap od 2>/dev/null || true)
+  # operator extras (colon-separated), opt-in
+  if [[ -n ${AI_DLC_INACCESSIBLE:-} ]]; then
+    IFS=: read -ra xs <<< "$AI_DLC_INACCESSIBLE"
+    for e in "${xs[@]}"; do
+      if [[ -e "$e" ]]; then echo "$e"; fi
+    done
+  fi
+}
+
+build_mask() {  # dedupe into MASK[]
+  MASK=()
+  local seen="" p e root
+  while IFS= read -r p; do
+    if [[ -z "$p" ]]; then continue; fi
+    if [[ " $seen " == *" $p "* ]]; then continue; fi
+    seen="$seen $p"; MASK+=("$p")
+  done < <(mask_paths)
+  # a containment that missed the tool it exists to contain
+  for e in $(type -ap openspec 2>/dev/null || true); do
+    root=$(dirname "$(dirname "$(readlink -f "$e" 2>/dev/null || echo "$e")")")
+    if [[ " ${MASK[*]} " != *" $e "* && " ${MASK[*]} " != *" $root "* ]]; then
+      die "openspec entry $e escaped the mask; refusing to run"
+    fi
+  done
+  # the same rule for the design reference: the tree and every od on
+  # PATH stand masked, or the shell refuses to start — never a silent
+  # under-containment
+  for e in $(type -ap od 2>/dev/null || true); do
+    if [[ " ${MASK[*]} " != *" $e "* ]]; then
+      die "od entry $e escaped the mask; refusing to run"
+    fi
+  done
+  local od_root=${OPENDESIGN_ROOT:-/opt/open-design}
+  if [[ -e "$od_root" && " ${MASK[*]} " != *" $od_root "* ]]; then
+    die "$od_root escaped the mask; refusing to run"
+  fi
+}
+
+forward_env() {  # the caller's own surface travels in, nothing else
+  ENVARGS=()
+  local n
+  local re='^(AI_DLC_|ANTHROPIC_|CLAUDE|HOME|PATH|USER|LOGNAME|SHELL|LANG|LC_|TERM|TZ|https_proxy|http_proxy|HTTPS_PROXY|HTTP_PROXY|NO_PROXY|no_proxy|SSL_CERT_FILE|REQUESTS_CA_BUNDLE)'
+  while IFS= read -r n; do
+    if [[ "$n" =~ $re && -n "$n" ]]; then ENVARGS+=(-E "$n=${!n}"); fi
+  done < <(env | cut -d= -f1 | grep -E '^[A-Za-z_][A-Za-z0-9_]*$' | sort -u)
+}
+
+build_mask
+
+case ${1:-} in
+  --print-mask)
+    printf '%s\n' "${MASK[@]}"
+    exit 0 ;;
+  --)
+    shift ;;
+  "")
+    set -- claude ;;
+  *) die "unknown argument '$1' (usage: aidlc-shell [-- <cmd>] | --print-mask)" ;;
+esac
+
+[[ $(id -u) -eq 0 ]] || die "the unit runs system-side today; run as root (the uid split is P5)"
+command -v systemd-run >/dev/null 2>&1 || die "systemd-run not found"
+
+forward_env
+PROPS=(-p NoNewPrivileges=yes -p CapabilityBoundingSet=)
+for p in "${MASK[@]}"; do PROPS+=(-p "InaccessiblePaths=$p"); done
+UNIT="aidlc-shell-$(date +%s)-$$-$RANDOM"
+if [[ -t 0 ]]; then PTY=(--pty); else PTY=(--pipe); fi
+# systemd 239 has no --same-dir (systemd ≥243); the property is the
+# same mechanism
+PROPS+=(-p "WorkingDirectory=$PWD")
+exec systemd-run --collect --wait "${PTY[@]}" \
+  --unit="$UNIT" "${PROPS[@]}" "${ENVARGS[@]}" "$@"

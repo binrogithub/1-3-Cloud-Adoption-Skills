@@ -1,0 +1,7 @@
+{
+  "change": "ch-country-a-tourism",
+  "proposal": "Build a tourism landing page for country-a with hero, destinations, and newsletter.",
+  "surface_class": "web",
+  "expect_top1": null,
+  "expect_in_shortlist": ["design-templates/kami-landing"]
+}

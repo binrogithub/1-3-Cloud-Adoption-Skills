@@ -1,0 +1,5 @@
+{"change": "huaweicloud-maas-site",
+ "proposal": "Build a marketing/introduction website for Huawei Cloud MaaS (Model as\na Service — hosted large-model inference and fine-tuning platform).\nSingle page: hero, what MaaS is, key capabilities, supported models,\ncall-to-action. Trilingual with a language switcher: English,\ncountry-b Portuguese, Spanish. Web surface, not a slide deck, not an\ninternal admin dashboard.",
+ "surface_class": "web",
+ "expect_top1": null,
+ "assert_design_system_excludes": ["Dashboard"]}

@@ -1,0 +1,5 @@
+{"change": "consulting-firm-website",
+ "proposal": "A business website for a management consulting firm — hero, services overview, case studies, team bios, and a contact call-to-action. Not a slide deck, not an internal admin dashboard.",
+ "surface_class": "web",
+ "expect_top1": null,
+ "assert_raw_top1_is_flagged": "contact-widget"}

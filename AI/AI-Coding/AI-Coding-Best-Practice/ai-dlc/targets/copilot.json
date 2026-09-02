@@ -1,0 +1,1 @@
+{"name": "copilot", "display_name": "GitHub Copilot coding agent", "kind": "copilot-instructions", "config_dir": "<project-root>/.github", "role": "交互壳 — GitHub Copilot coding agent 场景,读取 .github/copilot-instructions.md"}

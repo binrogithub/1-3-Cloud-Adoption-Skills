@@ -1,0 +1,7 @@
+{
+  "change": "ch-admin-dashboard",
+  "proposal": "Build an internal admin dashboard with KPI cards and charts.",
+  "surface_class": "web",
+  "expect_top1": "design-templates/dashboard",
+  "expect_in_shortlist": ["design-templates/dashboard"]
+}

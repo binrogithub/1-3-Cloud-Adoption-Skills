@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+.claude/
+.ai-dlc/tasks/
+.ai-dlc/metrics.jsonl
+.ai-dlc/install-manifest.json
