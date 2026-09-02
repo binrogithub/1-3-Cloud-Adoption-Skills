@@ -1,0 +1,1 @@
+{"name": "codex-native", "display_name": "OpenAI Codex CLI (native skill directory)", "kind": "codex-native-skill", "config_dir": "~/.codex/skills", "role": "交互壳 — Codex CLI 原生 skill 目录场景,把完整工具链装进 <config_dir>/ai-dlc/,与 Codex 自带的 skill-installer 从本仓库 GitHub 路径克隆的结果一致"}

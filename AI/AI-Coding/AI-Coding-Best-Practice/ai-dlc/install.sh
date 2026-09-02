@@ -723,6 +723,9 @@ GINTRO
 #   agents-md            — write AGENTS.md with BEGIN/END markers (idempotent)
 #   cursor-rules         — write ai-dlc.mdc with Cursor frontmatter
 #   copilot-instructions — write copilot-instructions.md with markers (idempotent)
+#   codex-native-skill    — copy the whole toolkit into <config_dir>/ai-dlc/
+#                          and generate SKILL.md there (Codex's own native
+#                          skill-directory discovery, done locally)
 install_skills_to_target() {
   local target_name="$1" config_dir="$2" kind="${3:-claude-skill}"
 
@@ -766,6 +769,36 @@ install_skills_to_target() {
     done
     if [[ "${rc}" == "0" ]]; then ok "Skills installed for ${target_name}"; fi
     return "${rc}"
+  fi
+
+  # ── codex-native-skill: copy the whole toolkit + generate SKILL.md ──
+  # (K1, K3, K6). Codex CLI's own remote skill-installer, when pointed at
+  # this repo's GitHub tree, clones the whole directory into
+  # $CODEX_HOME/skills/<name>/ — this does the same thing locally, for a
+  # checkout you already have, without depending on Codex's own network
+  # fetch path (which has its own separate reliability issues). config_dir
+  # is the skills ROOT (e.g. ~/.codex/skills), matching the claude-skill
+  # convention where config_dir is the agent's home and the function
+  # appends the per-skill subdirectory itself.
+  if [[ "${kind}" == "codex-native-skill" ]]; then
+    local dest="${config_dir}/ai-dlc"
+    info "Installing full toolkit to ${target_name} → ${dest}/"
+    rm -rf "${dest}"
+    mkdir -p "${dest}"
+    cp -r "${SCRIPT_DIR}"/. "${dest}/"
+    rm -rf "${dest}/.git" "${dest}/.ai-dlc" "${dest}/.pytest_cache" "${dest}/PUBLISH_NOTES.md"
+    find "${dest}" -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+    gen_root_skill "${dest}/SKILL.md" || { fail "could not generate SKILL.md at ${dest}"; return 1; }
+    # K6: read-back assert — the toolkit travelled, not just the SKILL.md
+    if [[ ! -f "${dest}/SKILL.md" || ! -f "${dest}/bin/plan.py" ]]; then
+      fail "read-back failed: ${dest}/SKILL.md or bin/plan.py missing after install"
+      return 1
+    fi
+    local dst_sha; dst_sha=$(sha256_file "${dest}/SKILL.md")
+    manifest_update "${target_name}" "${kind}" "${config_dir}" "ai-dlc" \
+      "${dest}/SKILL.md" "${dst_sha}" "."
+    ok "Full toolkit installed for ${target_name} (sha ${dst_sha:0:8}…)"
+    return 0
   fi
 
   # ── Non-claude-skill kinds: collect SKILL.md bodies (frontmatter stripped) ──
@@ -903,6 +936,19 @@ UEOF
   local rc=0
   while IFS=$'\t' read -r kind skill path; do
     [[ -n "${path}" ]] || continue
+    if [[ "${kind}" == "codex-native-skill" ]]; then
+      # this kind copies the whole toolkit, not just one file — remove
+      # the entire skill directory (SKILL.md's own parent), not just
+      # the recorded SKILL.md path
+      local skill_root; skill_root="$(dirname "${path}")"
+      if [[ -d "${skill_root}" ]]; then
+        rm -rf "${skill_root}"
+        ok "removed: ${target_name}/${skill} (${skill_root}/)"
+      else
+        warn "already absent: ${target_name}/${skill} (${skill_root}/)"
+      fi
+      continue
+    fi
     if [[ -f "${path}" ]]; then
       rm -f "${path}"
       # remove the skill dir if empty
@@ -942,6 +988,33 @@ with open(mfile, "w", encoding="utf-8") as f:
 UMEOF
   ok "Manifest cleaned for ${target_name}"
   return "${rc}"
+}
+
+# ── Ensure MaaS gateway credentials are configured ─────────────
+# Every agent's planning-plane dispatch (bin/plan.py) resolves the same
+# fixed client path (~/.local/bin/jiuwenswarm) reading the same shared
+# ~/.jiuwenswarm/config/.env — the key is gateway-level, not per-agent.
+# Whichever agent's install configured it first, every agent installed
+# afterward (Claude, Codex, Cursor, Copilot) shares it for free; this
+# only prompts (or warns, non-interactively) when it's genuinely still
+# missing, so a second/third agent install is silent.
+ensure_maas_key() {
+  local env_file="${AI_DLC_ENV_FILE:-$HOME/.jiuwenswarm/config/.env}"
+  local maas_key=""
+  [[ -f "${env_file}" ]] && maas_key="$(grep '^API_KEY=' "${env_file}" 2>/dev/null | head -1 | cut -d= -f2- || true)"
+  if [[ -n "${maas_key}" ]]; then
+    ok "MaaS API_KEY already configured (${env_file}) — shared by every installed agent"
+    return 0
+  fi
+  if [[ -t 0 ]]; then
+    echo ""
+    echo "No MaaS API key configured yet — every installed agent shares one gateway,"
+    echo "so this only needs to happen once."
+    "${SCRIPT_DIR}/scripts/setup-maas-key.sh" --force
+  else
+    warn "MaaS API_KEY not configured — planned/multi-file tasks will fail until set."
+    warn "run './install.sh --setup-maas-key' interactively to configure credentials (needed once, shared by every agent)"
+  fi
 }
 
 # ── Install upstream packages ────────────────────────────────
@@ -1212,6 +1285,7 @@ QEOF
   if [[ -f ".gitignore" ]]; then
     grep -qF ".ai-dlc/tasks/" ".gitignore" 2>/dev/null || echo ".ai-dlc/tasks/" >> ".gitignore"
   fi
+  ensure_maas_key
   echo "══════════════════════════════════════════════════"
   if [[ "${rc}" == "0" ]]; then
     ok "Install complete. Run './install.sh --doctor' to verify."

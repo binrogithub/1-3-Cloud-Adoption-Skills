@@ -159,6 +159,20 @@ build a second, worse verifier on top of a human's own judgment.
 install into. Always pair `--target <name>` with `--target-dir <path>` for
 these three.
 
+### The MaaS gateway key is shared, not per-agent
+
+Every install run ends by checking `~/.jiuwenswarm/config/.env` for a
+configured API key. That file is the *only* place the key lives, and
+`bin/plan.py`'s planning-plane dispatch resolves the gateway client from
+one fixed path regardless of which coding agent is running it — so a
+key set up once (whichever agent's install happened to trigger it) is
+already usable by every other agent you install afterward. The check is
+purely informational when a key is already there; it only prompts (or,
+non-interactively, warns with the fix command) when one is genuinely
+missing. Only 1–3 file inline changes skip the gateway entirely — a
+missing key just means planned/multi-file work and the design flow
+won't work yet, not that the skill itself failed to install.
+
 ### Codex CLI native skill discovery (third path)
 
 Codex CLI has a built-in skill-installer: typing
@@ -181,6 +195,22 @@ writes an `AGENTS.md` instruction file into a project you already have
 checked out. Use the native skill path when you want a self-contained,
 portable copy of the toolkit under `~/.codex/skills/`; use `--target`
 when you just want the flow documented inside an existing project.
+
+### Codex CLI native skill discovery, done locally (fourth path)
+
+If you already have this repo checked out, you don't need to go through
+Codex's own network fetch at all:
+
+```
+./install.sh --target codex-native   # copies the whole toolkit to ~/.codex/skills/ai-dlc/
+```
+
+This produces exactly what the GitHub-URL path above produces — same
+`SKILL.md`, same bundled `bin/`, `config/`, `openspec/` — just without
+depending on Codex's own `install <url>` fetch (which downloads over the
+network and, separately, depends on Codex's own background daemon being
+healthy — neither of which this repo controls). `--uninstall --target
+codex-native` removes the whole installed copy, not just one file.
 
 ## Constraints that don't expire
 
