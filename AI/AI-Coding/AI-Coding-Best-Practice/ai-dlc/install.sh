@@ -1073,9 +1073,20 @@ QEOF
   install_upstreams
   local rc=0
 
-  # --target-dir: ad-hoc CC target only (no workspace, no registry)
+  # --target-dir: install into an explicit path.  If --target <name> is also
+  # given, read the real kind from targets/<name>.json so agents-md/cursor-rules/
+  # copilot-instructions targets land in the right format (not always claude-skill).
+  # Without --target, fall back to the legacy ad-hoc claude-skill behaviour.
   if [[ -n "${target_dir}" ]]; then
-    install_skills_to_target "ad-hoc" "${target_dir}" || rc=1
+    if [[ -n "${target}" ]]; then
+      local tfile="${TARGETS_DIR}/${target}.json"
+      [[ -f "${tfile}" ]] || { fail "Unknown target: ${target}"; exit 1; }
+      local tkind
+      tkind=$("$PY" -c "import json; print(json.load(open('${tfile}')).get('kind','claude-skill'))" 2>/dev/null || echo "claude-skill")
+      install_skills_to_target "${target}" "${target_dir}" "${tkind}" || rc=1
+    else
+      install_skills_to_target "ad-hoc" "${target_dir}" || rc=1
+    fi
 
   # --all-targets: every registered target + workspace
   elif [[ "${all_targets}" == "1" ]]; then
@@ -1102,6 +1113,10 @@ QEOF
     tkind=$("$PY" -c "import json; print(json.load(open('${tfile}')).get('kind','claude-skill'))" 2>/dev/null || echo "claude-skill")
     if [[ -z "${tconfig}" ]]; then
       fail "target ${target}: no config_dir in ${tfile}"
+      exit 1
+    fi
+    if [[ "${tconfig}" == *"<project-root>"* ]]; then
+      fail "target ${target}: config_dir is a placeholder — pass --target-dir <your-project-path> to install here"
       exit 1
     fi
     install_skills_to_target "${target}" "${tconfig}" "${tkind}" || rc=1

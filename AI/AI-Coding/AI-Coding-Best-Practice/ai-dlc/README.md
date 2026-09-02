@@ -151,8 +151,13 @@ build a second, worse verifier on top of a human's own judgment.
 ./install.sh --doctor         # health check: executables, validator smoke
                               # test, gateway reachability, credentials, design
                               # asset catalog
-./install.sh --target codex   # install into a specific coding agent (see targets/)
+./install.sh --target codex --target-dir /path/to/your/project   # writes AGENTS.md there
 ```
+
+`codex`, `cursor`, and `copilot` targets have `config_dir: "<project-root>"`
+— a placeholder with no fixed value because it depends on which project you
+install into. Always pair `--target <name>` with `--target-dir <path>` for
+these three.
 
 ## Constraints that don't expire
 
