@@ -1,0 +1,677 @@
+#!/usr/bin/env python3
+"""Direct MaaS workflow fan-out runner.
+
+Reads a workflow manifest (JSON stdin or --file), validates it against
+assets/manifest-schema.json (manual validation, stdlib only), and executes one
+of two modes:
+
+  fanout        Run each item brief in an isolated delegate worker
+                (concurrent.futures.ThreadPoolExecutor, hard-capped
+                concurrency). Item scopes must be pairwise disjoint — this is
+                enforced BEFORE any thread is created. Per-item results are
+                written to ~/.claude-hybrid/workflows/<run_id>/<item_id>.json
+                (mode 0600). The results array is in input order regardless of
+                completion order. If failed/total > 0.30 the run aborts with
+                status "reclassify_premium".
+
+  suborchestrate  Pass the whole brief to a single bounded claude-maas -p
+                  invocation (one delegate call).
+
+There is no HTTP router, no Lite-LLM, no Claude Code Router (CCR), no
+Open-Router, no Sidecar, and no model fallback chain. Every worker connects
+directly to the Huawei MaaS native Anthropic Messages API using model
+glm-5.2. The audit log records route=maas, model=glm-5.2, fallback=false and
+never stores brief text or tool arguments.
+
+This file is a script AND a valid Python module: tests import it via importlib
+and inject a fake delegate through ``set_delegate_factory``.
+"""
+from __future__ import annotations
+
+import json
+import os
+import re
+import subprocess
+import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+from typing import Any, Callable
+
+
+sys.dont_write_bytecode = True
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+MODEL = "glm-5.2"
+DEFAULT_CONCURRENCY = 3
+MAX_CONCURRENCY = 8
+FAILURE_THRESHOLD = 0.30  # strictly greater than this -> reclassify_premium
+DEFAULT_ITEM_TIMEOUT = 1800.0
+DEFAULT_MAX_TURNS = 12
+
+ROOT = Path(__file__).resolve().parents[1]
+SCHEMA_PATH = ROOT / "assets" / "manifest-schema.json"
+
+# These are overridden by tests via monkeypatch so tests never touch real HOME.
+HYBRID_DIR = Path(os.environ.get("HOME", str(Path.home()))) / ".claude-hybrid"
+WORKFLOWS_DIR = HYBRID_DIR / "workflows"
+AUDIT_FILE = HYBRID_DIR / "route-audit.jsonl"
+
+VALID_MODES = ("fanout", "suborchestrate")
+# D5 (PRD SECURITY_HARDENING V1): run_id and item_id become directory and
+# file names under ~/.claude-hybrid/workflows/. Restrict them to a safe
+# charset so "../" traversal cannot escape the run directory.
+_SAFE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+# Must stay in sync with assets/brief-schema.json task_type enum.  We load the
+# schema at runtime so the two never drift.
+VALID_TASK_TYPES = (
+    "code_generation",
+    "unit_test_generation",
+    "bug_fix",
+    "refactor",
+    "docs",
+    "review",
+    "ci_fix",
+    "format_migration",
+    "repo_summary",
+    "batch",
+    "suborchestrate",
+    "image",
+)
+
+# ---------------------------------------------------------------------------
+# Delegate injection
+# ---------------------------------------------------------------------------
+
+# The delegate callable signature:
+#   delegate(brief: dict, *, model: str, max_turns: int, timeout: float,
+#            cwd: str | None, run_id: str | None, item_id: str | None,
+#            item_index: int) -> dict
+#
+# In production this wraps `scripts/delegate` (a claude-maas subprocess). In
+# tests it is replaced via set_delegate_factory.
+_delegate_factory: Callable[..., Callable[..., dict]] | None = None
+
+
+def set_delegate_factory(factory: Callable[..., Callable[..., dict]]) -> None:
+    """Install a factory that returns the delegate callable.
+
+    Tests call this to inject a FakeDelegate. In production the default factory
+    builds a subprocess-based delegate.
+    """
+    global _delegate_factory
+    _delegate_factory = factory
+
+
+def _get_delegate() -> Callable[..., dict]:
+    if _delegate_factory is not None:
+        return _delegate_factory()
+    return _subprocess_delegate
+
+
+def _subprocess_delegate(brief: dict, *, model: str, max_turns: int,
+                         timeout: float, cwd: str | None = None,
+                         run_id: str | None = None, item_id: str | None = None,
+                         item_index: int = -1) -> dict:
+    """Production delegate: run scripts/delegate as a subprocess.
+
+    Kept minimal — the real delegate runner (Task 5) owns retry/acceptance
+    logic. Here we invoke it with the brief on stdin and parse its JSON result.
+    """
+    delegate_bin = str(ROOT / "scripts" / "delegate")
+    try:
+        proc = subprocess.run(
+            ["python3", delegate_bin],
+            input=json.dumps(brief),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=cwd,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "status": "capacity_error",
+            "model": model,
+            "summary": "delegate timed out",
+            "files_changed": [],
+            "tokens": {"in": 0, "out": 0},
+            "duration_s": timeout,
+        }
+    ok = proc.returncode == 0
+    try:
+        payload = json.loads(proc.stdout)
+    except (json.JSONDecodeError, ValueError):
+        payload = {}
+    return {
+        "status": payload.get("status", "success" if ok else "needs_escalation"),
+        "model": model,
+        "summary": payload.get("summary", proc.stdout.strip()[:200]),
+        "files_changed": payload.get("files_changed", []),
+        "tokens": payload.get("tokens", {"in": 0, "out": 0}),
+        "duration_s": payload.get("duration_s", 0.0),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Bounded concurrency
+# ---------------------------------------------------------------------------
+
+
+def bounded_concurrency(requested: int) -> int:
+    """Clamp requested concurrency to [1, MAX_CONCURRENCY]."""
+    try:
+        n = int(requested)
+    except (TypeError, ValueError):
+        return DEFAULT_CONCURRENCY
+    return max(1, min(n, MAX_CONCURRENCY))
+
+
+# ---------------------------------------------------------------------------
+# Schema validation (manual, stdlib only)
+# ---------------------------------------------------------------------------
+
+
+def _validate_manifest(manifest: Any) -> list[str]:
+    """Validate manifest against the schema rules. Returns a list of error
+    strings (empty == valid). We do manual validation to avoid any third-party
+    jsonschema dependency."""
+    errors: list[str] = []
+
+    if not isinstance(manifest, dict):
+        return ["manifest must be a JSON object"]
+
+    mode = manifest.get("mode")
+    if mode not in VALID_MODES:
+        errors.append(f"mode must be one of {VALID_MODES}, got {mode!r}")
+
+    run_id = manifest.get("run_id")
+    if not isinstance(run_id, str) or not run_id:
+        errors.append("run_id must be a non-empty string")
+    elif not _SAFE_ID_RE.match(run_id):
+        errors.append("run_id must match [A-Za-z0-9][A-Za-z0-9._-]{0,63}")
+
+    if mode == "fanout":
+        items = manifest.get("items")
+        if not isinstance(items, list):
+            errors.append("fanout mode requires 'items' as a list")
+        elif len(items) == 0:
+            errors.append("fanout mode requires at least one item")
+        else:
+            for i, item in enumerate(items):
+                ie = _validate_brief(item)
+                for e in ie:
+                    errors.append(f"items[{i}]: {e}")
+    elif mode == "suborchestrate":
+        brief = manifest.get("brief")
+        if not isinstance(brief, dict):
+            errors.append("suborchestrate mode requires 'brief' as an object")
+        else:
+            for e in _validate_brief(brief):
+                errors.append(f"brief: {e}")
+
+    cc = manifest.get("concurrency")
+    if cc is not None:
+        if not isinstance(cc, int) or isinstance(cc, bool):
+            errors.append("concurrency must be an integer")
+        elif cc < 1:
+            errors.append("concurrency must be >= 1")
+
+    # Validate numeric fields that are cast with float()/int() in workers.
+    item_timeout = manifest.get("item_timeout")
+    if item_timeout is not None:
+        if isinstance(item_timeout, bool) or not isinstance(item_timeout, (int, float)):
+            errors.append("item_timeout must be a number")
+        elif item_timeout <= 0:
+            errors.append("item_timeout must be > 0")
+
+    max_turns = manifest.get("max_turns")
+    if max_turns is not None:
+        if isinstance(max_turns, bool) or not isinstance(max_turns, int):
+            errors.append("max_turns must be an integer")
+        elif max_turns < 1:
+            errors.append("max_turns must be >= 1")
+
+    verification_timeout = manifest.get("verification_timeout")
+    if verification_timeout is not None:
+        if isinstance(verification_timeout, bool) or not isinstance(verification_timeout, (int, float)):
+            errors.append("verification_timeout must be a number")
+        elif verification_timeout < 0:
+            errors.append("verification_timeout must be >= 0")
+
+    # Validate per-item max_turns and item_id if present.
+    if mode == "fanout" and isinstance(manifest.get("items"), list):
+        for i, item in enumerate(manifest["items"]):
+            if isinstance(item, dict):
+                imt = item.get("max_turns")
+                if imt is not None:
+                    if isinstance(imt, bool) or not isinstance(imt, int):
+                        errors.append(f"items[{i}].max_turns must be an integer")
+                    elif imt < 1:
+                        errors.append(f"items[{i}].max_turns must be >= 1")
+                iid = item.get("item_id")
+                if iid is not None:
+                    if not isinstance(iid, str) or not _SAFE_ID_RE.match(iid):
+                        errors.append(f"items[{i}].item_id must match [A-Za-z0-9][A-Za-z0-9._-]{{0,63}}")
+
+    return errors
+
+
+def _validate_brief(brief: Any) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(brief, dict):
+        return ["brief must be a JSON object"]
+    tt = brief.get("task_type")
+    if tt not in VALID_TASK_TYPES:
+        errors.append(f"task_type must be one of {VALID_TASK_TYPES}, got {tt!r}")
+    goal = brief.get("goal")
+    if not isinstance(goal, str) or not goal:
+        errors.append("goal must be a non-empty string")
+    scope = brief.get("scope")
+    if scope is not None:
+        if not isinstance(scope, list):
+            errors.append("scope must be a list of strings")
+        elif not all(isinstance(s, str) for s in scope):
+            errors.append("scope entries must be strings")
+    return errors
+
+
+# ---------------------------------------------------------------------------
+# Disjoint scope enforcement
+# ---------------------------------------------------------------------------
+
+
+def _find_scope_conflicts(items: list[dict]) -> list[tuple[str, int, int]]:
+    """Return a list of (path, index_a, index_b) for any path that appears in
+    two items' scope. Empty scopes never conflict."""
+    path_to_indices: dict[str, list[int]] = {}
+    for i, item in enumerate(items):
+        scope = item.get("scope") or []
+        if not isinstance(scope, list):
+            continue
+        for p in scope:
+            if not isinstance(p, str) or not p:
+                continue
+            path_to_indices.setdefault(p, []).append(i)
+    conflicts = []
+    for p, indices in path_to_indices.items():
+        if len(indices) > 1:
+            conflicts.append((p, indices[0], indices[1]))
+    return conflicts
+
+
+# ---------------------------------------------------------------------------
+# Filesystem helpers
+# ---------------------------------------------------------------------------
+
+
+def _ensure_run_dir(run_id: str) -> Path:
+    """Create the per-run directory with mode 0700 and return it."""
+    run_dir = WORKFLOWS_DIR / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        run_dir.chmod(0o700)
+    except OSError:
+        pass
+    return run_dir
+
+
+def _write_item_result(run_dir: Path, item_id: str, payload: dict) -> Path:
+    """Write a per-item result JSON file with mode 0600. Atomic via tmp+rename."""
+    # Defense in depth (D5): even if validation is bypassed, refuse any id
+    # that is not a plain filename component.
+    if not _SAFE_ID_RE.match(item_id or ""):
+        raise ValueError(f"unsafe item_id: {item_id!r}")
+    target = run_dir / f"{item_id}.json"
+    tmp = target.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(payload, sort_keys=True))
+    try:
+        tmp.chmod(0o600)
+    except OSError:
+        pass
+    os.replace(tmp, target)
+    try:
+        target.chmod(0o600)
+    except OSError:
+        pass
+    return target
+
+
+def _ensure_audit_file() -> None:
+    """Ensure the audit file exists with mode 0600 and parent dir 0700."""
+    AUDIT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        AUDIT_FILE.parent.chmod(0o700)
+    except OSError:
+        pass
+    if not AUDIT_FILE.exists():
+        AUDIT_FILE.touch()
+    try:
+        AUDIT_FILE.chmod(0o600)
+    except OSError:
+        pass
+
+
+def _append_audit(entry: dict) -> None:
+    """Append a JSONL audit entry. Never stores brief text or tool arguments."""
+    _ensure_audit_file()
+    line = json.dumps(entry, sort_keys=True)
+    with AUDIT_FILE.open("a") as f:
+        f.write(line + "\n")
+    try:
+        AUDIT_FILE.chmod(0o600)
+    except OSError:
+        pass
+
+
+def _audit_entry(run_id: str, outcome: str, duration_s: float, *,
+                 failed: int = 0, total: int = 0,
+                 tokens_in: int | None = None,
+                 tokens_out: int | None = None) -> dict:
+    """Build an audit entry with only safe fields — no brief text, no tool args."""
+    return {
+        "ts": _utc_now_iso(),
+        "run_id": run_id,
+        "route": "maas",
+        "model": MODEL,
+        "fallback": False,
+        "outcome": outcome,
+        "duration_s": round(duration_s, 4),
+        "failed": failed,
+        "total": total,
+        "tokens_in": tokens_in,
+        "tokens_out": tokens_out,
+    }
+
+
+def _utc_now_iso() -> str:
+    import datetime
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
+def _sum_tokens(results: list[dict], key: str) -> int | None:
+    """Sum a token key across subtask results. None if every value is None."""
+    total = 0
+    saw_int = False
+    for r in results:
+        if not isinstance(r, dict):
+            continue
+        val = (r.get("tokens") or {}).get(key)
+        if val is None:
+            continue
+        try:
+            total += int(val)
+            saw_int = True
+        except (TypeError, ValueError):
+            continue
+    return total if saw_int else None
+
+
+# ---------------------------------------------------------------------------
+# Item id helpers
+# ---------------------------------------------------------------------------
+
+
+def _item_id(item: dict, index: int) -> str:
+    explicit = item.get("item_id")
+    if isinstance(explicit, str) and explicit:
+        return explicit
+    return f"item-{index:03d}"
+
+
+# ---------------------------------------------------------------------------
+# Fanout execution
+# ---------------------------------------------------------------------------
+
+
+def _run_fanout(manifest: dict) -> dict:
+    items = manifest["items"]
+    run_id = manifest["run_id"]
+    concurrency = bounded_concurrency(manifest.get("concurrency", DEFAULT_CONCURRENCY))
+    item_timeout = manifest.get("item_timeout", DEFAULT_ITEM_TIMEOUT)
+    cwd = manifest.get("cwd")
+    max_turns = manifest.get("max_turns", DEFAULT_MAX_TURNS)
+    verification_timeout = manifest.get("verification_timeout")
+
+    # 1. Validate manifest structure.
+    errors = _validate_manifest(manifest)
+    if errors:
+        return {"status": "invalid_manifest", "fallback": False,
+                "errors": errors, "run_id": run_id}
+
+    # 2. Enforce disjoint scope BEFORE creating any threads.
+    conflicts = _find_scope_conflicts(items)
+    if conflicts:
+        return {"status": "invalid_manifest", "fallback": False,
+                "errors": [f"scope conflict: {c[0]} in items {c[1]} and {c[2]}"
+                           for c in conflicts],
+                "run_id": run_id}
+
+    # 3. Create the per-run directory.
+    run_dir = _ensure_run_dir(run_id)
+
+    # 4. Launch workers with a hard-capped thread pool.
+    delegate = _get_delegate()
+    n = len(items)
+    # results[i] holds the outcome for items[i] regardless of completion order.
+    results: list[dict | None] = [None] * n
+    start = time.monotonic()
+
+    def _worker(index: int) -> tuple[int, dict]:
+        item = items[index]
+        iid = _item_id(item, index)
+        # Strip workflow-only fields before passing to delegate so the brief
+        # validates against delegate's schema (additionalProperties: false).
+        brief = {k: v for k, v in item.items() if k != "item_id"}
+        result = delegate(
+            brief,
+            model=MODEL,
+            max_turns=int(item.get("max_turns", max_turns)),
+            timeout=float(item_timeout),
+            cwd=cwd,
+            run_id=run_id,
+            item_id=iid,
+            item_index=index,
+        )
+        # Ensure the result carries the model and a status.
+        result.setdefault("model", MODEL)
+        result.setdefault("status", "success")
+        result["item_id"] = iid
+        result["item_index"] = index
+        # Write the per-item result file.
+        _write_item_result(run_dir, iid, result)
+        return index, result
+
+    pool = ThreadPoolExecutor(max_workers=concurrency)
+    try:
+        futures = {pool.submit(_worker, i): i for i in range(n)}
+        if verification_timeout is not None:
+            deadline = start + float(verification_timeout)
+            try:
+                for fut in as_completed(futures, timeout=max(0.0, deadline - time.monotonic())):
+                    index, result = fut.result()
+                    results[index] = result
+            except TimeoutError:
+                # Cancel remaining futures; mark un-filled items as timed out.
+                for fut in futures:
+                    fut.cancel()
+                for i in range(n):
+                    if results[i] is None:
+                        results[i] = {
+                            "status": "needs_escalation",
+                            "summary": "workflow verification_timeout exceeded",
+                            "item_id": _item_id(items[i], i),
+                            "item_index": i,
+                            "model": MODEL,
+                        }
+                # Do NOT wait for cancelled/in-flight workers — return promptly.
+                pool.shutdown(wait=False, cancel_futures=True)
+            else:
+                pool.shutdown(wait=False)
+        else:
+            for fut in as_completed(futures):
+                index, result = fut.result()
+                results[index] = result
+            pool.shutdown(wait=False)
+    except Exception:
+        pool.shutdown(wait=False, cancel_futures=True)
+        raise
+
+    duration = time.monotonic() - start
+
+    # 5. Tally failures and decide outcome.
+    failed = sum(1 for r in results if r and r.get("status") != "success")
+    filled = [r for r in results if r is not None]
+
+    if n > 0 and failed / n > FAILURE_THRESHOLD:
+        outcome = "reclassify_premium"
+        status = "reclassify_premium"
+    else:
+        outcome = "success"
+        status = "success"
+
+    # Aggregate token usage across subtasks (None if all unknown).
+    _agg_in = _sum_tokens(filled, "in")
+    _agg_out = _sum_tokens(filled, "out")
+
+    _append_audit(_audit_entry(run_id, outcome, duration,
+                               failed=failed, total=n,
+                               tokens_in=_agg_in, tokens_out=_agg_out))
+
+    return {
+        "status": status,
+        "fallback": False,
+        "run_id": run_id,
+        "model": MODEL,
+        "results": filled,
+        "failed": failed,
+        "total": n,
+        "duration_s": duration,
+        "tokens": {"in": _agg_in, "out": _agg_out},
+    }
+
+
+# ---------------------------------------------------------------------------
+# Suborchestrate execution
+# ---------------------------------------------------------------------------
+
+
+def _run_suborchestrate(manifest: dict) -> dict:
+    run_id = manifest["run_id"]
+    brief = manifest.get("brief", {})
+    max_turns = int(manifest.get("max_turns", DEFAULT_MAX_TURNS))
+    timeout = float(manifest.get("item_timeout", DEFAULT_ITEM_TIMEOUT))
+    cwd = manifest.get("cwd")
+    verification_timeout = manifest.get("verification_timeout")
+    # If verification_timeout is set, cap the per-item timeout to the remaining
+    # wall-clock budget so the aggregate run is bounded.
+    if verification_timeout is not None:
+        timeout = min(timeout, float(verification_timeout))
+
+    errors = _validate_manifest(manifest)
+    if errors:
+        return {"status": "invalid_manifest", "fallback": False,
+                "errors": errors, "run_id": run_id}
+
+    delegate = _get_delegate()
+    start = time.monotonic()
+    result = delegate(
+        brief,
+        model=MODEL,
+        max_turns=max_turns,
+        timeout=timeout,
+        cwd=cwd,
+        run_id=run_id,
+        item_id="suborchestrate",
+        item_index=0,
+    )
+    duration = time.monotonic() - start
+    result.setdefault("model", MODEL)
+    status = result.get("status", "success")
+    outcome = status
+
+    _tok_in = (result.get("tokens") or {}).get("in")
+    _tok_out = (result.get("tokens") or {}).get("out")
+    _append_audit(_audit_entry(run_id, outcome, duration,
+                               failed=0 if status == "success" else 1, total=1,
+                               tokens_in=_tok_in, tokens_out=_tok_out))
+
+    result["fallback"] = False
+    result["run_id"] = run_id
+    result["duration_s"] = duration
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+
+def run(manifest: dict) -> dict:
+    """Run a workflow manifest and return a structured result dict.
+
+    This is the entry point used by tests (via importlib) and by the CLI
+    ``main``. It never raises on bad manifests — it returns a dict with
+    ``status == "invalid_manifest"`` instead.
+    """
+    if not isinstance(manifest, dict):
+        return {"status": "invalid_manifest", "fallback": False,
+                "errors": ["manifest must be a JSON object"]}
+
+    mode = manifest.get("mode")
+    if mode not in VALID_MODES:
+        # Unknown mode -> invalid_manifest, no delegate calls, no audit.
+        return {"status": "invalid_manifest", "fallback": False,
+                "errors": [f"mode must be one of {VALID_MODES}, got {mode!r}"],
+                "run_id": manifest.get("run_id", "")}
+
+    # Structural validation first (before any side effects).
+    errors = _validate_manifest(manifest)
+    if errors:
+        return {"status": "invalid_manifest", "fallback": False,
+                "errors": errors, "run_id": manifest.get("run_id", "")}
+
+    if mode == "fanout":
+        return _run_fanout(manifest)
+    return _run_suborchestrate(manifest)
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def _read_manifest() -> dict:
+    """Read the manifest from --file or JSON stdin."""
+    args = sys.argv[1:]
+    if "--file" in args:
+        idx = args.index("--file")
+        path = Path(args[idx + 1])
+        return json.loads(path.read_text())
+    if args and not args[0].startswith("-"):
+        return json.loads(Path(args[0]).read_text())
+    # Default: read JSON from stdin.
+    raw = sys.stdin.read()
+    if not raw.strip():
+        return {}
+    return json.loads(raw)
+
+
+def main() -> int:
+    try:
+        manifest = _read_manifest()
+    except (json.JSONDecodeError, OSError, IndexError) as exc:
+        print(json.dumps({"status": "invalid_manifest", "fallback": False,
+                          "errors": [str(exc)]}))
+        return 1
+
+    result = run(manifest)
+    print(json.dumps(result, sort_keys=True))
+    return 0 if result.get("status") == "success" else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

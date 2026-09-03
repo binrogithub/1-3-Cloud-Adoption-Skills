@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+"""Session-aware, structured delegation command for local coding agents."""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import sys
+from pathlib import Path
+
+# A self-contained release directory is an immutable verified artifact.  This
+# entry point imports local modules, so suppress Python's default __pycache__
+# writes before those imports can occur.
+sys.dont_write_bytecode = True
+
+from delegate_core import run as run_delegate
+from delegate_core import validate_brief as _validate_brief
+from session_registry import SessionBusy, SessionConflict, SessionRegistry, session_lock
+
+
+def _state_dir() -> Path:
+    root = os.environ.get("XDG_STATE_HOME")
+    if root:
+        return Path(root) / "claude-maas-delegate"
+    return Path.home() / ".local" / "state" / "claude-maas-delegate"
+
+
+def _registry() -> tuple[SessionRegistry, Path]:
+    state_dir = _state_dir()
+    return SessionRegistry(state_dir / "state.sqlite"), state_dir / "locks"
+
+
+def _print(result: dict) -> int:
+    """Print exactly one structured response and return its shell status."""
+    print(json.dumps(result, separators=(",", ":"), sort_keys=True))
+    return 0 if result.get("status") == "success" else 1
+
+
+def _lease_result(lease, *, status: str = "success") -> dict:
+    return {
+        "status": status,
+        "delegation_handle": lease.handle,
+        "claude_session_id": lease.claude_session_id,
+        "session_reused": lease.reused,
+    }
+
+
+def _status_result(record: dict | None, handle: str) -> dict:
+    if record is None:
+        return {"status": "not_found", "delegation_handle": handle}
+    return {
+        "status": record["status"],
+        "delegation_handle": record["handle"],
+        "owner_agent": record["owner_agent"],
+        "claude_session_id": record["claude_session_id"],
+        "created_at": record["created_at"],
+        "last_used_at": record["last_used_at"],
+        "last_outcome": record["last_outcome"],
+    }
+
+
+def _read_brief() -> dict:
+    raw = sys.stdin.read()
+    if not raw.strip():
+        raise ValueError("no JSON brief provided on stdin")
+    decoded = json.loads(raw)
+    if not isinstance(decoded, dict):
+        raise ValueError("brief must be a JSON object")
+    return decoded
+
+
+def _add_identity_arguments(parser: argparse.ArgumentParser, *, handle_optional: bool) -> None:
+    parser.add_argument("--agent", required=not handle_optional)
+    parser.add_argument("--conversation-id")
+    parser.add_argument("--handle")
+    parser.add_argument("--workspace", default=os.getcwd())
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    session = commands.add_parser("session")
+    session_commands = session.add_subparsers(dest="session_command", required=True)
+    new = session_commands.add_parser("new")
+    _add_identity_arguments(new, handle_optional=False)
+    status = session_commands.add_parser("status")
+    status.add_argument("--handle", required=True)
+    close = session_commands.add_parser("close")
+    close.add_argument("--handle", required=True)
+    gc = session_commands.add_parser("gc")
+    gc.add_argument("--older-than-days", type=int, required=True)
+
+    run = commands.add_parser("run")
+    _add_identity_arguments(run, handle_optional=True)
+    run.add_argument("--client-bin", default="claude-maas")
+    run.add_argument("--timeout", type=float, default=0.0,
+                     help="seconds per attempt; 0 uses an adaptive 15–120 minute budget")
+    run.add_argument("--lock-timeout", type=float, default=30.0)
+
+    doctor = commands.add_parser("doctor")
+    doctor.add_argument("--client-bin", default="claude-maas")
+    return parser
+
+
+def _acquire(registry: SessionRegistry, args: argparse.Namespace):
+    if args.handle:
+        if not args.agent:
+            raise ValueError("--agent is required with --handle")
+        return registry.acquire_handle(args.handle, args.agent, args.workspace)
+    if not args.agent:
+        raise ValueError("--agent is required")
+    return registry.acquire(args.agent, args.conversation_id, args.workspace)
+
+
+def _run(args: argparse.Namespace) -> dict:
+    brief = _read_brief()
+    # Validate the brief BEFORE acquiring a session so an invalid brief
+    # cannot persist a Claude session ID that was never created upstream.
+    errors = _validate_brief(brief)
+    if errors:
+        return {"status": "invalid_brief", "summary": "; ".join(errors)}
+    registry, locks_dir = _registry()
+    lease = _acquire(registry, args)
+    with session_lock(locks_dir, lease.handle, args.lock_timeout):
+        result = run_delegate(
+            brief,
+            cwd=args.workspace,
+            client_bin=args.client_bin,
+            timeout=args.timeout,
+            claude_session_id=lease.claude_session_id,
+            resume=lease.reused,
+            audit_context={"delegation_handle": lease.handle},
+        )
+        if not lease.reused:
+            if result.get("status") == "success" and result.get("session_id"):
+                registry.bind_session(lease.handle, result["session_id"])
+            else:
+                registry.discard_unbound(lease.handle)
+    if lease.reused or result.get("status") == "success":
+        registry.record_outcome(lease.handle, result.get("status", "needs_escalation"))
+    result["delegation_handle"] = lease.handle
+    result["session_reused"] = lease.reused
+    return result
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    try:
+        if args.command == "doctor":
+            return _print({
+                "status": "success" if shutil.which(args.client_bin) else "client_missing",
+                "client_bin": args.client_bin,
+            })
+        registry, _ = _registry()
+        if args.command == "session":
+            if args.session_command == "new":
+                return _print(_lease_result(_acquire(registry, args)))
+            if args.session_command == "status":
+                result = _status_result(registry.status(args.handle), args.handle)
+                print(json.dumps(result, separators=(",", ":"), sort_keys=True))
+                return 0 if result["status"] != "not_found" else 1
+            if args.session_command == "close":
+                return _print({
+                    "status": "success",
+                    "delegation_handle": args.handle,
+                    "closed": registry.close(args.handle),
+                })
+            if args.session_command == "gc":
+                return _print({"status": "success", "removed": registry.gc(args.older_than_days)})
+        if args.command == "run":
+            return _print(_run(args))
+        raise AssertionError("unreachable command")
+    except SessionBusy:
+        return _print({"status": "session_busy"})
+    except SessionConflict as exc:
+        return _print({"status": "session_conflict", "summary": str(exc)})
+    except (ValueError, json.JSONDecodeError) as exc:
+        return _print({"status": "invalid_brief", "summary": str(exc)})
+    except OSError:
+        return _print({"status": "client_missing"})
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

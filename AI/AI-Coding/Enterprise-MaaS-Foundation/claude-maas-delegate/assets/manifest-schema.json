@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Workflow manifest",
+  "description": "Manifest for the direct MaaS workflow runner. Describes either a fan-out of independent task briefs to parallel isolated claude-maas delegates, or a single sub-orchestration brief handed to one bounded claude-maas invocation. There is no HTTP router, no LiteLLM, no Sidecar, and no model fallback chain: every worker connects directly to the Huawei MaaS native Anthropic Messages API using model glm-5.2.",
+  "type": "object",
+  "required": ["mode", "run_id"],
+  "additionalProperties": false,
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["fanout", "suborchestrate"],
+      "description": "fanout: run each item brief in an isolated delegate worker. suborchestrate: pass the whole brief to a single bounded claude-maas -p invocation."
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+      "description": "Stable identifier for this workflow run. Used as the per-run directory name under ~/.claude-hybrid/workflows/. Restricted to a safe filename charset (no path separators)."
+    },
+    "items": {
+      "type": "array",
+      "description": "Ordered list of task briefs for fanout mode. Each item runs in its own delegate worker. Item scopes must be pairwise disjoint.",
+      "items": {
+        "$ref": "#/$defs/brief"
+      }
+    },
+    "brief": {
+      "description": "The single task brief for suborchestrate mode.",
+      "$ref": "#/$defs/brief"
+    },
+    "concurrency": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8,
+      "default": 3,
+      "description": "Maximum number of parallel delegate workers for fanout mode. Clamped to [1, MAX_CONCURRENCY]."
+    },
+    "max_turns": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Bounded turn limit for suborchestrate mode (propagated to claude-maas --max-turns)."
+    },
+    "item_timeout": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Per-item delegate timeout in seconds for fanout mode."
+    },
+    "verification_timeout": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Aggregate verification timeout in seconds for the whole workflow run."
+    },
+    "cwd": {
+      "type": "string",
+      "description": "Working directory for delegate workers and acceptance commands."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "mode": { "const": "fanout" } } },
+      "then": { "required": ["mode", "run_id", "items"] }
+    },
+    {
+      "if": { "properties": { "mode": { "const": "suborchestrate" } } },
+      "then": { "required": ["mode", "run_id", "brief"] }
+    }
+  ],
+  "$defs": {
+    "brief": {
+      "type": "object",
+      "required": ["task_type", "goal"],
+      "additionalProperties": true,
+      "properties": {
+        "task_type": {
+          "type": "string",
+          "enum": [
+            "code_generation",
+            "refactor",
+            "bug_fix",
+            "unit_test_generation",
+            "docs",
+            "review",
+            "image",
+            "orchestration"
+          ],
+          "description": "Category of work. image is rejected before launch by the delegate."
+        },
+        "goal": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Natural-language description of the task goal."
+        },
+        "scope": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "File paths the task may read or modify. For fanout mode, scopes across items must be pairwise disjoint."
+        },
+        "constraints": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "acceptance": {
+          "type": "string",
+          "description": "Shell command whose exit code determines task success."
+        },
+        "context_notes": {
+          "type": "string"
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2
+        },
+        "max_turns": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "item_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+          "description": "Optional stable identifier for this item. When omitted, a stable zero-padded index id (item-000, item-001, ...) is assigned. Restricted to a safe filename charset (no path separators)."
+        }
+      }
+    }
+  }
+}
