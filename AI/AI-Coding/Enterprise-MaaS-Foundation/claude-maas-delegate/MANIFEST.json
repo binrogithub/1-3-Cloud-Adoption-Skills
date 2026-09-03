@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "product": "claude-maas-delegate",
-  "product_version": "3.2.0",
+  "product_version": "3.2.1",
   "files": [
     {
       "path": "README.md",
@@ -17,9 +17,9 @@
     },
     {
       "path": "VERSION",
-      "size": 6,
+      "size": 5,
       "executable": false,
-      "sha256": "33bdaf9e2d6bcbde2e4e613e865e403f8fe21fc621078d34c30b0bdc7f68d903"
+      "sha256": "31af59c90c69fb80f10e2036bfac2b98cc98f5b12437211a496787e9561a131b"
     },
     {
       "path": "assets/brief-schema.json",
@@ -88,6 +88,12 @@
       "sha256": "232e8afa6c42885e82422396ad2b059ebc5f949463d8c7964c070e95bc672679"
     },
     {
+      "path": "references/PRD_AUTO_CONTINUE_SILENT_KILL_V2_PLAIN_RUN.md",
+      "size": 7218,
+      "executable": false,
+      "sha256": "6ade191d53af3e5e9136e9b28c24f46f41994cd3d0f4910b095a9cd6548209dc"
+    },
+    {
       "path": "references/RELEASE-NOTES.md",
       "size": 6170,
       "executable": false,
@@ -143,9 +149,9 @@
     },
     {
       "path": "scripts/delegate",
-      "size": 38246,
+      "size": 40021,
       "executable": true,
-      "sha256": "d77c7118ea69a402a871ecba37619e60666dacfaefd433974db7605004453ca3"
+      "sha256": "41166fab5c35001eae62eef27fe2fff73d7e6b1f9fed56ea5eb8dc27ee0c56b6"
     },
     {
       "path": "scripts/delegate_core.py",
@@ -197,9 +203,9 @@
     },
     {
       "path": "tests/test_silent_kill.py",
-      "size": 14879,
+      "size": 22231,
       "executable": false,
-      "sha256": "1979225d1e037911befdba902048200e4b2784230d0011ad85f871c5737027d0"
+      "sha256": "329a27d8e4a364bed1433de33d802e4e50b199ca3d48e3771e95772ba3a9bf9c"
     }
   ]
 }
