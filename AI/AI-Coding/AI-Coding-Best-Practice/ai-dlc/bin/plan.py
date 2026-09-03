@@ -260,6 +260,9 @@ from report import (RECORDS_ROOT, artifacts_view, design_surface,  # noqa: E402
                     load_json, newest_verdict, now_iso,
                     plane_graph, plane_root, plane_status, plane_tree,
                     save_json, signed_records, write_record)
+from initiative import (  # noqa: E402
+    cmd_advance as init_advance, cmd_register as init_register,
+    cmd_status as init_status)
 
 # the shipped gateway client; AI_DLC_CLIENT overrides the path only (an
 # alternate install, or a double standing in for it — the flags are the
@@ -8623,6 +8626,33 @@ def _build_subparsers(sub) -> None:
     p.add_argument("--counts-approved", action="store_true",
                    help="a human approved the requirement/scenario count "
                         "change")
+    p = sub.add_parser("initiative",
+                       help="phase-chain automation: register, advance, "
+                            "or query an initiative manifest")
+    isub = p.add_subparsers(dest="action", required=True)
+    r = isub.add_parser("register",
+                        help="create or extend an initiative manifest "
+                             "from a list of phase change ids")
+    r.add_argument("--initiative", required=True,
+                   help="initiative id (the manifest file name stem)")
+    r.add_argument("--repo", required=True, type=Path)
+    r.add_argument("--phases", required=True,
+                   help="comma-separated change ids in phase order")
+    r.add_argument("--title", default=None,
+                   help="human-readable title (defaults to the id)")
+    r.add_argument("--created-by", default=None,
+                   help="who created the initiative")
+    a = isub.add_parser("advance",
+                        help="mark a closed change delivered and queue "
+                             "the next phase's task skeleton")
+    a.add_argument("--change", required=True,
+                   help="the closed change id to advance from")
+    a.add_argument("--repo", required=True, type=Path)
+    s = isub.add_parser("status",
+                        help="print an initiative's phases and statuses "
+                             "as JSON")
+    s.add_argument("--initiative", required=True)
+    s.add_argument("--repo", required=True, type=Path)
     p = sub.add_parser("close")
     p.add_argument("--change", required=True)
     p.add_argument("--repo", required=True, type=Path)
@@ -8828,6 +8858,15 @@ def main() -> None:
     if args.cmd == "accept":
         sys.exit(cmd_accept(args.change, args.repo.resolve(), args.task_dir,
                             args.counts_approved))
+    if args.cmd == "initiative":
+        if args.action == "register":
+            sys.exit(init_register(args.initiative, args.repo.resolve(),
+                                   args.phases.split(","),
+                                   args.title, args.created_by))
+        if args.action == "advance":
+            sys.exit(init_advance(args.change, args.repo.resolve()))
+        if args.action == "status":
+            sys.exit(init_status(args.initiative, args.repo.resolve()))
     if args.cmd == "close":
         sys.exit(cmd_close(args.change, args.repo.resolve(), args.task_dir,
                            args.branch, args.skip_specs,

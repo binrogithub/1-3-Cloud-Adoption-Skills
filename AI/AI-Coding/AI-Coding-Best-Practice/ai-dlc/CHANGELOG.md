@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## v0.19.0 — phase-chain automation, Phase A: queue the next phase's task skeleton on an approved close (PRD `phase-chain-automation`, Robin's approval 2026-09-03)
+
+A multi-phase initiative (a proposal that splits work into "Phase 1 / Phase
+2 / Phase 3", the way `openjiuwen-efficiency-v1` did) existed only as prose:
+nothing recorded which change was which phase of what, and nothing created
+Phase 2's task skeleton once Phase 1 merged. A separate task record showed
+the same class of gap at the single-task level — a delivery report can print
+the exact remedy command and still nothing carries it to a person.
+
+- **`plan.py initiative register/advance/status`** (`bin/initiative.py`,
+  new): `register` writes `.ai-dlc/initiatives/<id>.json` — an ordered list
+  of phases (`change_id`, `status`). `advance --change <closed-id>` marks
+  that phase `delivered` and, if the next phase is `pending`, creates its
+  task skeleton through the exact same code path manual `report.py init`
+  uses — clean-slate, nothing copied from the phase that just delivered —
+  then marks it `queued` and appends `INITIATIVE_PHASE_QUEUED` /
+  `INITIATIVE_COMPLETE` to the repo's `events.jsonl`. `status` is read-only.
+- **Standalone in this pass.** `advance` is invoked by hand; it is **not**
+  wired into `plan.py close`'s tail (that hook is Phase B, a separate
+  change — it touches the existing merge-gate tail rather than being purely
+  additive, so it gets its own review). A change id absent from every
+  initiative manifest is untouched by any of this — every existing
+  single-phase task's behavior is unchanged (INV-6, the acceptance bar
+  this feature had to clear to land at all).
+- Every scenario in `openspec/specs/phase-chain-automation/spec.md` — clean
+  next-phase state, one change id per initiative, failure isolation (a
+  failed `advance` never rolls back the phase that already closed), no-op
+  for unregistered changes — has a direct test in
+  `tests/test_initiative.py` (11 cases); full suite still green (47 passed,
+  no regressions).
+
 ## v0.18.0 — the design surface: a pinned read-only OpenDesign reference, one pointer skill, conclusions as signed records (PRD `uidesigner-opendesign`, Robin's 「实施prd」 2026-09-01)
 
 P0 measured before anything moved: the sparse reference tree
