@@ -153,6 +153,45 @@ def detect_terminal_error(session_jsonl: Path) -> str | None:
     return text[:120] if text else "(empty api-error text)"
 
 
+# Record types that constitute a normal session end.  A session whose last
+# record is one of these did NOT get silently killed — it reached a natural
+# turn boundary (assistant spoke, a stream-json result frame arrived, or a
+# user/tool-result record closed the round).
+_NORMAL_TERMINAL_TYPES = frozenset({"assistant", "result", "user"})
+
+
+def detect_silent_kill(session_jsonl: Path) -> dict | None:
+    """None when the session ended normally (an assistant/result/user terminal
+    record, or a stream-protocol-error record already handled by
+    detect_stream_protocol_error). Otherwise a dict describing the last
+    record type found, for an honest failure summary.
+
+    A session that ends on a non-terminal record type (``attachment``,
+    ``last-prompt``, etc.) or that produced no records at all bears the
+    signature of a process killed by an external signal — there is no
+    assistant error record and no ``isApiErrorMessage`` marker, so
+    detect_stream_protocol_error would never fire.  This detector fills
+    that blind spot so the caller can report an honest cause instead of
+    falling back to unrelated stderr text.
+
+    Returns at least ``last_record_type`` and ``record_count``.
+    """
+    # If the session ended on the retryable stream-protocol marker, that
+    # is NOT a silent kill — leave it to the existing path.
+    if detect_stream_protocol_error(session_jsonl):
+        return None
+    records = list(_iter_jsonl(session_jsonl))
+    if not records:
+        # No records at all — the process produced nothing before
+        # disappearing.
+        return {"last_record_type": None, "record_count": 0}
+    last = records[-1]
+    last_type = last.get("type") if isinstance(last, dict) else None
+    if last_type in _NORMAL_TERMINAL_TYPES:
+        return None
+    return {"last_record_type": last_type, "record_count": len(records)}
+
+
 # ---------------------------------------------------------------------------
 # Audit (B9)
 # ---------------------------------------------------------------------------
@@ -272,6 +311,27 @@ def run_with_auto_continue(
         )
 
         if not ended_on_marker:
+            # Silent-kill detection (PRD AUTO_CONTINUE_SILENT_KILL_V1 §3.1):
+            # the session ended on a non-terminal record type with no API
+            # error marker — the process was likely killed externally. This
+            # is a separate outcome, NOT merged into "failed" or the
+            # stream-protocol-error retry path.
+            sk_info = (
+                detect_silent_kill(session_jsonl)
+                if session_jsonl is not None else None
+            )
+            if sk_info is not None:
+                _write_audit({
+                    "type": "auto_continue", "session_id": session_id,
+                    "attempt": attempts, "trigger": "silent_kill",
+                    "delay_s": retry_delay(), "outcome": "silent_kill",
+                    "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                }, audit_path)
+                return {"ok": False, "attempts": attempts, "retried": retried,
+                        "session_id": session_id, "outcome": "silent_kill",
+                        "last_returncode": last_rc,
+                        "silent_kill_info": sk_info}
+
             outcome = "completed" if last_rc == 0 else "failed"
             if retried > 0:
                 # B9: the retry produced a final outcome — record it.
