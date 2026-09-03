@@ -387,5 +387,180 @@ class TestDelegateSilentKillSummary:
         assert result["summary"] == "Error: 401 unauthorized"
 
 
+# ---------------------------------------------------------------------------
+# _parse_stream_json — session_id capture from non-result frames
+# (PRD AUTO_CONTINUE_SILENT_KILL_V2 §2.1 / §4)
+# ---------------------------------------------------------------------------
+
+
+class TestParseStreamJsonSessionIdBroadened:
+    def test_session_id_from_init_frame_without_result(self):
+        """A stream with only a system/init frame (no result frame) must
+        still yield session_id — the v2 broadening (§2.1)."""
+        delegate = _load_delegate()
+        stream = json.dumps({
+            "type": "system", "subtype": "init",
+            "session_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        })
+        parsed = delegate._parse_stream_json(stream, exit_code=137)
+        assert parsed["session_id"] == "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        assert parsed["ok"] is False
+
+    def test_session_id_from_assistant_frame_without_result(self):
+        """An assistant frame also carries session_id."""
+        delegate = _load_delegate()
+        sid = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+        stream = json.dumps({"type": "system", "subtype": "init",
+                             "session_id": sid}) + "\n"
+        stream += json.dumps({"type": "assistant",
+                              "message": {"content": [{"type": "text",
+                                                       "text": "hi"}]},
+                              "session_id": sid})
+        parsed = delegate._parse_stream_json(stream, exit_code=1)
+        assert parsed["session_id"] == sid
+
+    def test_result_frame_session_id_still_wins(self):
+        """Regression: when a result frame is present, its session_id is
+        captured as before."""
+        delegate = _load_delegate()
+        sid = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+        stream = json.dumps({"type": "system", "subtype": "init",
+                             "session_id": sid}) + "\n"
+        stream += json.dumps({"type": "result", "subtype": "success",
+                              "is_error": False, "session_id": sid})
+        parsed = delegate._parse_stream_json(stream, exit_code=0)
+        assert parsed["session_id"] == sid
+        assert parsed["ok"] is True
+
+
+# ---------------------------------------------------------------------------
+# _plain_run — silent-kill detection on the unsupervised path
+# (PRD AUTO_CONTINUE_SILENT_KILL_V2 §2.2 / §4)
+# ---------------------------------------------------------------------------
+
+
+class TestPlainRunSilentKill:
+    def _make_session(self, tmp_path, session_id, records):
+        project_dir = tmp_path / "projects" / "proj"
+        project_dir.mkdir(parents=True, exist_ok=True)
+        _write_jsonl(project_dir / f"{session_id}.jsonl", records)
+
+    def test_plain_run_detects_silent_kill(self, tmp_path, monkeypatch):
+        """A killed session going through _plain_run must set
+        supervisor_outcome == 'silent_kill' and ok is False."""
+        delegate = _load_delegate()
+        session_id = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+        self._make_session(tmp_path, session_id, [
+            _assistant_text("Running git status."),
+            _user_tool_result(" M bin/plan.py"),
+            {"type": "attachment"},
+            {"type": "last-prompt"},
+        ])
+
+        # Stream output: init frame carries session_id, no result frame.
+        stream = json.dumps({
+            "type": "system", "subtype": "init", "session_id": session_id,
+        })
+
+        class _FakeProc:
+            returncode = 137
+            stdout = stream
+            stderr = ""
+
+        monkeypatch.setattr(delegate.subprocess, "run",
+                            lambda *a, **kw: _FakeProc())
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+
+        result = delegate._plain_run(
+            "do something", "claude-sonnet-5", 50, 60.0, None, "claude",
+        )
+        assert result["ok"] is False
+        assert result["session_id"] == session_id
+        assert result["supervisor_outcome"] == "silent_kill"
+        assert result["silent_kill_info"] is not None
+        assert result["silent_kill_info"]["last_record_type"] == "last-prompt"
+
+    def test_plain_run_success_no_supervisor_outcome(self, tmp_path, monkeypatch):
+        """A successful _plain_run must not carry a silent-kill outcome."""
+        delegate = _load_delegate()
+        session_id = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+        stream = json.dumps({
+            "type": "system", "subtype": "init", "session_id": session_id,
+        }) + "\n"
+        stream += json.dumps({
+            "type": "result", "subtype": "success", "is_error": False,
+            "session_id": session_id, "result": "all good",
+        })
+
+        class _FakeProc:
+            returncode = 0
+            stdout = stream
+            stderr = ""
+
+        monkeypatch.setattr(delegate.subprocess, "run",
+                            lambda *a, **kw: _FakeProc())
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+
+        result = delegate._plain_run(
+            "do something", "claude-sonnet-5", 50, 60.0, None, "claude",
+        )
+        assert result["ok"] is True
+        assert result["supervisor_outcome"] is None
+        assert result["silent_kill_info"] is None
+
+    def test_plain_run_failure_no_session_id_no_detection(self, tmp_path,
+                                                          monkeypatch):
+        """When no session_id can be captured, detection is skipped gracefully."""
+        delegate = _load_delegate()
+
+        class _FakeProc:
+            returncode = 1
+            stdout = ""  # no stream frames at all
+            stderr = "some error"
+
+        monkeypatch.setattr(delegate.subprocess, "run",
+                            lambda *a, **kw: _FakeProc())
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+
+        result = delegate._plain_run(
+            "do something", "claude-sonnet-5", 50, 60.0, None, "claude",
+        )
+        assert result["ok"] is False
+        assert result["session_id"] is None
+        assert result["supervisor_outcome"] is None
+        assert result["silent_kill_info"] is None
+
+    def test_plain_run_failure_normal_session_not_silent_kill(self, tmp_path,
+                                                               monkeypatch):
+        """A failed run whose session jsonl ends normally must not be
+        classified as silent_kill."""
+        delegate = _load_delegate()
+        session_id = "ffffffff-ffff-4fff-8fff-ffffffffffff"
+        self._make_session(tmp_path, session_id, [
+            _assistant_text("All done."),
+        ])
+
+        stream = json.dumps({
+            "type": "system", "subtype": "init", "session_id": session_id,
+        })
+
+        class _FakeProc:
+            returncode = 1
+            stdout = stream
+            stderr = "exit 1"
+
+        monkeypatch.setattr(delegate.subprocess, "run",
+                            lambda *a, **kw: _FakeProc())
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+
+        result = delegate._plain_run(
+            "do something", "claude-sonnet-5", 50, 60.0, None, "claude",
+        )
+        assert result["ok"] is False
+        assert result["session_id"] == session_id
+        assert result["supervisor_outcome"] is None
+        assert result["silent_kill_info"] is None
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
