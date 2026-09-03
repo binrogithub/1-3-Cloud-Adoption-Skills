@@ -320,11 +320,18 @@ def _parse_stream_json(stdout: str, *, exit_code: int) -> dict:
             if "cache_read_input_tokens" in usage:
                 cache_read += int(usage.get("cache_read_input_tokens") or 0)
                 saw_read = True
+        # PRD AUTO_CONTINUE_SILENT_KILL_V2 §2.1: capture session_id from ANY
+        # frame that carries it (system/init, assistant, …), not just the
+        # terminal result frame.  When a session is killed before emitting a
+        # result frame, the id is still present on earlier frames.  Take the
+        # first occurrence; within one session they are all identical.
+        if isinstance(obj, dict):
+            session_id = session_id or obj.get("session_id")
         if isinstance(obj, dict) and obj.get("type") == "result":
             found_terminal = True
             subtype = obj.get("subtype")
             is_error = obj.get("is_error")
-            session_id = obj.get("session_id")
+            session_id = obj.get("session_id") or session_id
             if isinstance(obj.get("result"), str):
                 result_text = obj["result"]
 
@@ -510,6 +517,29 @@ def _plain_run(goal: str, model: str, max_turns: int, timeout: float,
     status_code = _extract_status_code(stderr_text)
     retry_after = _extract_retry_after(stderr_text)
     parsed = _parse_stream_json(proc.stdout or "", exit_code=proc.returncode)
+
+    # PRD AUTO_CONTINUE_SILENT_KILL_V2 §2.2: on a failed first attempt that
+    # went through _plain_run (claude_session_id is None for every fresh
+    # conversation), detect a silent kill the same way _supervised_run does.
+    # Only runs when not parsed["ok"] and we managed to capture a session_id
+    # from an earlier stream frame — the success path is untouched.  Every
+    # step is guarded for None so a missing module or file never raises.
+    supervisor_outcome = None
+    silent_kill_info = None
+    if not parsed["ok"] and parsed["session_id"]:
+        supervisor = _load_supervisor()
+        if supervisor is not None:
+            cfg_dir = Path(os.environ.get("CLAUDE_CONFIG_DIR")
+                           or (Path(os.environ.get("HOME", str(Path.home())))
+                               / ".claude-maas"))
+            session_jsonl = supervisor.find_session_jsonl(
+                cfg_dir, parsed["session_id"])
+            if session_jsonl is not None:
+                sk_info = supervisor.detect_silent_kill(session_jsonl)
+                if sk_info is not None:
+                    supervisor_outcome = "silent_kill"
+                    silent_kill_info = sk_info
+
     return {
         "ok": parsed["ok"],
         "stdout": parsed["result_text"],
@@ -522,6 +552,8 @@ def _plain_run(goal: str, model: str, max_turns: int, timeout: float,
         "files_changed": [],
         "timed_out": False,
         "session_id": parsed["session_id"],
+        "supervisor_outcome": supervisor_outcome,
+        "silent_kill_info": silent_kill_info,
     }
 
 
