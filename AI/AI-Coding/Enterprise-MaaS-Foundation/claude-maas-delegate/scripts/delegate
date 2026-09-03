@@ -622,6 +622,8 @@ def _supervised_run(supervisor, build, goal: str, cfg_dir: Path,
         "files_changed": [],
         "timed_out": False,
         "session_id": parsed["session_id"],
+        "supervisor_outcome": result.get("outcome"),
+        "silent_kill_info": result.get("silent_kill_info"),
     }
 
 
@@ -875,9 +877,40 @@ def run(brief: Any, *, cwd: str | None = None,
 
     # --- Build result dict --------------------------------------------------
     if outcome != "success":
+        # PRD AUTO_CONTINUE_SILENT_KILL_V1 §3.2: when the supervisor detected
+        # a silent kill, do NOT use raw stderr as the summary — it is typically
+        # an unrelated diagnostic line that misleads the reader.  Build a
+        # structured message that honestly says "we don't know the cause, but
+        # it was not an API error".  stderr is preserved separately for
+        # deep-diving.
+        last_res = last_result or {}
+        if last_res.get("supervisor_outcome") == "silent_kill":
+            sk_info = last_res.get("silent_kill_info") or {}
+            last_type = sk_info.get("last_record_type")
+            type_repr = f'"{last_type}"' if last_type is not None else "none"
+            summary = (
+                f"session ended without a terminal result "
+                f"(last record type: {type_repr}, "
+                f"no API error recorded) — likely killed externally "
+                f"(resource limit or an outer timeout), not an "
+                f"application-level failure; unrelated stderr "
+                f"(if any) is attached separately, not folded into "
+                f"this summary"
+            )
+            return {
+                "status": outcome,
+                "summary": summary,
+                "stderr": last_res.get("stderr", ""),
+                "attempts": attempt,
+                "duration_s": round(duration, 3),
+                "model": MODEL,
+                "tokens": {"in": tokens_in, "out": tokens_out},
+                "cache_creation_input_tokens": cache_creation,
+                "cache_read_input_tokens": cache_read,
+            }
         return {
             "status": outcome,
-            "summary": (last_result or {}).get("stderr", "delegation failed"),
+            "summary": last_res.get("stderr", "delegation failed"),
             "attempts": attempt,
             "duration_s": round(duration, 3),
             "model": MODEL,
