@@ -1101,6 +1101,34 @@ def design_surface(files: list, repo: Path,
             "measured_files": len(files)}
 
 
+def codegraph_surface(files: list, repo: Path,
+                      base_sha: str | None) -> dict:
+    """The codegraph surface of a file list: which of the changed files
+    ALREADY EXISTED at base_sha. A file that is net-new in this change
+    (did not exist at base_sha) does not count — there is nothing
+    pre-existing to query a graph about. Applicability is
+    `pre_existing >= 1`.
+
+    This mirrors design_surface's shape (capped list + *_total count +
+    measured_files) but with different applicability semantics:
+    design_surface measures extension classes (web/deck) on standing
+    files; codegraph_surface measures prior existence at base_sha. When
+    base_sha is None there is no base to check against, so nothing can
+    be pre-existing and applicability is false."""
+    hits: dict = {}
+    if base_sha:
+        for f in files:
+            r = subprocess.run(["git", "-C", str(repo), "cat-file", "-e",
+                                f"{base_sha}:{f}"], capture_output=True,
+                               text=True, cwd=str(repo))
+            if r.returncode == 0:
+                hits[f] = True
+    return {"applicable": bool(hits),
+            "pre_existing_files": sorted(hits)[:50],
+            "pre_existing_files_total": len(hits),
+            "measured_files": len(files)}
+
+
 # ── v2 design architecture: product-side spec artifacts + D3 checks ──
 #
 # D1 SPECIFY produces design/tokens.css + tokens.json + components.md +
@@ -1441,6 +1469,214 @@ def design_auto_dispatch(task_dir: Path, repo: Path, state: dict,
     planning["design_auto"] = rec
     save_json(task_dir / "planning.json", planning)
     event(task_dir, event="DESIGN_AUTO_DISPATCHED", change=change,
+          rc=rc, outcome=outcome, elapsed_seconds=elapsed,
+          session=session)
+    return rec
+
+
+# ── codegraph auto-dispatch: scheduling, not gating (codegraph-author-
+#    autodispatch) ──
+#
+# Same discipline as design_auto_due/design_auto_dispatch above, but
+# triggered at the START of author dispatch (WORK phase), not at deliver
+# — the brief is an input for the author, so it must exist before the
+# author starts writing, not after.  The dispatch's outcome never changes
+# cmd_phase/cmd_dispatch's exit code or stops role dispatch (INV-14).
+
+def _change_files_for_codegraph(repo: Path,
+                                task_dir: Path) -> tuple[list, str | None]:
+    """The changed-file list for codegraph_auto_due's applicability check.
+    This is the report.py-side equivalent of plan.py's change_surface —
+    structurally aligned with its W8 worktree-visibility block so the two
+    see the same files under ai-dlc's standard worktree-first flow.  The
+    full resolve_work_ref logic has a text-identical copy in report.py
+    (Z5), so this stays self-contained (E4: report does not import plan).
+    Reads base_sha from state.json, diffs base..<resolved work sha>, and
+    adds uncommitted paths from repo itself plus any linked worktree bound
+    to the resolved branch, applying excluded()."""
+    state = load_json(task_dir / "state.json", {})
+    base = state.get("base_sha")
+    files: list = []
+
+    # N1: measure the work's ref via resolve_work_ref (recorded branch >
+    # task/{change} convention > HEAD).  On the planned route the work
+    # lives on the task branch before the merge, so diffing repo's own
+    # HEAD would see an empty tree — and commits already landed on the
+    # task branch (not yet merged) would be invisible to a bare
+    # rev-parse HEAD on the main checkout.
+    work = resolve_work_ref(repo, state)
+    head_sha = work["sha"]
+    measured_ref = work["ref"]
+    if head_sha is None:
+        head = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"],
+            capture_output=True, text=True, cwd=str(repo))
+        head_sha = head.stdout.strip() if head.returncode == 0 else None
+    if base and head_sha and base != head_sha:
+        diff = subprocess.run(
+            ["git", "-C", str(repo), "diff", "--name-only",
+             base, head_sha],
+            capture_output=True, text=True, cwd=str(repo))
+        files += [f for f in diff.stdout.splitlines()
+                  if f and not excluded(f)]
+
+    # Fold uncommitted paths from a `git status --porcelain -uall` proc
+    # into files (rename-arrow handling, excluded() filter, dedupe) —
+    # the same parse the original inline loop did, factored so the W8
+    # worktree pass below reuses it verbatim.
+    def _fold_status(proc):
+        if proc.returncode != 0:
+            return
+        for line in proc.stdout.splitlines():
+            path = line[3:].strip().strip('"')
+            if " -> " in path:
+                path = path.split(" -> ", 1)[1]
+            path = path.rstrip("/\\")
+            if path and not excluded(path) and path not in files:
+                files.append(path)
+
+    # status on repo itself — covers the case where --repo points directly
+    # at a working tree (the main checkout or a worktree passed as --repo).
+    _fold_status(subprocess.run(
+        ["git", "-C", str(repo), "status", "--porcelain", "-uall"],
+        capture_output=True, text=True, cwd=str(repo)))
+
+    # W8: worktree visibility — uncommitted files in a linked worktree are
+    # invisible to the status call above (which only sees repo's own tree).
+    # Parse `git worktree list --porcelain`, find the linked worktree (not
+    # repo itself) whose branch matches the branch resolved by
+    # resolve_work_ref, and fold its uncommitted paths in.  Mirrors
+    # plan.py change_surface's W8 block, via subprocess (this function's
+    # existing style) rather than a shared helper (E4).
+    measured_branch = None
+    if measured_ref.startswith("refs/heads/"):
+        measured_branch = measured_ref[len("refs/heads/"):]
+    if measured_branch:
+        wt = subprocess.run(
+            ["git", "-C", str(repo), "worktree", "list", "--porcelain"],
+            capture_output=True, text=True, cwd=str(repo))
+        if wt.returncode == 0 and wt.stdout.strip():
+            cur_wt_path = None
+            cur_wt_branch = None
+            for line in wt.stdout.splitlines():
+                if line.startswith("worktree "):
+                    cur_wt_path = line[len("worktree "):]
+                elif line.startswith("branch "):
+                    cur_wt_branch = line[len("branch "):]
+                    if cur_wt_branch.startswith("refs/heads/"):
+                        cur_wt_branch = cur_wt_branch[len("refs/heads/"):]
+                elif line == "" and cur_wt_path and cur_wt_branch:
+                    if cur_wt_path != str(repo) \
+                            and cur_wt_branch == measured_branch:
+                        _fold_status(subprocess.run(
+                            ["git", "-C", cur_wt_path, "status",
+                             "--porcelain", "-uall"],
+                            capture_output=True, text=True,
+                            cwd=cur_wt_path))
+                    cur_wt_path = None
+                    cur_wt_branch = None
+    return files, base
+
+
+def codegraph_auto_due(task_dir: Path, repo: Path,
+                       state: dict) -> tuple[bool, str]:
+    """Whether a codegraph brief is due for one automatic dispatch, and
+    the human-readable reason it is not when it isn't.  Implements PRD
+    §02 decision table:
+
+      route != "planned"            → (False, "inline")
+      codegraph-scope not applicable → (False, "not_applicable" /
+                                             "surface_unmeasured")
+      already attempted              → (False, "already_attempted")
+      otherwise                      → (True, "due")
+
+    Record-keeping choice (mirroring design_auto's own comments): the
+    "already attempted" check reads TWO locations — state.json's
+    codegraph_brief key (written by cmd_codegraph_brief, catches manual
+    `plan.py codegraph brief` runs regardless of outcome) and
+    planning.json's codegraph_auto key (written by
+    codegraph_auto_dispatch's pre-record, catches auto-dispatch attempts
+    that may not have completed).  Either key's presence means "tried" —
+    idempotent, no retry counter (INV-16, unlike design's 2-attempt
+    limit, because a failed brief just means the author reads code
+    directly)."""
+    if state.get("route") != "planned":
+        return False, "inline"
+    files, base_sha = _change_files_for_codegraph(repo, task_dir)
+    surface = codegraph_surface(files, repo, base_sha)
+    if not surface["applicable"]:
+        if not surface.get("measured_files"):
+            return False, "surface_unmeasured"
+        return False, "not_applicable"
+    # already attempted?  Check both state.json (manual cmd_codegraph_brief
+    # runs) and planning.json (auto-dispatch pre-records).  Any of the four
+    # codegraph_state outcomes from cmd_codegraph_brief counts — the key's
+    # presence is the fence, not its success.
+    st = load_json(task_dir / "state.json", {})
+    if isinstance(st.get("codegraph_brief"), dict):
+        return False, "already_attempted"
+    planning = load_json(task_dir / "planning.json", {})
+    if isinstance(planning.get("codegraph_auto"), dict):
+        return False, "already_attempted"
+    return True, "due"
+
+
+def codegraph_auto_dispatch(task_dir: Path, repo: Path, state: dict,
+                            change: str) -> dict:
+    """One automatic codegraph-brief dispatch via subprocess (E4).  The
+    attempt is recorded in planning.json.codegraph_auto BEFORE the
+    subprocess opens — a killed process still leaves the fact (J2/INV-15).
+    The dispatch's rc and outcome never change cmd_phase/cmd_dispatch's
+    exit code or stop role dispatch (J3/INV-14) — this is scheduling,
+    not a gate.
+
+    Record-keeping choice: the pre-record goes to planning.json.codegraph_auto
+    (not state.json) to mirror design_auto_dispatch's J2 discipline exactly
+    — planning.json is the attempt ledger, state.json is the outcome
+    ledger.  The subprocess calls `plan.py codegraph brief` which writes
+    its own outcome to state.json.codegraph_brief; codegraph_auto_due
+    checks both locations (see its docstring)."""
+    started = time.monotonic()
+    attempted_at = now_iso()
+    # J2: write the attempt first — the key's presence is the fence,
+    # regardless of rc.  A crash between this write and the subprocess's
+    # end still counts as "tried" (INV-15).
+    planning = load_json(task_dir / "planning.json", {})
+    pre = {"attempted_at": attempted_at, "change": change,
+           "trigger": "phase", "rc": None, "outcome": None,
+           "session": None, "elapsed_seconds": None,
+           "state": "incomplete"}
+    planning["codegraph_auto"] = pre
+    save_json(task_dir / "planning.json", planning)
+    event(task_dir, event="CODEGRAPH_AUTO_DISPATCHED", change=change,
+          trigger="phase", attempted_at=attempted_at)
+    cmd = [sys.executable, str(PLAN_PY), "codegraph", "brief",
+           "--change", change, "--repo", str(repo),
+           "--task-dir", str(task_dir.resolve())]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True,
+                              cwd=str(repo))
+        rc = proc.returncode
+    except Exception:
+        rc = -1
+    elapsed = round(time.monotonic() - started, 3)
+    session = None
+    outcome = "brief_incomplete"
+    if rc == 0:
+        try:
+            out = json.loads(proc.stdout)
+            session = out.get("session_name")
+            outcome = out.get("codegraph_state", "brief_written")
+        except (json.JSONDecodeError, ValueError):
+            pass
+    rec = {"attempted_at": attempted_at, "change": change,
+           "trigger": "phase", "rc": rc, "outcome": outcome,
+           "session": session, "elapsed_seconds": elapsed,
+           "state": "complete"}
+    planning = load_json(task_dir / "planning.json", {})
+    planning["codegraph_auto"] = rec
+    save_json(task_dir / "planning.json", planning)
+    event(task_dir, event="CODEGRAPH_AUTO_DISPATCHED", change=change,
           rc=rc, outcome=outcome, elapsed_seconds=elapsed,
           session=session)
     return rec

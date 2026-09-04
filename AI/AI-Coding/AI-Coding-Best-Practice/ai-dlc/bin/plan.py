@@ -255,9 +255,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from report import (RECORDS_ROOT, artifacts_view, design_surface,  # noqa: E402
-                    cmd_next, excluded, human_state, is_git_repo,
-                    load_json, newest_verdict, now_iso,
+from report import (RECORDS_ROOT, artifacts_view, codegraph_auto_dispatch,  # noqa: E402
+                    codegraph_auto_due, codegraph_surface,
+                    design_surface, cmd_next, event, excluded, human_state,
+                    is_git_repo, load_json, newest_verdict, now_iso,
                     plane_graph, plane_root, plane_status, plane_tree,
                     save_json, signed_records, write_record)
 from initiative import (  # noqa: E402
@@ -269,6 +270,16 @@ from initiative import (  # noqa: E402
 # contract either way)
 CLIENT = os.environ.get("AI_DLC_CLIENT",
                         os.path.expanduser("~/.local/bin/jiuwenswarm"))
+# the pinned Understand-Anything skill tree (C1/C2).  This is a pure
+# prompt/skill tree — no compiled binary, no glibc dependency — installed
+# by scripts/install-understand-anything.sh to /opt/understand-anything.
+# The pin (.aidlc-pin.json) records tag + tree_sha256; the codegraph
+# build/brief commands dispatch sessions that read the skill files, not
+# subprocess calls to a binary.  AI_DLC_UNDERSTAND_ANYTHING_ROOT overrides
+# the path only (an alternate install).
+UNDERSTAND_ANYTHING_ROOT = Path(os.environ.get(
+    "AI_DLC_UNDERSTAND_ANYTHING_ROOT", "/opt/understand-anything"))
+UNDERSTAND_ANYTHING_PATHS = ("understand-anything-plugin",)
 GATEWAY_BOOKKEEPING = (".agent_history", "coding_memory", "prompt_attachment")
 INTERRUPT_EVENTS = ("chat.ask_user_question", "plan.approval_required")
 # the authoring skill the role reaches the CLI through, and where the
@@ -2577,6 +2588,15 @@ def cmd_dispatch(change: str, role: str, package_file: Path,
         p.setdefault("packages", {})[role] = pkg
         p["change"] = change
     update_planning(task_dir, _record_package)
+
+    # codegraph auto-dispatch (scheduling, not gating): if a brief is
+    # due, dispatch it before the role opens so the author has the
+    # impact brief as input.  This is on the live-dispatch path only —
+    # the offline judge mode (frames_file) returned early above and
+    # never reaches here (PRD §05 reverse gate).  The dispatch's outcome
+    # never changes this function's exit code or stops the dispatch
+    # (INV-14).
+    _maybe_auto_codegraph(change, repo, task_dir)
 
     # work already paid for is not paid for again: when the newest
     # signed status reports this artifact done, the role is not
@@ -4947,8 +4967,37 @@ def _run_role(change: str, role: str, package_file: Path, task_dir: Path,
     the pool started, so every worker authors in the same tree."""
     pkg, repo, prompt, _lang = prepare(change, role, package_file,
                                        workspace=ws)
+    # codegraph: if an impact brief exists, tell the role to read it
+    # first (prd-codegraph-role.md §04).  This check is purely file
+    # existence — it fires regardless of whether codegraph_auto_dispatch
+    # just ran in this invocation, the file came from an earlier run, or
+    # a human ran `plan.py codegraph brief` manually.  No file, no change
+    # to the prompt (INV-5).
+    brief = repo / "codegraph" / "impact-brief.md"
+    if brief.is_file():
+        prompt += (
+            "\n\nBefore writing, read codegraph/impact-brief.md in the "
+            "repository root if it exists — it summarizes the callers, "
+            "dependencies, and cross-module coupling of the files this "
+            "change touches.")
     return dispatch_role(change, role, pkg, repo, prompt, task_dir,
                          mode, timeout, ws=ws)
+
+
+def _maybe_auto_codegraph(change: str, repo: Path, task_dir: Path) -> None:
+    """The codegraph auto-dispatch hook (scheduling, not gating).  Called
+    at the start of cmd_phase and cmd_dispatch's live-dispatch path —
+    if a codegraph brief is due, dispatch it via subprocess before the
+    role pool opens.  The dispatch's outcome never changes the caller's
+    exit code or stops role dispatch (INV-14).  Shared by both call
+    sites to avoid the two judgment copies drifting apart (PRD §07)."""
+    state = load_json(task_dir / "state.json", {})
+    due, why_not = codegraph_auto_due(task_dir, repo, state)
+    if due:
+        codegraph_auto_dispatch(task_dir, repo, state, change)
+    else:
+        event(task_dir, event="CODEGRAPH_AUTO_SKIPPED",
+              change=change, why=why_not)
 
 
 def cmd_phase(change: str, repo: Path, package_file: Path,
@@ -5078,6 +5127,12 @@ def cmd_phase(change: str, repo: Path, package_file: Path,
             p.setdefault("packages", {})[a.get("id", "")] = pkg
         p["change"] = change
     update_planning(task_dir, _record_packages)
+
+    # codegraph auto-dispatch (scheduling, not gating): if a brief is
+    # due, dispatch it before the role pool opens so the author has the
+    # impact brief as input.  The dispatch's outcome never changes this
+    # function's exit code or stops the pool (INV-14).
+    _maybe_auto_codegraph(change, repo, task_dir)
 
     started = time.monotonic()
     started_at = now_iso()
@@ -5815,6 +5870,127 @@ def cmd_design_pin(root: Path, tag: str | None, write: bool) -> int:
     return emit(state, 0 if state.get("ok") else state.get("exit_code", 2))
 
 
+# ── Understand-Anything pin (C1/C2) ─────────────────────────────────
+# Mirrors the opendesign pin trio (digest, pin_state, cmd_*_pin) but for
+# the codegraph backend — a pure skill tree, not a binary.  The install
+# script calls cmd_codegraph_pin so the pin and the check never drift.
+
+def understand_anything_tree_digest(root: Path) -> str:
+    """A deterministic digest of the pinned skill tree's content: every
+    git-tracked file's sha256 (of its current on-disk bytes) with its
+    relative path, sorted, hashed. Local edits to a tracked file move
+    this off the pin (I3, PRD INV-10); untracked runtime artifacts
+    (node_modules, dist, __pycache__, …) never enter the measurement, so
+    a real analysis run that lazily installs tree-sitter bindings no
+    longer trips a false pin mismatch (PRD INV-19)."""
+    root = Path(root)
+    lines = []
+    for sub in UNDERSTAND_ANYTHING_PATHS:
+        # git's tracked-file list is the authoritative "this is source,
+        # not a runtime artifact" verdict — no need to mirror .gitignore
+        # semantics by hand (globs drift, and .gitignore changing would
+        # silently desync a hand-maintained exclude list). The sparse
+        # cone fully contains each UNDERSTAND_ANYTHING_PATHS entry, so
+        # ls-files and on-disk tracked content are in 1:1 correspondence.
+        proc = run(["git", "-C", str(root), "ls-files", "-z", "--", sub])
+        if proc.returncode != 0:
+            continue
+        for rel in proc.stdout.split("\0"):
+            if not rel:
+                continue
+            p = root / rel
+            if not p.is_file():
+                continue
+            try:
+                digest = hashlib.sha256(p.read_bytes()).hexdigest()
+            except OSError:
+                continue
+            lines.append(f"{digest}  {rel}")
+    h = hashlib.sha256()
+    for line in sorted(lines):
+        h.update(line.encode("utf-8") + b"\n")
+    return h.hexdigest()
+
+
+def understand_anything_pin_state(root: Path | None = None) -> dict:
+    """The pin and the tree, verified against each other. Ok only when
+    the pin stands, the plugin subtree stands, and the tree's measured
+    digest equals the pin's — anything else stops the dispatch before a
+    session opens (PRD §06 reverse gate, exit 26)."""
+    root = Path(root) if root else UNDERSTAND_ANYTHING_ROOT
+    pin_file = root / ".aidlc-pin.json"
+    if not root.is_dir():
+        return {"ok": False, "root": str(root), "pin": str(pin_file),
+                "why": ("the Understand-Anything skill tree does not "
+                        f"stand at {root}"),
+                "remedy": ("scripts/install-understand-anything.sh (the "
+                           "operator's one-time host step; the caller "
+                           "never clones or installs)"),
+                "exit_code": EXIT_DESIGN_PIN}
+    if not pin_file.is_file():
+        return {"ok": False, "root": str(root), "pin": str(pin_file),
+                "why": "no pin stands beside the tree",
+                "remedy": "scripts/install-understand-anything.sh --write-pin",
+                "exit_code": EXIT_DESIGN_PIN}
+    pin = load_json(pin_file, {})
+    if not isinstance(pin, dict) or not pin.get("tag") \
+            or not pin.get("tree_sha256"):
+        return {"ok": False, "root": str(root), "pin": pin,
+                "why": "the pin carries no tag or tree_sha256",
+                "remedy": ("re-run scripts/install-understand-anything.sh "
+                           "--write-pin; a pin without both fields "
+                           "verifies nothing"),
+                "exit_code": EXIT_DESIGN_PIN}
+    missing = [s for s in UNDERSTAND_ANYTHING_PATHS if not (root / s).is_dir()]
+    if missing:
+        return {"ok": False, "root": str(root), "pin": str(pin_file),
+                "why": f"pinned paths missing from the tree: {missing}",
+                "remedy": ("re-run scripts/install-understand-anything.sh; "
+                           "the sparse set shrank under the pin"),
+                "exit_code": EXIT_DESIGN_PIN}
+    digest = understand_anything_tree_digest(root)
+    if digest != pin.get("tree_sha256"):
+        return {"ok": False, "root": str(root), "pin": str(pin_file),
+                "pinned_tree_sha256": pin.get("tree_sha256"),
+                "measured_tree_sha256": digest,
+                "why": ("the tree's measured digest no longer matches "
+                        "the pin — the skill tree was modified after "
+                        "the pin was written"),
+                "remedy": ("restore the tree (scripts/install-"
+                           "understand-anything.sh) or re-pin "
+                           "deliberately; a modified reference cannot "
+                           "back a codegraph dispatch"),
+                "exit_code": EXIT_DESIGN_PIN}
+    return {"ok": True, "root": str(root),
+            "pin": {k: pin.get(k) for k in
+                    ("tag", "sha", "sparse_paths", "installed_at",
+                     "size_bytes", "tree_sha256")}}
+
+
+def cmd_codegraph_pin(root: Path, tag: str | None, write: bool) -> int:
+    """C1's other half: write or verify the pin. The digest contract is
+    the dispatch's own (understand_anything_tree_digest) — the install
+    script calls here so the pin and the check can never drift apart."""
+    root = Path(root)
+    if write:
+        if not root.is_dir():
+            return emit({"rejected": str(root),
+                         "why": "no tree stands there to pin",
+                         "remedy": "scripts/install-understand-anything.sh"}, 2)
+        proc = run(["git", "-C", str(root), "rev-parse", "HEAD"])
+        sha = proc.stdout.strip() if proc.returncode == 0 else None
+        pin = {"tag": tag or "unnamed", "sha": sha,
+               "sparse_paths": list(UNDERSTAND_ANYTHING_PATHS),
+               "installed_at": now_iso(),
+               "size_bytes": tree_bytes(root),
+               "tree_sha256": understand_anything_tree_digest(root)}
+        pin_file = root / ".aidlc-pin.json"
+        save_json(pin_file, pin)
+        return emit({"written": str(pin_file), "pin": pin}, 0)
+    state = understand_anything_pin_state(root)
+    return emit(state, 0 if state.get("ok") else state.get("exit_code", 2))
+
+
 def resolve_work_ref(repo: Path, state: dict) -> dict:
     """Resolve the ref a change's work lives on.
 
@@ -6211,6 +6387,49 @@ def run_design_session(change: str, prompt: str, repo: Path,
     v = judge_frames(frames)
     elapsed = round(time.monotonic() - started, 3)
     out = {"dispatch": "design", "change": change, "mode": mode,
+           "repo": str(repo), "client": CLIENT,
+           "client_rc": client_rc, "timed_out": timed_out,
+           "evidence": str(evidence), "session_name": session_name,
+           "started_at": started_at, "ended_at": now_iso(),
+           "elapsed_seconds": elapsed,
+           "round_complete": v["round_complete"],
+           "interrupted": v["interrupted"],
+           "envelope_note": ("the record is the frames' — the role's "
+                             "conclusion sentence was never read")}
+    return out, frames
+
+
+def run_codegraph_session(change: str, prompt: str, repo: Path,
+                          task_dir: Path, mode: str,
+                          timeout: int) -> tuple[dict, list]:
+    """One plane session for the codegraph role — the same shape as
+    run_design_session (fresh session, frames on disk, duration recorded)
+    with its working directory set to the repo: this role writes
+    codegraph/impact-brief.md into the repo, not the plane's tree."""
+    started = time.monotonic()
+    started_at = now_iso()
+    evidence = next_evidence(task_dir, "codegraph")
+    seq = re.search(r"-(\d+)\.jsonl$", evidence.name)
+    session_name = f"codegraph-{change}-{seq.group(1) if seq else '001'}"
+    evidence.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [CLIENT, "chat", prompt, "--jsonl", "--cwd", str(repo),
+           "--mode", mode, "--timeout", str(timeout),
+           "--session", session_name]
+    timed_out = False
+    client_rc = None
+    try:
+        with evidence.open("w", encoding="utf-8") as fh:
+            proc = subprocess.run(cmd, stdout=fh, stderr=subprocess.PIPE,
+                                  text=True, cwd=str(repo),
+                                  timeout=timeout + 60)
+        client_rc = proc.returncode
+    except subprocess.TimeoutExpired:
+        timed_out = True
+    frames = evidence.read_text(encoding="utf-8",
+                                errors="replace").splitlines()
+    v = judge_frames(frames)
+    elapsed = round(time.monotonic() - started, 3)
+    out = {"dispatch": "codegraph", "change": change, "mode": mode,
            "repo": str(repo), "client": CLIENT,
            "client_rc": client_rc, "timed_out": timed_out,
            "evidence": str(evidence), "session_name": session_name,
@@ -7646,6 +7865,307 @@ def cmd_design_scope(change: str, repo: Path,
                           "applicable is false")}, 0)
 
 
+def cmd_codegraph_scope(change: str, repo: Path,
+                        task_dir: Path | None) -> int:
+    """The codegraph applicability measurement on its own: which of the
+    change's files already existed at base_sha (there is something
+    pre-existing to query a graph about). A report, not a gate —
+    mirrors cmd_design_scope's shape but with prior-existence semantics
+    instead of extension-class semantics."""
+    repo = repo.resolve()
+    task_dir = Path(task_dir).resolve() if task_dir else default_task_dir(repo,
+                                                                change)
+    files, detail = change_surface(repo, task_dir)
+    surface = codegraph_surface(files, repo, detail.get("base_sha"))
+    return emit({"change": change, "repo": str(repo), **detail,
+                 **surface,
+                 "note": ("applicability is this measurement — "
+                          "a file counts only if it already existed at "
+                          "base_sha (net-new files have no graph to "
+                          "query)")}, 0)
+
+
+def _registered_subagent_types() -> list[str]:
+    """Read the agents/*.md filenames from the pinned Understand-Anything
+    tree and return the subagent_type names (filename without .md).  If
+    the agents directory is unreadable or empty, return [] — callers
+    omit the listing sentence gracefully, never error (PRD INV-12)."""
+    agents_dir = (UNDERSTAND_ANYTHING_ROOT
+                  / "understand-anything-plugin" / "agents")
+    try:
+        return sorted(p.stem for p in agents_dir.glob("*.md")
+                      if p.is_file())
+    except OSError:
+        return []
+
+
+def _subagent_listing_sentence() -> str:
+    """Build the sentence naming registered subagents, or '' if none."""
+    types = _registered_subagent_types()
+    if not types:
+        return ""
+    names = ", ".join(types)
+    return (f"\n\nThe following subagents are already registered with "
+            f"jiuwenswarm and can be dispatched directly via the Task "
+            f"tool by subagent_type: {names}.")
+
+
+def _codegraph_build_core(repo: Path, change: str = "",
+                          task_dir: Path | None = None,
+                          mode: str = "code.normal",
+                          timeout: int = 600) -> tuple[int, dict]:
+    """The core of cmd_codegraph_build without the emit — returns
+    (exit_code, result_dict) so callers (cmd_codegraph_brief) can run
+    the build step as a subroutine without a second JSON blob on stdout.
+
+    C2: the build is now a session dispatch, not a subprocess shell-out
+    to a binary.  The role reads the pinned understand/SKILL.md and
+    follows its multi-agent pipeline to produce .ua/knowledge-graph.json
+    in the target repo.  Pin missing → (1, unavailable dict), same shape
+    as the old missing-binary path."""
+    repo = repo.resolve()
+    pin = understand_anything_pin_state()
+    if not pin.get("ok"):
+        return 1, {"error": "understand-anything pin not available",
+                   "pin_state": pin,
+                   "hint": ("run scripts/install-understand-anything.sh "
+                            "--write-pin to install the skill tree and "
+                            "write the pin")}
+    # read the entry-point build skill (understand/SKILL.md) in full —
+    # this is the graph-build skill that dispatches project-scanner,
+    # file-analyzer, architecture-analyzer sub-agents to scan the
+    # codebase and write .ua/knowledge-graph.json
+    skill_path = (UNDERSTAND_ANYTHING_ROOT
+                  / "understand-anything-plugin" / "skills" / "understand"
+                  / "SKILL.md")
+    try:
+        skill_text = skill_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return 1, {"error": "cannot read build skill",
+                   "skill": str(skill_path), "exc": str(exc)}
+    # Non-interactive discipline preamble (PRD
+    # prd-codegraph-build-noninteractive-incremental §02).  This is a
+    # jiuwenswarm session dispatch, not a local interactive Claude Code
+    # session — there is no human present to answer the three-way
+    # question SKILL.md §7 asks on the "existing graph + unchanged
+    # commit hash" branch.  Tell the role that up front so it does not
+    # block waiting for a reply that will never come, and point it at
+    # the on-disk graph that an earlier dispatch against this same repo
+    # likely left behind.  Wording aligns with the tool author's own
+    # automated variant (hooks/hooks.json: "Do not ask the user for
+    # confirmation — just do it.").  No --full/--review flags are
+    # synthesized — the skill's own decision table acts on real disk
+    # state.
+    noninteractive_preamble = (
+        "## Run context — read before following the skill below\n\n"
+        "This is an **unattended, automated session dispatch** (a "
+        "jiuwenswarm session, not a local interactive Claude Code "
+        "session).  There is no human present during this run who can "
+        "answer a question or pick from a menu — do not ask one and do "
+        "not wait for a reply.  Wherever the skill's decision logic "
+        "below would normally prompt the user to choose between options "
+        "and wait for their answer — specifically its \"existing graph + "
+        "unchanged commit hash\" branch, which offers (a) full rebuild, "
+        "(b) graph review, or (c) do nothing — do **not** wait: treat it "
+        "as if the user chose **(c) do nothing**, i.e. reuse the existing "
+        "graph without rebuilding.  (The skill's own \"existing graph + "
+        "changed files\" branch is already a non-interactive incremental "
+        "update and needs no special handling here; other branches that "
+        "already document their own non-interactive fallback, such as the "
+        "language-detection confirmation step, are likewise left as-is.)\n\n"
+        f"{repo}/.ua/knowledge-graph.json may already exist on disk from "
+        "an earlier dispatch against this same repository — this is "
+        "expected and reusable, not stale leftover.  Follow the skill's "
+        "own freshness/decision logic (which reads "
+        ".ua/meta.json's gitCommitHash against the current HEAD) to "
+        "decide whether to reuse the existing graph, incrementally update "
+        "it, or do a full rebuild — do **not** assume a full rebuild is "
+        "always required.  Do not ask the user for confirmation — just "
+        "do it.\n\n"
+    )
+    build_prompt = (
+        f"You are the Codegraph build role for this repository.\n\n"
+        + noninteractive_preamble
+        + f"Follow the skill instructions below in full.  They describe a "
+        f"multi-agent pipeline (project-scanner → file-analyzer → "
+        f"architecture-analyzer) that scans the codebase and writes "
+        f".ua/knowledge-graph.json in the project root.\n\n"
+        f"--- SKILL.md ---\n{skill_text}\n--- end SKILL.md ---\n\n"
+        f"Project root: {repo}\n"
+        f"Write .ua/knowledge-graph.json.  When you are done, report "
+        f"the file you wrote and a one-line summary of nodes/edges."
+        + _subagent_listing_sentence())
+    # reuse run_codegraph_session — do not fork a new dispatch function.
+    # A standalone `codegraph build --repo` call carries no --change, so
+    # default it to "build" BEFORE computing task_dir (not after) — a
+    # blank change name would otherwise produce a task dir named
+    # ".ai-dlc/tasks/-planning".
+    change = change or "build"
+    td = Path(task_dir).resolve() if task_dir else default_task_dir(repo,
+                                                                change)
+    out, _frames = run_codegraph_session(change, build_prompt,
+                                         repo, td, mode, timeout)
+    graph_path = repo / ".ua" / "knowledge-graph.json"
+    graph_written = graph_path.is_file() and graph_path.stat().st_size > 0
+    out["graph_file"] = str(graph_path)
+    out["graph_written"] = graph_written
+    return (0 if graph_written else 1, out)
+
+
+def cmd_codegraph_build(repo: Path) -> int:
+    """(Re)build the local code graph for repo via a session dispatch
+    against the pinned Understand-Anything skill tree (C2).  The role
+    reads understand/SKILL.md and follows its multi-agent pipeline to
+    produce .ua/knowledge-graph.json.  If the pin is missing (the common
+    case until the skill tree is installed), exit non-zero with a
+    structured JSON error — never a traceback, never a silent success."""
+    code, result = _codegraph_build_core(repo)
+    return emit(result, code)
+
+
+def cmd_codegraph_brief(change: str, repo: Path,
+                        task_dir: Path | None,
+                        mode: str = "code.normal",
+                        timeout: int = 600) -> int:
+    """plan.py codegraph brief — the session-dispatched half of the
+    codegraph role.  Mirrors cmd_codegraph_scope's applicability check
+    and cmd_design_specify's dispatch-and-check shape, but simpler:
+    this produces exactly one file (codegraph/impact-brief.md).
+
+    Flow:
+      1. Measure applicability (same codegraph_surface call as
+         cmd_codegraph_scope).  Not applicable (all net-new files) →
+         no-op, return 0 (PRD §07 reverse gate).
+      2. Check the Understand-Anything pin is available (same
+         understand_anything_pin_state check as cmd_codegraph_build).
+         Not installed → emit a JSON result with
+         codegraph_state='unavailable' and return 0 — this must not
+         block the task (PRD §07).  This is the expected/normal path
+         in environments without the skill tree.
+      3. Pin available → run build first (reuse _codegraph_build_core),
+         then dispatch run_codegraph_session with a prompt instructing
+         the role to follow the understand-diff/SKILL.md methodology
+         and write codegraph/impact-brief.md with the PRD §06 template
+         sections.
+      4. After the session, check the file exists and is non-empty;
+         record the outcome in state.json under 'codegraph_brief' and
+         append a CODEGRAPH_BRIEF_WRITTEN or CODEGRAPH_BRIEF_INCOMPLETE
+         event to events.jsonl."""
+    repo = repo.resolve()
+    task_dir = Path(task_dir).resolve() if task_dir else default_task_dir(repo,
+                                                                change)
+    # 1. applicability — same measurement as cmd_codegraph_scope
+    files, detail = change_surface(repo, task_dir)
+    surface = codegraph_surface(files, repo, detail.get("base_sha"))
+    if not surface.get("applicable"):
+        return emit({"change": change, "repo": str(repo),
+                     "applicable": False,
+                     "codegraph_state": "not_applicable",
+                     "note": ("all target files are net-new — nothing "
+                              "pre-existing to query a graph about; "
+                              "brief is a no-op (PRD §07 reverse gate)")}, 0)
+    # 2. pin availability — same check as cmd_codegraph_build
+    pin = understand_anything_pin_state()
+    if not pin.get("ok"):
+        return emit({"change": change, "repo": str(repo),
+                     "applicable": True,
+                     "codegraph_state": "unavailable",
+                     "pin_state": pin,
+                     "note": ("understand-anything skill tree not "
+                              "installed — brief skipped, author work "
+                              "proceeds regardless (PRD §07: must not "
+                              "block the task)")}, 0)
+    # 3. run build first, then dispatch the brief session
+    build_rc, build_result = _codegraph_build_core(
+        repo, change=change, task_dir=task_dir, mode=mode, timeout=timeout)
+    if build_rc != 0:
+        event(task_dir, event="CODEGRAPH_UNAVAILABLE",
+              change=change, repo=str(repo), build_error=build_result)
+        return emit({"change": change, "repo": str(repo),
+                     "applicable": True,
+                     "codegraph_state": "build_failed",
+                     "build_result": build_result,
+                     "note": ("codegraph build failed — brief skipped, "
+                              "author work proceeds regardless "
+                              "(PRD §07)")}, 0)
+    # read the understand-diff skill — its methodology is the query
+    # contract: check .ua/knowledge-graph.json staleness via
+    # gitCommitHash, grep for nodes matching changed file paths, follow
+    # 1-hop edges (imports/calls/depends_on) to find callers/callees
+    diff_skill_path = (UNDERSTAND_ANYTHING_ROOT
+                       / "understand-anything-plugin" / "skills"
+                       / "understand-diff" / "SKILL.md")
+    try:
+        diff_skill_text = diff_skill_path.read_text(encoding="utf-8")
+    except OSError:
+        diff_skill_text = ("(understand-diff/SKILL.md not readable — "
+                            "fall back to generic graph query)")
+    pre_existing = surface.get("pre_existing_files", [])
+    files_block = "\n".join(f"  {f}" for f in pre_existing)
+    brief_prompt = (
+        f"You are the Codegraph analyst for the delivery '{change}' in "
+        f"this repository.\n\n"
+        f"The pre-existing files in this change's scope (files that "
+        f"already existed before this change — these have graph data):\n"
+        f"{files_block}\n\n"
+        f"Follow the methodology in the understand-diff skill below.  "
+        f"Its approach: read .ua/knowledge-graph.json, check staleness "
+        f"via the graph's gitCommitHash vs current HEAD, grep for nodes "
+        f"whose filePath matches each changed file, then follow 1-hop "
+        f"edges (imports, calls, depends_on) to find upstream callers "
+        f"and downstream dependencies.\n\n"
+        f"--- understand-diff/SKILL.md ---\n{diff_skill_text}\n"
+        f"--- end understand-diff/SKILL.md ---\n\n"
+        f"Write exactly one file: codegraph/impact-brief.md in the repo "
+        f"root, with these sections (PRD §06 data contract):\n\n"
+        f"  # Codegraph impact brief — {change}\n\n"
+        f"  ## Scope queried\n"
+        f"  <the pre-existing file list above>\n\n"
+        f"  ## Callers\n"
+        f"  <who calls the symbols in the changed files, grouped by "
+        f"file>\n\n"
+        f"  ## Callees / dependencies\n"
+        f"  <what the changed code depends on>\n\n"
+        f"  ## Cross-module coupling flagged\n"
+        f"  <hidden coupling worth the author's attention, or "
+        f"'none found' if none>\n\n"
+        f"Write only codegraph/impact-brief.md.  When you are done, "
+        f"report the file you wrote."
+        + _subagent_listing_sentence())
+    out, frames = run_codegraph_session(change, brief_prompt, repo,
+                                        task_dir, mode, timeout)
+    # 4. check the file exists and is non-empty
+    brief_path = repo / "codegraph" / "impact-brief.md"
+    brief_written = brief_path.is_file() and brief_path.stat().st_size > 0
+    state = load_json(task_dir / "state.json", {})
+    state["codegraph_brief"] = {
+        "session": out.get("session_name"),
+        "ts": now_iso(),
+        "file": str(brief_path),
+        "written": brief_written,
+        "applicable": True,
+        "pre_existing_files": pre_existing,
+    }
+    save_json(task_dir / "state.json", state)
+    if brief_written:
+        event(task_dir, event="CODEGRAPH_BRIEF_WRITTEN",
+              change=change, repo=str(repo),
+              session=out.get("session_name"),
+              file=str(brief_path))
+    else:
+        event(task_dir, event="CODEGRAPH_BRIEF_INCOMPLETE",
+              change=change, repo=str(repo),
+              session=out.get("session_name"),
+              reason="session ran but codegraph/impact-brief.md not "
+                     "found or empty")
+    out["phase"] = "CODEGRAPH_BRIEF"
+    out["codegraph_state"] = "brief_written" if brief_written \
+        else "brief_incomplete"
+    out["brief_file"] = str(brief_path)
+    out["brief_written"] = brief_written
+    return emit(out, 0 if brief_written else EXIT_INCONCLUSIVE)
+
+
 def detect_reasoning_runaway(frames: list) -> dict | None:
     """N7 (C1): detect reasoning runaway — line-level dedup ratio +
     cumulative chars dual threshold. The client-x round had 302,814 chars
@@ -8756,6 +9276,32 @@ def _build_subparsers(sub) -> None:
     p.add_argument("--change", required=True)
     p.add_argument("--repo", required=True, type=Path)
     p.add_argument("--task-dir", default=None, type=Path)
+    p = sub.add_parser("codegraph-scope",
+                       help="the codegraph applicability measurement on "
+                            "its own: which of the change's files already "
+                            "existed at base_sha (net-new files have no "
+                            "graph to query)")
+    p.add_argument("--change", required=True)
+    p.add_argument("--repo", required=True, type=Path)
+    p.add_argument("--task-dir", default=None, type=Path)
+    p = sub.add_parser("codegraph",
+                       help="local code-graph tool: build (re)index the "
+                            "graph, or brief a change's impact surface")
+    csub = p.add_subparsers(dest="action", required=True)
+    b = csub.add_parser("build",
+                        help="(re)build the local code graph for the repo "
+                             "via a session dispatch against the pinned "
+                             "Understand-Anything skill tree")
+    b.add_argument("--repo", required=True, type=Path)
+    br = csub.add_parser("brief",
+                         help="query the code graph for a change's impact "
+                              "surface and produce codegraph/impact-brief.md "
+                              "via a session dispatch")
+    br.add_argument("--change", required=True)
+    br.add_argument("--repo", required=True, type=Path)
+    br.add_argument("--task-dir", default=None, type=Path)
+    br.add_argument("--mode", default="code.normal")
+    br.add_argument("--timeout", type=int, default=600)
     p = sub.add_parser("design-pick",
                        help="A1: pick one OpenDesign skill for the change "
                             "by frontmatter matching — no session, no model, "
@@ -8769,6 +9315,14 @@ def _build_subparsers(sub) -> None:
                             "pin beside the tree — the digest contract "
                             "the design dispatch checks")
     p.add_argument("--root", default=str(OPENDESIGN_ROOT), type=Path)
+    p.add_argument("--tag", default=None,
+                   help="the tag the pin names (with --write)")
+    p.add_argument("--write", action="store_true")
+    p = sub.add_parser("codegraph-pin",
+                       help="write (--write) or verify the Understand-"
+                            "Anything pin beside the skill tree — the "
+                            "digest contract the codegraph dispatch checks")
+    p.add_argument("--root", default=str(UNDERSTAND_ANYTHING_ROOT), type=Path)
     p.add_argument("--tag", default=None,
                    help="the tag the pin names (with --write)")
     p.add_argument("--write", action="store_true")
@@ -8898,11 +9452,23 @@ def main() -> None:
     if args.cmd == "design-scope":
         sys.exit(cmd_design_scope(args.change, args.repo.resolve(),
                                   args.task_dir))
+    if args.cmd == "codegraph-scope":
+        sys.exit(cmd_codegraph_scope(args.change, args.repo.resolve(),
+                                     args.task_dir))
+    if args.cmd == "codegraph":
+        if args.action == "build":
+            sys.exit(cmd_codegraph_build(args.repo.resolve()))
+        if args.action == "brief":
+            sys.exit(cmd_codegraph_brief(args.change, args.repo.resolve(),
+                                         args.task_dir, args.mode,
+                                         args.timeout))
     if args.cmd == "design-pick":
         sys.exit(cmd_design_pick(args.change, args.repo.resolve(),
                                  args.task_dir))
     if args.cmd == "design-pin":
         sys.exit(cmd_design_pin(args.root, args.tag, args.write))
+    if args.cmd == "codegraph-pin":
+        sys.exit(cmd_codegraph_pin(args.root, args.tag, args.write))
     if args.cmd == "design-index":
         sys.exit(cmd_design_index(args.root, args.action))
     ap.error(f"unhandled {args.cmd}")

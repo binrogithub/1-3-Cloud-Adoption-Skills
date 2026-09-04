@@ -184,6 +184,14 @@ print("\n".join(json.loads(sys.argv[1])["writable_extras"]))' "$audit" \
     warn "OpenDesign tree missing — plan.py design will fail at D1. Run: ./install.sh --opendesign"
   fi
 
+  # Understand-Anything tree: warn (not fail) if absent — only needed for codegraph
+  local ua_root="${AI_DLC_UNDERSTAND_ANYTHING_ROOT:-/opt/understand-anything}"
+  if [[ -d "${ua_root}" ]]; then
+    ok "Understand-Anything tree present: ${ua_root}"
+  else
+    warn "Understand-Anything tree missing — plan.py codegraph will report unavailable. Run: ./install.sh --understand-anything"
+  fi
+
   # Skills — three segments (N7):
   #   ① source completeness (claude/ + workspace/)
   #   ② manifest sha256 consistency (K5)
@@ -1114,20 +1122,31 @@ run_bootstrap() {
   fi
   echo "步骤 3/5 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
 
-  # ── Step 4/5: OpenDesign ──
+  # ── Step 4/6: OpenDesign ──
   echo ""
-  echo "步骤 4/5 开始 — OpenDesign tree (git sparse clone, ~138MB, ~30s-3min)"
+  echo "步骤 4/6 开始 — OpenDesign tree (git sparse clone, ~138MB, ~30s-3min)"
   t0=$(date +%s)
   if [[ -d "${AI_DLC_OPENDESIGN_ROOT:-/opt/open-design}" ]]; then
     ok "OpenDesign tree already present: ${AI_DLC_OPENDESIGN_ROOT:-/opt/open-design}"
   else
     "${SCRIPT_DIR}/scripts/install-opendesign.sh" || rc=1
   fi
-  echo "步骤 4/5 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
+  echo "步骤 4/6 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
 
-  # ── Step 5/5: AI-DLC skills ──
+  # ── Step 5/6: Understand-Anything ──
   echo ""
-  echo "步骤 5/5 开始 — AI-DLC skills (local copy, instant)"
+  echo "步骤 5/6 开始 — Understand-Anything skill tree (git sparse clone, ~16 files, ~10s)"
+  t0=$(date +%s)
+  if [[ -d "${AI_DLC_UNDERSTAND_ANYTHING_ROOT:-/opt/understand-anything}" ]]; then
+    ok "Understand-Anything tree already present: ${AI_DLC_UNDERSTAND_ANYTHING_ROOT:-/opt/understand-anything}"
+  else
+    "${SCRIPT_DIR}/scripts/install-understand-anything.sh" --write-pin || rc=1
+  fi
+  echo "步骤 5/6 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
+
+  # ── Step 6/6: AI-DLC skills ──
+  echo ""
+  echo "步骤 6/6 开始 — AI-DLC skills (local copy, instant)"
   t0=$(date +%s)
   local tfile="${TARGETS_DIR}/claude.json"
   local tconfig tkind
@@ -1136,7 +1155,7 @@ run_bootstrap() {
   tkind=$("$PY" -c "import json; print(json.load(open('${tfile}')).get('kind','claude-skill'))" 2>/dev/null || echo "claude-skill")
   install_skills_to_target "claude-code" "${tconfig}" "${tkind}" || rc=1
   install_workspace_skills || rc=1
-  echo "步骤 5/5 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
+  echo "步骤 6/6 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
 
   echo ""
   echo "══════════════════════════════════════════════════"
@@ -1157,6 +1176,7 @@ main() {
       --doctor) mode="doctor"; shift ;;
       --provision-plane) mode="provision-plane"; shift ;;
       --opendesign) mode="opendesign"; shift ;;
+      --understand-anything) mode="understand-anything"; shift ;;
       --setup-maas-key) mode="setup-maas-key"; shift ;;
       --bootstrap) mode="bootstrap"; shift ;;
       --quickstart) mode="quickstart"; shift ;;
@@ -1175,9 +1195,10 @@ Usage: install.sh [OPTIONS]
   --all-targets              every target in targets/*.json + workspace
   --uninstall --target <n>   remove what we installed (manifest-based, K2)
   --opendesign               deploy the OpenDesign tree (host step)
+  --understand-anything      deploy the Understand-Anything skill tree (host step)
   --doctor                   health check + sha256 consistency (K5)
   --provision-plane          open the plane runtime
-  --bootstrap                fresh-environment setup (openspec → jiuwenswarm → MaaS key → OpenDesign → skills)
+  --bootstrap                fresh-environment setup (openspec → jiuwenswarm → MaaS key → OpenDesign → Understand-Anything → skills)
   --setup-maas-key           interactive MaaS credential entry for the gateway
   --quickstart               print a minimal task sequence (N8)
   --gen-root-skill           (re)generate SKILL.md at the repo root for Codex
@@ -1220,6 +1241,9 @@ QEOF
   fi
   if [[ "${mode}" == "opendesign" ]]; then
     exec "${SCRIPT_DIR}/scripts/install-opendesign.sh" "$@"
+  fi
+  if [[ "${mode}" == "understand-anything" ]]; then
+    exec "${SCRIPT_DIR}/scripts/install-understand-anything.sh" "$@"
   fi
   if [[ "${mode}" == "setup-maas-key" ]]; then
     exec "${SCRIPT_DIR}/scripts/setup-maas-key.sh" "$@"

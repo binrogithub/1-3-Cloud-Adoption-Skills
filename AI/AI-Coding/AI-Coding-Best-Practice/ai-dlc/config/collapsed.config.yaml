@@ -14,7 +14,8 @@ execution:
 
 delivery:                      # G-DELIVER-1 product surface
   product_excludes: [.ai-dlc/**, CLAUDE.md, findings.json, __pycache__/**,
-                     "*.pyc", .pytest_cache/**, audits/**, blueprint.json]
+                     "*.pyc", .pytest_cache/**, audits/**, blueprint.json,
+                     codegraph/**, .ua/**]
 
 gates:
   merge_required: true         # MERGE_GATE: no auto-merge, rationale required

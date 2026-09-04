@@ -528,3 +528,73 @@ grep -rnE '/root/|192\.168\.|110\.238\.|ecs-auto-scaling|hcsa-production-closure
 
 `pytest tests/test_initiative.py`：11 passed。全量回归
 `pytest tests/ --ignore=tests/collapse`：47 passed，无破坏。
+
+## §7 增量同步：codegraph role + Understand-Anything backend（2026-09-04）
+
+从 `<workspace-root>`（本次同步源分支：`master`，范围
+`3577447..b0a8276`，19 个 commit）带来完整的 codegraph 角色功能：
+Phase A（确定性 codegraph_surface/codegraph-scope）、Phase B
+（会话派发的 codegraph brief）、C1/C2（pin 住 Understand-Anything、
+把 build/brief 从"调二进制"改写为"派发会话"）、jiuwenswarm 子 agent
+注册、author 派发前自动触发、以及三个在真实 planned 任务验证过程中
+发现并修复的 bug（worktree 可见性盲区、build 派发的非交互纪律、pin
+摘要误把运行时产物算进去）。openspec/ 部分（vivo-maas-launch 删除、
+phase-chain-automation 归档+spec）跟本目录当前状态逐字节一致，
+无需同步（前者本来就没带过来，见 §2；后者已经在 §6 那次同步里带过）。
+
+### 带过来的文件
+
+| 文件 | 处理 |
+|---|---|
+| `bin/plan.py` | ✅ 手工应用同一段 diff（新增 `UNDERSTAND_ANYTHING_ROOT`/`_PATHS` 常量、`cmd_codegraph_scope`/`_build_core`/`build`/`brief`、pin 校验、非交互纪律 preamble、`_maybe_auto_codegraph` 挂钩等），未整体覆盖——理由同 §6：release 版已有独立于源仓库的脱敏历史（shebang、`jiuwenswarm`→`openjiuwen`、`Brazil`/`argentina`/`colombia`/`vivo`→`country-*`/`client-x` 等 A/B 类替换），整体覆盖会丢失那些改动。两处新增紧邻已脱敏行（`CLIENT` 常量后、`vivo round` 注释前），手工定位插入点后逐字节比对确认新增内容与源仓库一致、周边脱敏内容未被扰动 |
+| `bin/report.py` | ✅ 同上手法（新增 `codegraph_surface`/`codegraph_auto_due`/`codegraph_auto_dispatch`/`_change_files_for_codegraph`），diff 干净应用，无需手工介入 |
+| `docs/prd-codegraph-role.md`、`prd-codegraph-understand-anything-backend.md`、`prd-jiuwenswarm-understand-anything-subagents.md`、`prd-codegraph-docs-cleanup.md`、`prd-codegraph-author-autodispatch.md`、`prd-codegraph-autodispatch-worktree-blindspot.md`、`prd-codegraph-build-noninteractive-incremental.md`、`prd-codegraph-pin-digest-runtime-artifacts.md` | ✅ 8 个新 PRD，原样带入，仅 1 处脱敏（见下） |
+| `scripts/install-understand-anything.sh` | ✅ 原样带入（新文件，照抄 `install-opendesign.sh` 的既有模式：sparse clone 到 `/opt/understand-anything`、`.aidlc-pin.json`、`chmod -R a-w`；扫描无机器路径/IP/内部代号） |
+| `supervisor/skills/workspace/codegraph/SKILL.md` | ✅ 原样带入（新文件，workspace 技能定义） |
+| `install.sh` | ✅ 原样带入 diff（`--doctor`/`--bootstrap`/`--understand-anything` 三处接入 Understand-Anything 安装步骤，扫描无机器路径） |
+| `config/collapsed.config.yaml` | ✅ 原样带入 diff（`product_excludes` 加 `codegraph/**`、`.ua/**`） |
+| `tests/collapse/dt1_gates.sh` | ✅ 原样带入 diff（子命令黄金列表加 `codegraph`/`codegraph-scope`/`codegraph-pin`） |
+| `tests/test_codegraph_autodispatch.py`、`test_codegraph_brief.py`、`test_codegraph_build_prompt.py`、`test_codegraph_role.py`、`test_codegraph_subagent_prompt.py`、`test_understand_anything_pin.py`、`test_understand_anything_subagents.sh` | ✅ 7 个新测试文件，原样带入，扫描无机器路径/IP/内部代号 |
+
+### PRD 里的脱敏
+
+`docs/prd-jiuwenswarm-understand-anything-subagents.md` 一处引用了
+研究时读源码用的本机路径：
+
+- `/root/DevTeam/reference/jiuwenswarm` → `<workspace-root>/reference/jiuwenswarm`
+  （沿用 §1 既有规则）
+
+其余 7 个新 PRD 和全部新增代码扫描无 `/root/`、无 IP、无
+`Robin`/`argentina`/`brazil`/`colombia`/`panama`/`vivo` 等既有代号——
+这批工作是纯工具链功能开发（codegraph 角色本身），不涉及任何具体
+客户项目复盘，天然干净。
+
+### 自检
+
+```
+grep -rnE '(/root/DevTeam|/root/\.jiuwenswarm|/root/\.claude-|Robin\b|\
+124\.81\.97\.217|110\.238\.103\.247|192\.168\.0\.212|binrogithub|\
+panama|argentina|peru\b|brazil|colombia|vivo\b)' \
+  bin/plan.py bin/report.py docs/prd-codegraph-*.md \
+  docs/prd-jiuwenswarm-understand-anything-subagents.md \
+  scripts/install-understand-anything.sh \
+  supervisor/skills/workspace/codegraph/ install.sh config/ \
+  tests/test_codegraph_*.py tests/test_understand_anything_*.* \
+  tests/collapse/dt1_gates.sh
+```
+
+无匹配（`bin/plan.py`/`bin/report.py` 里既有的 `country-*`/`client-x`
+替换词本身不含这些原词，不会误报）。
+
+### 测试
+
+`pytest tests/test_codegraph_autodispatch.py tests/test_codegraph_brief.py
+tests/test_codegraph_build_prompt.py tests/test_codegraph_role.py
+tests/test_codegraph_subagent_prompt.py tests/test_understand_anything_pin.py`：
+全部 passed。全量回归 `pytest tests/ --ignore=tests/collapse`：
+91 passed，无破坏（对照同步前的源仓库，也是 91 passed，一致）。
+
+`tests/collapse/dt1_gates.sh` 在本目录跑会失败——但这是本目录截断版
+git 历史（只有 2 个 commit，没有源仓库里 `v0.8.0` 等历史 tag）导致的
+既有限制，同步前（缺 codegraph 子命令）和同步后（缺 tag 锚点）都会
+失败，只是失败在脚本的不同检查点，跟本次同步内容本身的正确性无关。

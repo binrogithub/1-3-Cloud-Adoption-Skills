@@ -61,8 +61,11 @@ P_SUBS=$(python3.12 bin/plan.py --help 2>&1 \
 # dispatches (validate, graph, status); P3's N6 adds migrate and
 # retires return (the scratch it copied back is gone with the scratch);
 # uidesigner-opendesign adds the design trio (design, design-scope,
-# design-pin) — the dashes force the match below to include '-' now
-[[ "$P_SUBS" == "{roles,validate,graph,status,prompt,dispatch,phase,decide,review,boundary,accept,close,sweep,classify,stage,snapshot,untouched,migrate,sandbox,design,design-scope,design-pick,design-pin,scaffold,next}" ]] \
+# design-pin) — the dashes force the match below to include '-' now;
+# phase-chain-automation adds initiative; codegraph-role adds codegraph
+# (build/brief) + codegraph-scope; the Understand-Anything backend adds
+# codegraph-pin (mirrors design-pin)
+[[ "$P_SUBS" == "{roles,validate,graph,status,prompt,dispatch,phase,decide,review,boundary,accept,initiative,close,sweep,classify,stage,snapshot,untouched,migrate,sandbox,design,design-index,design-scope,codegraph-scope,codegraph,design-pick,design-pin,codegraph-pin,scaffold,next}" ]] \
   || { echo "FAIL: plan.py subcommands are $P_SUBS"; exit 1; }
 # return is retired outright: argparse rejects it, and the refusal is
 # the named kind, not a silent alias
