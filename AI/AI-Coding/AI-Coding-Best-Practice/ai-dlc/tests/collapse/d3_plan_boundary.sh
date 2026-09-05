@@ -51,8 +51,8 @@ plane_migrate "$REPO"
 C="$PLANE_TREE/changes/add-nav-bar"
 mkdir -p "$PLANE_ROOT/src"
 printf 'legacy\n' > "$PLANE_ROOT/src/legacy.txt"
-git -C "$PLANE_ROOT" add src/legacy.txt
-git -C "$PLANE_ROOT" -c user.name=t -c user.email=t@t commit -qm seed
+plane_git "$PLANE_ROOT" add src/legacy.txt
+plane_git "$PLANE_ROOT" -c user.name=t -c user.email=t@t commit -qm seed
 printf 'dev notes\n' > "$PLANE_ROOT/NOTES.md"
 mkdir -p "$PLANE_ROOT/.agent_history" "$PLANE_ROOT/coding_memory/proj" "$PLANE_ROOT/prompt_attachment"
 printf 'attachment\n' > "$PLANE_ROOT/prompt_attachment/blob.bin"
@@ -91,7 +91,7 @@ grep -q '"src/legacy.txt"' "$T/dirty.json"
 
 # 4. an untracked stray added after the baseline is equally refused —
 #    while the pre-existing NOTES.md never counts against the run
-git -C "$PLANE_ROOT" checkout -q -- src/legacy.txt
+plane_git "$PLANE_ROOT" checkout -q -- src/legacy.txt
 printf 'stray\n' > "$PLANE_ROOT/stray-plugin.txt"
 set +e
 $PY "$PLAN" boundary --change add-nav-bar --repo "$REPO" > "$T/dirty2.json" 2>&1

@@ -296,6 +296,7 @@ not — so they are read where they live and never combined.
 ## Retired (rollback anchors)
 
 - Delegated orchestrator: `v0.5.1-delegated-final`
-- Oracle plane: `v0.8.0`
+- Oracle plane: `v0.8.0` (not reachable in this repo's history — a
+  republished copy; the anchor is real in the original lineage, not this one)
 - Budget capability: removed outright (landing L1) — nothing stops,
   warns or annotates on a token total computed here.

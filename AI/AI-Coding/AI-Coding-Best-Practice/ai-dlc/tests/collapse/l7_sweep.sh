@@ -37,8 +37,8 @@ PROOT="$(plane_of "$REPO")"
 # touched it
 mkdir -p "$PROOT/old"; printf 'notes\n' > "$PROOT/old/notes.txt"
 printf 'tracked\n' > "$PROOT/src.txt"
-git -C "$PROOT" add src.txt
-git -C "$PROOT" -c user.name=t -c user.email=t@t commit -qm seed
+plane_git "$PROOT" add src.txt
+plane_git "$PROOT" -c user.name=t -c user.email=t@t commit -qm seed
 
 # the task record with the baseline the first dispatch would have written
 mkdir -p "$TD/evidence"
