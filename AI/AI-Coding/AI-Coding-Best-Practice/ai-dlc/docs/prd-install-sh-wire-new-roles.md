@@ -180,15 +180,28 @@ understand-anything 的写法（不引入新抽象、不重构现有函数）：
 
 ## 05 反向门
 
-- `tests/collapse/dt1_gates.sh`（已有的 install.sh 结构性断言脚本，具体
-  断言什么需要实现时先读一遍现状）新增/扩展一条检查：对
-  `--opendesign`/`--understand-anything`/`--browser-verify`/`--agent-bench`
-  四个 flag，逐一断言 usage 注释、doctor 告警块、`--help` 文本、mode
-  dispatch 四处都能在 `install.sh` 源码里 grep 到对应字符串——用同一条
-  参数化断言循环四个工具名，而不是给新工具单独复制四段断言（避免将来
-  第五个工具再次被漏接而没人发现）。
-- 若 `dt1_gates.sh` 现状是硬编码的字符串匹配而非参数化循环，实现时按
-  现状最小改动追加，不强行重构已通过的旧断言。
+**核实结论（写 PRD 时已用 `grep -n 'install.sh\|opendesign\|understand-anything'
+tests/collapse/dt1_gates.sh` 确认）：`dt1_gates.sh` 与 `install.sh` 的
+opendesign/understand-anything 接入完全无关**（它审计的是 oracle 删除、
+checker registry 消失、gate id 集合等 L1 落地承诺），不存在"扩展现有
+断言"这回事——此前的假设是错的，新增一个独立脚本。
+
+- 新建 `tests/collapse/install_sh_tool_wiring.sh`：对
+  `opendesign`/`understand-anything`/`browser-verify`/`agent-bench`
+  四个工具名跑同一条参数化断言循环（用一个 bash 数组存四个工具名，
+  循环体一次写好，不给新工具复制四段断言），每个工具名断言
+  `install.sh` 源码里都能 grep 到：
+  1. usage 注释里出现 `--<name>`
+  2. `run_doctor()` 里出现对应的 `warn "...--<name>"` 告警行
+  3. `--help` here-doc 里出现 `--<name>`
+  4. mode dispatch 里出现 `exec "${SCRIPT_DIR}/scripts/install-<name>.sh"`
+  四项任一缺失即整条脚本失败并报出具体工具名 + 缺失的是哪一项
+  （不是笼统的 "FAIL"）。
+- 这个新脚本本身要能在两种方向上验证有效：对当前已接好的
+  opendesign/understand-anything 跑通过；临时把 browser-verify/agent-bench
+  的接入删掉一处（比如注释掉 mode dispatch 那一行）应该让脚本明确报错
+  指出具体哪一项、哪个工具——照抄 PR #169 里 `no_direct_tool_exec.sh`
+  已经验证过的"两个方向都要证明"的标准，不能只证明"正常情况下通过"。
 
 ## 06 验收
 
@@ -208,7 +221,8 @@ understand-anything 的写法（不引入新抽象、不重构现有函数）：
   `N/8`。
 - 全量 `pytest -q` 与既有 `tests/collapse/*.sh` 门禁不因本次改动回归
   （本次不动 `bin/plan.py`，回归面很小，但仍需真跑一遍确认）。
-- `tests/collapse/dt1_gates.sh`（含 05 节新增/扩展的断言）通过。
+- 新建的 `tests/collapse/install_sh_tool_wiring.sh` 通过，且经过双向验证
+  （正常代码下通过；临时注入一处缺失接入能被正确检出并点名具体工具/项）。
 
 ## 07 分期
 
