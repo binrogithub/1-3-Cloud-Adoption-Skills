@@ -32,8 +32,10 @@ Needs your decision — derived on every write, never stored ahead.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import hmac
+import io
 import json
 import os
 import re
@@ -286,6 +288,11 @@ def stale_route_guard(task_dir: Path) -> dict | None:
 # the target the tool operates on)
 CONFIG_PATH = (Path(__file__).resolve().parent.parent / "config"
                / "collapsed.config.yaml")
+# G2: the ai-dlc install root (where bin/ + config/ live), measured from
+# this file's own location the way install.sh --doctor measures from
+# SCRIPT_DIR. A module-level constant so route_doctor_advisory can be
+# pointed at a fixture root under test.
+_TOOLCHAIN_ROOT = Path(__file__).resolve().parent.parent
 # the route measurement counts the deliverable, not the bookkeeping:
 # the delivery gate's own non-product patterns, plus the openspec tree,
 # the dispatch evidence and the gateway bookkeeping dirs
@@ -458,6 +465,57 @@ def is_git_repo(repo: Path) -> bool:
     return r.returncode == 0 and r.stdout.strip() == "true"
 
 
+def route_doctor_advisory(repo: Path) -> str | None:
+    """G2 (ROUTE self-check): a lightweight, read-only subset of
+    install.sh --doctor's checks, sized for cmd_next's high-frequency
+    read-only call — no network roundtrip, no dispatch, no file writes
+    (INV-21/INV-22). Returns None when the toolchain is healthy;
+    otherwise a single human-readable string naming the first failed
+    check and a copy-pasteable repair command. Never raises.
+
+    Checks, in order, first-failure-wins (design.md §G2):
+      1. bin/plan.py and bin/report.py exist and are executable.
+      2. config/collapsed.config.yaml exists and parses.
+      3. the dispatch gateway client is reachable (a cheap local probe
+         of the configured client binary — not a full dispatch).
+    """
+    root = _TOOLCHAIN_ROOT
+    repair = ("re-run the installer from the canonical ai-dlc source: "
+              "./install.sh --target <name>")
+    # 1. toolchain scripts present and executable
+    for f in ("bin/plan.py", "bin/report.py"):
+        p = root / f
+        if not p.is_file():
+            return (f"{f} is missing from the ai-dlc install at {root} — "
+                    f"the toolchain is incomplete; {repair}")
+        if not os.access(p, os.X_OK):
+            return (f"{f} at {p} is not executable — the install lost the "
+                    f"exec bit; repair: chmod +x {p}")
+    # 2. config exists and parses (no YAML dependency — the file is ours;
+    #    readable + non-empty is the parse bar, matching config_scalar)
+    cfg = root / "config" / "collapsed.config.yaml"
+    if not cfg.is_file():
+        return (f"config/collapsed.config.yaml is missing from {root} — "
+                f"{repair}")
+    try:
+        body = cfg.read_text(encoding="utf-8")
+    except OSError as exc:
+        return (f"config/collapsed.config.yaml at {cfg} is unreadable "
+                f"({exc}); {repair}")
+    if not body.strip():
+        return (f"config/collapsed.config.yaml at {cfg} is empty — the "
+                f"install is corrupt; {repair}")
+    # 3. gateway client reachable (cheap local probe — no dispatch latency)
+    client = os.environ.get(
+        "AI_DLC_CLIENT", os.path.expanduser("~/.local/bin/jiuwenswarm"))
+    if not Path(client).is_file() or not os.access(client, os.X_OK):
+        return (f"the dispatch gateway client {client} is missing or not "
+                "executable — planning dispatches will fail; repair: "
+                "./install.sh --provision-plane (or set AI_DLC_CLIENT to "
+                "an executable client path)")
+    return None
+
+
 def cmd_next(task_dir: Path, repo: Path) -> int:
     """N1/N2: ask the system what to do next. Read-only (V2): no
     dispatch, no state change, no directory creation. The recommendation
@@ -468,6 +526,41 @@ def cmd_next(task_dir: Path, repo: Path) -> int:
         stage, human_state, blocked_on, why, do, then, not_yet
     where `do` is a directly executable command line and `not_yet`
     names what cannot run yet and the exit code it would return.
+
+    G2: before returning, runs route_doctor_advisory once and, when it
+    is non-None, adds an `advisory` key to the returned object. The
+    check never blocks, never retries, never changes the exit code, and
+    performs no file writes (INV-21/INV-22). Existing keys keep their
+    shape and meaning.
+    """
+    advisory = route_doctor_advisory(repo)
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = _cmd_next_base(task_dir, repo)
+    out = buf.getvalue().strip()
+    if advisory is not None and out:
+        try:
+            obj = json.loads(out)
+            if isinstance(obj, dict):
+                obj["advisory"] = advisory
+                out = json.dumps(obj, indent=2, ensure_ascii=False)
+        except (json.JSONDecodeError, ValueError):
+            pass  # never let the advisory corrupt the base output
+    if out:
+        print(out)
+    return rc
+
+
+def _cmd_next_base(task_dir: Path, repo: Path) -> int:
+    """The pre-G2 body of cmd_next — computes stage/blocked_on/do/then/
+    not_yet and prints exactly one JSON object. cmd_next wraps this to
+    inject the route-doctor advisory.
+
+    Read-only (V2): no dispatch, no state change, no directory creation.
+    The recommendation is derived from the task's state files and the
+    plane's records — the same preconditions the verbs check (V6), not a
+    second copy. Output shape (U-B): stage, human_state, blocked_on, why,
+    do, then, not_yet.
     """
     # N6②: validate repo before reading state — a non-existent repo
     # is the country-d path-typo failure mode.
