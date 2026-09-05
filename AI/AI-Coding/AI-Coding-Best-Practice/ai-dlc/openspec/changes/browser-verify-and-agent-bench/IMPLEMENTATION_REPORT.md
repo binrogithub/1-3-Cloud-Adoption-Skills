@@ -106,7 +106,7 @@ see below.
    exactly the acceptance bar the PRD set (genuine tool invocation, not
    an improvised curl/requests/html.parser substitute) and it is met.
 
-### agent-bench — mechanism proven correct; run itself timed out
+### agent-bench — the CLI worked as designed; real infra ran; a credential gap stopped it (corrected finding — see note below)
 
 1. `scripts/install-agent-bench.sh` run for real: created the venv,
    `pip install`ed `harbor==0.22.0` (pulling ~90 transitive packages
@@ -116,47 +116,75 @@ see below.
 2. Checked the real installed CLI (`harbor run --help`) before
    dispatching: the top-level flags visible in the (long, truncated)
    help output did not obviously match the `--dataset`/`--agent`/
-   `--model`/`--n-concurrent` shape `SKILL.md` assumes (Harbor's config
-   surface is large; a `--config <JobConfig>` path is also documented).
-   Deliberately did **not** pre-fix the SKILL.md for this — dispatched
-   the real role as-is to see whether it discovers and adapts to the
-   real CLI on its own, which is the actual point of routing this
-   through an intelligent role rather than a fixed script.
-3. Dispatched `plan.py bench --n-concurrent 1 --timeout 300`. Over
-   360.1s the role made exactly three tool calls: checked the `harbor`
-   entry point exists, read the entry-point script, then ran `cd
-   <scratch-dir> && harbor run --dataset terminal-bench@2.0 --agent
-   claude-code --n-concurrent 1` — this command **never returned** before
-   the internal timeout killed the dispatch. It did not error quickly
-   (which a rejected/unknown-flag CLI usage error would), consistent
-   with the flags being accepted and Harbor genuinely starting a real
-   evaluation (dataset resolution, container build, task execution) —
-   plausible given Docker was confirmed present and a real
-   terminal-bench round is expected to take substantially longer than a
-   few minutes even at `n-concurrent 1`. No Harbor-spawned containers
-   were left running afterward (`docker ps -a` showed only pre-existing,
-   unrelated infrastructure).
-4. **The mechanism behaved exactly as specified under this genuine
-   timeout**: `plan.py bench` returned `round_complete: false,
-   agent_bench_state: "incomplete"`, and — critically — wrote **no**
-   record under `/var/lib/aidlc/bench-history/` (confirmed: the
-   directory did not even exist afterward). INV-40's hard requirement
-   ("a record missing the pinned version or tree_sha256 must not be
-   written as complete") held under a real timeout, not just the stubbed
-   `test_agent_bench.py` fixture that exercises the same code path
-   synthetically.
+   `--model`/`--n-concurrent` shape `SKILL.md` assumes. This turned out
+   to be a **false alarm from a truncated `--help` read on my part** —
+   see the correction below.
+3. Dispatched `plan.py bench --n-concurrent 1 --timeout 300`. The
+   `plan.py`-level dispatch (`run_agent_bench_session`'s
+   `subprocess.run(..., timeout=360)`) hit that 360s ceiling and
+   `plan.py bench` correctly reported `round_complete: false,
+   agent_bench_state: "incomplete"`, writing **no** record to
+   `/var/lib/aidlc/bench-history/` — this part of my original report was
+   accurate as far as it went, and it does correctly prove INV-40's hard
+   requirement ("a record missing the pinned version or tree_sha256 must
+   not be written as complete") holds under a real timeout, not just the
+   stubbed `test_agent_bench.py` fixture.
+4. **Correction, found on a closer pass through the role's own scratch
+   directory after the fact (not checked in the original verification —
+   I had only inspected `bench-history` and `plan.py`'s own top-level
+   judgment, not the role's own working-directory output)**: the
+   underlying Harbor job kept running past the point `subprocess.run`
+   killed the parent `jiuwenswarm chat` process (Harbor's job execution
+   is not tied to that process's stdio — `result.json`'s `updated_at`
+   is ~12 minutes after `plan.py`'s own `ended_at`), and the role itself
+   wrote a complete `agent-bench/result.md` into its scratch dir before
+   being cut off. That file shows:
+   - The exact flags `SKILL.md` specifies (`--dataset terminal-bench@2.0
+     --agent claude-code --n-concurrent 1`) **were accepted by the real
+     CLI and worked** — my `--help` read was truncated before the
+     relevant flag group; there was no CLI mismatch to adapt to.
+   - Harbor genuinely resolved the 89-task `terminal-bench@2.0` dataset
+     and started real Docker-based trials (confirmed independently
+     against Harbor's own `result.json` in its job directory:
+     `n_total_trials: 89`, 2 errored, 1 cancelled, 86 pending — matches
+     the role's report exactly).
+   - Both completed trials failed identically with
+     `AgentAuthenticationError` ("Not logged in") — the `claude-code`
+     agent inside Harbor's task containers has no Anthropic credentials
+     (`ANTHROPIC_API_KEY`/logged-in session), so no task-solving
+     capability was actually measured. This is an **environment/
+     credential-wiring gap**, not a role or dispatch defect.
+   - The role correctly followed the SKILL.md's stop protocol: it did
+     not fabricate a result, transcribed the figures directly from
+     Harbor's own `result.json`/`job.log`, and made the engineering call
+     to stop after the second identical auth failure rather than
+     burning through the remaining 86 tasks toward a predetermined 0/89
+     — an appropriate outcome, not a shortcut.
+   - One operational side-effect found during this correction pass: the
+     job's default `--jobs-dir` landed at
+     `/opt/understand-anything/jobs/` (an unrelated pinned tree, not
+     `AGENT_BENCH_ROOT` or the scratch dir) — harmless in this case
+     because that tree is git-tracked and `understand_anything_pin_state()`
+     digests only `git ls-files`-tracked content (confirmed: the pin
+     still reported `ok: true` before and after removing the stray,
+     untracked `jobs/` directory), but worth pinning down explicitly in
+     a follow-up (Harbor's `--jobs-dir` should be pointed at the scratch
+     run directory). One stopped/exited Docker container from the
+     cancelled trial and the stray job directory were both found and
+     removed during cleanup.
 
-**Conclusion on agent-bench**: the pin/dispatch/no-fabrication mechanism
-is proven correct end-to-end. Whether the role would have gone on to
-successfully adapt to Harbor's real CLI (or correctly stopped and
-reported a mismatch) is **not settled** by this run — the timeout was hit
-first. This is a test-harness limitation (my own conservative `--timeout
-300` for bounding how long I'd wait), not a finding about the product
-code: a real invocation should use the subcommand's actual default
-(`--timeout 1800`) or larger, since a genuine Harbor evaluation round is
-a many-minutes-to-hours operation. Recorded here rather than chased
-further, per instruction not to wait indefinitely on a real external
-tool's own timescale.
+**Corrected conclusion on agent-bench**: the pin/dispatch mechanism and
+the no-fabrication guarantee are both proven correct end-to-end, *and*
+the role successfully drove a real Harbor evaluation round against real
+Docker infrastructure with zero CLI-adaptation problems. The blocker is
+operational, not architectural: Harbor's task containers need Anthropic
+credentials wired in before `agent-bench` can produce a real capability
+score. My first pass at this report understated the outcome — I had
+verified `plan.py`'s own top-level judgment and the signed-record
+location, but not the role's own scratch-directory output, and drew a
+"CLI mismatch, undetermined" conclusion that the fuller evidence does
+not support. Recording this correction plainly rather than quietly
+editing the earlier claim away.
 
 ## Test suite results
 
@@ -174,14 +202,25 @@ tool's own timescale.
 
 ## Not completed / left for a human
 
-- Whether the agent-bench role can successfully discover and adapt to
-  Harbor's real CLI surface — undetermined (timed out before reaching a
-  verdict either way). A follow-up run with `--timeout 1800`+ (or
-  Harbor's own smallest single-task dataset, if one exists) would settle
-  it; not attempted here to avoid an open-ended wait.
-- `SKILL.md`'s `agent-bench` "What to run" section still shows the
-  `--dataset`/`--agent`/`--model`/`--n-concurrent` example command,
-  unverified against Harbor's real flag surface. Left as-is per this
-  change's scope (the PRD's non-goals explicitly exclude designing
-  Harbor's exact invocation contract in this pass) — worth revisiting
-  once a real run actually completes and confirms or corrects it.
+- **`agent-bench` cannot yet produce a real capability score** — Harbor's
+  task containers need Anthropic credentials (`ANTHROPIC_API_KEY` or an
+  equivalent logged-in `claude-code` session) wired in before a run can
+  measure anything beyond `AgentAuthenticationError`. This is an
+  operator/provisioning task (likely belongs in
+  `scripts/install-agent-bench.sh` or the pinned Harbor config, injecting
+  the same credential the rest of this host's `claude-*` launchers
+  already use), not a code change to `cmd_bench`/`run_agent_bench_session`
+  — out of scope for this PRD's non-goals, which explicitly exclude
+  designing Harbor's exact invocation/credential contract. Recorded here
+  as the concrete next step for whoever picks this up.
+- `SKILL.md`'s `agent-bench` "What to run" section's example command
+  (`--dataset`/`--agent`/`--model`/`--n-concurrent`) is now **confirmed
+  correct** against the real installed CLI (see the corrected finding
+  above) — no change needed there.
+- Harbor's default `--jobs-dir` was observed landing outside both
+  `AGENT_BENCH_ROOT` and the scratch run directory (in this run, inside
+  an unrelated pinned tree, harmlessly since that tree only digests
+  git-tracked content) — a follow-up should have `agent-bench/SKILL.md`
+  or `cmd_bench`'s prompt explicitly pass `--jobs-dir` pointed at the
+  scratch run directory, so job artifacts always land somewhere expected
+  and get cleaned up with it.
