@@ -22,6 +22,9 @@
 #   ./install.sh --all-targets            # every target in targets/*.json
 #   ./install.sh --uninstall --target <n> # remove what we installed (manifest-based)
 #   ./install.sh --opendesign             # deploy the OpenDesign tree (host step)
+#   ./install.sh --understand-anything    # deploy the Understand-Anything skill tree (host step)
+#   ./install.sh --browser-verify         # deploy the Playwright MCP tree (host step)
+#   ./install.sh --agent-bench            # deploy the Harbor/Terminal-Bench venv (host step)
 #   ./install.sh --doctor                 # health check + sha256 consistency
 #   ./install.sh --provision-plane        # open the plane runtime. Idempotent
 set -euo pipefail
@@ -190,6 +193,22 @@ print("\n".join(json.loads(sys.argv[1])["writable_extras"]))' "$audit" \
     ok "Understand-Anything tree present: ${ua_root}"
   else
     warn "Understand-Anything tree missing — plan.py codegraph will report unavailable. Run: ./install.sh --understand-anything"
+  fi
+
+  # Playwright MCP tree: warn (not fail) if absent — only needed for browser-verify
+  local bv_root="${AI_DLC_PLAYWRIGHT_MCP_ROOT:-/opt/playwright-mcp}"
+  if [[ -d "${bv_root}" ]]; then
+    ok "Playwright MCP tree present: ${bv_root}"
+  else
+    warn "Playwright MCP tree missing — plan.py browser-verify will fail to dispatch. Run: ./install.sh --browser-verify"
+  fi
+
+  # Harbor/Terminal-Bench venv: warn (not fail) if absent — only needed for bench
+  local ab_root="${AI_DLC_AGENT_BENCH_ROOT:-/opt/agent-bench}"
+  if [[ -d "${ab_root}" ]]; then
+    ok "Harbor/Terminal-Bench venv present: ${ab_root}"
+  else
+    warn "Harbor/Terminal-Bench venv missing — plan.py bench will report unavailable. Run: ./install.sh --agent-bench"
   fi
 
   # Skills — three segments (N7):
@@ -1136,7 +1155,10 @@ run_bootstrap() {
   echo "  2. jiuwenswarm gateway    (uv tool install, ~976MB, ~2-15 min depending on network)"
   echo "  3. Huawei Cloud MaaS key  (interactive prompt, one question)"
   echo "  4. OpenDesign tree        (git sparse clone, ~138MB, ~30s-3min)"
-  echo "  5. AI-DLC skills          (local copy, instant)"
+  echo "  5. Understand-Anything    (git sparse clone, ~16 files, ~10s)"
+  echo "  6. Playwright MCP tree    (npm install, ~几十 MB, ~1-3min)"
+  echo "  7. Harbor venv            (pip install, ~几十个包, ~1-3min)"
+  echo "  8. AI-DLC skills          (local copy, instant)"
   echo ""
   echo "Continue? [y/N]"
 
@@ -1153,16 +1175,16 @@ run_bootstrap() {
 
   local rc=0
 
-  # ── Step 1/5: openspec ──
+  # ── Step 1/8: openspec ──
   echo ""
-  echo "步骤 1/5 开始 — openspec CLI (npm package, <5MB, ~seconds)"
+  echo "步骤 1/8 开始 — openspec CLI (npm package, <5MB, ~seconds)"
   local t0; t0=$(date +%s)
   install_upstreams || rc=1
-  echo "步骤 1/5 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
+  echo "步骤 1/8 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
 
-  # ── Step 2/5: jiuwenswarm ──
+  # ── Step 2/8: jiuwenswarm ──
   echo ""
-  echo "步骤 2/5 开始 — jiuwenswarm gateway (uv tool install, ~976MB, ~2-15 min)"
+  echo "步骤 2/8 开始 — jiuwenswarm gateway (uv tool install, ~976MB, ~2-15 min)"
   t0=$(date +%s)
   if command -v jiuwenswarm &>/dev/null; then
     ok "jiuwenswarm already installed: $(command -v jiuwenswarm)"
@@ -1176,11 +1198,11 @@ run_bootstrap() {
     warn "install uv first (https://docs.astral.sh/uv/), then: uv tool install jiuwenswarm==0.2.3"
     rc=1
   fi
-  echo "步骤 2/5 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
+  echo "步骤 2/8 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
 
-  # ── Step 3/5: MaaS key ──
+  # ── Step 3/8: MaaS key ──
   echo ""
-  echo "步骤 3/5 开始 — Huawei Cloud MaaS key (interactive prompt)"
+  echo "步骤 3/8 开始 — Huawei Cloud MaaS key (interactive prompt)"
   t0=$(date +%s)
   if [[ -t 0 ]]; then
     "${SCRIPT_DIR}/scripts/setup-maas-key.sh" --force || rc=1
@@ -1188,33 +1210,55 @@ run_bootstrap() {
     warn "non-interactive environment — skipping MaaS key prompt"
     warn "run './install.sh --setup-maas-key' interactively to configure credentials"
   fi
-  echo "步骤 3/5 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
+  echo "步骤 3/8 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
 
-  # ── Step 4/6: OpenDesign ──
+  # ── Step 4/8: OpenDesign ──
   echo ""
-  echo "步骤 4/6 开始 — OpenDesign tree (git sparse clone, ~138MB, ~30s-3min)"
+  echo "步骤 4/8 开始 — OpenDesign tree (git sparse clone, ~138MB, ~30s-3min)"
   t0=$(date +%s)
   if [[ -d "${AI_DLC_OPENDESIGN_ROOT:-/opt/open-design}" ]]; then
     ok "OpenDesign tree already present: ${AI_DLC_OPENDESIGN_ROOT:-/opt/open-design}"
   else
     "${SCRIPT_DIR}/scripts/install-opendesign.sh" || rc=1
   fi
-  echo "步骤 4/6 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
+  echo "步骤 4/8 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
 
-  # ── Step 5/6: Understand-Anything ──
+  # ── Step 5/8: Understand-Anything ──
   echo ""
-  echo "步骤 5/6 开始 — Understand-Anything skill tree (git sparse clone, ~16 files, ~10s)"
+  echo "步骤 5/8 开始 — Understand-Anything skill tree (git sparse clone, ~16 files, ~10s)"
   t0=$(date +%s)
   if [[ -d "${AI_DLC_UNDERSTAND_ANYTHING_ROOT:-/opt/understand-anything}" ]]; then
     ok "Understand-Anything tree already present: ${AI_DLC_UNDERSTAND_ANYTHING_ROOT:-/opt/understand-anything}"
   else
     "${SCRIPT_DIR}/scripts/install-understand-anything.sh" --write-pin || rc=1
   fi
-  echo "步骤 5/6 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
+  echo "步骤 5/8 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
 
-  # ── Step 6/6: AI-DLC skills ──
+  # ── Step 6/8: Playwright MCP (browser-verify) ──
   echo ""
-  echo "步骤 6/6 开始 — AI-DLC skills (local copy, instant)"
+  echo "步骤 6/8 开始 — Playwright MCP tree (npm install, ~几十 MB, ~1-3min)"
+  t0=$(date +%s)
+  if [[ -d "${AI_DLC_PLAYWRIGHT_MCP_ROOT:-/opt/playwright-mcp}" ]]; then
+    ok "Playwright MCP tree already present: ${AI_DLC_PLAYWRIGHT_MCP_ROOT:-/opt/playwright-mcp}"
+  else
+    "${SCRIPT_DIR}/scripts/install-browser-verify.sh" --write-pin || rc=1
+  fi
+  echo "步骤 6/8 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
+
+  # ── Step 7/8: Harbor/Terminal-Bench (agent-bench) ──
+  echo ""
+  echo "步骤 7/8 开始 — Harbor venv (pip install, ~几十个包, ~1-3min)"
+  t0=$(date +%s)
+  if [[ -d "${AI_DLC_AGENT_BENCH_ROOT:-/opt/agent-bench}" ]]; then
+    ok "Harbor venv already present: ${AI_DLC_AGENT_BENCH_ROOT:-/opt/agent-bench}"
+  else
+    "${SCRIPT_DIR}/scripts/install-agent-bench.sh" --write-pin || rc=1
+  fi
+  echo "步骤 7/8 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
+
+  # ── Step 8/8: AI-DLC skills ──
+  echo ""
+  echo "步骤 8/8 开始 — AI-DLC skills (local copy, instant)"
   t0=$(date +%s)
   local tfile="${TARGETS_DIR}/claude.json"
   local tconfig tkind
@@ -1223,7 +1267,7 @@ run_bootstrap() {
   tkind=$("$PY" -c "import json; print(json.load(open('${tfile}')).get('kind','claude-skill'))" 2>/dev/null || echo "claude-skill")
   install_skills_to_target "claude-code" "${tconfig}" "${tkind}" || rc=1
   install_workspace_skills || rc=1
-  echo "步骤 6/6 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
+  echo "步骤 8/8 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
 
   echo ""
   echo "══════════════════════════════════════════════════"
@@ -1247,6 +1291,8 @@ main() {
       --provision-plane) mode="provision-plane"; shift ;;
       --opendesign) mode="opendesign"; shift ;;
       --understand-anything) mode="understand-anything"; shift ;;
+      --browser-verify) mode="browser-verify"; shift ;;
+      --agent-bench) mode="agent-bench"; shift ;;
       --setup-maas-key) mode="setup-maas-key"; shift ;;
       --bootstrap) mode="bootstrap"; shift ;;
       --quickstart) mode="quickstart"; shift ;;
@@ -1266,6 +1312,8 @@ Usage: install.sh [OPTIONS]
   --uninstall --target <n>   remove what we installed (manifest-based, K2)
   --opendesign               deploy the OpenDesign tree (host step)
   --understand-anything      deploy the Understand-Anything skill tree (host step)
+  --browser-verify           deploy the Playwright MCP tree (host step)
+  --agent-bench              deploy the Harbor/Terminal-Bench venv (host step)
   --doctor                   health check + sha256 consistency (K5)
   --check-sync               compare the repo VERSION against each installed
                              target's VERSION; with --doctor, append mismatch
@@ -1322,6 +1370,12 @@ QEOF
   fi
   if [[ "${mode}" == "understand-anything" ]]; then
     exec "${SCRIPT_DIR}/scripts/install-understand-anything.sh" "$@"
+  fi
+  if [[ "${mode}" == "browser-verify" ]]; then
+    exec "${SCRIPT_DIR}/scripts/install-browser-verify.sh" "$@"
+  fi
+  if [[ "${mode}" == "agent-bench" ]]; then
+    exec "${SCRIPT_DIR}/scripts/install-agent-bench.sh" "$@"
   fi
   if [[ "${mode}" == "setup-maas-key" ]]; then
     exec "${SCRIPT_DIR}/scripts/setup-maas-key.sh" "$@"
