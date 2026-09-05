@@ -22,3 +22,15 @@ plane_migrate() {
 plane_of() {
     printf '%s' "$AI_DLC_SPECS/$(printf '%s' "${1#/}" | sed 's,/,--,g')"
 }
+
+# plane_git <plane_root> <git-args...> — like `git -C <plane_root> ...`
+# but scopes a safe.directory override to exactly that path. Mirrors
+# bin/plan.py's git_run(): plane_migrate's real `plan.py migrate` chowns
+# the plane root to swarm:swarm, so any fixture that seeds content there
+# directly (bypassing plan.py) hits the same dubious-ownership refusal
+# plan.py's own code must handle — this is that same fix, applied to the
+# test fixtures that recreate the ownership mismatch on purpose.
+plane_git() {
+    local root="$1"; shift
+    git -c "safe.directory=$root" -C "$root" "$@"
+}
