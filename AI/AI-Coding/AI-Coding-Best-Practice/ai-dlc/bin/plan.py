@@ -283,6 +283,31 @@ CLIENT = os.environ.get("AI_DLC_CLIENT",
 UNDERSTAND_ANYTHING_ROOT = Path(os.environ.get(
     "AI_DLC_UNDERSTAND_ANYTHING_ROOT", "/opt/understand-anything"))
 UNDERSTAND_ANYTHING_PATHS = ("understand-anything-plugin",)
+# the pinned Harbor evaluation harness (G2).  Harbor is the official
+# Terminal-Bench 2.0 framework (pip install harbor), installed by
+# scripts/install-agent-bench.sh into an isolated venv under
+# /opt/agent-bench.  The pin (.aidlc-pin.json) records tag + tree_sha256
+# over the whole venv; the bench command dispatches a session whose role
+# runs harbor — plan.py never executes the harbor binary itself (INV-38).
+# AI_DLC_AGENT_BENCH_ROOT overrides the path only (an alternate install).
+AGENT_BENCH_ROOT = Path(os.environ.get(
+    "AI_DLC_AGENT_BENCH_ROOT", "/opt/agent-bench"))
+# where bench scratch runs and signed history records land — env-overridable
+# so tests can point them at a tmp_path without root.
+BENCH_RUNS_DIR = Path(os.environ.get("AI_DLC_BENCH_RUNS_DIR",
+                                     "/var/lib/aidlc/bench-runs"))
+BENCH_HISTORY_DIR = Path(os.environ.get("AI_DLC_BENCH_HISTORY_DIR",
+                                        "/var/lib/aidlc/bench-history"))
+# the pinned Playwright MCP tree (G1) — @playwright/mcp + Chromium,
+# installed by scripts/install-browser-verify.sh to /opt/playwright-mcp
+# (a local, not global, npm install).  The pin (.aidlc-pin.json) records
+# tag + tree_sha256 over the whole installed tree; the browser-verify
+# dispatch checks it before opening a session and refuses if the tree
+# was modified after the pin (INV-36).  AI_DLC_PLAYWRIGHT_MCP_ROOT
+# overrides the path only (an alternate install).
+PLAYWRIGHT_MCP_ROOT = Path(os.environ.get(
+    "AI_DLC_PLAYWRIGHT_MCP_ROOT", "/opt/playwright-mcp"))
+PLAYWRIGHT_MCP_PATHS = ("node_modules/@playwright/mcp",)
 GATEWAY_BOOKKEEPING = (".agent_history", "coding_memory", "prompt_attachment")
 INTERRUPT_EVENTS = ("chat.ask_user_question", "plan.approval_required")
 # the authoring skill the role reaches the CLI through, and where the
@@ -6027,6 +6052,91 @@ def understand_anything_pin_state(root: Path | None = None) -> dict:
                      "size_bytes", "tree_sha256")}}
 
 
+def agent_bench_tree_digest(root: Path) -> str:
+    """A deterministic digest of the pinned Harbor venv's content: every
+    file under root/venv/ — sha256 of its on-disk bytes with its path
+    relative to root, sorted, hashed.  A modified venv (a different
+    package pip-installed into it, a hand edit of a tracked file) moves
+    this off the pin (INV-36).  This MUST stay identical to the digest
+    computed by scripts/install-agent-bench.sh's pin-writing heredoc —
+    the pin and the check can never drift apart."""
+    root = Path(root)
+    venv = root / "venv"
+    lines = []
+    if venv.is_dir():
+        for p in venv.rglob("*"):
+            if p.is_file():
+                try:
+                    digest = hashlib.sha256(p.read_bytes()).hexdigest()
+                except OSError:
+                    continue
+                lines.append(f"{digest}  {p.relative_to(root).as_posix()}")
+    h = hashlib.sha256()
+    for line in sorted(lines):
+        h.update(line.encode("utf-8") + b"\n")
+    return h.hexdigest()
+
+
+def agent_bench_pin_state(root: Path | None = None) -> dict:
+    """The pin and the Harbor venv, verified against each other.  Ok only
+    when the pin stands, the venv's harbor entry point stands and is
+    executable, and the venv's measured digest equals the pin's — anything
+    else stops the dispatch before a session opens (INV-36 reverse gate).
+    Structurally identical to understand_anything_pin_state (same
+    {ok, root, pin, why, remedy, exit_code} shape, never raises)."""
+    root = Path(root) if root else AGENT_BENCH_ROOT
+    pin_file = root / ".aidlc-pin.json"
+    if not root.is_dir():
+        return {"ok": False, "root": str(root), "pin": str(pin_file),
+                "why": (f"the Harbor venv does not stand at {root}"),
+                "remedy": ("scripts/install-agent-bench.sh (the "
+                           "operator's one-time host step; the caller "
+                           "never installs)"),
+                "exit_code": EXIT_DESIGN_PIN}
+    if not pin_file.is_file():
+        return {"ok": False, "root": str(root), "pin": str(pin_file),
+                "why": "no pin stands beside the venv",
+                "remedy": "scripts/install-agent-bench.sh --write-pin",
+                "exit_code": EXIT_DESIGN_PIN}
+    pin = load_json(pin_file, {})
+    if not isinstance(pin, dict) or not pin.get("tag") \
+            or not pin.get("tree_sha256"):
+        return {"ok": False, "root": str(root), "pin": pin,
+                "why": "the pin carries no tag or tree_sha256",
+                "remedy": ("re-run scripts/install-agent-bench.sh; a pin "
+                           "without both fields verifies nothing"),
+                "exit_code": EXIT_DESIGN_PIN}
+    harbor_bin = root / "venv" / "bin" / "harbor"
+    if not harbor_bin.is_file():
+        return {"ok": False, "root": str(root), "pin": str(pin_file),
+                "why": f"pinned harbor entry point missing: {harbor_bin}",
+                "remedy": ("re-run scripts/install-agent-bench.sh; the "
+                           "venv shrank under the pin"),
+                "exit_code": EXIT_DESIGN_PIN}
+    if not os.access(harbor_bin, os.X_OK):
+        return {"ok": False, "root": str(root), "pin": str(pin_file),
+                "why": f"harbor entry point not executable: {harbor_bin}",
+                "remedy": ("re-run scripts/install-agent-bench.sh; the "
+                           "venv's permissions drifted under the pin"),
+                "exit_code": EXIT_DESIGN_PIN}
+    digest = agent_bench_tree_digest(root)
+    if digest != pin.get("tree_sha256"):
+        return {"ok": False, "root": str(root), "pin": str(pin_file),
+                "pinned_tree_sha256": pin.get("tree_sha256"),
+                "measured_tree_sha256": digest,
+                "why": ("the venv's measured digest no longer matches "
+                        "the pin — the Harbor install was modified after "
+                        "the pin was written"),
+                "remedy": ("restore the venv (scripts/install-agent-"
+                           "bench.sh) or re-pin deliberately; a modified "
+                           "install cannot back a bench dispatch"),
+                "exit_code": EXIT_DESIGN_PIN}
+    return {"ok": True, "root": str(root),
+            "pin": {k: pin.get(k) for k in
+                    ("tag", "sha", "sparse_paths", "installed_at",
+                     "size_bytes", "tree_sha256")}}
+
+
 def cmd_codegraph_pin(root: Path, tag: str | None, write: bool) -> int:
     """C1's other half: write or verify the pin. The digest contract is
     the dispatch's own (understand_anything_tree_digest) — the install
@@ -6049,6 +6159,95 @@ def cmd_codegraph_pin(root: Path, tag: str | None, write: bool) -> int:
         return emit({"written": str(pin_file), "pin": pin}, 0)
     state = understand_anything_pin_state(root)
     return emit(state, 0 if state.get("ok") else state.get("exit_code", 2))
+
+
+def browser_verify_tree_digest(root: Path) -> str:
+    """A deterministic digest of the pinned Playwright MCP tree's content:
+    every file's sha256 (of its current on-disk bytes) with its relative
+    path, sorted, hashed.  Unlike understand_anything_tree_digest this is a
+    filesystem walk, not `git ls-files` — the npm-installed tree is not a
+    git repo.  The pin file itself (.aidlc-pin.json) is excluded so writing
+    the pin does not move the digest (chicken-and-egg).  This must agree
+    byte-for-byte with the inline walk in scripts/install-browser-verify.sh
+    or the pin check will always mismatch (INV-36)."""
+    root = Path(root)
+    lines = []
+    pin_name = ".aidlc-pin.json"
+    for p in root.rglob("*"):
+        if not p.is_file():
+            continue
+        rel = p.relative_to(root).as_posix()
+        if rel == pin_name:
+            continue
+        try:
+            digest = hashlib.sha256(p.read_bytes()).hexdigest()
+        except OSError:
+            continue
+        lines.append(f"{digest}  {rel}")
+    h = hashlib.sha256()
+    for line in sorted(lines):
+        h.update(line.encode("utf-8") + b"\n")
+    return h.hexdigest()
+
+
+def browser_verify_pin_state(root: Path | None = None) -> dict:
+    """The pin and the Playwright MCP tree, verified against each other.
+    Ok only when the pin stands, the @playwright/mcp subtree stands, and
+    the tree's measured digest equals the pin's — anything else stops the
+    dispatch before a session opens (PRD §05 reverse gate, INV-36).
+    Structurally identical to understand_anything_pin_state: the same five
+    checks in the same order, the same {ok, root, pin, why, remedy,
+    exit_code} shape, the same non-blocking stance (INV-39).  Reuses
+    EXIT_DESIGN_PIN — it is the generic 'upstream pin missing or digest
+    moved' code, not design-specific despite the name."""
+    root = Path(root) if root else PLAYWRIGHT_MCP_ROOT
+    pin_file = root / ".aidlc-pin.json"
+    if not root.is_dir():
+        return {"ok": False, "root": str(root), "pin": str(pin_file),
+                "why": ("the Playwright MCP tree does not "
+                        f"stand at {root}"),
+                "remedy": ("scripts/install-browser-verify.sh (the "
+                           "operator's one-time host step; the caller "
+                           "never installs)"),
+                "exit_code": EXIT_DESIGN_PIN}
+    if not pin_file.is_file():
+        return {"ok": False, "root": str(root), "pin": str(pin_file),
+                "why": "no pin stands beside the tree",
+                "remedy": "scripts/install-browser-verify.sh --write-pin",
+                "exit_code": EXIT_DESIGN_PIN}
+    pin = load_json(pin_file, {})
+    if not isinstance(pin, dict) or not pin.get("tag") \
+            or not pin.get("tree_sha256"):
+        return {"ok": False, "root": str(root), "pin": pin,
+                "why": "the pin carries no tag or tree_sha256",
+                "remedy": ("re-run scripts/install-browser-verify.sh; "
+                           "a pin without both fields verifies nothing"),
+                "exit_code": EXIT_DESIGN_PIN}
+    missing = [s for s in PLAYWRIGHT_MCP_PATHS if not (root / s).is_dir()]
+    if missing:
+        return {"ok": False, "root": str(root), "pin": str(pin_file),
+                "why": f"pinned paths missing from the tree: {missing}",
+                "remedy": ("re-run scripts/install-browser-verify.sh; "
+                           "the @playwright/mcp install shrank under "
+                           "the pin"),
+                "exit_code": EXIT_DESIGN_PIN}
+    digest = browser_verify_tree_digest(root)
+    if digest != pin.get("tree_sha256"):
+        return {"ok": False, "root": str(root), "pin": str(pin_file),
+                "pinned_tree_sha256": pin.get("tree_sha256"),
+                "measured_tree_sha256": digest,
+                "why": ("the tree's measured digest no longer matches "
+                        "the pin — the Playwright MCP tree was modified "
+                        "after the pin was written"),
+                "remedy": ("restore the tree (scripts/install-browser-"
+                           "verify.sh) or re-pin deliberately; a modified "
+                           "reference cannot back a browser-verify "
+                           "dispatch"),
+                "exit_code": EXIT_DESIGN_PIN}
+    return {"ok": True, "root": str(root),
+            "pin": {k: pin.get(k) for k in
+                    ("tag", "sha", "sparse_paths", "installed_at",
+                     "size_bytes", "tree_sha256")}}
 
 
 def resolve_work_ref(repo: Path, state: dict) -> dict:
@@ -6490,6 +6689,96 @@ def run_codegraph_session(change: str, prompt: str, repo: Path,
     v = judge_frames(frames)
     elapsed = round(time.monotonic() - started, 3)
     out = {"dispatch": "codegraph", "change": change, "mode": mode,
+           "repo": str(repo), "client": CLIENT,
+           "client_rc": client_rc, "timed_out": timed_out,
+           "evidence": str(evidence), "session_name": session_name,
+           "started_at": started_at, "ended_at": now_iso(),
+           "elapsed_seconds": elapsed,
+           "round_complete": v["round_complete"],
+           "interrupted": v["interrupted"],
+           "envelope_note": ("the record is the frames' — the role's "
+                             "conclusion sentence was never read")}
+    return out, frames
+
+
+def run_browser_verify_session(change: str, prompt: str, repo: Path,
+                               task_dir: Path, mode: str,
+                               timeout: int) -> tuple[dict, list]:
+    """One plane session for the browser-verify role — structurally
+    identical to run_codegraph_session (fresh session, frames on disk,
+    duration recorded) with its working directory set to the repo: this
+    role writes browser-verify/report.md into the repo, not the plane's
+    tree.  The orchestrator never calls Playwright directly; only this
+    dispatched session does (INV-38)."""
+    started = time.monotonic()
+    started_at = now_iso()
+    evidence = next_evidence(task_dir, "browser-verify")
+    seq = re.search(r"-(\d+)\.jsonl$", evidence.name)
+    session_name = f"browser-verify-{change}-{seq.group(1) if seq else '001'}"
+    evidence.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [CLIENT, "chat", prompt, "--jsonl", "--cwd", str(repo),
+           "--mode", mode, "--timeout", str(timeout),
+           "--session", session_name]
+    timed_out = False
+    client_rc = None
+    try:
+        with evidence.open("w", encoding="utf-8") as fh:
+            proc = subprocess.run(cmd, stdout=fh, stderr=subprocess.PIPE,
+                                  text=True, cwd=str(repo),
+                                  timeout=timeout + 60)
+        client_rc = proc.returncode
+    except subprocess.TimeoutExpired:
+        timed_out = True
+    frames = evidence.read_text(encoding="utf-8",
+                                errors="replace").splitlines()
+    v = judge_frames(frames)
+    elapsed = round(time.monotonic() - started, 3)
+    out = {"dispatch": "browser-verify", "change": change, "mode": mode,
+           "repo": str(repo), "client": CLIENT,
+           "client_rc": client_rc, "timed_out": timed_out,
+           "evidence": str(evidence), "session_name": session_name,
+           "started_at": started_at, "ended_at": now_iso(),
+           "elapsed_seconds": elapsed,
+           "round_complete": v["round_complete"],
+           "interrupted": v["interrupted"],
+           "envelope_note": ("the record is the frames' — the role's "
+                             "conclusion sentence was never read")}
+    return out, frames
+
+
+def run_agent_bench_session(prompt: str, repo: Path, task_dir: Path,
+                            mode: str, timeout: int) -> tuple[dict, list]:
+    """One plane session for the agent-bench role — the same shape as
+    run_codegraph_session (fresh session, frames on disk, duration
+    recorded) but with NO change parameter: this is a standalone
+    diagnostic, not part of any change's lifecycle, so the session name
+    carries no change id and the returned dict's dispatch is
+    'agent-bench'.  The role runs the pinned Harbor binary inside this
+    session; plan.py never executes harbor itself (INV-38)."""
+    started = time.monotonic()
+    started_at = now_iso()
+    evidence = next_evidence(task_dir, "agent-bench")
+    seq = re.search(r"-(\d+)\.jsonl$", evidence.name)
+    session_name = f"agent-bench-{seq.group(1) if seq else '001'}"
+    evidence.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [CLIENT, "chat", prompt, "--jsonl", "--cwd", str(repo),
+           "--mode", mode, "--timeout", str(timeout),
+           "--session", session_name]
+    timed_out = False
+    client_rc = None
+    try:
+        with evidence.open("w", encoding="utf-8") as fh:
+            proc = subprocess.run(cmd, stdout=fh, stderr=subprocess.PIPE,
+                                  text=True, cwd=str(repo),
+                                  timeout=timeout + 60)
+        client_rc = proc.returncode
+    except subprocess.TimeoutExpired:
+        timed_out = True
+    frames = evidence.read_text(encoding="utf-8",
+                                errors="replace").splitlines()
+    v = judge_frames(frames)
+    elapsed = round(time.monotonic() - started, 3)
+    out = {"dispatch": "agent-bench", "mode": mode,
            "repo": str(repo), "client": CLIENT,
            "client_rc": client_rc, "timed_out": timed_out,
            "evidence": str(evidence), "session_name": session_name,
@@ -8226,6 +8515,242 @@ def cmd_codegraph_brief(change: str, repo: Path,
     return emit(out, 0 if brief_written else EXIT_INCONCLUSIVE)
 
 
+def cmd_bench(dataset: str = "terminal-bench@2.0",
+              model: str | None = None, n_concurrent: int | None = None,
+              mode: str = "code.normal", timeout: int = 1800) -> int:
+    """plan.py bench — run one benchmark round of this pipeline itself via
+    the pinned Harbor install, dispatched through a plane session (G2).
+    The orchestrator never executes harbor directly; only
+    run_agent_bench_session's [CLIENT, "chat", ...] call is permitted
+    (INV-38).  This subcommand accepts no --change and touches no
+    .ai-dlc/tasks/ path — it is a standalone diagnostic, never recorded
+    against any change's delivery (INV-39/INV-40, spec
+    agent-bench-role).
+
+    Flow:
+      1. Pin check — agent_bench_pin_state() not ok → emit
+         agent_bench_state='unavailable' and return 0 (never blocks the
+         caller, never dispatches a session).
+      2. Build a scratch working directory under
+         /var/lib/aidlc/bench-runs/<ISO timestamp>/ — this is the
+         repo/task_dir passed to run_agent_bench_session, NOT any
+         .ai-dlc/tasks/ path.
+      3. Build a prompt naming the pinned Harbor venv path, the dataset,
+         model, and n_concurrent (only the values actually given),
+         with agent-bench/SKILL.md's content embedded directly (the
+         skill lives beside bin/plan.py, not in the dispatch's --cwd, so
+         it is read here and inlined rather than named as a path for the
+         role to fetch).
+      4. On a judged-complete dispatch, write a signed result to
+         /var/lib/aidlc/bench-history/<same ISO timestamp>.json including
+         the pinned Harbor version (pin["tag"]) and its tree_sha256
+         (INV-40 — a record missing either is not written as complete).
+      5. Print a summary via emit()."""
+    # 1. pin availability
+    pin = agent_bench_pin_state()
+    if not pin.get("ok"):
+        return emit({"agent_bench_state": "unavailable",
+                     "pin_state": pin,
+                     "note": ("Harbor not installed or the pin no longer "
+                              "matches — bench skipped, never blocks the "
+                              "caller (INV-39)")}, 0)
+    # 2. scratch working directory — no --change, no .ai-dlc/tasks/ path
+    started_at = now_iso()
+    run_dir = BENCH_RUNS_DIR / started_at
+    run_dir.mkdir(parents=True, exist_ok=True)
+    # 3. build the prompt — only include the values actually given; let
+    # Harbor use its own defaults for anything not specified (PRD §05).
+    # The skill's own content is read and embedded directly (same fix as
+    # cmd_codegraph_brief's understand-diff/SKILL.md handling) rather than
+    # telling the role to "read it in this repo" — the workspace skill
+    # lives beside bin/plan.py, not in the target/scratch working tree
+    # the dispatch's --cwd points at, so a repo-relative instruction
+    # resolves nowhere (caught by the browser-verify e2e run: the role
+    # tried and failed to read a path under the target repo).
+    harbor_bin = str(AGENT_BENCH_ROOT / "venv" / "bin" / "harbor")
+    skill_path = (Path(__file__).resolve().parent.parent / "supervisor"
+                 / "skills" / "workspace" / "agent-bench" / "SKILL.md")
+    try:
+        skill_text = skill_path.read_text(encoding="utf-8")
+    except OSError:
+        skill_text = ("(agent-bench/SKILL.md not readable at "
+                      f"{skill_path} — follow the summary below)")
+    lines = [
+        "You are the agent-bench role running one benchmark round of "
+        "this pipeline itself, not modifying any user project.",
+        "Your skill instructions (agent-bench/SKILL.md) follow verbatim "
+        "— they are not a file path to go read; act on them directly:",
+        "----- BEGIN SKILL.md -----",
+        skill_text,
+        "----- END SKILL.md -----",
+        f"The pinned Harbor executable is at: {harbor_bin}",
+        f"Dataset: {dataset}",
+    ]
+    if model is not None:
+        lines.append(f"Model: {model}")
+    if n_concurrent is not None:
+        lines.append(f"n-concurrent: {n_concurrent}")
+    lines.append("When the run finishes, write agent-bench/result.md per "
+                 "the skill. If Harbor is unavailable or the run errors, "
+                 "follow the stop protocol — do not improvise a fake "
+                 "result.")
+    prompt = "\n".join(lines) + _subagent_listing_sentence()
+    out, frames = run_agent_bench_session(prompt, run_dir, run_dir,
+                                         mode, timeout)
+    # 4. signed result on a judged-complete dispatch
+    bench_state = "incomplete"
+    result_file = None
+    if out.get("round_complete") and not out.get("interrupted") \
+            and not out.get("timed_out"):
+        harbor_version = pin.get("pin", {}).get("tag")
+        tree_sha = pin.get("pin", {}).get("tree_sha256")
+        # INV-40 hard requirement: a record missing the pinned version or
+        # tree_sha256 must not be written as a complete result.
+        if harbor_version and tree_sha:
+            record = {
+                "timestamp": started_at,
+                "dataset": dataset,
+                "model": model,
+                "n_concurrent": n_concurrent,
+                "harbor_version": harbor_version,
+                "tree_sha256": tree_sha,
+                "dispatch": out,
+                "written_at": now_iso(),
+            }
+            BENCH_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+            result_file = BENCH_HISTORY_DIR / f"{started_at}.json"
+            save_json(result_file, record)
+            bench_state = "complete"
+        else:
+            out["record_rejected"] = (
+                "pin missing harbor_version or tree_sha256 — no signed "
+                "result written (INV-40)")
+    out["agent_bench_state"] = bench_state
+    if result_file is not None:
+        out["result_file"] = str(result_file)
+    # 5. summary to stdout
+    return emit(out, 0 if bench_state == "complete" else EXIT_INCONCLUSIVE)
+
+
+def cmd_browser_verify(change: str, repo: Path,
+                       task_dir: Path | None, pages: list[str],
+                       mode: str = "code.normal",
+                       timeout: int = 600) -> int:
+    """plan.py browser-verify — the session-dispatched page-verification
+    role.  Mirrors cmd_codegraph_brief's three-step shape:
+
+      1. Applicability: none of `pages` exist as files under `repo` →
+         no-op, return 0 (PRD §05 reverse gate — no page to check, no
+         session to open).
+      2. Pin availability: browser_verify_pin_state() not ok → emit
+         browser_verify_state='unavailable' and return 0 — must not block
+         the task (INV-39).  This is the expected/normal path in
+         environments without Playwright MCP installed.
+      3. Pin available → build a prompt naming the pinned Playwright MCP
+         root and the existing pages, instructing the role to read
+         supervisor/skills/workspace/browser-verify/SKILL.md and follow
+         it; dispatch run_browser_verify_session; judge frames; record
+         the outcome in state.json under 'browser_verify' and append
+         BROWSER_VERIFY_PASSED / BROWSER_VERIFY_FAILED /
+         BROWSER_VERIFY_UNAVAILABLE to events.jsonl."""
+    repo = repo.resolve()
+    task_dir = Path(task_dir).resolve() if task_dir else default_task_dir(repo,
+                                                                change)
+    # 1. applicability — at least one named page must stand in the repo
+    existing_pages = [p for p in pages if (repo / p).is_file()]
+    if not existing_pages:
+        return emit({"change": change, "repo": str(repo),
+                     "applicable": False,
+                     "browser_verify_state": "not_applicable",
+                     "pages": pages,
+                     "note": ("none of the named pages exist in the "
+                              "working tree — nothing to verify; no "
+                              "session dispatched (PRD §05 reverse "
+                              "gate)")}, 0)
+    # 2. pin availability
+    pin = browser_verify_pin_state()
+    if not pin.get("ok"):
+        return emit({"change": change, "repo": str(repo),
+                     "applicable": True,
+                     "browser_verify_state": "unavailable",
+                     "pin_state": pin,
+                     "pages": existing_pages,
+                     "note": ("Playwright MCP not installed — "
+                              "verification skipped, author work "
+                              "proceeds regardless (INV-39: must not "
+                              "block the task)")}, 0)
+    # 3. build the prompt and dispatch. The skill's own content is read
+    # and embedded directly (same fix as cmd_codegraph_brief's
+    # understand-diff/SKILL.md handling) rather than telling the role to
+    # "read it in this repo" — the workspace skill lives beside
+    # bin/plan.py, not in the target repo the dispatch's --cwd points at,
+    # so a repo-relative instruction resolves nowhere (this is exactly
+    # what the first live e2e run caught: the role tried and failed to
+    # read a path under the target repo).
+    pin_root = pin.get("root") or str(PLAYWRIGHT_MCP_ROOT)
+    pages_block = "\n".join(f"  {p}" for p in existing_pages)
+    skill_path = (Path(__file__).resolve().parent.parent / "supervisor"
+                 / "skills" / "workspace" / "browser-verify" / "SKILL.md")
+    try:
+        skill_text = skill_path.read_text(encoding="utf-8")
+    except OSError:
+        skill_text = ("(browser-verify/SKILL.md not readable at "
+                      f"{skill_path} — follow the summary below)")
+    verify_prompt = (
+        f"You are the browser-verify role for the delivery '{change}' "
+        f"in this repository.\n\n"
+        f"Your skill instructions (browser-verify/SKILL.md) follow "
+        f"verbatim — they are not a file path to go read; act on them "
+        f"directly:\n"
+        f"----- BEGIN SKILL.md -----\n{skill_text}\n"
+        f"----- END SKILL.md -----\n\n"
+        f"The pinned Playwright MCP server is installed at:\n"
+        f"  {pin_root}\n"
+        f"Drive it (the server under {pin_root}/node_modules/@playwright/"
+        f"mcp) against each of these pages:\n"
+        f"{pages_block}\n\n"
+        f"For each page: navigate to it, take an accessibility snapshot, "
+        f"check the HTTP status, the title, and any selector/text "
+        f"assertions named above.  Write your findings to "
+        f"browser-verify/report.md in the repo root: one row per page, "
+        f"pass/fail, failure reason if failed.\n\n"
+        f"Write only browser-verify/report.md.  When you are done, "
+        f"report the file you wrote."
+        + _subagent_listing_sentence())
+    out, frames = run_browser_verify_session(change, verify_prompt, repo,
+                                             task_dir, mode, timeout)
+    # 4. judge the outcome from the frames — never from the role's closing
+    # sentence (the spec's "recorded, never inferred" requirement)
+    report_path = repo / "browser-verify" / "report.md"
+    report_written = report_path.is_file() and report_path.stat().st_size > 0
+    interrupted = out.get("interrupted") or out.get("timed_out")
+    if interrupted:
+        bv_state, ev = "unavailable", "BROWSER_VERIFY_UNAVAILABLE"
+    elif report_written:
+        bv_state, ev = "passed", "BROWSER_VERIFY_PASSED"
+    else:
+        bv_state, ev = "failed", "BROWSER_VERIFY_FAILED"
+    state = load_json(task_dir / "state.json", {})
+    state["browser_verify"] = {
+        "session": out.get("session_name"),
+        "ts": now_iso(),
+        "file": str(report_path),
+        "written": report_written,
+        "applicable": True,
+        "pages": existing_pages,
+        "browser_verify_state": bv_state,
+    }
+    save_json(task_dir / "state.json", state)
+    event(task_dir, event=ev, change=change, repo=str(repo),
+          session=out.get("session_name"), file=str(report_path),
+          report_written=report_written)
+    out["phase"] = "BROWSER_VERIFY"
+    out["browser_verify_state"] = bv_state
+    out["report_file"] = str(report_path)
+    out["report_written"] = report_written
+    return emit(out, 0 if bv_state == "passed" else EXIT_INCONCLUSIVE)
+
+
 def detect_reasoning_runaway(frames: list) -> dict | None:
     """N7 (C1): detect reasoning runaway — line-level dedup ratio +
     cumulative chars dual threshold. The client-x round had 302,814 chars
@@ -9493,6 +10018,18 @@ def _build_subparsers(sub) -> None:
     br.add_argument("--task-dir", default=None, type=Path)
     br.add_argument("--mode", default="code.normal")
     br.add_argument("--timeout", type=int, default=600)
+    p = sub.add_parser("browser-verify",
+                       help="verify a list of pages via a session dispatch "
+                            "against the pinned Playwright MCP server — "
+                            "navigate, accessibility snapshot, assertions; "
+                            "writes browser-verify/report.md")
+    p.add_argument("--change", required=True)
+    p.add_argument("--repo", required=True, type=Path)
+    p.add_argument("--task-dir", default=None, type=Path)
+    p.add_argument("--pages", required=True,
+                   help="comma-separated list of page paths to verify")
+    p.add_argument("--mode", default="code.normal")
+    p.add_argument("--timeout", type=int, default=600)
     p = sub.add_parser("design-pick",
                        help="A1: pick one OpenDesign skill for the change "
                             "by frontmatter matching — no session, no model, "
@@ -9517,6 +10054,23 @@ def _build_subparsers(sub) -> None:
     p.add_argument("--tag", default=None,
                    help="the tag the pin names (with --write)")
     p.add_argument("--write", action="store_true")
+    p = sub.add_parser("bench",
+                       help="run one benchmark round of this pipeline "
+                            "itself via the pinned Harbor install — a "
+                            "standalone diagnostic, never gates a change "
+                            "(no --change, no .ai-dlc/tasks/ path)")
+    p.add_argument("--dataset", default="terminal-bench@2.0",
+                   help="the Harbor dataset to run (default: "
+                        "terminal-bench@2.0)")
+    p.add_argument("--model", default=None,
+                   help="the model Harbor runs with (omit to let Harbor "
+                        "use its own default)")
+    p.add_argument("--n-concurrent", type=int, default=None,
+                   help="concurrent task count (omit to let Harbor use "
+                        "its own default — plan.py invents no default of "
+                        "its own)")
+    p.add_argument("--mode", default="code.normal")
+    p.add_argument("--timeout", type=int, default=1800)
     p = sub.add_parser("scaffold",
                        help="W10: generate a four-file spec skeleton "
                             "(change.md, proposal.md, design.md, tasks.md) "
@@ -9665,6 +10219,12 @@ def main() -> None:
             sys.exit(cmd_codegraph_brief(args.change, args.repo.resolve(),
                                          args.task_dir, args.mode,
                                          args.timeout))
+    if args.cmd == "browser-verify":
+        sys.exit(cmd_browser_verify(args.change, args.repo.resolve(),
+                                    args.task_dir,
+                                    [p for p in args.pages.split(",")
+                                     if p],
+                                    args.mode, args.timeout))
     if args.cmd == "design-pick":
         sys.exit(cmd_design_pick(args.change, args.repo.resolve(),
                                  args.task_dir))
@@ -9672,6 +10232,9 @@ def main() -> None:
         sys.exit(cmd_design_pin(args.root, args.tag, args.write))
     if args.cmd == "codegraph-pin":
         sys.exit(cmd_codegraph_pin(args.root, args.tag, args.write))
+    if args.cmd == "bench":
+        sys.exit(cmd_bench(args.dataset, args.model, args.n_concurrent,
+                           args.mode, args.timeout))
     if args.cmd == "design-index":
         sys.exit(cmd_design_index(args.root, args.action))
     ap.error(f"unhandled {args.cmd}")
