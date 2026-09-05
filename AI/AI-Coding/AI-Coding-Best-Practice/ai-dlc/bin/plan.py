@@ -345,6 +345,19 @@ def run(cmd: list, cwd=None, timeout=None) -> subprocess.CompletedProcess:
                           timeout=timeout)
 
 
+def git_run(args: list, repo: Path, cwd=None,
+            timeout=None) -> subprocess.CompletedProcess:
+    """Like run(["git", "-C", str(repo)] + args), but always scopes a
+    per-invocation safe.directory override to exactly this path — never
+    written to any config file, never affecting any call outside this one
+    subprocess. Exists because plane_root() paths are chowned to a
+    different uid (swarm) than the caller's own, which trips git's
+    dubious-ownership refusal; this is git's own documented answer to
+    that scenario, applied narrowly (INV-31/INV-32)."""
+    return run(["git", "-c", f"safe.directory={repo}", "-C", str(repo)]
+               + args, cwd=cwd, timeout=timeout)
+
+
 # ── the plane's records: the only spec surface the caller reads ─────
 #
 # openspec is never executed caller-side (containment §1, invariant
@@ -1282,11 +1295,22 @@ def design_skill_state() -> dict:
 
 # ── the boundary check ──────────────────────────────────────────────
 
+# the captured stderr of the last git_status_paths failure (empty string on
+# success or when no failure has occurred). Read it immediately after a None
+# result to learn *why* git status failed — a module-level slot rather than a
+# second return value so the existing list[str] | None contract (and every
+# caller doing `git_status_paths(...) or []`) is untouched (G4, INV-33).
+_GIT_STATUS_LAST_ERROR = ""
+
+
 def git_status_paths(repo: Path) -> list[str] | None:
     """The paths git reports uncommitted right now, or None on git error."""
-    proc = run(["git", "-C", str(repo), "status", "--porcelain", "-uall"])
+    global _GIT_STATUS_LAST_ERROR
+    proc = git_run(["status", "--porcelain", "-uall"], repo)
     if proc.returncode != 0:
+        _GIT_STATUS_LAST_ERROR = (proc.stderr or "").strip()
         return None
+    _GIT_STATUS_LAST_ERROR = ""
     paths = []
     for line in (proc.stdout or "").splitlines():
         path = line[3:].strip().strip('"')
@@ -2269,7 +2293,7 @@ def cmd_sweep(change: str, repo: Path, task_dir: Path | None,
         c["paths"].append(path)
         if covered_by_baseline(path, baseline):
             c["baseline"].append(path)
-    ls = run(["git", "-C", str(root), "ls-files"])
+    ls = git_run(["ls-files"], root)
     tracked = {l for l in (ls.stdout or "").splitlines() if l} \
         if ls.returncode == 0 else set()
 
@@ -2296,7 +2320,7 @@ def cmd_sweep(change: str, repo: Path, task_dir: Path | None,
         for path in c["paths"]:
             target = root / path
             if path in tracked:
-                r = run(["git", "-C", str(root), "checkout", "--", path])
+                r = git_run(["checkout", "--", path], root)
                 restored.append({"path": path,
                                  "restored_to_head": r.returncode == 0,
                                  "output": _run_note(r)})
@@ -2677,8 +2701,20 @@ def dispatch_role(change: str, role: str, pkg: dict, repo: Path, prompt: str,
     # (dispatch-concurrency).
     pre_paths = git_status_paths(tree)
     if pre_paths is None:
+        # G4/INV-33: distinguish "target not readable at all" (genuinely
+        # indeterminate — keep "boundary": "unknown") from "git itself
+        # reported a specific error on an existing path" (surface the
+        # captured stderr so a human can act on it). The outcome label stays
+        # "unknown" per tasks.md; the two causes are distinguishable by the
+        # presence of the git_error field.
+        if tree.is_dir():
+            return {"artifact": role, "change": change,
+                    "error": "git status failed (baseline snapshot)",
+                    "boundary": "unknown",
+                    "git_error": _GIT_STATUS_LAST_ERROR}, EXIT_INCONCLUSIVE
         return {"artifact": role, "change": change,
-                "error": "git status failed (baseline snapshot)",
+                "error": ("baseline snapshot target not readable or not a "
+                          "directory: %s") % tree,
                 "boundary": "unknown"}, EXIT_INCONCLUSIVE
     baseline = set(pre_paths)
     evidence = next_evidence(task_dir, role)
