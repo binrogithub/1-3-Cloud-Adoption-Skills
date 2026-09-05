@@ -232,6 +232,8 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import json
 import math
 import os
@@ -263,7 +265,8 @@ from report import (RECORDS_ROOT, artifacts_view, codegraph_auto_dispatch,  # no
                     save_json, signed_records, write_record)
 from initiative import (  # noqa: E402
     cmd_advance as init_advance, cmd_register as init_register,
-    cmd_status as init_status)
+    cmd_status as init_status,
+    _find_manifest_for_change as init_find_manifest)
 
 # the shipped gateway client; AI_DLC_CLIENT overrides the path only (an
 # alternate install, or a double standing in for it — the flags are the
@@ -5756,6 +5759,27 @@ def cmd_close(change: str, repo: Path, task_dir: Path | None,
                    "dispatch; the merge stayed caller-side behind the "
                    "human gate, and the delivery report remains the "
                    "honest account of what was and was not checked")
+
+    # G1 (phase-chain-automation Phase B): after a successful merge +
+    # archive, advance any initiative that owns this change. Reuses the
+    # Phase A function (init_advance) — no second implementation. The
+    # manifest lookup is the same one `initiative advance` does
+    # internally; a change id in no manifest skips the hook entirely so
+    # close stays byte-identical to pre-change for that case (PRD §06
+    # regression). Advancement failure is reported under
+    # `initiative_advance` but never affects the closed phase's record
+    # or close's exit code (INV-20 / spec: "Advancement failure does not
+    # affect the closed phase's record").
+    if init_find_manifest(repo, change) is not None:
+        try:
+            _buf = io.StringIO()
+            with contextlib.redirect_stdout(_buf):
+                _adv_rc = init_advance(change, repo)
+            _adv = json.loads(_buf.getvalue()) \
+                if _buf.getvalue().strip() else {}
+        except Exception as _exc:  # never break a successful close
+            _adv = {"advanced": False, "error": str(_exc)}
+        out["initiative_advance"] = _adv
     return emit(out, 0)
 
 
@@ -8726,6 +8750,137 @@ def cmd_classify(repo: Path) -> int:
                 code)
 
 
+# ── G3: intent-scenario suggest — a read-only candidate-route menu ────
+#
+# Complementary to `next` ("this change should now run X"): `suggest`
+# answers "given this free text and repo state, which routes are worth
+# considering" — usable before any change id exists. It never executes,
+# never writes state, never opens a session (INV-23). Scoring reuses
+# _extract_change_keywords' IDF/CJK-bigram tokenizer (_tokenize_query)
+# against a fixed candidate table; no second tokenizer is introduced.
+
+_SUGGEST_CANDIDATES = [
+    {
+        "name": "inline_quick_fix",
+        "triggers": ["fix", "typo", "rename", "bug", "patch", "hotfix",
+                     "single file", "one file", "mechanical", "quick fix",
+                     "小改动", "改一行"],
+        "why": ("the text reads as a single-file or mechanical edit — "
+                "the inline route avoids the planning plane's overhead"),
+        "first_command": ("python3 bin/report.py init --task-dir <td> "
+                          "--repo <repo> --route inline --task-id <id> "
+                          "--change <change-id>"),
+    },
+    {
+        "name": "planned_full_pipeline",
+        "triggers": ["architecture", "refactor", "module", "modules",
+                     "multi module", "pipeline", "system", "redesign",
+                     "restructure", "梳理架构", "多模块", "重构"],
+        "why": ("multiple modules or architecture language — the planning "
+                "plane (validate → deliver → close) fits the scope"),
+        "first_command": ("python3 bin/plan.py validate --change "
+                          "<change-id> --repo <repo>"),
+    },
+    {
+        "name": "prd_spec_only",
+        "triggers": ["prd", "spec", "proposal", "design doc", "document",
+                     "write up", "plan first", "spec first",
+                     "先出", "文档", "先写"],
+        "why": ("the text asks for a PRD/spec before implementation — "
+                "produce the spec and let a human fill it in before "
+                "any code lands"),
+        "first_command": ("python3 bin/plan.py scaffold --change "
+                          "<change-id> --kind spec --repo <repo>"),
+    },
+    {
+        "name": "design_first",
+        "triggers": ["design", "ui", "page", "frontend", "web page",
+                     "deck", "slides", "dashboard", "界面", "页面", "前端"],
+        "why": ("the surface is web/deck — pick a design system before "
+                "writing pages"),
+        "first_command": ("python3 bin/plan.py design-pick --change "
+                          "<change-id> --repo <repo> --task-dir <td>"),
+    },
+    {
+        "name": "deploy_extra_gate",
+        "triggers": ["deploy", "production", "prod", "release", "ship",
+                     "上线", "部署", "发布"],
+        "why": ("deploy/production language — add an extra review gate "
+                "before close"),
+        "first_command": ("python3 bin/plan.py review --change "
+                          "<change-id> --repo <repo> --task-dir <td>"),
+    },
+]
+
+_SUGGEST_MAX = 4  # INV-24: at most 4 candidates, never silently raised
+
+
+def score_candidates(text: str, repo: Path,
+                     state: dict | None = None) -> list[dict]:
+    """Score the fixed candidate table against free text + repo state,
+    reusing _tokenize_query (the IDF/CJK-bigram tokenizer
+    _extract_change_keywords uses). Returns a list of
+    {name, why, first_command, score} sorted by score desc then
+    declaration order, with zero-score candidates dropped and the list
+    capped at _SUGGEST_MAX. Pure function: no writes, no dispatch."""
+    text_tokens = _tokenize_query(text or "")
+    state = state or {}
+
+    # A prior design decision (recorded by design-pick) reshapes the
+    # design_first rationale from "consider picking" to "continue".
+    has_design_selection = isinstance(state.get("design_selection"), dict) \
+        and bool(state["design_selection"].get("skill"))
+
+    scored = []
+    for i, cand in enumerate(_SUGGEST_CANDIDATES):
+        trig_tokens: set[str] = set()
+        for t in cand["triggers"]:
+            trig_tokens |= _tokenize_query(t)
+        score = len(trig_tokens & text_tokens)
+
+        why = cand["why"]
+        if cand["name"] == "design_first" and has_design_selection:
+            why = ("a design system is already picked for this change — "
+                   "continue from D1 rather than choosing afresh")
+
+        # Light state bonus: a recorded design selection nudges
+        # design_first up by one so it competes even on thin text.
+        if cand["name"] == "design_first" and has_design_selection:
+            score += 1
+
+        scored.append({"name": cand["name"], "why": why,
+                       "first_command": cand["first_command"],
+                       "score": score, "_order": i})
+
+    ranked = sorted(scored, key=lambda c: (-c["score"], c["_order"]))
+    positive = [c for c in ranked if c["score"] > 0]
+    for c in positive:
+        del c["_order"]
+    return positive[:_SUGGEST_MAX]
+
+
+def cmd_suggest(repo: Path, change: str | None, text: str) -> int:
+    """G3: `plan.py suggest --repo <repo> [--change <id>] "<text>"`.
+    Read-only query (INV-23): scores the fixed candidate table against
+    the free text and the change's existing state (when --change is
+    given), prints up to _SUGGEST_MAX ranked candidates as JSON, and
+    never executes, writes, or dispatches. An all-zero score returns an
+    empty candidate list plus a fallback pointing at `plan.py next`."""
+    state = None
+    if change:
+        td = default_task_dir(repo, change)
+        state = load_json(td / "state.json", {})
+    candidates = score_candidates(text, repo, state)
+    fallback = None
+    if not candidates:
+        fallback = ("no candidate scored above zero — the text does not "
+                    "lean toward any route; follow `plan.py next`'s "
+                    "default judgment")
+    return emit({"repo": str(repo), "change": change,
+                 "candidates": candidates, "fallback": fallback}, 0)
+
+
+
 def cmd_stage(change: str, repo: Path) -> int:
     """Stage a copy — the one mechanism reserved for a target the plane
     cannot see at all. A readable target is refused here with the split
@@ -9347,6 +9502,16 @@ def _build_subparsers(sub) -> None:
     p.add_argument("--task-dir", required=True, type=Path)
     p.add_argument("--repo", required=True, type=Path)
 
+    p = sub.add_parser("suggest",
+                       help="given free text and the repo state, list up to "
+                            "4 candidate automation routes with tradeoffs — "
+                            "read-only, never chooses or executes (G3).")
+    p.add_argument("--repo", required=True, type=Path)
+    p.add_argument("--change", default=None,
+                   help="optional change id; when given, the change's "
+                        "state.json reshapes the rationales")
+    p.add_argument("text", help="the free-text request to classify")
+
 def main() -> None:
     if "--describe" in sys.argv:
         ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -9360,6 +9525,8 @@ def main() -> None:
     args = ap.parse_args()
     if args.cmd == "next":
         sys.exit(cmd_next(args.task_dir, args.repo.resolve()))
+    if args.cmd == "suggest":
+        sys.exit(cmd_suggest(args.repo.resolve(), args.change, args.text))
     if args.cmd == "roles":
         sys.exit(cmd_roles(args.change, args.repo.resolve()))
     if args.cmd in ("validate", "graph", "status"):

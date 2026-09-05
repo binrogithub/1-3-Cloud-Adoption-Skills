@@ -64,8 +64,9 @@ P_SUBS=$(python3.12 bin/plan.py --help 2>&1 \
 # design-pin) — the dashes force the match below to include '-' now;
 # phase-chain-automation adds initiative; codegraph-role adds codegraph
 # (build/brief) + codegraph-scope; the Understand-Anything backend adds
-# codegraph-pin (mirrors design-pin)
-[[ "$P_SUBS" == "{roles,validate,graph,status,prompt,dispatch,phase,decide,review,boundary,accept,initiative,close,sweep,classify,stage,snapshot,untouched,migrate,sandbox,design,design-index,design-scope,codegraph-scope,codegraph,design-pick,design-pin,codegraph-pin,scaffold,next}" ]] \
+# codegraph-pin (mirrors design-pin); route-selfcheck-and-intent-menu
+# adds suggest (G3 intent-scenario candidate menu)
+[[ "$P_SUBS" == "{roles,validate,graph,status,prompt,dispatch,phase,decide,review,boundary,accept,initiative,close,sweep,classify,stage,snapshot,untouched,migrate,sandbox,design,design-index,design-scope,codegraph-scope,codegraph,design-pick,design-pin,codegraph-pin,scaffold,next,suggest}" ]] \
   || { echo "FAIL: plan.py subcommands are $P_SUBS"; exit 1; }
 # return is retired outright: argparse rejects it, and the refusal is
 # the named kind, not a silent alias

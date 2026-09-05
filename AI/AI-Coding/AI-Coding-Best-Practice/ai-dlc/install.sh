@@ -272,6 +272,46 @@ MEOF2
   else fail "Some checks failed"; return 1; fi
 }
 
+# ── G4: install version sync check ─────────────────────────────
+# Read-only: compare the repo's own VERSION against each installed
+# target's VERSION. A mismatch (different content or a missing target
+# VERSION file) is named on stdout; a registered target whose install
+# dir no longer exists locally is skipped without error (the machine
+# may be offline). Never modifies a target, never changes --doctor's
+# exit code (advisory, not a gate — INV-25).
+run_check_sync() {
+  local repo_version=""
+  if [[ -f "${SCRIPT_DIR}/VERSION" ]]; then
+    repo_version="$(cat "${SCRIPT_DIR}/VERSION" 2>/dev/null || true)"
+  fi
+  local tfile name kind config_dir dest tv
+  for tfile in "${SCRIPT_DIR}"/targets/*.json; do
+    [[ -f "${tfile}" ]] || continue
+    name=$("$PY" -c "import json;print(json.load(open('${tfile}')).get('name',''))" 2>/dev/null || echo "")
+    kind=$("$PY" -c "import json;print(json.load(open('${tfile}')).get('kind',''))" 2>/dev/null || echo "")
+    config_dir=$("$PY" -c "import json;print(json.load(open('${tfile}')).get('config_dir',''))" 2>/dev/null || echo "")
+    config_dir="$(expand_tilde "${config_dir}")"
+    # Only full-toolkit kinds carry VERSION (the same install path that
+    # copies SKILL.md/config/). Other kinds install a single prose file
+    # and have no version stamp to compare.
+    case "${kind}" in
+      codex-native-skill)   dest="${config_dir}/ai-dlc" ;;
+      claude-native-skill)  dest="${config_dir}/skills/ai-dlc" ;;
+      *) continue ;;
+    esac
+    # Registered target no longer present locally → skip (spec).
+    [[ -d "${dest}" ]] || continue
+    tv=""
+    if [[ -f "${dest}/VERSION" ]]; then
+      tv="$(cat "${dest}/VERSION" 2>/dev/null || true)"
+    fi
+    if [[ "${tv}" != "${repo_version}" ]]; then
+      warn "version drift: ${name} (${dest}/VERSION) — repo='${repo_version}' target='${tv}'"
+    fi
+  done
+  return 0
+}
+
 # ── The plane runtime: audit, provision, probe ────────────────
 
 # The state the planning plane needs, read from where it lives: the
@@ -747,6 +787,16 @@ install_full_toolkit() {
     fail "read-back failed: ${dest}/SKILL.md or bin/plan.py missing after install"
     return 1
   fi
+  # G4: VERSION travels with the toolkit (cp -r already carried it);
+  # an explicit copy + read-back so a future copy-mode change can't
+  # silently drop the version stamp --check-sync compares against.
+  if [[ -f "${SCRIPT_DIR}/VERSION" ]]; then
+    cp -f "${SCRIPT_DIR}/VERSION" "${dest}/VERSION"
+    if [[ ! -f "${dest}/VERSION" ]]; then
+      fail "read-back failed: ${dest}/VERSION missing after install"
+      return 1
+    fi
+  fi
   local dst_sha; dst_sha=$(sha256_file "${dest}/SKILL.md")
   manifest_update "${target_name}" "${kind}" "${config_dir}" "ai-dlc" \
     "${dest}/SKILL.md" "${dst_sha}" "."
@@ -1171,9 +1221,11 @@ run_bootstrap() {
 # ── Main ─────────────────────────────────────────────────────
 main() {
   local mode="install" target="" target_dir="" all_targets=0 uninstall=0
+  local check_sync=0
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --doctor) mode="doctor"; shift ;;
+      --check-sync) check_sync=1; shift ;;
       --provision-plane) mode="provision-plane"; shift ;;
       --opendesign) mode="opendesign"; shift ;;
       --understand-anything) mode="understand-anything"; shift ;;
@@ -1197,6 +1249,9 @@ Usage: install.sh [OPTIONS]
   --opendesign               deploy the OpenDesign tree (host step)
   --understand-anything      deploy the Understand-Anything skill tree (host step)
   --doctor                   health check + sha256 consistency (K5)
+  --check-sync               compare the repo VERSION against each installed
+                             target's VERSION; with --doctor, append mismatch
+                             lines to its output (advisory, never fails the gate)
   --provision-plane          open the plane runtime
   --bootstrap                fresh-environment setup (openspec → jiuwenswarm → MaaS key → OpenDesign → Understand-Anything → skills)
   --setup-maas-key           interactive MaaS credential entry for the gateway
@@ -1208,7 +1263,12 @@ HEOF
       *) shift ;;
     esac
   done
-  if [[ "${mode}" == "doctor" ]]; then run_doctor; exit $?; fi
+  if [[ "${mode}" == "doctor" ]]; then
+    run_doctor; local drc=$?
+    if [[ "${check_sync}" == "1" ]]; then run_check_sync; fi
+    exit "${drc}"
+  fi
+  if [[ "${check_sync}" == "1" ]]; then run_check_sync; exit 0; fi
   if [[ "${mode}" == "provision-plane" ]]; then provision_plane; exit $?; fi
   if [[ "${mode}" == "gen-root-skill" ]]; then
     gen_root_skill
