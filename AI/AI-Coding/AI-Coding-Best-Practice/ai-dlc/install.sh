@@ -252,19 +252,37 @@ MEOF2
     warn "no manifest — run an install first (K4: no manifest = no verifiable install)"
   fi
 
-  # ③ workspace registration: exactly 1 ui-designer entry
+  # ③ workspace registration: every shipped workspace skill is installed
+  # and registered exactly once. The list of skills to verify is taken
+  # from the shipped source (supervisor/skills/workspace/*/), not a hard-
+  # coded subset, so a newly added skill can never again go uncovered the
+  # way openspec-author did (INV-28). A missing SKILL.md at the installed
+  # destination or a registration count other than 1 fails --doctor
+  # (INV-29/30); a missing skills_state.json entirely stays a warn — an
+  # uninitialized gateway workspace is a different condition from a
+  # missing registration.
   local ws_state="${WORKSPACE_SKILLS_DIR}/skills_state.json"
-  if [[ -f "${ws_state}" ]]; then
-    local ws_count
-    ws_count=$("$PY" -c "import json; st=json.load(open('${ws_state}')); print(sum(1 for x in st.get('installed_plugins',[]) if x.get('name')=='ui-designer'))" 2>/dev/null || echo 0)
-    if [[ "${ws_count}" == "1" ]]; then
-      ok "workspace: ui-designer registered (1 entry)"
-    else
-      fail "workspace: ui-designer registration count is ${ws_count}, want 1"
-      all_ok=false
-    fi
-  else
+  if [[ ! -f "${ws_state}" ]]; then
     warn "workspace skills_state.json not found at ${ws_state}"
+  else
+    for skill_dir in "${WS_SKILLS_DIR}"/*/; do
+      [[ -d "${skill_dir}" ]] || continue
+      local skill_name; skill_name=$(basename "${skill_dir}")
+      local installed_skill_md="${WORKSPACE_SKILLS_DIR}/${skill_name}/SKILL.md"
+      if [[ ! -f "${installed_skill_md}" ]]; then
+        fail "workspace skill '${skill_name}' not installed: SKILL.md missing at ${installed_skill_md} (expected present, found absent)"
+        all_ok=false
+        continue
+      fi
+      local ws_count
+      ws_count=$("$PY" -c "import json; st=json.load(open('${ws_state}')); print(sum(1 for x in st.get('installed_plugins',[]) if x.get('name')=='${skill_name}'))" 2>/dev/null || echo 0)
+      if [[ "${ws_count}" == "1" ]]; then
+        ok "workspace: ${skill_name} registered (1 entry, SKILL.md present)"
+      else
+        fail "workspace skill '${skill_name}' registration count is ${ws_count}, want 1 (in ${ws_state})"
+        all_ok=false
+      fi
+    done
   fi
 
   echo "══════════════════════════════════════════════════"
