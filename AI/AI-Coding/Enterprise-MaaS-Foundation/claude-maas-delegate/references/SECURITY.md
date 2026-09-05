@@ -104,6 +104,44 @@ Re-run the installer with the new key — idempotent, atomically rewrites the
 config. Rotate after any interactive-channel key exposure before any production
 use.
 
+## Tool-scoping does not prevent command chaining
+
+`DELEGATE_ALLOWED_TOOLS` is passed straight through as `--allowedTools` to the
+underlying `claude` process (see `scripts/delegate`, ~line 460/494). The two
+presets documented in `SKILL.md` (`Read,Bash,Glob,Grep` and
+`Read,Write,Edit,Bash,Glob,Grep`) use the bare tool name `Bash` with no
+command-pattern restriction. A bare `Bash` entry grants the entire Bash tool
+unrestricted — every command that "Implementation" tasks run (including
+`git commit`) is unrestricted shell execution today, by design of that preset.
+
+A finer-grained pattern syntax also exists:
+
+| Form | Matches | Notes |
+| --- | --- | --- |
+| `Bash` (bare tool name) | every command, unrestricted | the preset default |
+| `Bash(<literal prefix>:*)` | commands starting with that literal prefix | e.g. `Bash(git add:*)` |
+| `Bash(<exact literal>)` | that exact command only | no wildcard, e.g. `Bash(git status)` |
+| `*` in the middle of a pattern | a literal asterisk character | never matches a real filename; only a trailing `:*` after a fixed literal prefix works as a wildcard |
+
+**Critical limitation, verified empirically:** none of the above forms — bare
+tool name, prefixed pattern, or exact literal string — protect against command
+chaining. A command allowed under `Bash(python3.12 -m pytest:*)` still executes
+in full, including anything appended with `&&`/`;`/pipes, e.g.
+`python3.12 -m pytest -q tests/ && rm -rf <target>` ran the `rm -rf` with no
+additional prompt. The same was independently reproduced against an exact
+literal (non-wildcarded) allowlist entry. Any tool grant, however narrowly
+scoped, should be treated as full shell trust for that invocation, not a
+command-injection boundary.
+
+Practical consequence: real safety for a delegated task must come from
+`routing-policy.md`'s task-type restrictions (keep security/architecture
+decisions local) and from the delegating agent independently verifying the
+task's `acceptance` command result afterward — never from the
+`DELEGATE_ALLOWED_TOOLS` value itself, regardless of how narrowly it's written.
+
+See `references/permission-scoping.md` for the concrete tested patterns and
+`references/PRD_ALLOWEDTOOLS_CHAINING_V1.md` for the full investigation.
+
 ## What this project does NOT do
 
 - Does not read, copy, proxy, or replay Anthropic OAuth tokens.

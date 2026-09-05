@@ -48,10 +48,22 @@ printf '%s' "$brief_json" | DELEGATE_ALLOWED_TOOLS='Read,Write,Edit,Bash,Glob,Gr
   maas-delegate run --agent cursor --conversation-id "$ID" --workspace "$PWD"
 ```
 
+Both presets above use the bare `Bash` tool name, which grants unrestricted
+shell — the `Bash` entry is not a command-level sandbox even when written
+more narrowly (e.g. `Bash(git add:*)`); see
+[permission-scoping.md](references/permission-scoping.md) for what
+`--allowedTools` patterns actually restrict and
+[SECURITY.md](references/SECURITY.md#tool-scoping-does-not-prevent-command-chaining)
+for why none of them stop command chaining.
+
 For parallel work, use separate handles or child sessions. Never run two
 prompts concurrently through one handle. Save the `delegation_handle` from the
 result to reuse the session on later turns. An invalid brief is rejected before
-any session is acquired.
+any session is acquired. When fanning a larger task out into multiple
+concurrent Claude-MaaS sub-tasks, give each one `Write`/`Edit` only (no git)
+and have the orchestrator perform `git add`/`git commit` itself once, after
+reviewing every sub-task's output — git's index lock has no automatic retry,
+so concurrent commits from separate sub-tasks are not safe.
 
 ## Verify and uninstall
 
