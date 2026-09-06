@@ -2717,6 +2717,12 @@ def dispatch_role(change: str, role: str, pkg: dict, repo: Path, prompt: str,
         return {**masked, "artifact": role, "change": change,
                 "stopped": "before dispatch — the client was never "
                            "invoked"}, EXIT_FORBIDDEN_TARGET
+    if maas_key_missing():
+        return {"artifact": role, "change": change,
+                "error": "MaaS API_KEY not configured — dispatch refused",
+                "remedy": "./install.sh --setup-maas-key",
+                "stopped": "before dispatch — the client was never invoked"
+               }, EXIT_INCONCLUSIVE
     # the boundary baseline: what the working tree already carried
     # BEFORE this run. Pre-existing uncommitted state (an openspec init,
     # a dev's WIP) is the caller's, never the role's — only the
@@ -3511,6 +3517,21 @@ def masked_surface_refusal(path: Path) -> dict | None:
                            "aidlc-shell")}
     except FileNotFoundError:
         return None
+
+
+def maas_key_missing() -> bool:
+    """Mirrors install.sh's maas_key_present() — same env file, same
+    convention, re-implemented in Python because plan.py has no shell
+    dependency on install.sh. True when no non-empty API_KEY line
+    exists."""
+    env_file = Path(os.environ.get("AI_DLC_ENV_FILE") or
+                     (Path.home() / ".jiuwenswarm" / "config" / ".env"))
+    if not env_file.is_file():
+        return True
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        if line.startswith("API_KEY="):
+            return not line.split("=", 1)[1].strip()
+    return True
 
 
 def plane_surface_state(root: Path) -> dict:

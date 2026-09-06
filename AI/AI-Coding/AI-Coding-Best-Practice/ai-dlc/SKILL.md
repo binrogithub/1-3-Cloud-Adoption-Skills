@@ -77,6 +77,7 @@ Gate approvals, route exceptions, and design skips must name a human
 | 1–3 files, or one mechanical change | inline, done | inline |
 | 4+ files / reading-is-for-writing / 2+ non-trivial changes | planning plane: roles author the change artifacts; you implement inline | planned |
 | A persistent artifact would materially reduce ambiguity | propose the planning plane; the human decides | planned |
+| Known up front to touch the web/deck design surface (even if only 1–3 files) | planning plane: the design pass goes first | planned |
 
 Size, file count, or risk never select the plane alone. Record the route
 (`report.py init --route planned --change <id>`). Any other value

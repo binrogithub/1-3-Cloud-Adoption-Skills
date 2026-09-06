@@ -405,6 +405,7 @@ def route_measurement(repo: Path, base: str | None,
                       for pat in ROUTE_EXCLUDES)
             (excluded if hit else files).append(f)
     return {"measured_files": len(files), "files": files[:10],
+            "all_files": files,
             "excluded_patterns": list(ROUTE_EXCLUDES),
             "excluded_count": len(excluded)}
 
@@ -415,13 +416,18 @@ def route_check(task_dir: Path, repo: Path, state: dict) -> tuple[dict, dict | N
     an inline route carrying a change at or above it stops the task for
     a person unless an explicit exception with a reason is recorded —
     the two options are re-running through the plane or recording that
-    exception. Returns (the check record to carry in the report, the
+    exception.  A second, independent contradiction: an inline route
+    whose change touches the web/deck design surface stops the task
+    regardless of file count — even a 1-file .html change — so small
+    design-surface changes do not sail through inline with no signal.
+    Returns (the check record to carry in the report, the
     block that stops the task, if any)."""
     route = state.get("route")
     threshold = route_threshold()
     work = resolve_work_ref(repo, state)
     measurement = route_measurement(repo, state.get("base_sha"),
                                      ref=work["ref"])
+    all_files = measurement.pop("all_files")
     check = {"route": route, "threshold": threshold,
              "threshold_source": str(CONFIG_PATH), **measurement,
              "work_ref": work}
@@ -441,7 +447,16 @@ def route_check(task_dir: Path, repo: Path, state: dict) -> tuple[dict, dict | N
         return check, {"why": ("no route threshold is configured — the "
                                "check stops rather than assuming one"),
                        **check}
-    if measurement["measured_files"] < threshold:
+    # the design surface is an independent contradiction — an inline
+    # route touching web/deck files stops the task regardless of file
+    # count, so a 1-file .html change does not sail through inline
+    # with no signal.  Symmetric with the count-based check: same
+    # gate, same exception path, same "contradiction stops the run"
+    # shape.
+    surface = design_surface(all_files, repo,
+                             head=work.get("sha") or work["ref"])
+    check["design_surface"] = surface
+    if measurement["measured_files"] < threshold and not surface["applicable"]:
         return check, None
     exc = load_json(task_dir / "gates" / "gate-route.answer.json")
     if isinstance(exc, dict) and exc.get("decision") == "exception" \
@@ -450,10 +465,21 @@ def route_check(task_dir: Path, repo: Path, state: dict) -> tuple[dict, dict | N
                               "author": exc.get("author"),
                               "recorded_at": exc.get("ts")}
         return check, None
-    return check, {"why": ("an inline route carries a change at or above "
-                           "the configured threshold — the routing table "
-                           "sends it to the planning plane"),
-                   **check}
+    over_threshold = measurement["measured_files"] >= threshold
+    if over_threshold and surface["applicable"]:
+        why = ("an inline route carries a change at or above the "
+               "configured threshold and touches the web/deck design "
+               "surface — the routing table sends it to the planning plane")
+    elif over_threshold:
+        why = ("an inline route carries a change at or above "
+               "the configured threshold — the routing table "
+               "sends it to the planning plane")
+    else:
+        why = ("an inline route touches the web/deck design surface "
+               "(%d file%s) — the routing table sends it to the planning "
+               "plane" % (surface["surface_files_total"],
+                          "" if surface["surface_files_total"] == 1 else "s"))
+    return check, {"why": why, **check}
 
 
 def is_git_repo(repo: Path) -> bool:
@@ -971,15 +997,45 @@ def cmd_gate(task_dir: Path, gate_id: str, decision: str | None,
             _dv.get("design_state") in _design_warn_states
             and bool((_dv.get("surface") or {}).get("applicable")))
         if not question:
-            if _design_warn:
+            _selection_degraded = bool(_dv.get("selection_degraded"))
+            if _selection_degraded:
+                # a silently-degraded arbiter result must not reuse the
+                # generic nonconforming warning — the human needs to see
+                # that the *selection itself* was unreliable, not just
+                # "design not verified".
+                _sdr = _dv.get("selection_degraded_reason", "")
+                _sf = (_dv.get("surface") or {}).get("surface_files") or []
+                _sf_display = ", ".join(_sf[:10])
+                if len(_sf) > 10:
+                    _sf_display += ", and %d more" % (len(_sf) - 10)
+                question = (
+                    "⚠ Design selection degraded: %s\n"
+                    "Files: %s\n"
+                    "Merge this delivery into the target branch? "
+                    "(rationale required)" % (_sdr, _sf_display))
+            elif _design_warn:
                 _n = (_dv.get("surface") or {}).get("surface_files_total", 0)
                 _rc = (_report.get("design_auto") or {}).get("rc", "?")
                 _ds = _dv.get("design_state", "design_unverified")
                 question = (
                     "⚠ Design %s: surface has %d web/deck files, "
-                    "design not verified (rc=%s).\n"
-                    "Merge this delivery into the target branch? "
-                    "(rationale required)" % (_ds, _n, _rc))
+                    "design not verified (rc=%s)." % (_ds, _n, _rc))
+                # append concrete evidence — file names and failed D3
+                # check names — so the human sees what specifically
+                # failed without opening state.json.
+                _sf = (_dv.get("surface") or {}).get("surface_files") or []
+                if _sf:
+                    _sf_display = ", ".join(_sf[:10])
+                    if len(_sf) > 10:
+                        _sf_display += ", and %d more" % (len(_sf) - 10)
+                    question += "\nFiles: %s" % _sf_display
+                _d3_checks = (_dv.get("d3_checks") or {}).get("checks") or {}
+                _failed_d3 = [k for k, v in _d3_checks.items() if not v]
+                if _failed_d3:
+                    question += "\nFailed D3 checks: %s" % ", ".join(
+                        _failed_d3)
+                question += ("\nMerge this delivery into the target branch? "
+                             "(rationale required)")
             else:
                 question = ("Merge this delivery into the target branch? "
                             "(rationale required)")
@@ -999,6 +1055,17 @@ def cmd_gate(task_dir: Path, gate_id: str, decision: str | None,
             dv = report.get("design", {})
             summary["design_state"] = dv.get("design_state")
             summary["surface"] = dv.get("surface")
+            # surface concrete evidence in the gate summary so the human
+            # can see which D3 checks failed and whether the selection
+            # was degraded, without opening report.json.
+            _d3 = dv.get("d3_checks") or {}
+            _checks = _d3.get("checks") or {}
+            summary["failed_d3_checks"] = [
+                k for k, v in _checks.items() if not v]
+            if dv.get("selection_degraded"):
+                summary["selection_degraded"] = True
+                summary["selection_degraded_reason"] = dv.get(
+                    "selection_degraded_reason", "")
             summary["outcome"] = report.get("outcome")
             summary["delivered"] = report.get("delivered")
             # N2: which ref was measured — the human sees this at the
@@ -1274,6 +1341,21 @@ def design_d3_checks(task_dir: Path, repo: Path) -> dict:
             "ts": dv.get("ts")}
 
 
+def _annotate_selection_degraded(result: dict, state: dict) -> dict:
+    """When D0 SELECT recorded a degraded selection (arbiter replied
+    but named no shortlist path, etc.), layer that fact onto the
+    design_validation result so downstream readers (gate-merge,
+    humans) can distinguish 'design verified but the selection itself
+    was unreliable' from a clean run. Adds two optional keys only —
+    never removes or alters existing keys, so callers that don't know
+    about them are unaffected (backward compatible)."""
+    selection = state.get("design_selection") or {}
+    if selection.get("degraded"):
+        result["selection_degraded"] = True
+        result["selection_degraded_reason"] = selection.get("reason", "")
+    return result
+
+
 def design_validation(task_dir: Path, repo: Path, state: dict,
                       landed: list, head: str | None = None) -> dict:
     """The design conclusion, read the way the spec verdict is: from the
@@ -1324,60 +1406,67 @@ def design_validation(task_dir: Path, repo: Path, state: dict,
     if artifacts["any_exist"]:
         d3 = design_d3_checks(task_dir, repo)
         if d3["available"] and d3["all_pass"]:
-            return {"design_state": "design_verified",
-                    "artifacts": artifacts, "d3_checks": d3,
-                    "surface": surface}
+            return _annotate_selection_degraded(
+                {"design_state": "design_verified",
+                 "artifacts": artifacts, "d3_checks": d3,
+                 "surface": surface}, state)
         if d3["available"] and not d3["all_pass"]:
-            return {"design_state": "design_nonconforming",
-                    "artifacts": artifacts, "d3_checks": d3,
-                    "why": ("design spec artifacts exist but one or more "
-                            "D3 verify checks failed — the pages do not "
-                            "conform to the spec"),
-                    "surface": surface}
+            return _annotate_selection_degraded(
+                {"design_state": "design_nonconforming",
+                 "artifacts": artifacts, "d3_checks": d3,
+                 "why": ("design spec artifacts exist but one or more "
+                         "D3 verify checks failed — the pages do not "
+                         "conform to the spec"),
+                 "surface": surface}, state)
         # artifacts exist but D3 verify hasn't run yet — nonconforming
         # until verified (the spec stands but conformance is unproven)
-        return {"design_state": "design_nonconforming",
-                "artifacts": artifacts,
-                "d3_checks": d3,
-                "why": ("design spec artifacts exist but D3 verify has "
-                        "not run — run plan.py design-verify to check "
-                        "conformance"),
-                "remedy": "plan.py design-verify --change <id> --repo <repo>",
-                "surface": surface}
+        return _annotate_selection_degraded(
+            {"design_state": "design_nonconforming",
+             "artifacts": artifacts,
+             "d3_checks": d3,
+             "why": ("design spec artifacts exist but D3 verify has "
+                     "not run — run plan.py design-verify to check "
+                     "conformance"),
+             "remedy": "plan.py design-verify --change <id> --repo <repo>",
+             "surface": surface}, state)
     # v1 legacy fallback: check for signed design records (backward compat
     # for tasks that ran the v1 design dispatch without producing v2
     # product-side artifacts).
     record_key = state.get("change_id") or state.get("task_id")
     if not record_key:
-        return {"design_state": "design_unspecified",
-                "why": ("no design spec artifacts exist and no change id "
-                        "or task id recorded — D1 SPECIFY was never run"),
-                "artifacts": artifacts, "surface": surface}
+        return _annotate_selection_degraded(
+            {"design_state": "design_unspecified",
+             "why": ("no design spec artifacts exist and no change id "
+                     "or task id recorded — D1 SPECIFY was never run"),
+             "artifacts": artifacts, "surface": surface}, state)
     records, rejected = signed_records(str(record_key), "design")
     if rejected:
-        return {"design_state": "design_unverified",
-                "why": ("design records failed signature verification "
-                        "— tampering evidence, not a conclusion"),
-                "rejected_records": rejected, "surface": surface}
+        return _annotate_selection_degraded(
+            {"design_state": "design_unverified",
+             "why": ("design records failed signature verification "
+                     "— tampering evidence, not a conclusion"),
+             "rejected_records": rejected, "surface": surface}, state)
     rec = None
     for r in reversed(records):
         if r.get("verb") == "design":
             rec = r
             break
     if rec is not None:
-        return {"design_state": "design_applied",
-                "record": {k: rec.get(k) for k in
-                           ("ts", "session", "surface", "template",
-                            "design_system", "files", "assets", "render",
-                            "placeholders")},
-                "artifacts": artifacts, "surface": surface}
+        return _annotate_selection_degraded(
+            {"design_state": "design_applied",
+             "record": {k: rec.get(k) for k in
+                        ("ts", "session", "surface", "template",
+                         "design_system", "files", "assets", "render",
+                         "placeholders")},
+             "artifacts": artifacts, "surface": surface}, state)
     # no product-side artifacts, no signed record — unspecified
-    return {"design_state": "design_unspecified",
-            "why": ("no design spec artifacts exist (design/tokens.css etc.) "
-                    "and no signed design record stands — D1 SPECIFY was "
-                    "never run or produced no artifacts"),
-            "remedy": "plan.py design-pick --change <id> --repo <repo>",
-            "artifacts": artifacts, "surface": surface}
+    return _annotate_selection_degraded(
+        {"design_state": "design_unspecified",
+         "why": ("no design spec artifacts exist (design/tokens.css etc.) "
+                 "and no signed design record stands — D1 SPECIFY was "
+                 "never run or produced no artifacts"),
+         "remedy": "plan.py design-pick --change <id> --repo <repo>",
+         "artifacts": artifacts, "surface": surface}, state)
 
 
 # ── the auto-dispatch: scheduling, not gating (design-autodispatch) ──
