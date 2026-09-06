@@ -453,6 +453,16 @@ class TestM4DesignProductFiles:
         report.save_json(gates_dir / "gate-merge.answer.json", {
             "decision": "approve", "rationale": "looks good",
             "approver": "tester", "ts": report.now_iso()})
+        # index.html is a web-surface file, so an inline route now
+        # stops at ROUTE_STOP regardless of file count (route_check's
+        # design-surface contradiction) unless an exception is recorded
+        # — this test is about M4 (design/ counts toward landed_files),
+        # not about routing, so record the exception the same way a
+        # real caller would.
+        report.save_json(gates_dir / "gate-route.answer.json", {
+            "decision": "exception",
+            "reason": "M4 fixture: design surface change, not a routing test",
+            "author": "tester", "ts": report.now_iso()})
 
         rc = report.cmd_deliver(task_dir, repo, "working",
                                 no_design=True, no_design_by="tester",
@@ -598,6 +608,16 @@ class TestM6DesignNoBlock:
             report.save_json(gates_dir / "gate-merge.answer.json", {
                 "decision": "approve", "rationale": "ok",
                 "approver": "tester", "ts": report.now_iso()})
+        # index.html is a web-surface file, so an inline route now
+        # stops at ROUTE_STOP regardless of file count (route_check's
+        # design-surface contradiction) unless an exception is
+        # recorded — these tests are about M6 (design state never
+        # hard-blocks merge), not about routing, so record the
+        # exception the same way a real caller would.
+        report.save_json(gates_dir / "gate-route.answer.json", {
+            "decision": "exception",
+            "reason": "M6 fixture: design surface change, not a routing test",
+            "author": "tester", "ts": report.now_iso()})
         return repo, task_dir
 
     def test_positive_delivered_with_nonconforming(self, tmp_path, capsys):

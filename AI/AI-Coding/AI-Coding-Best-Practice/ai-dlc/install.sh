@@ -1114,13 +1114,24 @@ UMEOF
 # ~/.jiuwenswarm/config/.env — the key is gateway-level, not per-agent.
 # Whichever agent's install configured it first, every agent installed
 # afterward (Claude, Codex, Cursor, Copilot) shares it for free; this
-# only prompts (or warns, non-interactively) when it's genuinely still
-# missing, so a second/third agent install is silent.
-ensure_maas_key() {
+# only prompts when it's genuinely still missing, so a second/third
+# agent install is silent. When the key is still missing after the
+# attempt, the install hard-fails — a "successful" install with no
+# credentials is a deferred failure that surfaces too late.
+
+# Shared "is a key already present" check — used by both ensure_maas_key()
+# and run_bootstrap() so the two never drift apart on what counts as
+# "configured". Returns 0 (true) when a non-empty API_KEY line exists.
+maas_key_present() {
   local env_file="${AI_DLC_ENV_FILE:-$HOME/.jiuwenswarm/config/.env}"
   local maas_key=""
   [[ -f "${env_file}" ]] && maas_key="$(grep '^API_KEY=' "${env_file}" 2>/dev/null | head -1 | cut -d= -f2- || true)"
-  if [[ -n "${maas_key}" ]]; then
+  [[ -n "${maas_key}" ]]
+}
+
+ensure_maas_key() {
+  local env_file="${AI_DLC_ENV_FILE:-$HOME/.jiuwenswarm/config/.env}"
+  if maas_key_present; then
     ok "MaaS API_KEY already configured (${env_file}) — shared by every installed agent"
     return 0
   fi
@@ -1128,11 +1139,69 @@ ensure_maas_key() {
     echo ""
     echo "No MaaS API key configured yet — every installed agent shares one gateway,"
     echo "so this only needs to happen once."
-    "${SCRIPT_DIR}/scripts/setup-maas-key.sh" --force
+    "${SCRIPT_DIR}/scripts/setup-maas-key.sh" --force \
+      || { fail "MaaS API_KEY still not configured"; return 1; }
   else
-    warn "MaaS API_KEY not configured — planned/multi-file tasks will fail until set."
-    warn "run './install.sh --setup-maas-key' interactively to configure credentials (needed once, shared by every agent)"
+    fail "MaaS API_KEY not configured and no key piped via stdin — install cannot proceed"
+    fail "run './install.sh --setup-maas-key' interactively, or pipe a key: printf '%s\n' \"\$KEY\" | ./install.sh --setup-maas-key"
+    return 1
   fi
+  # Re-check after setup — the script may have exited 0 but left the key
+  # empty (e.g. user pressed Enter at the hidden prompt).
+  maas_key_present || { fail "MaaS API_KEY still empty after setup"; return 1; }
+}
+
+# ── Review axes configuration helpers ──────────────────────────
+# After the per-target skill install loop, each target whose install
+# copied config/collapsed.config.yaml gets an interactive prompt to
+# pick review axes (presets or custom). Non-interactive environments
+# skip with a warn — review axes ship with working factory defaults,
+# so unlike the MaaS key this is not a hard failure.
+
+# Compute the installed collapsed.config.yaml path for a target, or
+# empty when the kind does not carry one (agents-md, cursor-rules,
+# copilot-instructions only write a single prose file — no config/).
+installed_config_path() {
+  # installed_config_path <config_dir> <kind>
+  local config_dir="$1" kind="$2"
+  case "${kind}" in
+    claude-native-skill) printf '%s' "${config_dir}/skills/ai-dlc/config/collapsed.config.yaml" ;;
+    codex-native-skill)  printf '%s' "${config_dir}/ai-dlc/config/collapsed.config.yaml" ;;
+    *) printf '' ;;
+  esac
+}
+
+# Queue a config file for review-axes configuration if it exists on
+# disk (the install may have failed or been skipped — only queue what
+# actually landed).
+maybe_queue_review_config() {
+  # maybe_queue_review_config <config_dir> <kind>
+  local config_dir="$1" kind="$2"
+  local cfg_path
+  cfg_path="$(installed_config_path "${config_dir}" "${kind}")"
+  if [[ -n "${cfg_path}" && -f "${cfg_path}" ]]; then
+    REVIEW_CONFIG_FILES+=("${cfg_path}")
+  fi
+  return 0
+}
+
+# Run setup-review-axes.sh for each queued config file. --configure-roles
+# forces a re-prompt (passes --force); without it, the script skips
+# targets that already differ from the factory default.
+configure_review_axes() {
+  local force_arg=""
+  [[ "${configure_roles}" == "1" ]] && force_arg="--force"
+  local cfg
+  for cfg in "${REVIEW_CONFIG_FILES[@]:-}"; do
+    [[ -n "${cfg}" ]] || continue
+    if [[ ! -t 0 ]]; then
+      warn "non-interactive environment — skipping review axes configuration for ${cfg}"
+      warn "run './install.sh --configure-roles' interactively to pick review axes"
+      continue
+    fi
+    "${SCRIPT_DIR}/scripts/setup-review-axes.sh" --config-file "${cfg}" ${force_arg} \
+      || warn "review axes configuration skipped for ${cfg}"
+  done
 }
 
 # ── Install upstream packages ────────────────────────────────
@@ -1204,11 +1273,15 @@ run_bootstrap() {
   echo ""
   echo "步骤 3/8 开始 — Huawei Cloud MaaS key (interactive prompt)"
   t0=$(date +%s)
-  if [[ -t 0 ]]; then
+  if maas_key_present; then
+    ok "MaaS API_KEY already configured — skipping prompt"
+  elif [[ -t 0 ]]; then
     "${SCRIPT_DIR}/scripts/setup-maas-key.sh" --force || rc=1
+    maas_key_present || { fail "MaaS API_KEY still not configured after setup"; rc=1; }
   else
-    warn "non-interactive environment — skipping MaaS key prompt"
-    warn "run './install.sh --setup-maas-key' interactively to configure credentials"
+    fail "MaaS API_KEY not configured and non-interactive environment — cannot proceed"
+    fail "run './install.sh --setup-maas-key' interactively to configure credentials"
+    rc=1
   fi
   echo "步骤 3/8 完成 — 实际耗时 $(( $(date +%s) - t0 ))s"
 
@@ -1283,7 +1356,7 @@ run_bootstrap() {
 # ── Main ─────────────────────────────────────────────────────
 main() {
   local mode="install" target="" target_dir="" all_targets=0 uninstall=0
-  local check_sync=0
+  local check_sync=0 configure_roles=0
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --doctor) mode="doctor"; shift ;;
@@ -1301,6 +1374,7 @@ main() {
       --target-dir) target_dir="$2"; shift 2 ;;
       --all-targets) all_targets=1; shift ;;
       --uninstall) uninstall=1; shift ;;
+      --configure-roles) configure_roles=1; shift ;;
       --help|-h)
         cat <<'HEOF'
 Usage: install.sh [OPTIONS]
@@ -1321,6 +1395,7 @@ Usage: install.sh [OPTIONS]
   --provision-plane          open the plane runtime
   --bootstrap                fresh-environment setup (openspec → jiuwenswarm → MaaS key → OpenDesign → Understand-Anything → skills)
   --setup-maas-key           interactive MaaS credential entry for the gateway
+  --configure-roles          interactively pick review axes for each installed target
   --quickstart               print a minimal task sequence (N8)
   --gen-root-skill           (re)generate SKILL.md at the repo root for Codex
                              native skill-directory discovery
@@ -1399,6 +1474,7 @@ QEOF
   echo "══════════════════════════════════════════════════"
   install_upstreams
   local rc=0
+  REVIEW_CONFIG_FILES=()
 
   # --target-dir: install into an explicit path.  If --target <name> is also
   # given, read the real kind from targets/<name>.json so agents-md/cursor-rules/
@@ -1411,8 +1487,10 @@ QEOF
       local tkind
       tkind=$("$PY" -c "import json; print(json.load(open('${tfile}')).get('kind','claude-skill'))" 2>/dev/null || echo "claude-skill")
       install_skills_to_target "${target}" "${target_dir}" "${tkind}" || rc=1
+      maybe_queue_review_config "${target_dir}" "${tkind}"
     else
       install_skills_to_target "ad-hoc" "${target_dir}" || rc=1
+      maybe_queue_review_config "${target_dir}" "claude-skill"
     fi
 
   # --all-targets: every registered target + workspace
@@ -1429,6 +1507,7 @@ QEOF
         rc=1; continue
       fi
       install_skills_to_target "${tname}" "${tconfig}" "${tkind}" || rc=1
+      maybe_queue_review_config "${tconfig}" "${tkind}"
     done
     install_workspace_skills || rc=1
 
@@ -1449,6 +1528,7 @@ QEOF
       exit 1
     fi
     install_skills_to_target "${target}" "${tconfig}" "${tkind}" || rc=1
+    maybe_queue_review_config "${tconfig}" "${tkind}"
 
   # default: claude target + workspace
   else
@@ -1470,13 +1550,15 @@ QEOF
     fi
     tkind=$("$PY" -c "import json; print(json.load(open('${tfile}')).get('kind','claude-skill'))" 2>/dev/null || echo "claude-skill")
     install_skills_to_target "claude-code" "${tconfig}" "${tkind}" || rc=1
+    maybe_queue_review_config "${tconfig}" "${tkind}"
     install_workspace_skills || rc=1
   fi
 
   if [[ -f ".gitignore" ]]; then
     grep -qF ".ai-dlc/tasks/" ".gitignore" 2>/dev/null || echo ".ai-dlc/tasks/" >> ".gitignore"
   fi
-  ensure_maas_key
+  ensure_maas_key || rc=1
+  configure_review_axes
   echo "══════════════════════════════════════════════════"
   if [[ "${rc}" == "0" ]]; then
     ok "Install complete. Run './install.sh --doctor' to verify."
