@@ -24,10 +24,63 @@ python3 bin/plan.py next --task-dir <td> --repo <repo>
 Returns `stage`, `blocked_on`, `do` (a directly executable command),
 `then`, and `not_yet` (what you can't run yet + the exit code it would give).
 
+## The commands, copy-paste ready
+From the toolkit root, `<repo>` = the project under development. Do not
+`--help` your way around — these four steps are the whole flow:
+
+```bash
+TD=<repo>/.ai-dlc/tasks/<task-id>
+
+# 1 · INIT + ROUTE
+python3 bin/report.py init --task-dir $TD --repo <repo> \
+  --route inline|planned --task-id <task-id> --change <change-id>
+
+# 2 · WORK — write code, run tests (planned route: signed spec verdict)
+python3 bin/plan.py validate --change <change-id> --repo <repo> --task-dir $TD
+
+# 2b · between work units — key the worktree's state (turn checkpoint;
+#      restore carries a stash-or-abort guard, never a blind clobber)
+python3 bin/report.py checkpoint --task-dir $TD --repo <repo> --label "<what this turn did>"
+python3 bin/report.py checkpoint --task-dir $TD --repo <repo> --list
+python3 bin/report.py checkpoint --task-dir $TD --repo <repo> --show <seq>
+
+# 2c · query the graph, not the code (deterministic, local, no session)
+python3 bin/plan.py codegraph query --repo <repo> --file <path> --hop 1
+python3 bin/plan.py codegraph query --repo <repo> --symbol <name>
+#    neighborhood_files = the surface; everything else you need not read
+
+# 3 · REPORT — landed files + spec validity + the execution gate
+python3 bin/report.py deliver --task-dir $TD --repo <repo> --outcome completed
+#    planned route also carries spec↔diff alignment: every Requirement
+#    traced to a hunk, orphans named both ways, surfaced at the gate
+
+# 4 · MERGE_GATE — request, a human answers, close
+python3 bin/report.py gate --request --task-dir $TD
+python3 bin/report.py gate --task-dir $TD \
+  --decision approve --approver <name> --rationale <why>
+python3 bin/plan.py close --change <change-id> --repo <repo> --task-dir $TD
+```
+Planned route: `git -C <repo> worktree add ../wt/<change-id> -b task/<change-id>`
+first (init's output carries the exact command), work there, deliver
+from it. Any doubt at any step: `plan.py next`.
+
 ## The flow
 `INIT → ROUTE → WORK → CHECK → REPORT → MERGE_GATE`. Work in `<repo>`,
 state under `.ai-dlc/tasks/<task_id>/`. Worktree first; nothing merges
 except through MERGE_GATE. 1–3 files → inline; 4+ → planned.
+
+**Effort tiers (the anti-15× rule — the expensive patterns are chosen,
+never defaulted into; multi-agent token burn runs ~15× a plain chat):**
+
+| tier | shape | crew | budget |
+|---|---|---|---|
+| 1 · inline | 1–3 files, one surface, no cross-module blast | 1 author session (you) | 3–10 tool calls |
+| 2 · planned | 4+ files or spec-bearing; one repo, one surface | author + validator dispatches; review round (concurrent) | 10–15 tool calls per role |
+| 3 · team | breadth: multiple surfaces/repos, or context overflow | tier-2 + per-surface roles (ui-designer, codegraph) | bounded per role; the round records the spend |
+
+Tier 3 is entered by explicit choice when the task's breadth names it —
+never by file count alone. `report.py init` records the tier with its
+budget; `report.py next` echoes it.
 
 0. **INIT** — if `<repo>` does not exist or is not a git repo, create the
    directory and run `git init` + an initial empty commit so worktree
@@ -35,15 +88,28 @@ except through MERGE_GATE. 1–3 files → inline; 4+ → planned.
 1. **ROUTE** — `report.py init --route inline|planned --change <id>`.
 2. **WORK** — read, write code, run tests. Planned: `plan.py validate` for the
    signed spec verdict.
-3. **REPORT** — `report.py deliver` measures landed files + spec validity.
+3. **REPORT** — `report.py deliver` measures landed files + spec validity,
+   and runs the **execution gate**: the repo's own toolchain (pytest, ruff,
+   mypy, npm test, tsc — whatever the changed files implicate and the repo
+   configures) gets a vote. Each tool is recorded `pass` / `fail` /
+   `not_applicable` — a language with no toolchain is explicit, never silent.
+   A failing tool ⇒ outcome `exec_gate_failed`, not delivered. A named human
+   can skip it: `--no-exec-gate --no-exec-gate-by <name> --no-exec-gate-why
+   <why>`. Green is necessary, never sufficient — the gate checks
+   executability, not correctness; the human at the merge gate still reads
+   the diff.
 4. **MERGE_GATE** — `report.py gate --request` → human answers with rationale
    → `plan.py close` merges, archives, cleans up.
 
 ## Three rules that bite
 1. **No auto-merge.** A human approves with a rationale or nothing merges.
 2. **No report is verification.** Present the diff; the human reads it.
-3. **--repo must be an existing git repo.** A typo'd path is refused, not silent.
-4. **A live result is not `delivered`.** A page that renders, a server that
+3. **Machine facts outrank consensus.** The git diff, the execution gate
+   and the five-facts frames are authoritative — however unanimous a
+   reviewer approval reads, it never overrides a measured failure (the
+   merge gate's question carries this reminder on every request).
+4. **--repo must be an existing git repo.** A typo'd path is refused, not silent.
+5. **A live result is not `delivered`.** A page that renders, a server that
    answers on its port — none of that is the flow's definition of done.
    Before telling the user a task is finished, call `plan.py next` and do
    what it says; if `do` names `report.py deliver`, run it. Only
@@ -115,13 +181,18 @@ paid for is never paid for again.
 **1b · REVIEW (planned route)** — once the design artifact stands, run the
 adversarial round: `plan.py review --change <id> --repo <repo> --axes
 "axis: reason, ..."` (comma-free reasons; the stage flag stops after the
-reviewers or resumes at the revision). The axes are the named list under
+reviewers or resumes at the revision; reviewers dispatch concurrently —
+default 4 at once). The axes are the named list under
 `review:` in `config/collapsed.config.yaml` — each chosen with a reason,
 never more than the configured maximum, never off the list, never two
 personas sharing a stance. Each reviewer holds exactly one axis and one
 antagonistic persona, dispatched through the same per-role path (own
-session, frames, boundary baseline), and files exactly one finding — or
-an explicit nothing-found naming what it examined; a second finding, a
+session, frames, boundary baseline), and files exactly one record — a
+**Finding grounded in code evidence** (`Evidence: <path>:<line> — what it
+shows`; a diff hunk `@@` counts; a finding without evidence is refused by
+the judge), a **Concern** (a suspicion it cannot ground — filed with what
+it examined; a reading aid that never gates anything), or an explicit
+nothing-found naming what it examined; a second record, a
 write outside its own path (the design included) or silence fails the
 dispatch. Then **you synthesise the findings yourself** — no session is
 opened for it, no role dispatched: you already hold the design and
@@ -129,7 +200,10 @@ every finding. Write `review/synthesis.md` in the round's record:
 groups ordered by where in the design each finding lands, every
 opposing pair named with what one increases and the other reduces (or
 an explicit statement that none oppose — silence does not stand in for
-it), every concern citing its finding as `- [axis] …`; the round fails
+it), every concern citing its finding as `- [axis] — confirmed:
+<path>:<line>` or `- [axis] — refuted: <path>:<line>` — you checked the
+finding's Evidence against the code yourself, and a citation without a
+verdict is the false consensus the round refuses; the round fails
 if a concern cites nothing, a filed finding appears in no group, or a
 passage recommends or ranks between findings — the synthesis surfaces,
 it never decides. `--stage synthesis` checks it; `--stage revision`

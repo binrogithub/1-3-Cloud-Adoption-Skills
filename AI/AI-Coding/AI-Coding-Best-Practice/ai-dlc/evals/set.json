@@ -1,0 +1,92 @@
+{
+  "note": "P1-3 eval set — small, fixed, deterministic-judged. Run before and after a plane change; compare the two results files. Fixtures materialise as fresh git repos; checks assert behaviour (exists / contains / command exit).",
+  "tasks": [
+    {
+      "id": "fix-off-by-one",
+      "prompt": "The function last_n in util.py returns one element too few for n>0. Fix it so last_n([1,2,3,4],2) returns [3,4]. Do not change the signature.",
+      "objective": "fix an off-by-one slice bug",
+      "files": {
+        "util.py": "def last_n(xs, n):\n    return xs[:-n]\n",
+        "check.py": "from util import last_n\nassert last_n([1,2,3,4],2) == [3,4]\nassert last_n([1],1) == [1]\nassert last_n([],1) == []\nprint('ok')\n"
+      },
+      "checks": [{"kind": "command", "cmd": ["python3", "check.py"]}]
+    },
+    {
+      "id": "add-validation",
+      "prompt": "Make greet(name) in greet.py raise ValueError with the message 'empty name' when name is empty or only whitespace; otherwise return 'hello, <name>' as it does now.",
+      "objective": "add input validation",
+      "files": {
+        "greet.py": "def greet(name):\n    return 'hello, ' + name\n",
+        "check.py": "import greet\ntry:\n    greet('  ')\n    raise SystemExit('no error raised')\nexcept ValueError as e:\n    assert str(e) == 'empty name', str(e)\nassert greet('ada') == 'hello, ada'\nprint('ok')\n"
+      },
+      "checks": [{"kind": "command", "cmd": ["python3", "check.py"]}]
+    },
+    {
+      "id": "write-median",
+      "prompt": "Implement median(xs) in stats.py per its docstring: the middle value of a sorted list, or the mean of the two middle values for even length. An empty list raises ValueError.",
+      "objective": "implement a function from a docstring",
+      "files": {
+        "stats.py": "def median(xs):\n    \"\"\"Middle of a sorted list; mean of the two middles when even.\n    Empty list raises ValueError.\"\"\"\n    raise NotImplementedError\n",
+        "check.py": "from stats import median\nassert median([3,1,2]) == 2\nassert median([4,1,3,2]) == 2.5\ntry:\n    median([])\n    raise SystemExit('no error')\nexcept ValueError:\n    pass\nprint('ok')\n"
+      },
+      "checks": [{"kind": "command", "cmd": ["python3", "check.py"]}]
+    },
+    {
+      "id": "html-page",
+      "prompt": "Create index.html for a small coffee guide: a <title> containing 'Coffee Guide', a <nav> element, and an <h1> heading. Plain HTML, no external resources.",
+      "objective": "produce a minimal valid page",
+      "files": {},
+      "checks": [
+        {"kind": "exists", "path": "index.html"},
+        {"kind": "contains", "path": "index.html", "pattern": "<title>"},
+        {"kind": "contains", "path": "index.html", "pattern": "<nav>"},
+        {"kind": "contains", "path": "index.html", "pattern": "<h1>"}
+      ]
+    },
+    {
+      "id": "css-tokens",
+      "prompt": "Create tokens.css defining a :root block with at least three CSS custom properties, one of them --color-accent with any value. No external imports.",
+      "objective": "produce a token stylesheet",
+      "files": {},
+      "checks": [
+        {"kind": "exists", "path": "tokens.css"},
+        {"kind": "contains", "path": "tokens.css", "pattern": ":root"},
+        {"kind": "contains", "path": "tokens.css", "pattern": "--color-accent"}
+      ]
+    },
+    {
+      "id": "fix-json",
+      "prompt": "config.json is invalid JSON (a trailing comma). Fix it so python3 -c \"import json;json.load(open('config.json'))\" exits 0. Keep every key.",
+      "objective": "repair a broken config file",
+      "files": {
+        "config.json": "{\n  \"host\": \"localhost\",\n  \"port\": 8080,\n}\n"
+      },
+      "checks": [{"kind": "command", "cmd": ["python3", "-c", "import json;d=json.load(open('config.json'));assert d['port']==8080 and d['host']=='localhost'"]}]
+    },
+    {
+      "id": "rename-caller",
+      "prompt": "Rename the function calc to compute in mathlib.py and update the one caller in main.py. No other changes.",
+      "objective": "rename across a module and its caller",
+      "files": {
+        "mathlib.py": "def calc(a, b):\n    return a * b + 1\n",
+        "main.py": "from mathlib import calc\nprint(calc(2, 3))\n"
+      },
+      "checks": [
+        {"kind": "contains", "path": "mathlib.py", "pattern": "def compute("},
+        {"kind": "command", "cmd": ["python3", "main.py"]}
+      ]
+    },
+    {
+      "id": "write-failing-test",
+      "prompt": "cart.py has a bug: total() ignores the second item. Write tests/test_cart.py with at least two tests using plain asserts (no framework); at least one must FAIL against the current code. Do not fix cart.py.",
+      "objective": "write a test that fails against a real bug",
+      "files": {
+        "cart.py": "class Cart:\n    def __init__(self):\n        self.items = []\n    def add(self, price):\n        self.items.append(price)\n    def total(self):\n        if not self.items:\n            return 0\n        return self.items[0]\n"
+      },
+      "checks": [
+        {"kind": "exists", "path": "tests/test_cart.py"},
+        {"kind": "command", "cmd": ["python3", "tests/test_cart.py"], "expect_rc": 1}
+      ]
+    }
+  ]
+}

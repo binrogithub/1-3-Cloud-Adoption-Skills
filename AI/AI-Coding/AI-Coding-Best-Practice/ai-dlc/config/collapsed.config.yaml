@@ -42,3 +42,11 @@ design:                           # v2 design architecture: D0 SELECT → D1 SPE
   verify_checks: [tokens_used, skill_sha_match, components_conform, no_placeholder,
                   design_artifacts_exist, tokens_json_valid]  # D3 mechanical checks, don't read frames
   artifacts: [tokens.css, tokens.json, components.md, pages.md, assets.md]  # D1 product files → git
+
+dispatch_policy:                  # P1-2 — the dispatch gate (OpenBot policy.ts semantics):
+                                  # deny first (never overruled by allow), allow second, default-deny.
+                                  # Patterns are shell globs over the role name; audit lands in
+                                  # <task-dir>/dispatch-policy.jsonl BEFORE anything runs.
+  deny:                           # comma-separated globs, e.g.:  deny: internal-*, staging-role
+  allow:                          # empty = the plane's own roster (proposal/specs/design/tasks/
+                                  # review-*/design-index/ui-designer/archiver/codegraph)

@@ -1,0 +1,155 @@
+{
+  "mode": "design-select",
+  "root": "/opt/open-design",
+  "intent_meta": "on",
+  "queries": 13,
+  "hit@1": 1.0,
+  "hit@3": 1.0,
+  "rows": [
+    {
+      "q": "blog long-form articles page",
+      "golden": "blog-post",
+      "top3": [
+        "blog-post",
+        "full-page-screenshot",
+        "magazine-poster"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "documentation docs page for developers",
+      "golden": "docs-page",
+      "top3": [
+        "docs-page",
+        "writing-guidelines",
+        "faq-page"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "admin dashboard with charts",
+      "golden": "dashboard",
+      "top3": [
+        "dashboard",
+        "social-media-matrix-tracker-template",
+        "wireframe-greybox"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "contact widget form page",
+      "golden": "contact-widget",
+      "top3": [
+        "contact-widget",
+        "faq-page",
+        "pricing-page"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "email marketing campaign page",
+      "golden": "email-marketing",
+      "top3": [
+        "email-marketing",
+        "waitlist-page",
+        "screenshots-marketing"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "github profile dashboard",
+      "golden": "github-dashboard",
+      "top3": [
+        "github-dashboard",
+        "live-dashboard",
+        "social-media-dashboard"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "hr onboarding flow pages",
+      "golden": "hr-onboarding",
+      "top3": [
+        "hr-onboarding",
+        "mobile-onboarding",
+        "wireframe-mobile-flow"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "finance report page",
+      "golden": "finance-report",
+      "top3": [
+        "finance-report",
+        "html-ppt-weekly-report",
+        "clinical-case-report"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "dating web landing",
+      "golden": "dating-web",
+      "top3": [
+        "dating-web",
+        "imagegen-frontend-web",
+        "web-prototype"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "digital eguide page",
+      "golden": "digital-eguide",
+      "top3": [
+        "digital-eguide",
+        "faq-page",
+        "pricing-page"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "博客 长文 页面",
+      "golden": "blog-post",
+      "top3": [
+        "blog-post",
+        "weekly-update",
+        "video-shortform"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "文档 开发者 页面",
+      "golden": "docs-page",
+      "top3": [
+        "docs-page",
+        "github-dashboard",
+        "pm-spec"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "面向开发者的中文文档中心 api 文档 开发者指南 帮助中心 知识库",
+      "golden": "docs-page",
+      "top3": [
+        "docs-page",
+        "faq-page",
+        "github-dashboard"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    }
+  ],
+  "plane_git": "e05e25e797e4ec0b3d9051db69ba70161831544f",
+  "ts": "2026-09-09T19:01:24.770811+00:00"
+}

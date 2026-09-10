@@ -256,8 +256,13 @@ def test_run_role_boundary_failure_distinguishes_missing_from_git_error(
     missing = tmp_path / "does-not-exist"  # not a directory
 
     def fake_prepare(change, role, package_file, workspace=None):
-        # repo is the tree when ws is None; we swap it per-case below
-        return ({"repo": str(_cur_tree[0])}, _cur_tree[0], "prompt", "lang")
+        # repo is the tree when ws is None; we swap it per-case below.
+        # The prompt is a complete P0-2 brief so the dispatch reaches
+        # the baseline path this test exercises (an incomplete brief is
+        # refused earlier, by contract).
+        brief = ("Objective: o.\nExpected output: e.\nTools: t.\n"
+                 "Boundary: b.\n")
+        return ({"repo": str(_cur_tree[0])}, _cur_tree[0], brief, "lang")
 
     _cur_tree = [existing]
 
@@ -278,7 +283,9 @@ def test_run_role_boundary_failure_distinguishes_missing_from_git_error(
 
     # case 1: existing dir, git itself errored -> git_error field present
     _cur_tree[0] = existing
-    res, code = plan._run_role("c", "role", Path("/pkg"), Path("/td"),
+    # P1-2: the role must sit on the policy allowlist so the dispatch
+    # reaches the baseline path this test exercises
+    res, code = plan._run_role("c", "proposal", Path("/pkg"), Path("/td"),
                                "mode", 10, None)
     assert res["boundary"] == "unknown"
     assert "git_error" in res
@@ -287,7 +294,7 @@ def test_run_role_boundary_failure_distinguishes_missing_from_git_error(
     # case 2: target not a directory -> no git_error field, a distinct
     # 'not readable' error message
     _cur_tree[0] = missing
-    res2, code2 = plan._run_role("c", "role", Path("/pkg"), Path("/td"),
+    res2, code2 = plan._run_role("c", "proposal", Path("/pkg"), Path("/td"),
                                  "mode", 10, None)
     assert res2["boundary"] == "unknown"
     assert "git_error" not in res2

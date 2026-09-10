@@ -53,9 +53,9 @@ fi
 #    sweep (v0.7.0 added exception and the phase runner; the
 #    design-review change adds review; agent-onboarding adds next).
 R_SUBS=$(python3.12 bin/report.py --help 2>&1 \
-         | grep -oE '\{[a-z,]+\}' | head -1)
-[[ "$R_SUBS" == "{init,deliver,gate,exception,correct,next}" ]] \
-  || { echo "FAIL: report.py subcommands are $R_SUBS, want {init,deliver,gate,exception,correct,next}"; exit 1; }
+         | grep -oE '\{[a-z,-]+\}' | head -1)
+[[ "$R_SUBS" == "{init,deliver,dispatch-doctor,stallguard,nudge,patterns,checkpoint,gate,exception,correct,next}" ]] \
+  || { echo "FAIL: report.py subcommands are $R_SUBS, want {init,deliver,dispatch-doctor,stallguard,nudge,patterns,checkpoint,gate,exception,correct,next}"; exit 1; }
 P_SUBS=$(python3.12 bin/plan.py --help 2>&1 \
          | grep -oE '\{[a-z,-]+\}' | head -1)
 # any-directory adds the workspace subcommands (classify, stage,
@@ -68,7 +68,7 @@ P_SUBS=$(python3.12 bin/plan.py --help 2>&1 \
 # (build/brief) + codegraph-scope; the Understand-Anything backend adds
 # codegraph-pin (mirrors design-pin); route-selfcheck-and-intent-menu
 # adds suggest (G3 intent-scenario candidate menu)
-[[ "$P_SUBS" == "{roles,validate,graph,status,prompt,dispatch,phase,decide,review,boundary,accept,initiative,close,sweep,classify,stage,snapshot,untouched,migrate,sandbox,design,design-index,design-scope,codegraph-scope,codegraph,browser-verify,design-pick,design-pin,codegraph-pin,bench,scaffold,next,suggest}" ]] \
+[[ "$P_SUBS" == "{roles,validate,graph,status,prompt,dispatch,phase,decide,review,boundary,accept,initiative,close,sweep,classify,stage,snapshot,untouched,migrate,sandbox,design,design-index,design-scope,codegraph-scope,codegraph,browser-verify,design-pick,design-pin,codegraph-pin,bench,scaffold,next,suggest,design-pages,design-pages-specify,design-materialize,wbs}" ]] \
   || { echo "FAIL: plan.py subcommands are $P_SUBS"; exit 1; }
 # return is retired outright: argparse rejects it, and the refusal is
 # the named kind, not a silent alias

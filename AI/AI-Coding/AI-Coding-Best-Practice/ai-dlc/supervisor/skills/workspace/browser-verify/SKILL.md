@@ -35,3 +35,28 @@ If the Playwright MCP server is unavailable or a page is unreachable, do
 not improvise, do not guess, do not write a "looks correct" result. Follow
 the stop protocol your dispatch prompt already gives you — this file does
 not repeat it. Stop and report exactly what happened.
+
+
+## Persist what you checked (P1-7 — exploration vs verification)
+
+This skill is the *exploration* half: you drive MCP because you have
+never seen this page. Verification is the other discipline. After a
+page passes, write `browser-verify/spec.json` in the repo root — one
+entry per page:
+
+```json
+{"pages": [{"path": "index.html", "title": "the exact title",
+            "selectors": ["nav", "h1"], "texts": ["Coffee Guide"]}]}
+```
+
+Every later verification then replays deterministically, without a
+model and without MCP:
+
+```bash
+python3 bin/plan.py browser-verify --repo <repo> --change <id>   --run-spec browser-verify/spec.json
+```
+
+Two attempts per page classify the verdict: pass (first attempt),
+flake (fail-then-pass — suspicious, named, never silent), fail (both
+attempts — the trace lands in the task record). One isolated browser
+profile per attempt: session state never leaks.
