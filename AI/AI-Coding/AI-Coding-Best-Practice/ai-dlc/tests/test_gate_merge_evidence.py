@@ -259,8 +259,14 @@ class TestRegressionPureCode:
             "surface": _surface([], applicable=False)
         })
         req = _gate_request(task_dir)
+        # P1-6: the standing machine-facts reminder and the execution
+        # gate's state ride with every default question — the base
+        # sentence is unchanged, the two appended lines are the contract
         expected = ("Merge this delivery into the target branch? "
-                    "(rationale required)")
+                    "(rationale required)\n"
+                    "Execution gate: not run (this report predates the "
+                    "gate).\n"
+                    + report.GATE_AUTHORITY_NOTE)
         assert req["question"] == expected
 
     def test_pure_code_options_unchanged(self, tmp_path):

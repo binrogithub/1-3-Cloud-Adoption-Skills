@@ -1,0 +1,9 @@
+# The lint baseline for the plane own code. 01-notes-cli evaluation:
+# the exec gate ruff dimension went live on the host and bit its own
+# fix task on pre-existing style debt. The baseline is the classic
+# error floor (pycodestyle E + pyflakes F) minus E501 - prompt text is
+# deliberately long-lined house style; percent formatting, hand-checked
+# subprocess returncodes and deliberate blind excepts are likewise out.
+[lint]
+select = ["E", "F"]
+ignore = ["E501"]

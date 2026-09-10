@@ -233,6 +233,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import fnmatch
 import io
 import json
 import math
@@ -246,6 +247,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import html.parser
@@ -259,8 +261,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from report import (RECORDS_ROOT, artifacts_view, codegraph_auto_dispatch,  # noqa: E402
                     codegraph_auto_due, codegraph_surface,
-                    design_surface, cmd_next, event, excluded, human_state,
-                    is_git_repo, load_json, newest_verdict, now_iso,
+                    design_surface, cmd_next, event, excluded,
+                    load_json, newest_verdict, now_iso,
                     plane_graph, plane_root, plane_status, plane_tree,
                     save_json, signed_records, write_record)
 from initiative import (  # noqa: E402
@@ -575,6 +577,11 @@ def detect_language(change_dir: Path, requirement: str) -> str:
     return "English"
 
 
+# the project-manager and coder roles are HATS the coding agent
+# wears (roles/*.md) — they are not dispatched through the gateway
+PM_ROLE = "project-manager"
+
+
 def assemble_prompt(pkg: dict, role: str, language: str,
                     split: dict | None = None) -> str:
     """The prompt carries the handoff package, the artifact identity, the
@@ -587,6 +594,17 @@ def assemble_prompt(pkg: dict, role: str, language: str,
     absolute path as the place to read, with the working directory —
     where every write belongs — named as separate from it."""
     sections = [
+        f"Objective: write the {role} artifact for change "
+        f"{pkg['change_id']} from the handoff package quoted verbatim "
+        "below.",
+        f"Expected output: exactly your own artifact file, at the "
+        "output path the openspec CLI reports for it, in the shape its "
+        f"template gives. Write the artifact in {language}.",
+        "Tools: the openspec-author skill through the openspec CLI for "
+        "your authoring guidance; the project's own files where your "
+        "artifact needs them.",
+        f"Boundary: write only inside openspec/changes/{pkg['change_id']}/"
+        " at the CLI-reported path; no other file is touched.",
         "===== 1. HANDOFF PACKAGE =====",
         f"requirement (verbatim):\n{pkg['requirement']}",
         f"change_id: {pkg['change_id']}\ncapability: {pkg['capability']}\n"
@@ -2219,7 +2237,7 @@ def view_state(repo: Path) -> dict:
                 "HEAD"])
     if proc.returncode != 0:
         return {"state": "no_history"}
-    heads = [l for l in (proc.stdout or "").splitlines() if l]
+    heads = [ln for ln in (proc.stdout or "").splitlines() if ln]
     if not heads:
         return {"state": "no_history"}
     missing = [h for h in heads if not (repo / h).is_file()]
@@ -2319,7 +2337,7 @@ def cmd_sweep(change: str, repo: Path, task_dir: Path | None,
         if covered_by_baseline(path, baseline):
             c["baseline"].append(path)
     ls = git_run(["ls-files"], root)
-    tracked = {l for l in (ls.stdout or "").splitlines() if l} \
+    tracked = {ln for ln in (ls.stdout or "").splitlines() if ln} \
         if ls.returncode == 0 else set()
 
     removed: list = []
@@ -2689,6 +2707,109 @@ def cmd_dispatch(change: str, role: str, package_file: Path,
     return emit(out, code)
 
 
+# P0-2 (brief schema): every dispatch brief names its four elements as
+# explicit line markers — Objective / Expected output / Tools /
+# Boundary. The check refuses a brief missing one BEFORE a session
+# opens: a vague brief buys duplicated work (Anthropic's dispatch
+# briefs name the same four; CrewAI's Task makes description +
+# expected_output + agent mandatory for the same reason).
+BRIEF_SECTION_MARKERS = ("Objective:", "Expected output:",
+                         "Tools:", "Boundary:")
+
+
+def brief_missing_sections(prompt: str) -> list[str]:
+    """The elements a dispatch brief lacks, in marker order — empty
+    when the brief is complete."""
+    missing = []
+    for marker in BRIEF_SECTION_MARKERS:
+        if not re.search(rf"^{re.escape(marker)}", prompt, flags=re.M):
+            missing.append(marker)
+    return missing
+
+
+# P1-2 (dispatch policy gate — ported from OpenBot policy.ts semantics,
+# MIT): deny evaluates first and a matching deny is never overruled by
+# an allow; a broken rule (empty or non-string) takes the fail-closed
+# path and names itself, exactly as a non-boolean CEL expression
+# refuses rather than softens; nothing else matches → default-deny —
+# a missing policy permits nothing. Every decision, allow included,
+# is written to the audit trail BEFORE anything runs: a trail that
+# only contains refusals proves nothing about what was let through.
+# Patterns are shell globs over the role name (review-* covers every
+# axis); the allowlist defaults to the plane's own roster, and a role
+# outside it is refused by name.
+DISPATCH_POLICY_BUILTIN_ALLOW = ("proposal", "specs", "design", "tasks",
+                                 "review-*", "design-index", "ui-designer",
+                                 "archiver", "codegraph")
+
+
+def _policy_patterns(kind: str) -> list:
+    """The deny/allow pattern list from the collapsed config's
+    dispatch_policy section — comma-separated globs on one line each.
+    Returns the raw list untouched: broken entries stay visible so the
+    decision can fail closed on them, never silently drop them."""
+    section = None
+    for line in _config_lines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if not line[0].isspace():
+            section = stripped.split(":", 1)[0].strip()
+            continue
+        if section != "dispatch_policy":
+            continue
+        m = re.match(rf"{kind}:\s*(.*)$", stripped)
+        if m:
+            raw = m.group(1).split("#", 1)[0].strip()
+            return [p.strip() for p in raw.split(",")] if raw else []
+    return []
+
+
+def dispatch_policy_decide(role: str) -> dict:
+    """One policy decision for one role — deny first, allow second,
+    default-deny last; broken rules fail closed and name themselves."""
+    deny = _policy_patterns("deny")
+    allow_raw = _policy_patterns("allow")
+    for src, entries in (("deny", deny), ("allow", allow_raw)):
+        for entry in entries:
+            if not isinstance(entry, str) or not entry.strip():
+                return {"decision": "refuse", "rule": repr(entry),
+                        "source": "%s (broken)" % src,
+                        "why": ("a policy rule that is not a non-empty "
+                                "pattern is broken — the gate fails "
+                                "closed rather than read a broken rule "
+                                "as no match")}
+    allow = allow_raw or list(DISPATCH_POLICY_BUILTIN_ALLOW)
+    for pattern in deny:
+        if fnmatch.fnmatch(role, pattern):
+            return {"decision": "refuse", "rule": pattern, "source": "deny",
+                    "why": ("the role matches a deny rule — a rule that "
+                            "removes permission is never overruled by "
+                            "an allow")}
+    for pattern in allow:
+        if fnmatch.fnmatch(role, pattern):
+            return {"decision": "allow", "rule": pattern, "source": "allow",
+                    "why": "the role matches the allowlist"}
+    return {"decision": "refuse", "rule": None, "source": "default-deny",
+            "why": ("the role matches no allow entry — a missing policy "
+                    "permits nothing"),
+            "allowlist": allow}
+
+
+def _audit_policy_decision(task_dir: Path, role: str,
+                           decision: dict) -> None:
+    """The audit row, written before anything runs — allow included
+    (OpenBot gateway.ts: a trail that only contains successes cannot
+    prove anything)."""
+    p = task_dir / "dispatch-policy.jsonl"
+    try:
+        with p.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"ts": now_iso(), "role": role,
+                                 **decision}, ensure_ascii=False) + "\n")
+    except OSError:
+        pass          # an unwritable audit never widens the gate
+
+
 def dispatch_role(change: str, role: str, pkg: dict, repo: Path, prompt: str,
                   task_dir: Path, mode: str, timeout: int,
                   ws: dict | None = None,
@@ -2723,6 +2844,40 @@ def dispatch_role(change: str, role: str, pkg: dict, repo: Path, prompt: str,
                 "remedy": "./install.sh --setup-maas-key",
                 "stopped": "before dispatch — the client was never invoked"
                }, EXIT_INCONCLUSIVE
+    # P0-2: the brief's four elements are checked after the
+    # environment gate and before anything is paid for — a session
+    # opened on a vague brief is the duplicated work this refusal
+    # exists to prevent
+    missing = brief_missing_sections(prompt)
+    if missing:
+        return {"artifact": role, "change": change,
+                "refused": "brief",
+                "missing": missing,
+                "why": ("the dispatch brief is missing "
+                        + ", ".join(missing)
+                        + " — a brief names Objective / Expected output "
+                          "/ Tools / Boundary, each as a line marker"),
+                "remedy": ("fix the prompt the caller built; no session "
+                           "was opened and nothing was paid for"),
+                "stopped": "before dispatch — the client was never "
+                           "invoked"}, EXIT_ROLE_REJECTED
+    # P1-2 (policy gate): deny first, allow second, default-deny last;
+    # the decision is audited before anything runs — allow included
+    _policy = dispatch_policy_decide(role)
+    _audit_policy_decision(task_dir, role, _policy)
+    if _policy["decision"] == "refuse":
+        return {"artifact": role, "change": change,
+                "refused": "policy",
+                "policy_rule": _policy["rule"],
+                "policy_source": _policy["source"],
+                "why": _policy["why"],
+                "remedy": ("a deny rule is removed by amending "
+                           "config/collapsed.config.yaml's "
+                           "dispatch_policy section — never by bypassing "
+                           "the gate"),
+                "audit": "dispatch-policy.jsonl",
+                "stopped": "before dispatch — the client was never "
+                           "invoked"}, EXIT_ROLE_REJECTED
     # the boundary baseline: what the working tree already carried
     # BEFORE this run. Pre-existing uncommitted state (an openspec init,
     # a dev's WIP) is the caller's, never the role's — only the
@@ -3190,6 +3345,62 @@ def _normalized_failure(out: dict, argvs: list[list[str]],
             EXIT_NO_NORMALIZED_CALL)
 
 
+# P1-6 (anti-collusion, measured): the jiuwenswarm client exposes no
+# per-dispatch --model flag, so a heterogeneous validator cannot be
+# switched client-side — but it CAN be measured. The usage frames name
+# the model that actually served the dispatch; AI_DLC_VALIDATOR_MODEL
+# (or validator_model: in the collapsed config) states the model the
+# validator is INTENDED to run on, and the verdict record carries both
+# plus a warning when they disagree or when no intent is stated at all
+# (the whole roster on one model is the highest-risk collusion posture
+# — NeurIPS 2025 measured coordinated approvals across seven models).
+def frames_model_name(frames: list[str]) -> str | None:
+    """The model that served a dispatch, read from its own usage
+    frames — never from the envelope's self-description."""
+    for line in frames:
+        try:
+            d = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if (d.get("event") or d.get("type")) != "chat.usage_metadata":
+            continue
+        meta = ((d.get("payload") or {}).get("metadata")
+                or {}).get("usage_metadata") or {}
+        name = meta.get("model_name")
+        if name:
+            return str(name)
+    return None
+
+
+def config_scalar_global(key: str) -> str | None:
+    """A top-level `key: value` line of the collapsed config, or None."""
+    m = re.search(rf"^{re.escape(key)}:\s*(\S+)",
+                  "\n".join(_config_lines()), flags=re.M)
+    return m.group(1) if m else None
+
+
+def validator_model_state(frames: list[str]) -> dict:
+    configured = (os.environ.get("AI_DLC_VALIDATOR_MODEL")
+                  or config_scalar_global("validator_model") or None)
+    actual = frames_model_name(frames)
+    state: dict = {"configured": configured, "actual": actual}
+    if actual and configured and actual != configured:
+        state["same_source_warning"] = True
+        state["why"] = ("the dispatch served %s while the validator is "
+                        "configured for %s — the configuration did not "
+                        "take effect; the verdict stands as measured, "
+                        "the posture does not" % (actual, configured))
+    elif not configured:
+        state["same_source_warning"] = None
+        state["why"] = ("no validator model configured — the validator "
+                        "runs the gateway default, same-source as every "
+                        "other role; set AI_DLC_VALIDATOR_MODEL or "
+                        "validator_model: to state a different intent")
+    else:
+        state["same_source_warning"] = False
+    return state
+
+
 def cmd_validate(change: str, repo: Path, task_dir: Path | None,
                  mode: str, timeout: int) -> int:
     """N1 — the validate dispatch: one fresh session whose only
@@ -3222,10 +3433,15 @@ def cmd_validate(change: str, repo: Path, task_dir: Path | None,
     out.update({"argv": argv, "rc": res["rc"], "stdout": res["stdout"],
                 "stderr": res["stderr"], "sha256": hashlib.sha256(
                     res["stdout"].encode("utf-8")).hexdigest()})
+    # P1-6: the model posture travels with the verdict — measured from
+    # the usage frames, stated next to rc so the human at the gate sees
+    # whether the validator ran same-source with the rest of the roster
+    out["validator_model"] = validator_model_state(frames)
     record = {"verb": "validate", "argv": argv, "rc": res["rc"],
               "stdout": res["stdout"], "sha256": out["sha256"],
               "change": change, "ts": now_iso(),
-              "session": out["session_name"]}
+              "session": out["session_name"],
+              "validator_model": out["validator_model"]}
     out["record"] = str(write_record(change, "verdict", record))
     out["spec_state"] = "spec_valid" if res["rc"] == 0 else "spec_invalid"
     out["note"] = ("the verdict is the frames' — the model's conclusion "
@@ -3619,7 +3835,7 @@ def archive_writeback_cmds(change: str, repo: Path, root: Path,
                  str(dst / "changes" / "archive") + "/"])
     cmds.append(["git", "-C", str(repo), "add", "openspec"])
     cmds.append(["git", "-C", str(repo),
-                 "-c", f"user.name=ai-dlc-plane",
+                 "-c", "user.name=ai-dlc-plane",
                  "-c", "user.email=ai-dlc-plane@aidlc.invalid",
                  "commit", "-m", f"openspec: archive {change}"])
     return cmds, name
@@ -4090,6 +4306,21 @@ EXIT_REVIEW_UNANSWERED = 19      # a finding carries no answer
 REVIEW_FINDING_HEADING = "## Finding"
 REVIEW_NOTHING_HEADING = "## Nothing found"
 REVIEW_EXAMINED_HEADING = "## Examined"
+# P0-1② (evidence constraint): a finding without code evidence is not a
+# finding — it files as a Concern with what it examined, and the
+# synthesis's citations carry confirmed:/refuted: with the file:line
+# that checked them. Evidence is the change's own code: a path:line
+# citation or a diff hunk head (@@). The false-consensus failure this
+# exists to prevent is measured, not argued (arXiv 2608.18167: the
+# unconstrained adversarial variant scored worst; the evidence-grounded
+# constraint scored best, via prompt alone).
+REVIEW_CONCERN_HEADING = "## Concern"
+REVIEW_EVIDENCE_RE = re.compile(
+    r"^Evidence:[^\n]*(\S+\.\w{1,4}:\d+|@@)", flags=re.M)
+# P0-1①: reviewers already dispatch concurrently; 4 is the standing
+# default (Anthropic's multi-agent retrospection runs 3-5 subagents at
+# once — below that the round pays serial wall-clock for nothing)
+REVIEW_CONCURRENCY_DEFAULT = 4
 TEAM_MODE_REASONS = (
     "an ad-hoc team matches the wildcard configuration, so the named "
     "reviewers cannot be given to it",
@@ -4238,7 +4469,12 @@ def synthesis_rel(task_dir: Path, project: Path) -> str:
 
 def reviewer_prompt(change: str, axis: str, persona: dict,
                     finding_path: str) -> str:
-    return f"""You are the {axis} reviewer for change {change} — an adversarial reviewer holding exactly one axis, once.
+    return f"""Objective: adversarially review change {change} on exactly one axis ({axis}), once, against the other reviewers' axes.
+Expected output: exactly one file at {finding_path} — first line `Axis: {axis}`, then exactly one of Finding / Concern / Nothing found, in the shape below.
+Tools: read openspec/changes/{change}/design.md and follow the code it cites where your axis needs to.
+Boundary: your only write is the finding file; the design and every other file stay untouched, and openspec validate is never run.
+
+You are the {axis} reviewer for change {change} — an adversarial reviewer holding exactly one axis, once.
 
 Your persona, held against the other reviewers' axes:
 - suspicious of: {persona.get('stance')}
@@ -4250,7 +4486,8 @@ Read openspec/changes/{change}/design.md. Follow the code it cites where your ax
 Write exactly one file, this path and no other: {finding_path}
 Its first line is: Axis: {axis}
 Then exactly one of:
-{REVIEW_FINDING_HEADING} — where in the design it applies (section or quoted line), the concern on your axis, and what you would change; or
+{REVIEW_FINDING_HEADING} — where in the design it applies (section or quoted line), the concern on your axis, what you would change, and one Evidence line citing the change's own code: `Evidence: <path>:<line> — what it shows` (a diff hunk head @@ counts). A finding without code evidence is refused by the round's judge; or
+{REVIEW_CONCERN_HEADING} — a suspicion you hold but cannot ground in the code: file it here, never as a Finding, and record what you examined under {REVIEW_EXAMINED_HEADING}. A concern is a reading aid; it never gates anything; or
 {REVIEW_NOTHING_HEADING} — then {REVIEW_EXAMINED_HEADING} naming what you examined on your axis.
 
 One finding only — a second finding fails the dispatch. Do not edit the design or any other file; your only write is the finding file. Do not run openspec validate. Nothing found is a valid answer; silence is not."""
@@ -4267,7 +4504,12 @@ A synthesis of the findings follows — a reading aid that groups them and names
 
 {synthesis_text}
 """
-    return f"""The design you wrote for change {change} went through an adversarial review. Every finding follows, verbatim.
+    return f"""Objective: revise the design for change {change} once, answering every adversarial finding on the record.
+Expected output: the revised openspec/changes/{change}/design.md where findings are accepted, plus your answers at {answers_path} — one `### <axis>` section per finding with `accepted: yes` (and what changed) or `accepted: no` (and why rejected).
+Tools: the findings quoted verbatim below and the synthesis as a reading aid; the design you wrote.
+Boundary: your writes are the design and the answers file; this is one revision, not a loop, and openspec validate is never run.
+
+The design you wrote for change {change} went through an adversarial review. Every finding follows, verbatim.
 
 {body}
 {synthesis_block}
@@ -4280,9 +4522,10 @@ Revise once, answering every finding on the record:
 
 def judge_finding_file(path: Path, axis: str) -> dict:
     """The reviewer's own contract, judged from the file it left: an
-    axis-named record carrying exactly one finding, or an explicit
-    nothing-found that names what was examined. Anything else — silence
-    included — fails the dispatch."""
+    axis-named record carrying exactly one finding grounded in code
+    evidence, one concern (an ungrounded suspicion, with what was
+    examined), or an explicit nothing-found that names what was
+    examined. Anything else — silence included — fails the dispatch."""
     if not path.is_file():
         return {"ok": False, "kind": None,
                 "why": "the finding file was not written"}
@@ -4290,6 +4533,7 @@ def judge_finding_file(path: Path, axis: str) -> dict:
     headings = [h.strip() for h in re.findall(r"^## .+$", text, flags=re.M)]
     n_finding = headings.count(REVIEW_FINDING_HEADING)
     n_nothing = headings.count(REVIEW_NOTHING_HEADING)
+    n_concern = headings.count(REVIEW_CONCERN_HEADING)
     if not re.search(rf"^Axis:\s*{re.escape(axis)}\s*$", text,
                      flags=re.M | re.I):
         return {"ok": False, "kind": None,
@@ -4298,9 +4542,29 @@ def judge_finding_file(path: Path, axis: str) -> dict:
         return {"ok": False, "kind": "finding",
                 "why": (f"{n_finding} findings are filed — the contract "
                         "is exactly one")}
-    if n_finding == 1 and n_nothing == 0:
+    kinds = (n_finding, n_nothing, n_concern)
+    if sum(1 for n in kinds if n) > 1:
+        return {"ok": False, "kind": None,
+                "why": ("the record files more than one of finding / "
+                        "concern / nothing-found — the contract is "
+                        "exactly one")}
+    if n_finding == 1:
+        if not REVIEW_EVIDENCE_RE.search(text):
+            return {"ok": False, "kind": "finding",
+                    "why": ("the finding carries no code evidence — an "
+                            "`Evidence: <path>:<line> …` line (or a diff "
+                            "hunk @@) is the contract; a suspicion "
+                            "without ground files as a Concern, never a "
+                            "Finding")}
         return {"ok": True, "kind": "finding"}
-    if n_nothing == 1 and n_finding == 0:
+    if n_concern == 1:
+        if not re.search(rf"^{REVIEW_EXAMINED_HEADING}\s*\n+.+\S", text,
+                         flags=re.M):
+            return {"ok": False, "kind": "concern",
+                    "why": ("a concern, but no record of what was "
+                            "examined")}
+        return {"ok": True, "kind": "concern"}
+    if n_nothing == 1:
         if not re.search(rf"^{REVIEW_EXAMINED_HEADING}\s*\n+.+\S", text,
                          flags=re.M):
             return {"ok": False, "kind": "nothing",
@@ -4308,8 +4572,8 @@ def judge_finding_file(path: Path, axis: str) -> dict:
                             "examined")}
         return {"ok": True, "kind": "nothing"}
     return {"ok": False, "kind": None,
-            "why": ("the record carries neither one finding nor an "
-                    "explicit nothing-found")}
+            "why": ("the record carries neither one finding, a concern, "
+                    "nor an explicit nothing-found")}
 
 
 def judge_answers_file(path: Path, axes: list[str]) -> tuple[dict, list]:
@@ -4337,11 +4601,14 @@ def judge_answers_file(path: Path, axes: list[str]) -> tuple[dict, list]:
 
 def judge_synthesis_file(path: Path, finding_axes: list[str]) -> dict:
     """The synthesis's own contract, judged from the file the caller
-    wrote: every concern cites a finding a reviewer filed, every filed
-    finding appears in a group, no passage picks a side between them,
-    and either an opposing pair is named with what one increases and
-    the other reduces, or the absence of pairs is stated outright —
-    silence never stands in for that statement."""
+    wrote: every concern cites a finding a reviewer filed and carries
+    an evidence verdict for it (confirmed:/refuted: with the path:line
+    that checked the finding's own Evidence line — agreement without a
+    check is the false consensus this round exists not to produce),
+    every filed finding appears in a group, no passage picks a side
+    between them, and either an opposing pair is named with what one
+    increases and the other reduces, or the absence of pairs is stated
+    outright — silence never stands in for that statement."""
     if not path.is_file():
         return {"ok": False, "kind": "missing", "breaches": [
             {"kind": "missing",
@@ -4384,7 +4651,8 @@ def judge_synthesis_file(path: Path, finding_axes: list[str]) -> dict:
         if stripped.startswith(SYNTHESIS_GROUP_HEADING):
             groups.append({"where": stripped[len(
                 SYNTHESIS_GROUP_HEADING):].lstrip(" —-") or
-                "(unnamed part of the design)", "cites": []})
+                "(unnamed part of the design)", "cites": [],
+                "verdicts": []})
             section = "group"
             continue
         m = re.match(r"^- \[([\w-]+)\]", stripped)
@@ -4399,8 +4667,25 @@ def judge_synthesis_file(path: Path, finding_axes: list[str]) -> dict:
                         "why": ("the concern cites a finding no reviewer "
                                 "filed — every concern in the synthesis "
                                 "maps to a filed finding")})
-                elif axis not in cited:
-                    cited.append(axis)
+                else:
+                    if axis not in cited:
+                        cited.append(axis)
+                    gvm = re.search(
+                        r"\b(confirmed|refuted):\s*\S+\.\w{1,4}:\d+",
+                        stripped)
+                    if gvm and groups:
+                        groups[-1]["verdicts"].append(
+                            {"finding": axis, "verdict": gvm.group(1)})
+                    else:
+                        breaches.append({
+                            "kind": "unverified-citation", "finding": axis,
+                            "why": ("the citation carries no evidence "
+                                    "verdict — name it `confirmed: "
+                                    "<path>:<line>` or `refuted: <path>:"
+                                    "<line>`, the line that checked the "
+                                    "finding's own Evidence; agreeing "
+                                    "without checking is the false "
+                                    "consensus the round refuses")})
             elif section == "pair" and pairs:
                 if re.search(r"\bincreases\b", stripped):
                     pairs[-1]["increases"] = True
@@ -4448,8 +4733,8 @@ def judge_synthesis_file(path: Path, finding_axes: list[str]) -> dict:
                     "none oppose — silence does not stand in for that "
                     "statement")})
     return {"ok": not breaches, "kind": "present", "breaches": breaches,
-            "groups": [{"where": g["where"], "cites": g["cites"]}
-                       for g in groups],
+            "groups": [{"where": g["where"], "cites": g["cites"],
+                        "verdicts": g["verdicts"]} for g in groups],
             "opposing_pairs": [{"axes": p["axes"]} for p in pairs],
             "no_opposing_pairs": not pairs,
             "cited": cited}
@@ -4817,7 +5102,7 @@ def cmd_review(change: str, repo: Path, task_dir: Path | None,
                     else:
                         why = out.get("why") or out.get("error")
                 text = None
-                if verdict["kind"] == "finding" and not stray:
+                if verdict["kind"] in ("finding", "concern") and not stray:
                     ffile = surface / axis / "finding.md"
                     if ffile.is_file():
                         text = ffile.read_text(encoding="utf-8",
@@ -4932,8 +5217,11 @@ def cmd_review(change: str, repo: Path, task_dir: Path | None,
                          "remedy": (f"write {srel} — groups by where in "
                                     "the design each finding lands, every "
                                     "opposing pair named, one citation "
-                                    "per concern — then --stage synthesis "
-                                    "checks it"),
+                                    "per concern carrying its evidence "
+                                    "verdict (confirmed:/refuted: with "
+                                    "the path:line that checked the "
+                                    "finding's Evidence line) — then "
+                                    "--stage synthesis checks it"),
                          "planning_record": str(planning_path(task_dir))},
                         EXIT_INCONCLUSIVE)
         else:
@@ -5683,6 +5971,40 @@ def cmd_close(change: str, repo: Path, task_dir: Path | None,
     out = {"closed": False, "change": change, "repo": str(repo),
            "approved_by": ans.get("approver"), "approved_at": ans.get("ts")}
 
+    # 02-static-site finding (test #2): a gate approval can predate a
+    # failing re-delivery - close ran on the approval and merged work
+    # whose execution gate had failed. The standing report is read
+    # here, after the gate answer: a failed execution gate stops close
+    # exactly as it stops deliver. A human who still wants it through
+    # re-answers the gate AFTER the failing report stands.
+    _rep = load_json(task_dir / "report.json", {})
+    # 03-wordfreq finding: the exec-gate guard's twin - a standing
+    # spec_invalid report stops close too (close does not archive a
+    # change the validator refused, whatever an earlier approval says)
+    if (_rep.get("spec") or {}).get("spec_state") == "spec_invalid":
+        return emit({"closed": False, "change": change,
+                     "repo": str(repo),
+                     "waiting_on": "spec",
+                     "spec": _rep.get("spec"),
+                     "why": ("the standing delivery report carries "
+                             "spec_invalid - close does not archive a "
+                             "change the validator refused"),
+                     "remedy": ("fix the change in the plane tree and "
+                                "re-validate, then re-deliver and "
+                                "re-answer the gate")},
+                    EXIT_INCONCLUSIVE)
+    if (_rep.get("execution_gate") or {}).get("state") == "fail":
+        return emit({"closed": False, "change": change,
+                     "repo": str(repo),
+                     "waiting_on": "execution_gate",
+                     "execution_gate": _rep.get("execution_gate"),
+                     "why": ("the standing delivery report carries a "
+                             "failed execution gate - an approval that "
+                             "predates it does not carry the merge"),
+                     "remedy": ("fix the failing tool, re-deliver, then "
+                                "re-answer the gate against the new "
+                                "report")}, EXIT_INCONCLUSIVE)
+
     # 1. merge the task branch into the branch the repo stands on
     # W1/Z1: read the branch from state.json (the init contract) first,
     # then fall back to the --branch flag, then the task/<change> convention.
@@ -5952,6 +6274,413 @@ def opendesign_pin_state(root: Path | None = None) -> dict:
                      "size_bytes", "tree_sha256")}}
 
 
+MAX_MATERIALIZE_FILES = 40
+MAX_MATERIALIZE_BYTES = 24 * 1024 * 1024
+
+
+_PAGES_META_RE = re.compile(
+    r"(responsive|interaction\s+flow|accessib|audit|compliance|"
+    r"quality|checklist|^content\s+\d+|^p0\b)", re.I)
+_PAGE_PREFIX_RE = re.compile(r"^page\s*[:：]\s*", re.I)
+
+
+def _parse_pages_md(pages_md: Path) -> tuple[list[dict], int]:
+    """P2-2: parse design/pages.md into [{title, slug, body}] — one
+    entry per `## ` section; deeper headings fold into the body.
+
+    des5-fixes (F3b): D1 sessions title real product pages
+    "Page: …" and fold spec meta (Responsive Behavior Summary, Accent
+    Usage Audit, Interaction Flow, Content-16-…, P0 Quality Gate) into
+    sibling ## sections. When any Page:-prefixed section exists, only
+    those are pages (prefix stripped from title and slug); otherwise a
+    meta blacklist filters sections; if that empties the list the
+    original sections stand — never a silent empty result. Returns
+    (pages, meta_sections_dropped)."""
+    raw: list[dict] = []
+    cur: dict | None = None
+    for line in pages_md.read_text(encoding="utf-8",
+                                   errors="replace").splitlines():
+        m = re.match(r"^##\s+(.+?)\s*$", line)
+        if m:
+            title = m.group(1)
+            stripped = _PAGE_PREFIX_RE.sub("", title)
+            slug = re.sub(r"[^a-z0-9]+", "-",
+                          stripped.lower()).strip("-")
+            cur = {"title": stripped, "slug": slug or "page",
+                   "body": [], "page_prefixed":
+                       bool(_PAGE_PREFIX_RE.match(title))}
+            raw.append(cur)
+        elif cur is not None:
+            cur["body"].append(line)
+    for pg in raw:
+        pg["body"] = "\n".join(pg["body"]).strip()
+    tagged = [pg for pg in raw if pg.pop("page_prefixed")]
+    if tagged:
+        return tagged, len(raw) - len(tagged)
+    kept = [pg for pg in raw if not _PAGES_META_RE.search(pg["title"])]
+    if not kept:
+        return raw, 0
+    return kept, len(raw) - len(kept)
+
+
+def cmd_design_pages(change: str, repo: Path,
+                     task_dir: Path | None, top_n: int = 3) -> int:
+    """P2-2 (PRD v9) — D1.6 PAGES: each design/pages.md page matches
+    its own secondary templates. Reads D1's pages.md (one `## ` section
+    per page), runs the same L1 hard filter + L2 IDF retrieval + dedup
+    per page, and records each page's top-N picks with the D0 main
+    template excluded — it is already in force. Zero sessions: the
+    per-page shortlist is deterministic retrieval exactly like D0's;
+    per-page material then arrives via design-materialize --page."""
+    repo = repo.resolve()
+    task_dir = Path(task_dir).resolve() if task_dir else default_task_dir(
+        repo, change)
+    pages_md = repo / "design" / "pages.md"
+    if not pages_md.is_file():
+        return emit({"change": change, "repo": str(repo),
+                     "stopped": ("before matching — no design/pages.md in "
+                                 "the repo; run design-specify (D1) first"),
+                     "remedy": ("plan.py design-specify --change <id> "
+                                "--repo <repo>, then real pages live in "
+                                "design/pages.md as `## ` sections")},
+                    EXIT_INCONCLUSIVE)
+    pages, meta_dropped = _parse_pages_md(pages_md)
+    if not pages:
+        return emit({"change": change, "repo": str(repo),
+                     "stopped": ("pages.md carries no `## ` page sections "
+                                 "to match")},
+                    EXIT_INCONCLUSIVE)
+    root = Path(OPENDESIGN_ROOT)
+    change_kw = _extract_change_keywords(change, repo, task_dir)
+    surface_hint = change_kw.get("surface_hint")
+    candidates = _scan_design_candidates(root)
+    eligible, filtered = _filter_candidates(candidates, surface_hint)
+    if not eligible:
+        return emit({"change": change, "repo": str(repo),
+                     "error": "no eligible candidates after L1 filter",
+                     "candidates_considered": len(candidates)}, 1)
+    state = load_json(task_dir / "state.json", {})
+    main_path = (state.get("design_selection") or {}).get("chosen")
+    main_dir = Path(main_path).parent.name if main_path else None
+    idf = _build_design_index(root)["idf"]
+    out_pages = []
+    for pg in pages:
+        text = pg["title"] + "\n" + pg["body"]
+        qtoks = _tokenize_query(text) - _negated_tokens(text)
+        kw = {"query_tokens": qtoks,
+              "keywords": {t for t in qtoks
+                           if t.isascii() and len(t) >= 3},
+              "surface_hint": surface_hint,
+              "text": _strip_negated_clauses(text).lower()}
+        scored = sorted(
+            ((_score_candidate(c, kw, idf), c) for c in eligible),
+            key=lambda x: (x[0], _tiebreak_key(x[1])), reverse=True)
+        ranked, _clusters = _dedup_scored(scored)
+        picks = []
+        for sc, c in ranked:
+            if c["dir"] == main_dir:
+                continue
+            picks.append({"dir": c["dir"], "name": c["name"],
+                          "path": c["path"], "score": round(sc, 1),
+                          "matched_features": _matched_features(c, qtoks)})
+            if len(picks) >= top_n:
+                break
+        out_pages.append({"title": pg["title"], "slug": pg["slug"],
+                          "query_tokens": sorted(qtoks)[:16],
+                          "picks": picks})
+    state["design_pages"] = {
+        "main": main_dir, "main_path": main_path, "top_n": top_n,
+        "pages": out_pages, "eligible": len(eligible),
+        "filtered_from": filtered, "meta_sections_dropped": meta_dropped,
+        "ts": now_iso()}
+    save_json(task_dir / "state.json", state)
+    return emit({"change": change, "repo": str(repo),
+                 "phase": "D1_6_PAGES", **state["design_pages"]}, 0)
+
+
+def cmd_design_pages_specify(change: str, repo: Path,
+                               task_dir: Path | None,
+                               mode: str = "code.normal",
+                               timeout: int = 600,
+                               max_pages: int = 3) -> int:
+    """D1.7 PAGE-SPECIFY (PRD des5 残留①) — the loop closes: each
+    D1.6 page pick reaches a concrete per-page spec. One ui-designer
+    session reads the standing main design (design/tokens.css,
+    components.md, pages.md) plus every picked secondary SKILL.md and
+    writes design/pages/<slug>.md per page — product files the merge
+    gate sees. Each page's skill sha is pinned in the record; the
+    outcome gate is the mechanical existence check, never the
+    session's claim."""
+    repo = repo.resolve()
+    task_dir = Path(task_dir).resolve() if task_dir else default_task_dir(
+        repo, change)
+    state = load_json(task_dir / "state.json", {})
+    dp = state.get("design_pages")
+    if not dp or not dp.get("pages"):
+        return emit({"change": change, "repo": str(repo),
+                     "stopped": ("before dispatch — no design_pages in "
+                                 "state.json; run design-pages (D1.6) "
+                                 "first"),
+                     "remedy": ("plan.py design-pages --change <id> "
+                                "--repo <repo> [--task-dir <dir>]")},
+                    EXIT_INCONCLUSIVE)
+    pages = [p for p in dp["pages"] if p.get("picks")][:max_pages]
+    if not pages:
+        return emit({"change": change, "repo": str(repo),
+                     "stopped": ("design_pages carries no pages with "
+                                 "picks to specify")},
+                    EXIT_INCONCLUSIVE)
+    pin = []
+    page_lines = []
+    for pg in pages:
+        pick = pg["picks"][0]
+        skill = Path(pick["path"])
+        sha = None
+        try:
+            sha = hashlib.sha256(skill.read_bytes()).hexdigest()
+        except OSError:
+            pass
+        pin.append({"slug": pg["slug"], "title": pg["title"],
+                    "template": pick["dir"], "skill_path": str(skill),
+                    "skill_sha256": sha})
+        page_lines.append(
+            f"- page '{pg['title']}' (slug {pg['slug']}): read "
+            f"{skill} in full, then write design/pages/{pg['slug']}.md "
+            f"— this page's concrete spec: its layout composed from "
+            f"components.md, the tokens it uses, and the page-specific "
+            f"components the secondary template contributes")
+    prompt = (
+        f"You are the UI Designer for the delivery '{change}' in this "
+        f"repository.\n\n"
+        f"The main design already stands — read design/tokens.css, "
+        f"design/tokens.json, design/components.md and design/pages.md "
+        f"first; the per-page specs must reuse those tokens and "
+        f"components, never invent parallel ones.\n\n"
+        f"Pages to specify (at most {max_pages}):\n"
+        + "\n".join(page_lines) + "\n\n"
+        "Write only inside design/pages/. Real content and real data "
+        "throughout — lorem ipsum, placeholder text and TODO markers "
+        "are failures.\n\n"
+        "When you are done, report every file you wrote.")
+    out, frames = run_design_session(change, prompt, repo, task_dir,
+                                     mode, timeout)
+    if out.get("timed_out"):
+        return emit({**out, "phase": "D1_7_PAGE_SPECIFY",
+                     "stopped": "the page-specify session exceeded its "
+                                "timeout"}, EXIT_INCONCLUSIVE)
+    if not out.get("round_complete") or out.get("interrupted"):
+        return emit({**out, "phase": "D1_7_PAGE_SPECIFY",
+                     "stopped": "the page-specify session ended without "
+                                "a complete round"}, EXIT_INCONCLUSIVE)
+    _settle_artifacts([repo / "design" / "pages" / f"{entry['slug']}.md"
+                       for entry in pin])
+    artifacts = {}
+    all_written = True
+    for entry in pin:
+        f = repo / "design" / "pages" / f"{entry['slug']}.md"
+        ok = f.is_file() and f.stat().st_size > 0
+        artifacts[entry["slug"]] = {
+            "exists": f.is_file(),
+            "size": f.stat().st_size if f.is_file() else 0}
+        all_written = all_written and ok
+    unlanded = _unlanded_writes(
+        frames or [], [repo / "design" / "pages"
+                       / f"{e['slug']}.md" for e in pin])
+    state = load_json(task_dir / "state.json", {})
+    state["design_page_specs"] = {
+        "pages": pin, "artifacts": artifacts,
+        "unlanded_writes": unlanded,
+        "all_written": all_written, "max_pages": max_pages,
+        "session": out.get("session_name"), "ts": now_iso()}
+    save_json(task_dir / "state.json", state)
+    out["phase"] = "D1_7_PAGE_SPECIFY"
+    if unlanded:
+        out["unlanded_writes"] = unlanded
+    out["page_artifacts"] = artifacts
+    out["all_written"] = all_written
+    out["note"] = ("per-page specs are product files in design/pages/ "
+                   "— they count toward landed_files/landed_bytes and "
+                   "the merge gate sees them")
+    return emit(out, 0 if all_written else EXIT_INCONCLUSIVE)
+
+
+_MATERIAL_KINDS = {".png": "image", ".jpg": "image", ".jpeg": "image",
+                   ".webp": "image", ".gif": "image", ".svg": "svg",
+                   ".css": "css", ".html": "html", ".json": "data",
+                   ".md": "text", ".txt": "text"}
+
+
+def _material_kind(f: Path) -> str:
+    return _MATERIAL_KINDS.get(f.suffix.lower(), "text")
+
+
+def cmd_design_materialize(change: str, repo: Path, template: str,
+                           root: Path | None = None,
+                           page: str | None = None,
+                           max_files: int | None = None,
+                           max_bytes: int | None = None,
+                           task_dir: Path | None = None,
+                           secondary: bool = False) -> int:
+    """P1-B (PRD v9) — D1.5 MATERIALIZE: copy the chosen template's
+    usable material (assets/, references/, example.html) into the
+    change's design-material/ dir in the spec tree, with a manifest
+    naming every file's sha256 and the source SKILL.md's sha. The coder
+    assembles from this material instead of writing from zero; the
+    digest pin makes "which material did this build use" a fact, not a
+    memory."""
+    troot = Path(root) if root else Path(OPENDESIGN_ROOT)
+    tdir = troot / "design-templates" / template
+    if not (tdir / "SKILL.md").is_file():
+        return emit({"rejected": "materialize",
+                     "why": f"no template named {template!r} under "
+                            f"{troot / 'design-templates'}"},
+                    EXIT_PACKAGE_INVALID)
+    if page and not re.fullmatch(r"[a-z0-9][a-z0-9-]*", page):
+        return emit({"rejected": "materialize",
+                     "why": f"page slug {page!r} is not a lowercase "
+                            "hyphen slug — it names a directory under "
+                            "design-material/pages/"},
+                    EXIT_PACKAGE_INVALID)
+    dest = plane_tree(repo) / "changes" / change / "design-material"
+    if secondary:
+        dest = dest / "secondary" / template
+    if page:
+        dest = dest / "pages" / page
+    # P2-2: the guard is the manifest's presence, not the directory's —
+    # a main materialization and per-page materializations coexist
+    # under design-material/, and the manifest (written last) is the
+    # marker of standing material a build may already cite
+    if (dest / "manifest.json").is_file():
+        return emit({"rejected": "materialize",
+                     "why": f"materialized material already stands at "
+                            f"{dest} — remove it to re-materialize; a "
+                            "re-run must never silently overwrite the "
+                            "material a build may already cite",
+                     "page": page},
+                    EXIT_PACKAGE_INVALID)
+    max_files = max_files or MAX_MATERIALIZE_FILES
+    max_bytes = max_bytes or MAX_MATERIALIZE_BYTES
+    # materialize-via-dispatch: OpenDesign is consumed through a
+    # jiuwenswarm session — the session runs the normalized copy
+    # command (the session is the actor that touches the template
+    # tree); the plane verifies the frames, cross-checks the script's
+    # report against the standing files, and signs the manifest. The
+    # coding agent never calls OpenDesign directly.
+    script = Path(__file__).resolve().parent.parent / "scripts" \
+        / "materialize_copy.py"
+    argv = [sys.executable, str(script), "--template-dir", str(tdir),
+            "--dest", str(dest), "--max-files", str(max_files),
+            "--max-bytes", str(max_bytes)]
+    dispatched = os.environ.get(
+        "AI_DLC_NO_MATERIALIZE_DISPATCH") != "1"
+    session_name = None
+    if dispatched:
+        td = Path(task_dir).resolve() if task_dir else \
+            default_task_dir(repo, change)
+        out, _rc = run_plane_session(
+            change, "design-materialize",
+            _plane_command_prompt(
+                "Materialize the template " + template +
+                " for change " + change + " into its design-material "
+                "directory.", [argv],
+                "Report the command's output verbatim."),
+            repo, td, "code.normal", 180)
+        if out.get("refused") or "frames" not in out:
+            return emit({**out, "rejected": "materialize",
+                         "why": ("the dispatch session did not run — "
+                                 "OpenDesign is consumed through "
+                                 "jiuwenswarm sessions, never by the "
+                                 "plane's caller directly"),
+                         "remedy": ("retry the command; "
+                                    "AI_DLC_NO_MATERIALIZE_DISPATCH=1 "
+                                    "exists for offline maintenance "
+                                    "only")},
+                    EXIT_INCONCLUSIVE)
+        frames = out.pop("frames")
+        calls = normalized_calls(frames, argv)
+        if not calls or calls[-1]["result"] is None \
+                or calls[-1]["result"].get("rc") != 0:
+            return emit({"rejected": "materialize",
+                         "why": ("the session never ran the normalized "
+                                 "copy command to completion"),
+                         "frames_saw_command": bool(calls)},
+                        EXIT_INCONCLUSIVE)
+        session_name = out.get("session_name")
+        # machine fact over session claim: the script's own report
+        # must agree with what actually stands under dest
+        try:
+            report = json.loads(
+                calls[-1]["result"].get("stdout") or "{}")
+        except json.JSONDecodeError:
+            report = {}
+        claimed = {c["path"] for c in report.get("copied", [])}
+        standing = {f.relative_to(dest).as_posix()
+                    for f in dest.rglob("*")
+                    if f.is_file() and f.name != "manifest.json"}
+        if claimed != standing:
+            return emit({"rejected": "materialize",
+                         "why": ("the session's copy report and the "
+                                 "standing files disagree"),
+                         "claimed_not_standing": sorted(
+                             claimed - standing)[:8],
+                         "standing_not_claimed": sorted(
+                             standing - claimed)[:8]},
+                        EXIT_INCONCLUSIVE)
+    else:
+        import subprocess as _sp
+        r = _sp.run(argv, capture_output=True, text=True)
+        if r.returncode != 0:
+            return emit({"rejected": "materialize",
+                         "why": "local copy failed",
+                         "stderr": r.stderr[-200:]},
+                        EXIT_INCONCLUSIVE)
+    files = []
+    total = 0
+    for f in sorted(dest.rglob("*")):
+        if not f.is_file() or f.name == "manifest.json":
+            continue
+        if len(files) >= max_files:
+            break
+        size = f.stat().st_size
+        files.append({"path": f.relative_to(dest).as_posix(),
+                      "kind": _material_kind(f),
+                      "sha256": hashlib.sha256(
+                          f.read_bytes()).hexdigest(),
+                      "bytes": size})
+        total += size
+    if not files:
+        return emit({"rejected": "materialize",
+                     "why": "the template carries no material "
+                            "(no assets/, references/ or example.html)"},
+                    EXIT_PACKAGE_INVALID)
+    _count_key = {"image": "images", "css": "css", "html": "html",
+                  "svg": "svg"}
+    counts = {"images": 0, "css": 0, "html": 0, "svg": 0, "other": 0}
+    for f in files:
+        counts[_count_key.get(f["kind"], "other")] += 1
+    manifest = {
+        "template": template,
+        "source_skill_sha256": hashlib.sha256(
+            (tdir / "SKILL.md").read_bytes()).hexdigest(),
+        "change": change,
+        "page": page,
+        "counts": counts,
+        "slot": "secondary" if secondary else
+                ("page" if page else "main"),
+        "dispatched": dispatched,
+        "session": session_name,
+        "files": files,
+        "total_bytes": total,
+        "materialized_at": now_iso(),
+        "note": ("the coder assembles from this material; the manifest "
+                 "is the digest pin that answers which material this "
+                 "build used"),
+    }
+    save_json(dest / "manifest.json", manifest)
+    return emit({"change": change, "template": template, "page": page,
+                 "materialized": len(files), "total_bytes": total,
+                 "dest": str(dest)}, 0)
+
 def cmd_design_pin(root: Path, tag: str | None, write: bool) -> int:
     """N3's other half: write or verify the pin. The digest contract is
     the dispatch's own (opendesign_tree_digest) — the install script
@@ -6156,6 +6885,87 @@ def agent_bench_pin_state(root: Path | None = None) -> dict:
             "pin": {k: pin.get(k) for k in
                     ("tag", "sha", "sparse_paths", "installed_at",
                      "size_bytes", "tree_sha256")}}
+
+
+def cmd_codegraph_query(repo: Path, file: str | None, symbol: str | None,
+                        hop: int) -> int:
+    """P1-8①: the author-side query channel — read the graph, not the
+    code. One to N hops of dependents/dependencies around a file or a
+    symbol at near-zero cost, plus the count the answer does NOT touch:
+    what the author need not read (the KG-tools finding: a pre-built
+    graph queried beats code re-fed to the model). Deterministic, local
+    — no session is opened."""
+    repo = repo.resolve()
+    graph_path = next((p for p in
+                       (repo / ".ua" / "knowledge-graph.json",
+                        repo / ".understand-anything" / "knowledge-graph.json")
+                       if p.is_file()), None)
+    if graph_path is None:
+        return emit({"refused": True,
+                     "why": ("no knowledge graph on disk — the query "
+                             "channel reads a built graph, never "
+                             "improvises one"),
+                     "remedy": ("plan.py codegraph build --repo %s" % repo)},
+                    EXIT_INCONCLUSIVE)
+    graph = json.loads(graph_path.read_text(encoding="utf-8",
+                                            errors="replace"))
+    nodes = graph.get("nodes") or []
+    edges = graph.get("edges") or []
+    by_id = {str(n.get("id")): n for n in nodes if n.get("id")}
+    seeds = []
+    if file:
+        f = file.lstrip("./")
+        seeds = [i for i, n in by_id.items()
+                 if f in str(n.get("path") or n.get("filePath") or "")
+                 or str(i).endswith(f) or f in str(i)]
+    elif symbol:
+        s = symbol.lower()
+        seeds = [i for i, n in by_id.items()
+                 if str(n.get("name", "")).lower() == s]
+    if not seeds:
+        return emit({"query": {"file": file, "symbol": symbol},
+                     "found": False, "graph_nodes": len(nodes),
+                     "why": ("no node matches — the graph's vocabulary "
+                             "and the query's differ; try the other "
+                             "kind, or rebuild the graph")}, 0)
+    reachable: dict[str, tuple[str, str]] = {s: ("seed", "") for s in seeds}
+    frontier = set(seeds)
+    for depth in range(1, max(1, hop) + 1):
+        nxt = set()
+        for e in edges:
+            src, tgt = str(e.get("source", "")), str(e.get("target", ""))
+            if src in frontier and tgt not in reachable:
+                reachable[tgt] = ("outgoing/%s" % e.get("type", "edge"),
+                                  str(src))
+                nxt.add(tgt)
+            elif tgt in frontier and src not in reachable:
+                reachable[src] = ("incoming/%s" % e.get("type", "edge"),
+                                  str(tgt))
+                nxt.add(src)
+        frontier = nxt
+        if not frontier:
+            break
+    neighborhood_files = sorted({str(by_id[i].get("path")
+                                     or by_id[i].get("filePath") or i)
+                                 for i in reachable if i in by_id})
+    return emit({
+        "query": {"file": file, "symbol": symbol, "hop": max(1, hop)},
+        "found": True,
+        "seeds": [{"id": s, "name": by_id[s].get("name"),
+                   "type": by_id[s].get("type")} for s in seeds],
+        "neighborhood": [{"id": i, "name": by_id[i].get("name"),
+                          "type": by_id[i].get("type"),
+                          "relation": reachable[i][0],
+                          "via": reachable[i][1]}
+                         for i in sorted(reachable) if i in by_id],
+        "neighborhood_files": neighborhood_files,
+        "graph_nodes_total": len(nodes),
+        "files_not_in_neighborhood": max(0, len(nodes) - len(
+            neighborhood_files)),
+        "note": ("query the graph, not the code — everything outside "
+                  "neighborhood_files is context the author need not "
+                  "read for this surface"),
+        "graph": str(graph_path)}, 0)
 
 
 def cmd_codegraph_pin(root: Path, tag: str | None, write: bool) -> int:
@@ -6638,16 +7448,21 @@ the pages reference."""
 
 def run_design_session(change: str, prompt: str, repo: Path,
                        task_dir: Path, mode: str,
-                       timeout: int) -> tuple[dict, int]:
+                       timeout: int,
+                       generation: int = 1) -> tuple[dict, int]:
     """One plane session for the design role — the same shape as the
     tool dispatches (fresh session, frames on disk, duration recorded)
     but its working directory is the repo: this role writes the
-    product surface, not the plane's tree."""
+    product surface, not the plane's tree. generation > 1 names a NEW
+    session (the gateway reuses a session by name — a rewritten
+    requirement must not continue the superseded conversation)."""
     started = time.monotonic()
     started_at = now_iso()
     evidence = next_evidence(task_dir, "design")
     seq = re.search(r"-(\d+)\.jsonl$", evidence.name)
     session_name = f"design-{change}-{seq.group(1) if seq else '001'}"
+    if generation > 1:
+        session_name += f"-r{generation}"
     evidence.parent.mkdir(parents=True, exist_ok=True)
     cmd = [CLIENT, "chat", prompt, "--jsonl", "--cwd", str(repo),
            "--mode", mode, "--timeout", str(timeout),
@@ -6974,7 +7789,6 @@ def _parse_frontmatter(text: str) -> dict:
     # prefix is the dotted key prefix; indent is the indentation level
     block_stack: list[tuple[str, int]] = [("", -1)]
     in_list_key: str | None = None
-    in_list_indent: int = -1
 
     def _strip_val(v: str) -> str:
         v = v.strip()
@@ -7064,7 +7878,6 @@ def _parse_frontmatter(text: str) -> dict:
                         # Check if it's a list (starts with "- ")
                         if raw[j].strip().startswith("- "):
                             in_list_key = full_key
-                            in_list_indent = nl_indent
                             i += 1
                             continue
                         else:
@@ -7098,6 +7911,17 @@ def _parse_frontmatter(text: str) -> dict:
 
         i += 1
     return fm
+
+
+def _fm_list(value) -> list[str]:
+    """A frontmatter value as a clean string list — a list stays a
+    list, a comma string splits, anything else is empty (P1-9 metadata
+    keys tolerate both authoring shapes)."""
+    if isinstance(value, list):
+        return [str(v).strip() for v in value if str(v).strip()]
+    if isinstance(value, str) and value.strip():
+        return [t.strip() for t in value.split(",") if t.strip()]
+    return []
 
 
 def _scan_design_candidates(root: Path) -> list[dict]:
@@ -7151,6 +7975,13 @@ def _scan_design_candidates(root: Path) -> list[dict]:
                     "platform": fm.get("od.platform", ""),
                     "zh_name": fm.get("zh_name", ""),
                     "triggers": fm.get("triggers", []),
+                    # P1-9 metadata (optional, additive): intent page
+                    # types drive the prefilter, token family and
+                    # co-appear rules ride the selection rubric
+                    "intent_page_types": _fm_list(
+                        fm.get("od.intent.page_types")),
+                    "token_family": _fm_list(fm.get("od.token_family")),
+                    "co_appear": _fm_list(fm.get("od.co_appear")),
                     "description": fm.get("description", ""),
                     "audience": fm.get("od.audience", ""),
                     "tone": fm.get("od.tone", ""),
@@ -7160,6 +7991,7 @@ def _scan_design_candidates(root: Path) -> list[dict]:
                     "has_example_html": has_example,
                     "body_bytes": body_bytes,
                 })
+                _merge_od_intent(candidates[-1], d)
             elif manifest.is_file():
                 try:
                     data = json.loads(
@@ -7187,7 +8019,51 @@ def _scan_design_candidates(root: Path) -> list[dict]:
                     "has_example_html": False,
                     "body_bytes": 0,
                 })
+                _merge_od_intent(candidates[-1], d)
     return candidates
+OD_INTENT_KEYS = ("intent_page_types", "token_family", "co_appear",
+                  "locale", "framework", "synonyms")
+
+
+def _read_od_intent_sidecar(d: Path) -> dict | None:
+    """PRD v9 P0-A — per-template .od-intent.json sidecar carrying the
+    intent metadata the frontmatter does not (baseline 0/428). Additive:
+    upstream files stay untouched; AI_DLC_NO_INTENT_META=1 ignores the
+    sidecars so the eval can measure the before/after arms on one tree.
+    A sidecar whose template field names another directory, or whose
+    values are not string lists, is ignored here — metadata-validate
+    names it instead of the scan failing on one bad file."""
+    if os.environ.get("AI_DLC_NO_INTENT_META") == "1":
+        return None
+    f = d / ".od-intent.json"
+    if not f.is_file():
+        return None
+    try:
+        data = json.loads(f.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    if not isinstance(data, dict) or \
+            data.get("template") not in (None, d.name):
+        return None
+    out: dict = {}
+    for k in OD_INTENT_KEYS:
+        v = data.get(k)
+        if isinstance(v, list) and v and all(isinstance(x, str) for x in v):
+            out[k] = v
+        elif isinstance(v, str) and v:
+            out[k] = [v]
+    return out or None
+
+
+def _merge_od_intent(cand: dict, d: Path) -> None:
+    side = _read_od_intent_sidecar(d)
+    if not side:
+        return
+    for k, v in side.items():
+        merged = set(cand.get(k) or []) | set(v)
+        cand[k] = sorted(merged)
+
+
 def _tokenize_query(text: str) -> set[str]:
     """Tokenize text for IDF retrieval: ASCII words (2+ chars) AND
     CJK bigrams.  ``管理后台`` → ``管理``, ``理后``, ``后台``.
@@ -7333,6 +8209,15 @@ def _filter_candidates(candidates: list[dict],
         # systems are never in the main selection pool
         if c.get("kind") == "system":
             continue
+        # verdebet finding: capability stubs (a SKILL.md with no
+        # example.html and no assets/) are not design candidates —
+        # frontend-dev won a degraded D0 this way and D1 had nothing
+        # to design from. A selectable design carries material.
+        if not (c.get("has_example_html")
+                or (c.get("path", "") and Path(
+                    str(c["path"])).parent.joinpath(
+                    "assets").is_dir())):
+            continue
         mode = c.get("mode", "")
         surface = c.get("surface", "")
         if surface_hint == "web":
@@ -7347,6 +8232,17 @@ def _filter_candidates(candidates: list[dict],
                 continue
         eligible.append(c)
     return eligible, len(candidates) - len(eligible)
+
+
+_DATA_STRUCTURE_MARKERS = {
+    # en — the data-display brief vocabulary
+    "table", "tables", "odds", "data", "live", "score", "scores",
+    "placar", "chart", "charts", "board", "stats", "statistics",
+    "realtime", "kpi", "metrics", "ticker",
+    # zh — 盘口/赔率/实时/数据/表格/比分/图表/走势/面板/指数
+    "盘口", "赔率", "实时", "数据", "表格", "比分", "图表", "走势",
+    "面板", "指数",
+}
 
 
 def _score_candidate(cand: dict, change_kw: dict,
@@ -7422,6 +8318,75 @@ def _score_candidate(cand: dict, change_kw: dict,
             if tok in query_tokens:
                 score += 2.0 * _idf(tok)
 
+    # 6. P1-A (PRD v9): declared intent metadata and locale are scored
+    #    axes now that sidecars exist (intent was tiebreak-only, locale
+    #    did not exist). One intent hit scores between a name hit (5)
+    #    and a trigger-phrase hit (12); the locale axis is a flat
+    #    adjustment so it cannot outrank relevance.
+    qtoks_lower = {t.lower() for t in query_tokens}
+    for itok in cand.get("intent_page_types") or []:
+        itl = str(itok).lower()
+        if itl in qtoks_lower:
+            score += 6.0 * _idf(itl)
+            break
+    # 6b. P2-1 (PRD v9 P2): declared synonyms are a vocabulary-bridge
+    # axis — a Chinese query must reach an English-only template
+    # (文档 → docs-page) and a generic-word query the specific page-type
+    # name (admin/charts → dashboard). Each unique synonym token present
+    # in the query scores 4×idf — between a name hit (5) and a
+    # description hit (2): bridging vocabulary never outranks the fields
+    # the template actually carries. Synonyms are curated (≤8 per
+    # template, scripts/od-synonyms.json, git-audited) so the axis
+    # cannot be stuffed.
+    # 6b-2. des5-fixes (F1): a multi-token synonym appearing VERBATIM in
+    # the (negation-stripped) query text is a phrase-class signal and
+    # scores 8×idf per token — below a native trigger phrase (12), above
+    # the token rule. Token-wise 4×idf let a competitor's native
+    # trigger on the SAME phrase beat the bridge 3:1 and flip a golden
+    # pick (des5 devdocs: faq-page 帮助中心 trigger vs docs-page
+    # synonym). Phrase tokens are excluded from the token rule below so
+    # the same hit is never double-counted.
+    syn_phrase_tokens: set[str] = set()
+    for syn in cand.get("synonyms") or []:
+        sl = str(syn).lower()
+        toks = _tokenize_query(sl)
+        if len(toks) >= 2 and sl in query_text:
+            for tok in toks:
+                score += 8.0 * _idf(tok)
+            syn_phrase_tokens |= toks
+    syn_tokens: set[str] = set()
+    for syn in cand.get("synonyms") or []:
+        syn_tokens.update(_tokenize_query(str(syn).lower()))
+    for tok in syn_tokens - syn_phrase_tokens:
+        if tok in query_tokens:
+            score += 4.0 * _idf(tok)
+    # 7. structure axis (upstream protocol: artifact shape gates
+    # before content): a brief carrying >=2 distinct data-display
+    # markers declares a data-board product shape; a candidate whose
+    # od.scenario/category declares the same shape scores 6xidf per
+    # distinct marker, capped at 3. Without the markers nothing
+    # changes — a tourism landing and a betting board separated (both
+    # used to land on the same marketing template: the word
+    # "landing" outranked the product's actual shape).
+    q_markers = _DATA_STRUCTURE_MARKERS & set(query_tokens)
+    if len(q_markers) >= 2:
+        shape_field = f"{scen} {cat}"
+        if any(w in shape_field for w in (
+                "operation", "live-artifacts", "analytics",
+                "monitoring", "data", "dashboard", "trading")):
+            for tok in sorted(q_markers)[:3]:
+                score += 6.0 * _idf(tok)
+    cand_locale = [str(x).lower() for x in cand.get("locale") or []]
+    if cand_locale:
+        if any(CJK.search(t) for t in query_tokens):
+            if "zh" in cand_locale:
+                score += 8.0
+        elif "en" in cand_locale:
+            # +1, not +2: the eval showed a flat +2 outranking weak-IDF
+            # description hits in small pools — a locale nudge must
+            # never beat relevance (design-eval, P1-C tuning)
+            score += 1.0
+
     return score
 
 
@@ -7473,6 +8438,84 @@ def _tiebreak_key(cand: dict) -> tuple:
     )
 
 
+def _matched_features(cand: dict, qtoks: set) -> dict:
+    """P1-A: which query tokens hit which candidate fields - a choice
+    without its matched features cannot be audited. An empty dict means
+    the choice rode retrieval score alone; that fact is itself the
+    explanation."""
+    feats: dict = {}
+    name = (cand.get("name") or cand.get("dir") or "").lower()
+    hits = sorted(t for t in qtoks if t and t in name)
+    if hits:
+        feats["name"] = hits
+    for field in ("category", "scenario"):
+        v = str(cand.get(field) or "").lower()
+        hits = sorted(t for t in qtoks if t and t in v)
+        if hits:
+            feats[field] = hits
+    trig = [str(t).lower() for t in cand.get("triggers") or []]
+    hits = sorted(t for t in qtoks if any(t in x for x in trig))
+    if hits:
+        feats["triggers"] = hits
+    ip = [str(t).lower() for t in cand.get("intent_page_types") or []]
+    hits = sorted(t for t in qtoks if any(t == x for x in ip))
+    if hits:
+        feats["intent_page_types"] = hits
+    tf = [str(t).lower() for t in cand.get("token_family") or []]
+    hits = sorted(t for t in qtoks if any(t == x for x in tf))
+    if hits:
+        feats["token_family"] = hits
+    syn_toks: set[str] = set()
+    for x in cand.get("synonyms") or []:
+        syn_toks.update(_tokenize_query(str(x).lower()))
+    hits = sorted(qtoks & syn_toks)
+    if hits:
+        feats["synonyms"] = hits
+    shape_field = (str(cand.get("scenario") or "") + " "
+                   + str(cand.get("category") or ""))
+    if any(w in shape_field for w in (
+            "operation", "live-artifacts", "analytics", "monitoring",
+            "data", "dashboard", "trading")):
+        hits = sorted(qtoks & _DATA_STRUCTURE_MARKERS)
+        if hits:
+            feats["structure_axis"] = hits[:4]
+    return feats
+
+
+
+def _name_tokens(cand: dict) -> set:
+    return {t for t in re.findall(r"[a-z0-9]+",
+                                  (cand.get("dir") or
+                                   cand.get("name") or "").lower())}
+
+
+def _dedup_scored(scored: list, threshold: float = 0.8) -> tuple:
+    """P1-A: near-duplicate candidates (waitlist-page vs
+    waitlist-page-pro vs waitlist-page-landing) collapse to their
+    cluster representative - the highest-scored member - so the
+    shortlist carries variety and the margin is measured over distinct
+    choices. Duplication is token containment: a later candidate whose
+    name tokens are >=80% contained in a kept one's merges in. Returns
+    (kept_scored, cluster_names); kept entries carry cluster_members."""
+    kept: list = []
+    clusters: list = []
+    for item in scored:
+        cand = item[1]
+        toks = _name_tokens(cand)
+        merged = False
+        for k in kept:
+            ktoks = _name_tokens(k[1])
+            inter = toks & ktoks
+            containment = len(inter) / max(1, min(len(toks), len(ktoks)))
+            if toks and ktoks and containment >= threshold:
+                k[1].setdefault("cluster_members", []).append(cand["dir"])
+                merged = True
+                break
+        if not merged:
+            kept.append([item[0], cand])
+            clusters.append(cand["dir"])
+    return kept, clusters
+
 def _design_prefilter(change: str, repo: Path, task_dir: Path,
                       top_n: int = 12) -> tuple[list, list, dict]:
     """The pre-filter layer: L1 hard filter → L2 IDF retrieval →
@@ -7496,11 +8539,21 @@ def _design_prefilter(change: str, repo: Path, task_dir: Path,
     change_kw["eligible"] = len(eligible)
     change_kw["filtered_from"] = len(candidates)
 
-    # L2 IDF scoring
+    # L2 IDF scoring — a declared intent match is the first tie
+    # preference (P1-9: metadata-carrying templates prefilter first,
+    # read-full-text second)
+    _qtoks = {t.lower() for t in (change_kw.get("query_tokens") or [])}
+
+    def _meta_hit(cand: dict) -> bool:
+        return bool(_qtoks & {t.lower() for t
+                              in cand.get("intent_page_types") or []})
+
     scored = sorted(
         ((_score_candidate(c, change_kw, idf), c) for c in eligible),
-        key=lambda x: (x[0], _tiebreak_key(x[1])),
+        key=lambda x: (x[0], _meta_hit(x[1]), _tiebreak_key(x[1])),
         reverse=True)
+    scored, clusters = _dedup_scored(scored)
+    change_kw["dedup_clusters"] = len(clusters)
     shortlist = [cand for _score, cand in scored[:top_n]]
     return shortlist, scored, change_kw
 
@@ -7523,11 +8576,96 @@ def _needs_arbitration(cand: dict) -> bool:
     return False
 
 
+def _example_is_developable(path) -> bool:
+    """A developable template carries a real composed example page —
+    at least three sections or 20KB (verdebet: the degraded pick landed
+    on poster-hero, whose example is a single 5.7KB 9:16 poster with
+    zero sections, while a 66.0-scored real landing template stood
+    right behind it)."""
+    try:
+        f = Path(path)
+        if not f.is_file():
+            return False
+        if f.stat().st_size >= 20480:
+            return True
+        return f.read_text(encoding="utf-8",
+                           errors="replace").count("<section") >= 3
+    except OSError:
+        return False
+
+
+def _is_developable(cand: dict) -> bool:
+    if not cand.get("has_example_html"):
+        return False
+    ex = Path(str(cand.get("path", ""))).parent / "example.html"
+    return _example_is_developable(ex)
+
+
+def _degraded_pick(scored: list, fallback: dict) -> dict:
+    """The degraded fallback prefers, in order: developable and
+    unflagged, developable (a flagged real page still beats an
+    undevelopable stub — at least one suitable template must carry the
+    build), then the old unflagged-with-material rule."""
+    unflagged_dev = dev = None
+    for _, c in scored:
+        if not c.get("has_example_html"):
+            continue
+        if _is_developable(c):
+            if dev is None:
+                dev = c
+            if unflagged_dev is None and not _needs_arbitration(c):
+                unflagged_dev = c
+                break
+    return unflagged_dev or dev or _first_unflagged(scored, fallback)
+
+
 def _first_unflagged(scored: list, fallback: dict) -> dict:
     for _, c in scored:
-        if not _needs_arbitration(c):
+        if not _needs_arbitration(c) and c.get("has_example_html"):
             return c
     return fallback
+
+
+def _last_assistant_text(frames: list) -> str:
+    """The last assistant text block in a session's frames — the
+    arbiter's reply. Empty string when the frames carry none."""
+    last_msg = ""
+    for line in reversed(frames):
+        try:
+            obj = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if obj.get("type") == "assistant" and obj.get("message"):
+            msg = obj["message"]
+            if isinstance(msg, dict):
+                content = msg.get("content", [])
+                if isinstance(content, list):
+                    for block in content:
+                        if isinstance(block, dict) \
+                                and block.get("type") == "text":
+                            last_msg = block.get("text", "")
+                            break
+            if last_msg:
+                break
+    return last_msg
+
+
+def _session_named_pick(reply: str, shortlist: list[dict]) -> dict | None:
+    """The candidate a session's reply names. Full-path substring
+    first (shortlist order), else the dir name as a standalone token —
+    des5: sessions routinely answer with the template name alone, and
+    dir names are unique in the candidate pool; the lookarounds keep
+    waitlist-page from swallowing waitlist-page-pro."""
+    for c in shortlist:
+        if c["path"] in reply:
+            return c
+    low = reply.lower()
+    for c in shortlist:
+        if re.search(
+                rf"(?<![a-z0-9-]){re.escape(c['dir'])}(?![a-z0-9-])",
+                low):
+            return c
+    return None
 
 
 def cmd_design_select(change: str, repo: Path,
@@ -7563,6 +8701,15 @@ def cmd_design_select(change: str, repo: Path,
                      "error": ("no eligible candidates after L1 filter"),
                      "candidates_considered": 428}, 1)
     best_score, best = scored[0]
+    # strategy (verdebet): the deterministic pick must land on at
+    # least one developable template — the top-scored candidate whose
+    # example is a real composed page; the margin stays measured over
+    # the raw retrieval top-2 (an honest retrieval fact)
+    if not _is_developable(best):
+        for _sc, _c in scored:
+            if _is_developable(_c):
+                best = _c
+                break
     runner_up_score = scored[1][0] if len(scored) > 1 else 0
     margin = (best_score - runner_up_score) / max(best_score, 1)
 
@@ -7571,6 +8718,7 @@ def cmd_design_select(change: str, repo: Path,
               f"{runner_up_score:.1f} (margin {margin:.2f})")
     method = "deterministic"
     degraded = False
+    second_opinion = {"attempted": False}
 
     # Narrow-aesthetic gate: if top1 declares a specific audience/tone,
     # never let it sail through the deterministic fast path regardless of
@@ -7599,64 +8747,90 @@ def cmd_design_select(change: str, repo: Path,
             f"too close to decide deterministically):\n"
             f"{shortlist_lines}\n\n"
             f"Pick exactly one SKILL.md path from the list above. "
-            f"Reply with the full path on the first line, then one line "
-            f"explaining why you chose it. Nothing else.")
+            f"Reply with its full path (or just its directory name) "
+            f"on the first line, then one line explaining why you "
+            f"chose it. Nothing else.")
         out, _rc = run_plane_session(change, "design-select", select_prompt,
                                      repo, task_dir, mode, 90)
         frames = out.get("frames", [])
-        if out.get("timed_out") or not out.get("round_complete") \
-                or out.get("interrupted"):
-            chosen = _first_unflagged(scored, best)
-            if chosen is not best:
-                reason = (f"degraded — the 90s arbiter session did not complete; "
-                          f"top-scored candidate {best['name']} needs arbitration "
-                          f"(audience/tone/standalone-scope declared) and was "
-                          f"skipped; using next candidate {chosen['name']} instead")
-            else:
-                reason = (f"degraded — the 90s arbiter session did not complete; "
-                          f"using the top-scored candidate (score {best_score:.1f})")
-            degraded = True
-            method = "degraded"
-        else:
-            last_msg = ""
-            for line in reversed(frames):
-                try:
-                    obj = json.loads(line)
-                except (json.JSONDecodeError, ValueError):
-                    continue
-                if obj.get("type") == "assistant" and obj.get("message"):
-                    msg = obj["message"]
-                    if isinstance(msg, dict):
-                        content = msg.get("content", [])
-                        if isinstance(content, list):
-                            for block in content:
-                                if isinstance(block, dict) \
-                                        and block.get("type") == "text":
-                                    last_msg = block.get("text", "")
-                                    break
-                    if last_msg:
-                        break
-            for cand in shortlist:
-                if cand["path"] in last_msg:
-                    chosen = cand
-                    lines = last_msg.strip().splitlines()
-                    reason = lines[1].strip() if len(lines) > 1 else \
-                        f"selected by 90s arbiter session"
-                    method = "judged"
-                    break
-            if method == "deterministic":
-                chosen = _first_unflagged(scored, best)
+        first_failed = (out.get("timed_out")
+                        or not out.get("round_complete")
+                        or out.get("interrupted"))
+        # P1 (verdebet): the frames' named answer is a machine fact —
+        # a round that ran past the timeout flag but already names a
+        # valid shortlist candidate is a pick, not a failure; the
+        # recurring "both sessions failed" was exactly this. The
+        # selection records round_incomplete so the human still sees
+        # the unclosed round.
+        named = _session_named_pick(_last_assistant_text(frames),
+                                    shortlist) if frames else None
+        if named is not None:
+            chosen = named
+            lines = _last_assistant_text(frames).strip().splitlines()
+            reason = lines[1].strip() if len(lines) > 1 else \
+                "selected by 90s arbiter session"
+            if first_failed:
+                reason = ("round incomplete but the reply already "
+                          "names the pick — " + reason)
+            method = "judged"
+        if named is None and not first_failed \
+                and method == "deterministic":
+            # a complete round that named no shortlist path — the
+            # same failure class as not completing, for retry purposes
+            first_failed = True
+        if first_failed and named is None:
+            # P2-3 (PRD v9): before accepting a degraded pick, one 45s
+            # second-opinion mini-session — top-3 only, path + name,
+            # the reply is the pick. Degradation is an honest fallback,
+            # but "one session failed" and "no conclusion exists" are
+            # not the same fact, and the retry costs 45s while a
+            # mispick costs the whole build.
+            second_opinion["attempted"] = True
+            second_prompt = (
+                "Second opinion, kept deliberately small: pick exactly "
+                f"one design template for the change '{change}'.\n"
+                + "\n".join(f"  {i2 + 1}. {c['path']}  ({c['name']})"
+                             for i2, (_sc, c) in enumerate(scored[:3]))
+                + "\n\nReply with its full path (or just its "
+                  "directory name) on the first line, one short reason "
+                  "on the second, nothing else.")
+            out2, _rc2 = run_plane_session(change, "design-select-2nd",
+                                           second_prompt, repo, task_dir,
+                                           mode, 45)
+            second_opinion["session"] = out2.get("session_name")
+            named2 = _session_named_pick(
+                _last_assistant_text(out2.get("frames", []) or []),
+                shortlist)
+            if named2 is not None:
+                    chosen = named2
+                    lines = _last_assistant_text(
+                    out2.get("frames", [])).strip().splitlines()
+                    reason = lines[1].strip() if len(lines) > 1 else (
+                        "picked by the 45s second-opinion session "
+                        "after the 90s arbiter failed")
+                    method = "judged-2nd"
+                    second_opinion["outcome"] = "picked"
+                    second_opinion["pick"] = named2["dir"]
+            if "outcome" not in second_opinion:
+                second_opinion["outcome"] = "failed"
+                chosen = _degraded_pick(scored, best)
+                if out.get("timed_out") or not out.get("round_complete") \
+                        or out.get("interrupted"):
+                    fail_why = "the 90s arbiter session did not complete"
+                else:
+                    fail_why = ("arbiter session replied but named no "
+                                "shortlist path")
                 if chosen is not best:
-                    reason = (f"degraded — arbiter session replied but named no "
-                              f"shortlist path; top-scored candidate "
+                    reason = (f"degraded — second opinion also failed; "
+                              f"{fail_why}; top-scored candidate "
                               f"{best['name']} needs arbitration "
-                              f"(audience/tone/standalone-scope declared) and "
-                              f"was skipped; using next candidate "
+                              f"(audience/tone/standalone-scope declared) "
+                              f"and was skipped; using next candidate "
                               f"{chosen['name']} instead")
                 else:
-                    reason = (f"degraded — arbiter session replied but named no "
-                              f"shortlist path; using top-scored "
-                              f"(score {best_score:.1f})")
+                    reason = (f"degraded — second opinion also failed; "
+                              f"{fail_why}; using the top-scored "
+                              f"candidate (score {best_score:.1f})")
                 degraded = True
                 method = "degraded"
 
@@ -7695,6 +8869,9 @@ def cmd_design_select(change: str, repo: Path,
         "design_system": design_system,
         "craft_requires": craft_requires,
         "surface_hint": change_kw.get("surface_hint"),
+        "second_opinion": second_opinion,
+        "round_incomplete_judged": bool(
+            method == "judged" and first_failed),
         "degraded": degraded,
         "narrow_aesthetic_gate": narrow_aesthetic,
     }
@@ -7706,6 +8883,65 @@ def cmd_design_select(change: str, repo: Path,
                  "applicable": True,
                  "phase": "D0_SELECT",
                  "selection": selection}, 0)
+
+
+def _unlanded_writes(frames, paths) -> list:
+    """Write targets the session's frames carry that never landed on
+    disk — verdebet: a page-specify session finished with four write
+    calls in its frames and zero files standing; a silent 0-byte
+    verdict hides the gateway write failure. Returns the expected
+    paths that were write-attempted (write/edit tools) yet are still
+    missing."""
+    attempted = set()
+    for call in _tool_invocations(frames):
+        name = (call.get("tool") or "").lower()
+        args = call.get("arguments") or {}
+        if isinstance(args, str):
+            try:
+                args = json.loads(args)
+            except json.JSONDecodeError:
+                continue
+        pth = args.get("path") if isinstance(args, dict) else None
+        if pth and ("write" in name or "edit" in name):
+            attempted.add(str(Path(pth).resolve()))
+    return sorted(str(p) for p in paths
+                  if str(Path(p).resolve()) in attempted
+                  and not Path(p).is_file())
+
+
+SETTLE_SECONDS = 45.0
+SETTLE_POLL = 3.0
+
+
+def _settle_artifacts(paths: list[Path],
+                      settle_seconds: float | None = None,
+                      poll: float | None = None) -> None:
+    """des5b finding: a design session's round can complete before its
+    file writes land — the mechanical check then records 0-byte
+    artifacts that appear minutes later (pagemix2: pages.md landed two
+    minutes after the check read 0; the des5 tail 'instant failures'
+    were the same race). Wait until every expected file exists and the
+    total size is stable across two consecutive probes, or the settle
+    window closes. The check after this is still the judge — this only
+    stops it from running early."""
+    if settle_seconds is None:
+        settle_seconds = SETTLE_SECONDS
+    if poll is None:
+        poll = SETTLE_POLL
+    deadline = time.monotonic() + settle_seconds
+    prev = -1
+    while time.monotonic() < deadline:
+        total = 0
+        missing = False
+        for p in paths:
+            try:
+                total += p.stat().st_size
+            except OSError:
+                missing = True
+        if not missing and total > 0 and total == prev:
+            return
+        prev = total
+        time.sleep(poll)
 
 
 def cmd_design_specify(change: str, repo: Path,
@@ -7742,12 +8978,65 @@ def cmd_design_specify(change: str, repo: Path,
     skill_path = selection["chosen"]
     skill_sha = selection.get("skill_sha256")
     skill_name = selection.get("skill_name", "")
+    # V1: a rewritten requirement must not continue the superseded
+    # session's conversation — generation bump renames the session and
+    # the prompt demands a wholesale rewrite
+    req_sha = None
+    try:
+        req_sha = hashlib.sha256(
+            (task_dir / "proposal.md").read_bytes()).hexdigest()
+    except OSError:
+        pass
+    prior_spec = load_json(task_dir / "state.json",
+                           {}).get("design_spec") or {}
+    prior_sha = prior_spec.get("requirement_sha")
+    generation = 1
+    if prior_sha and req_sha and prior_sha != req_sha:
+        generation = int(prior_spec.get("generation") or 1) + 1
+    rewrite_note = ""
+    if generation > 1:
+        rewrite_note = (
+            "\n\nThe requirement has been REWRITTEN since the design "
+            "standing in design/ was produced. REWRITE all five files "
+            "completely — replace the prior versions wholesale; do not "
+            "patch or preserve their content.\n")
+    # asset-forward (PRD af): D1.5 may run BEFORE D1 — when standing
+    # material exists the ui-designer must derive the palette and
+    # section idioms from the materialized example page and reference
+    # the materialized images by path (the audit: palettes read from
+    # SKILL.md metadata alone came out flat, and materialized images
+    # never reached the pages)
+    material_note = ""
+    mat_dir = plane_tree(repo) / "changes" / change / "design-material"
+    mat_man = mat_dir / "manifest.json"
+    if mat_man.is_file():
+        try:
+            man = json.loads(mat_man.read_text(encoding="utf-8"))
+            imgs = [f["path"] for f in man.get("files", [])
+                    if f.get("kind") == "image"]
+            ex = str(mat_dir / "example.html") \
+                if (mat_dir / "example.html").is_file() else None
+            material_note = "\n\nMaterialized template material " \
+                "already stands (sha-pinned) — USE it:\n"
+            if ex:
+                material_note += ("  - read " + ex + " in full; the "
+                                  "palette and section idioms in "
+                                  "design/tokens.css MUST derive from "
+                                  "this page's actual visual system\n")
+            if imgs:
+                material_note += (
+                    f"  - {len(imgs)} materialized images; the pages "
+                    "reference them by these materialized paths:\n"
+                    + "".join(f"      {mat_dir}/{i}\n" for i in imgs))
+        except (json.JSONDecodeError, OSError):
+            pass
     # build the specify prompt
     specify_prompt = (
         f"You are the UI Designer for the delivery '{change}' in this "
         f"repository.\n\n"
         f"Read this SKILL.md in full before you write anything:\n"
-        f"  {skill_path}\n\n"
+        f"  {skill_path}\n"
+        f"{material_note}\n"
         f"Then produce a concrete design specification as five files in "
         f"the repo's design/ directory:\n"
         f"  design/tokens.css     — CSS custom properties for colors, "
@@ -7758,17 +9047,22 @@ def cmd_design_specify(change: str, repo: Path,
         f"  design/components.md  — component specs: each component with "
         f"its props, states, and which tokens it uses\n"
         f"  design/pages.md       — page-level layout specs: each page's "
-        f"composition from components\n"
+        f"composition from components — if the proposal names multiple "
+        f"pages (landing, pricing, blog, contact, ...), pages.md MUST "
+        f"carry one `## Page: <name>` section per named page, each "
+        f"composed from the shared components and tokens\n"
         f"  design/assets.md      — asset requirements: icons, images, "
-        f"fonts the pages reference\n\n"
+        f"fonts the pages reference\n"
+        f"{rewrite_note}\n"
         f"Write only inside this repository's design/ directory. "
         f"Real content and real data throughout — lorem ipsum, placeholder "
         f"text and TODO markers are failures.\n\n"
         f"When you are done, report: the SKILL.md path you read, and every "
         f"file you wrote.")
     # dispatch the ui-designer session
-    out, frames = run_design_session(change, specify_prompt, repo, task_dir,
-                                     mode, timeout)
+    out, frames = run_design_session(change, specify_prompt, repo,
+                                     task_dir, mode, timeout,
+                                     generation=generation)
     if out.get("timed_out"):
         return emit({**out, "phase": "D1_SPECIFY",
                      "stopped": "the specify session exceeded its "
@@ -7777,10 +9071,11 @@ def cmd_design_specify(change: str, repo: Path,
         return emit({**out, "phase": "D1_SPECIFY",
                      "stopped": "the specify session ended without a "
                                 "complete round"}, EXIT_INCONCLUSIVE)
-    # check the five design artifacts exist
+    # check the five design artifacts exist — after the writes settle
     design_dir = repo / "design"
     expected = ["tokens.css", "tokens.json", "components.md",
                 "pages.md", "assets.md"]
+    _settle_artifacts([design_dir / name for name in expected])
     artifacts = {}
     for name in expected:
         p = design_dir / name
@@ -7789,11 +9084,16 @@ def cmd_design_specify(change: str, repo: Path,
     all_written = all(a["exists"] and a["size"] > 0
                       for a in artifacts.values())
     # record the design spec in state.json
+    unlanded = _unlanded_writes(
+        frames or [], [design_dir / name for name in expected])
     state = load_json(task_dir / "state.json", {})
     state["design_spec"] = {
         "skill_path": skill_path,
         "skill_sha256": skill_sha,
         "skill_name": skill_name,
+        "requirement_sha": req_sha,
+        "generation": generation,
+        "unlanded_writes": unlanded,
         "artifacts": artifacts,
         "all_written": all_written,
         "session": out.get("session_name"),
@@ -7801,6 +9101,8 @@ def cmd_design_specify(change: str, repo: Path,
     }
     save_json(task_dir / "state.json", state)
     out["phase"] = "D1_SPECIFY"
+    if unlanded:
+        out["unlanded_writes"] = unlanded
     out["design_artifacts"] = artifacts
     out["all_written"] = all_written
     out["note"] = ("design artifacts are product files in design/ — they "
@@ -7859,11 +9161,9 @@ def cmd_design_verify(change: str, repo: Path,
     }
     # 2. tokens_json_valid — tokens.json parses as valid JSON
     tokens_json_path = design_dir / "tokens.json"
-    tokens_data = None
     if tokens_json_path.is_file():
         try:
-            tokens_data = json.loads(
-                tokens_json_path.read_text(encoding="utf-8"))
+            json.loads(tokens_json_path.read_text(encoding="utf-8"))
             checks["tokens_json_valid"] = {"pass": True}
         except (json.JSONDecodeError, OSError) as exc:
             checks["tokens_json_valid"] = {"pass": False,
@@ -8091,19 +9391,62 @@ def cmd_design_pick(change: str, repo: Path,
 
     # L3: craft requires (transparent passthrough for D3 VERIFY)
     craft_requires = []
-    if best.get("craft", {}).get("requires"):
+    if (best.get("craft") or {}).get("requires"):
         craft_requires = best["craft"]["requires"]
 
     # Build shortlist for output
     sl_out = [{"path": c["path"], "name": c["name"], "kind": c["kind"],
                "score": round(s, 1)} for s, c in scored[:12]]
 
+    # P1-9①: the three-part rubric, explicit on every selection — a
+    # choice without its reasons is exactly the silent degradation the
+    # report used to discover after the fact
+    _qtoks = {t.lower() for t in (change_kw.get("query_tokens") or [])}
+    _trig = {t.lower() for t in best.get("triggers", [])}
+    _intent_matched = sorted(_qtoks & _trig)[:8]
+    rubric = {
+        "intent_coverage": {
+            "matched": _intent_matched,
+            "score": round(len(_intent_matched) / max(1, len(_qtoks)), 3),
+            "reason": ("the change's page-type keywords against the "
+                       "template's declared triggers")},
+        "token_fit": {
+            "idf_score": round(best_score, 1),
+            "margin": round(margin, 3),
+            "reason": ("IDF-weighted retrieval score over the eligible "
+                       "pool, with the runner-up margin")},
+        "co_appearance": (
+            {"rules": best.get("co_appear") or [],
+             "reason": "declared co-appear metadata on the template"}
+            if best.get("co_appear") else
+            {"status": "unrated",
+             "reason": ("no co-appear metadata on this template — the "
+                        "metadata baseline is 0/428 today; "
+                        "design-index metadata-coverage measures the "
+                        "fill-in")}),
+    }
+    rubric["matched_features"] = _matched_features(best, _qtoks)
+    rubric["locale_axis"] = {
+        "query": "zh" if any(CJK.search(t) for t in _qtoks) else "en",
+        "template_locale": best.get("locale") or [],
+        "reason": ("query language against the template's declared "
+                   "locale axis (sidecar metadata)"),
+    }
+    _syn_toks: set[str] = set()
+    for _s in best.get("synonyms") or []:
+        _syn_toks.update(_tokenize_query(str(_s).lower()))
+    rubric["synonyms_axis"] = {
+        "matched": sorted(_qtoks & _syn_toks)[:8],
+        "reason": ("query tokens bridged to this template via curated "
+                   "synonyms (sidecar metadata, scripts/od-synonyms.json)"),
+    }
     selection = {
         "chosen": best["path"],
         "skill_sha256": best.get("sha256"),
         "skill_name": best["name"],
         "skill_kind": best["kind"],
         "method": "deterministic",
+        "rubric": rubric,
         "margin": round(margin, 3),
         "eligible": change_kw.get("eligible", 0),
         "filtered_from": change_kw.get("filtered_from", 428),
@@ -8114,7 +9457,17 @@ def cmd_design_pick(change: str, repo: Path,
         "design_system": design_system,
         "craft_requires": craft_requires,
         "surface_hint": change_kw.get("surface_hint"),
-        "degraded": False,
+        # 02-static-site finding #4: a pick with zero intent coverage
+        # at a near-zero margin is a guess wearing a score - the gate
+        # machinery downstream exists; it only needed the flag set here
+        "degraded": (rubric["intent_coverage"]["score"] == 0
+                     and margin < 0.05),
+        **({"reason": ("zero intent coverage at a %.2f margin - no "
+                       "template's declared surface names this change; "
+                       "the pick is a guess and the human at the gate "
+                       "reads it as one" % margin)}
+           if rubric["intent_coverage"]["score"] == 0 and margin < 0.05
+           else {}),
     }
     # write to state.json
     state_path = task_dir / "state.json"
@@ -8197,6 +9550,63 @@ def cmd_design_index(root: Path, action: str) -> int:
             "idf_tokens": len(index["idf"]),
             "index_path": str(index_path),
         }, 0)
+    elif action == "metadata-coverage":
+        candidates = _scan_design_candidates(root)
+        with_meta = [c for c in candidates
+                     if c.get("intent_page_types")]
+        return emit({
+            "action": "metadata-coverage", "root": str(root),
+            "candidates": len(candidates),
+            "with_intent_metadata": len(with_meta),
+            "coverage_pct": round(
+                100.0 * len(with_meta) / max(1, len(candidates)), 1),
+            "target": ("top-50 templates by selection frequency "
+                       "(P1-9 acceptance)"),
+            "missing_examples": [c["dir"] for c in candidates
+                                 if not c.get("intent_page_types")][:20],
+            "note": ("the fill-in is content engineering measured here; "
+                     "SELECT already prefers metadata carriers on ties"),
+        }, 0)
+    elif action == "metadata-validate":
+        root = Path(root)
+        sidecars = sorted(root.glob("*/**/.od-intent.json"))
+        valid, invalid = [], []
+        for f in sidecars:
+            try:
+                data = json.loads(f.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError) as exc:
+                invalid.append({"file": str(f), "why": f"unreadable: {exc}"})
+                continue
+            why = None
+            if not isinstance(data, dict):
+                why = "not a JSON object"
+            elif data.get("template") != f.parent.name:
+                why = (f"template {data.get('template')!r} does not name "
+                       f"its directory {f.parent.name!r}")
+            else:
+                for k, v in data.items():
+                    if k not in ("template",) + OD_INTENT_KEYS:
+                        why = f"unknown key: {k}"
+                        break
+                    if k == "template":
+                        continue
+                    if not isinstance(v, list) or                             not all(isinstance(x, str) and x for x in v):
+                        why = f"{k} must be a list of strings"
+                        break
+                    if k == "intent_page_types" and not v:
+                        why = ("intent_page_types must be non-empty — "
+                               "a sidecar that states no intent states "
+                               "nothing")
+                        break
+            (invalid if why else valid).append(
+                {"file": str(f), "why": why} if why
+                else {"file": str(f), "keys": sorted(
+                    k for k in data if k != "template")})
+        return emit({
+            "action": "metadata-validate", "root": str(root),
+            "sidecars": len(sidecars), "valid": len(valid),
+            "invalid": len(invalid), "invalid_detail": invalid[:20],
+        }, 0 if not invalid else 2)
     elif action == "show":
         index = _build_design_index(root)
         # Show summary, not full dump
@@ -8354,7 +9764,7 @@ def _codegraph_build_core(repo: Path, change: str = "",
         "do it.\n\n"
     )
     build_prompt = (
-        f"You are the Codegraph build role for this repository.\n\n"
+        "You are the Codegraph build role for this repository.\n\n"
         + noninteractive_preamble
         + f"Follow the skill instructions below in full.  They describe a "
         f"multi-agent pipeline (project-scanner → file-analyzer → "
@@ -8493,12 +9903,19 @@ def cmd_codegraph_brief(change: str, repo: Path,
         f"  <the pre-existing file list above>\n\n"
         f"  ## Callers\n"
         f"  <who calls the symbols in the changed files, grouped by "
-        f"file>\n\n"
+        f"file — each line carries its confidence: (high) for an edge "
+        f"read straight off the graph, (low) for a connection you "
+        f"inferred; the author verifies the low lines themselves>\n\n"
         f"  ## Callees / dependencies\n"
-        f"  <what the changed code depends on>\n\n"
+        f"  <what the changed code depends on — the same confidence "
+        f"marking on every line>\n\n"
         f"  ## Cross-module coupling flagged\n"
         f"  <hidden coupling worth the author's attention, or "
         f"'none found' if none>\n\n"
+        f"  ## Files you need not read\n"
+        f"  <the complement of the queried surface: node count outside "
+        f"the 1-hop neighborhood, so the author knows what NOT to "
+        f"open>\n\n"
         f"Write only codegraph/impact-brief.md.  When you are done, "
         f"report the file you wrote."
         + _subagent_listing_sentence())
@@ -8653,6 +10070,107 @@ def cmd_bench(dataset: str = "terminal-bench@2.0",
     return emit(out, 0 if bench_state == "complete" else EXIT_INCONCLUSIVE)
 
 
+# ── P1-7 (browser-verify: exploration vs verification, separated) ──
+# The MCP dispatch is an exploration tool — it answers what a page
+# looks like to a model that has never seen it. Verification is the
+# other discipline: the assertions an exploration checked are recorded
+# as a spec file, and every later run replays them deterministically
+# (no model, no MCP — the community consensus is exactly this split).
+# The runner is scripts/browser-spec-runner.js on the pinned tree's
+# playwright-core; two attempts per page classify flake (fail-then-pass)
+# against bug (stable fail); a trace lands beside the task record for
+# every first-attempt failure.
+BROWSER_SPEC_FILENAME = "browser-verify/spec.json"
+
+
+def classify_spec_run(run: dict) -> dict:
+    """pass / flake / fail per page: a first-attempt pass is a pass; a
+    fail-then-pass is a flake (suspicious, never silent); two fails is
+    a bug. The classification is the caller's, judged from the runner's
+    JSON — never from an envelope."""
+    pages = []
+    for p in run.get("pages", []):
+        attempts = p.get("attempts") or []
+        first_ok = bool(attempts and attempts[0].get("ok"))
+        second_ok = len(attempts) > 1 and attempts[1].get("ok")
+        verdict = ("pass" if first_ok
+                   else "flake" if second_ok else "fail")
+        pages.append({"page": p.get("url"),
+                      "verdict": verdict,
+                      "failures": (attempts[0].get("failures")
+                                   if not first_ok else []),
+                      "trace": p.get("trace")})
+    counts = {v: sum(1 for p in pages if p["verdict"] == v)
+              for v in ("pass", "flake", "fail")}
+    return {"pages": pages, "counts": counts,
+            "verdict": "fail" if counts["fail"] else
+                       "flake" if counts["flake"] else "pass"}
+
+
+def cmd_browser_spec_run(spec_path: Path, repo: Path,
+                         task_dir: Path | None) -> int:
+    """The deterministic replay: no session is opened. The spec names
+    its pages and assertions; the runner replays them on the pinned
+    tree's core; the classification and the traces land in the task
+    record."""
+    spec_path = Path(spec_path).resolve()
+    if not spec_path.is_file():
+        return emit({"refused": True,
+                     "why": "no spec file at %s" % spec_path,
+                     "remedy": ("the exploration dispatch writes %s in "
+                                "the repo; or hand-write it: {pages: "
+                                "[{path|url, title?, selectors?, "
+                                "texts?}]}" % BROWSER_SPEC_FILENAME)},
+                    EXIT_ROLE_REJECTED)
+    try:
+        spec = json.loads(spec_path.read_text(encoding="utf-8"))
+        assert isinstance(spec.get("pages"), list) and spec["pages"]
+    except Exception as exc:                    # noqa: BLE001
+        return emit({"refused": True, "spec": str(spec_path),
+                     "why": "the spec file does not parse: %r" % exc},
+                    EXIT_ROLE_REJECTED)
+    runner = Path(__file__).resolve().parent.parent / "scripts" \
+        / "browser-spec-runner.js"
+    out_file = Path(tempfile.mkstemp(suffix=".json")[1])
+    traces = ((Path(task_dir) / "browser-traces") if task_dir
+              else repo / ".ai-dlc" / "browser-traces")
+    traces.mkdir(parents=True, exist_ok=True)
+    env = {**os.environ,
+           "AI_DLC_SPEC_REPO_ROOT": str(repo.resolve())}
+    proc = subprocess.run(
+        ["node", str(runner), str(spec_path), str(out_file),
+         str(traces)],
+        capture_output=True, text=True, env=env, timeout=600)
+    try:
+        run = json.loads(out_file.read_text(encoding="utf-8"))
+    except Exception as exc:                    # noqa: BLE001
+        return emit({"refused": True, "runner_rc": proc.returncode,
+                     "stderr": proc.stderr[-500:],
+                     "why": "the runner wrote nothing readable: %r" % exc},
+                    EXIT_INCONCLUSIVE)
+    finally:
+        out_file.unlink(missing_ok=True)
+    if "error" in run:
+        return emit({"refused": True, "runner_error": run["error"],
+                     "remedy": ("check AI_DLC_PLAYWRIGHT_ROOT — the "
+                                "runner resolves playwright-core from "
+                                "the pinned tree")},
+                    EXIT_INCONCLUSIVE)
+    classified = classify_spec_run(run)
+    out = {"spec": str(spec_path), "repo": str(repo),
+           "mode": "deterministic-replay", **classified,
+           "note": ("no model and no MCP in this path — assertions "
+                    "replayed on the pinned core; a flake is suspicious "
+                    "and named, never silent")}
+    if task_dir:
+        (Path(task_dir) / "browser-spec-run.json").write_text(
+            json.dumps(out, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8")
+        event(task_dir, event="BROWSER_SPEC_RUN",
+              verdict=classified["verdict"], counts=classified["counts"])
+    return emit(out, 0 if classified["verdict"] != "fail" else 1)
+
+
 def cmd_browser_verify(change: str, repo: Path,
                        task_dir: Path | None, pages: list[str],
                        mode: str = "code.normal",
@@ -8735,8 +10253,15 @@ def cmd_browser_verify(change: str, repo: Path,
         f"assertions named above.  Write your findings to "
         f"browser-verify/report.md in the repo root: one row per page, "
         f"pass/fail, failure reason if failed.\n\n"
-        f"Write only browser-verify/report.md.  When you are done, "
-        f"report the file you wrote."
+        f"Then PERSIST what you checked: write browser-verify/spec.json "
+        f"in the repo root — one entry per page, shape "
+        f'{{"pages": [{{"path": "<repo-relative page>", "title": "<exact '
+        f'title>", "selectors": ["<selector you asserted>"], "texts": '
+        f'["<text you asserted>"]}}]}} — so every later verification can '
+        f"replay deterministically (plan.py browser-verify --run-spec) "
+        f"without you.\n\n"
+        f"Write only browser-verify/report.md and browser-verify/"
+        f"spec.json.  When you are done, report the files you wrote."
         + _subagent_listing_sentence())
     out, frames = run_browser_verify_session(change, verify_prompt, repo,
                                              task_dir, mode, timeout)
@@ -8982,6 +10507,32 @@ def cmd_design(change: str, repo: Path, task_dir: Path | None,
         rc = cmd_design_select(change, repo, task_dir, mode)
         if rc != 0:
             return rc
+        # asset-forward default: materialize the chosen template
+        # BETWEEN D0 and D1 — the specify session then derives the
+        # palette from the materialized example page and references
+        # the materialized images (a template with no material, or
+        # standing material, is not an error — the note just stays
+        # absent and the specify proceeds as before)
+        _sel = load_json(Path(task_dir) / "state.json",
+                         {}).get("design_selection") or {}
+        if _sel.get("chosen"):
+            cmd_design_materialize(change, repo,
+                                   Path(_sel["chosen"]).parent.name,
+                                   task_dir=task_dir)
+        # strategy: more template-based material — the shortlist's
+        # runner-ups (next two distinct dirs) materialize as secondary
+        # slots so the design and the coder assemble from a broader
+        # template basis; refusals (no material / standing) are fine
+        _seen = {Path(_sel.get("chosen", "/x")).parent.name}
+        for _c in (_sel.get("shortlist") or []):
+            _d = Path(_c.get("path", "/x")).parent.name
+            if _d in _seen or not _d or _d.startswith("x"):
+                continue
+            _seen.add(_d)
+            if len(_seen) > 3:
+                break
+            cmd_design_materialize(change, repo, _d,
+                                   task_dir=task_dir, secondary=True)
         # D1 SPECIFY
         rc = cmd_design_specify(change, repo, task_dir, mode, timeout)
         if rc != 0:
@@ -9441,6 +10992,115 @@ def score_candidates(text: str, repo: Path,
     return positive[:_SUGGEST_MAX]
 
 
+def _wbs_topo_order(subtasks: list) -> list | None:
+    """Kahn ordering over depends_on. None on an unknown dependency or
+    a cycle — the decomposition the coding agent walks must be a DAG
+    with a start."""
+    indeg: dict = {s.get("id"): 0 for s in subtasks}
+    succ: dict = {s.get("id"): [] for s in subtasks}
+    for s in subtasks:
+        for dep in s.get("depends_on", []) or []:
+            if dep not in indeg:
+                return None
+            indeg[s["id"]] += 1
+            succ[dep].append(s["id"])
+    ready = [i for i, d in indeg.items() if d == 0]
+    order: list = []
+    while ready:
+        cur = ready.pop(0)
+        order.append(cur)
+        for nxt in succ[cur]:
+            indeg[nxt] -= 1
+            if indeg[nxt] == 0:
+                ready.append(nxt)
+    return order if len(order) == len(subtasks) else None
+
+
+def cmd_wbs(change: str, repo: Path) -> int:
+    """Validate the project-manager decomposition: wbs.json plus one
+    handoff package per subtask inside the change's spec dir, every
+    package's brief carrying the four contract markers, and the
+    project tree untouched (clean git status — the PM manages, never
+    codes). Emits the topo-ordered subtask list the coding agent
+    executes one by one."""
+    cdir = plane_tree(repo) / "changes" / change
+    wbs_path = cdir / "wbs.json"
+
+    def bad(why: str, **extra) -> int:
+        payload = {"rejected": "wbs", "change": change, "why": why}
+        payload.update(extra)
+        return emit(payload, EXIT_PACKAGE_INVALID)
+
+    if not wbs_path.is_file():
+        return bad(f"no wbs.json at {wbs_path} — produce it in the "
+                   f"{PM_ROLE} role first (roles/{PM_ROLE}.md)")
+    wbs = load_json(wbs_path, None)
+    if not isinstance(wbs, dict):
+        return bad("wbs.json is not a JSON object")
+    if wbs.get("change_id") != change:
+        return bad(f"wbs change_id {wbs.get('change_id')!r} does not "
+                   f"match --change {change!r}")
+    if str(wbs.get("repo")) != str(repo):
+        return bad(f"wbs repo {wbs.get('repo')!r} does not match "
+                   f"--repo {str(repo)!r}")
+    subs = wbs.get("subtasks")
+    if not isinstance(subs, list) or not subs:
+        return bad("wbs subtasks missing or empty")
+    seen: set = set()
+    for st in subs:
+        sid = st.get("id") if isinstance(st, dict) else None
+        if not isinstance(sid, str) or not sid or sid in seen:
+            return bad(f"subtask id missing, not a string or "
+                       f"duplicated: {sid!r}")
+        seen.add(sid)
+    order = _wbs_topo_order(subs)
+    if order is None:
+        return bad("depends_on carries an unknown id or a cycle")
+    by_id = {st["id"]: st for st in subs}
+    for sid in order:
+        st = by_id[sid]
+        if st.get("package") != f"packages/{sid}.json":
+            return bad(f"subtask {sid}: package must be "
+                       f"packages/{sid}.json")
+        ppath = cdir / "packages" / f"{sid}.json"
+        pkg = load_json(ppath, None)
+        if not isinstance(pkg, dict):
+            return bad(f"subtask {sid}: package file missing or not "
+                       f"JSON at {ppath}")
+        if pkg.get("change_id") != change or \
+                pkg.get("subtask_id") != sid:
+            return bad(f"subtask {sid}: package change_id/subtask_id "
+                       "mismatch")
+        for key in PACKAGE_KEYS:
+            if pkg.get(key) in (None, ""):
+                return bad(f"subtask {sid}: package key missing or "
+                           f"empty: {key}", missing_key=key)
+        brief = pkg.get("brief")
+        if not isinstance(brief, str) or not brief.strip():
+            return bad(f"subtask {sid}: brief missing — the four-marker "
+                       "contract (Objective / Expected output / Tools / "
+                       "Boundary) rides on it")
+        missing = brief_missing_sections(brief)
+        if missing:
+            return bad(f"subtask {sid}: brief missing sections "
+                       f"{missing}", missing_sections=missing)
+    dirty = run(["git", "-C", str(repo), "status", "--porcelain"])
+    if dirty.returncode == 0 and dirty.stdout.strip():
+        return bad("the project tree is dirty — the project-manager "
+                   "must leave it exactly as found (manage, never "
+                   "code): git status reports changes",
+                   dirty=dirty.stdout.strip()[:400])
+    return emit({"change": change,
+                 "subtasks": [{"id": sid,
+                               "title": by_id[sid].get("title", ""),
+                               "package": by_id[sid]["package"],
+                               "depends_on": list(by_id[sid]
+                                                  .get("depends_on",
+                                                       []))}
+                              for sid in order],
+                 "package_count": len(order),
+                 "tree": "clean"}, 0)
+
 def cmd_suggest(repo: Path, change: str | None, text: str) -> int:
     """G3: `plan.py suggest --repo <repo> [--change <id>] "<text>"`.
     Read-only query (INV-23): scores the fixed candidate table against
@@ -9854,7 +11514,8 @@ def _build_subparsers(sub) -> None:
                    help="the client mode; team is refused with the "
                         "three recorded reasons")
     p.add_argument("--timeout", type=int, default=1800)
-    p.add_argument("--concurrency", type=int, default=2,
+    p.add_argument("--concurrency", type=int,
+                   default=REVIEW_CONCURRENCY_DEFAULT,
                    help="reviewers dispatched at once")
     p.add_argument("--axes", default=None,
                    help='the axes for this round, each with a reason: '
@@ -10004,7 +11665,8 @@ def _build_subparsers(sub) -> None:
                        help="build or show the OpenDesign index "
                             "(candidates + tree_id + IDF table)")
     p.add_argument("--root", default=str(OPENDESIGN_ROOT), type=Path)
-    p.add_argument("action", choices=["build", "show"],
+    p.add_argument("action",
+                   choices=["build", "show", "metadata-coverage", "metadata-validate"],
                    help="build writes the index; show prints a summary")
     p = sub.add_parser("design-scope",
                        help="the design applicability measurement on "
@@ -10036,6 +11698,18 @@ def _build_subparsers(sub) -> None:
                               "via a session dispatch")
     br.add_argument("--change", required=True)
     br.add_argument("--repo", required=True, type=Path)
+    q = csub.add_parser("query",
+                        help="P1-8: the author-side channel — read the "
+                             "graph, not the code; deterministic, local, "
+                             "no session is opened")
+    q.add_argument("--repo", required=True, type=Path)
+    q.add_argument("--file", default=None,
+                   help="a file path (or suffix) to centre the "
+                        "neighborhood on")
+    q.add_argument("--symbol", default=None,
+                   help="a symbol name to centre the neighborhood on")
+    q.add_argument("--hop", type=int, default=1,
+                   help="hops to walk from the seed (default 1)")
     br.add_argument("--task-dir", default=None, type=Path)
     br.add_argument("--mode", default="code.normal")
     br.add_argument("--timeout", type=int, default=600)
@@ -10047,8 +11721,12 @@ def _build_subparsers(sub) -> None:
     p.add_argument("--change", required=True)
     p.add_argument("--repo", required=True, type=Path)
     p.add_argument("--task-dir", default=None, type=Path)
-    p.add_argument("--pages", required=True,
+    p.add_argument("--pages", default=None,
                    help="comma-separated list of page paths to verify")
+    p.add_argument("--run-spec", default=None, dest="run_spec",
+                   help="P1-7: replay browser-verify/spec.json "
+                        "deterministically — no session, no MCP; "
+                        "flakes classified, traces saved")
     p.add_argument("--mode", default="code.normal")
     p.add_argument("--timeout", type=int, default=600)
     p = sub.add_parser("design-pick",
@@ -10123,6 +11801,73 @@ def _build_subparsers(sub) -> None:
                         "state.json reshapes the rationales")
     p.add_argument("text", help="the free-text request to classify")
 
+    p = sub.add_parser("design-pages",
+                       help="D1.6 PAGES — match each design/pages.md "
+                            "page to its own top-N secondary templates "
+                            "(deterministic retrieval, D0 main template "
+                            "excluded); picks land in state.json "
+                            "design_pages for per-page materialization")
+    p.add_argument("--change", required=True)
+    p.add_argument("--repo", required=True, type=Path)
+    p.add_argument("--task-dir", default=None, type=Path,
+                   help="task dir holding state.json (default: the "
+                        "repo's planning task dir)")
+    p.add_argument("--top", type=int, default=3,
+                   help="per-page shortlist depth (default 3)")
+
+    p = sub.add_parser("design-pages-specify",
+                       help="D1.7 PAGE-SPECIFY — one ui-designer "
+                            "session turns the design-pages picks into "
+                            "concrete per-page specs under "
+                            "design/pages/<slug>.md, reusing the main "
+                            "tokens/components; skill shas pinned per "
+                            "page")
+    p.add_argument("--change", required=True)
+    p.add_argument("--repo", required=True, type=Path)
+    p.add_argument("--task-dir", default=None, type=Path)
+    p.add_argument("--timeout", type=int, default=600)
+    p.add_argument("--max-pages", type=int, default=3,
+                   help="cap on pages specified per run (default 3)")
+
+    p = sub.add_parser("design-materialize",
+                       help="D1.5 MATERIALIZE — copy the chosen "
+                            "template's assets/references/example into "
+                            "the change's design-material/ with a "
+                            "sha-pinned manifest; refuses to overwrite "
+                            "standing material")
+    p.add_argument("--change", required=True)
+    p.add_argument("--repo", required=True, type=Path)
+    p.add_argument("--template", required=True)
+    p.add_argument("--root", default=None, type=Path,
+                   help="OpenDesign root override (tests)")
+    p.add_argument("--page", default=None,
+                   help="materialize as a per-page secondary template "
+                        "under design-material/pages/<slug>/ (slug from "
+                        "design-pages output)")
+    p.add_argument("--max-files", type=int, default=None,
+                   help="override the materialized-file cap "
+                        "(default 40)")
+    p.add_argument("--max-bytes", type=int, default=None,
+                   help="override the materialized-bytes cap "
+                        "(default 24MB)")
+    p.add_argument("--task-dir", default=None, type=Path,
+                   help="task dir for the dispatch evidence "
+                        "(default: the repo's planning task dir)")
+    p.add_argument("--secondary", action="store_true",
+                   help="materialize as a secondary template slot "
+                        "under design-material/secondary/<template>/ "
+                        "(more template-based material for the build)")
+
+    p = sub.add_parser("wbs",
+                       help="validate the project-manager decomposition "
+                            "(wbs.json + one handoff package per subtask, "
+                            "each brief carrying the four contract "
+                            "markers, and the project tree untouched — "
+                            "clean git status). Emits the topo-ordered "
+                            "subtask list the coding agent executes.")
+    p.add_argument("--change", required=True)
+    p.add_argument("--repo", required=True, type=Path)
+
 def main() -> None:
     if "--describe" in sys.argv:
         ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -10138,6 +11883,23 @@ def main() -> None:
         sys.exit(cmd_next(args.task_dir, args.repo.resolve()))
     if args.cmd == "suggest":
         sys.exit(cmd_suggest(args.repo.resolve(), args.change, args.text))
+    if args.cmd == "wbs":
+        sys.exit(cmd_wbs(args.change, args.repo.resolve()))
+    if args.cmd == "design-pages":
+        sys.exit(cmd_design_pages(args.change, args.repo.resolve(),
+                                  args.task_dir, args.top))
+    if args.cmd == "design-pages-specify":
+        sys.exit(cmd_design_pages_specify(args.change, args.repo.resolve(),
+                                          args.task_dir,
+                                          "code.normal", args.timeout,
+                                          args.max_pages))
+    if args.cmd == "design-materialize":
+        sys.exit(cmd_design_materialize(args.change, args.repo.resolve(),
+                                        args.template, args.root,
+                                        args.page, args.max_files,
+                                        args.max_bytes,
+                                        args.task_dir,
+                                        args.secondary))
     if args.cmd == "roles":
         sys.exit(cmd_roles(args.change, args.repo.resolve()))
     if args.cmd in ("validate", "graph", "status"):
@@ -10240,10 +12002,17 @@ def main() -> None:
             sys.exit(cmd_codegraph_brief(args.change, args.repo.resolve(),
                                          args.task_dir, args.mode,
                                          args.timeout))
+        if args.action == "query":
+            sys.exit(cmd_codegraph_query(args.repo.resolve(), args.file,
+                                         args.symbol, args.hop))
     if args.cmd == "browser-verify":
+        if args.run_spec:
+            sys.exit(cmd_browser_spec_run(
+                Path(args.run_spec), args.repo.resolve(),
+                args.task_dir))
         sys.exit(cmd_browser_verify(args.change, args.repo.resolve(),
                                     args.task_dir,
-                                    [p for p in args.pages.split(",")
+                                    [p for p in (args.pages or "").split(",")
                                      if p],
                                     args.mode, args.timeout))
     if args.cmd == "design-pick":

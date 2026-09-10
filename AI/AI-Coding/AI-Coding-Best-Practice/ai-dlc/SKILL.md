@@ -112,7 +112,16 @@ the typo guard, not a missing-feature error.
 
 **1 · WORK** — you, inline: read what the task needs (not everything),
 write the code, run the tests. Route planned: dispatch through
-`bin/plan.py` — one role per artifact, judged from the event frames. The
+`bin/plan.py` — one role per artifact, judged from the event frames.
+Two roles are yours — hats the coding agent wears, contracted in
+`roles/project-manager.md` and `roles/coder.md`, never dispatched: the
+PM hat is the entry point and the orchestrator — it runs init, drives
+the jiuwenswarm dispatches (proposal first), then reads the repo and
+writes `wbs.json` plus one four-marker handoff package per subtask
+(`plan.py wbs --change <id> --repo <repo>` validates it and proves the
+tree untouched — clean git status); the coder hat then executes the
+subtasks in the emitted order, coding and testing each per its
+package. The
 target is admitted first: a tree holding source of a dependency this
 project may never modify (delegate-router / jiuwenswarm / openjiuwen /
 openspec source) is refused before the client exists, and a working
@@ -147,7 +156,7 @@ it), every concern citing its finding as `- [axis] …`; the round fails
 if a concern cites nothing, a filed finding appears in no group, or a
 passage recommends or ranks between findings — the synthesis surfaces,
 it never decides. `--stage synthesis` checks it; `--stage revision`
-then dispatches the author once more with every finding in full, the
+then dispatches the artifact's owning role once more with every finding in full, the
 synthesis alongside, and the answers owed to the findings, not to the
 synthesis — each answered on the record (`accepted: yes` + what
 changed, or `no` + why); answering only the synthesis blocks as
@@ -182,6 +191,25 @@ and the pages are mechanically verified against it. Four phases:
   they count toward `landed_files`/`landed_bytes` — the merge gate sees
   them (S1 fix). D1 failure only loses five small files; the failure is
   isolated.
+
+- **D1.6 PAGES** — `design-pages` reads `design/pages.md` and matches
+  each `Page:`-titled section to its own top-3 secondary templates (the
+  same deterministic retrieval as D0, main template excluded; spec meta
+  sections like Responsive/Audit summaries are skipped, the drop count
+  is recorded); the picks land in `state.json.design_pages`, and
+  per-page material arrives via `design-materialize --page <slug>`.
+- **MATERIALIZE IS A DISPATCH** — OpenDesign is consumed through
+  jiuwenswarm sessions only: `design-materialize` copies the template
+  material via a session running the normalized copy command; the
+  plane verifies the frames, cross-checks the copy report against the
+  standing files, and signs the manifest. The coding agent never
+  calls OpenDesign directly.
+
+- **D1.7 PAGE-SPECIFY** — `design-pages-specify` closes the loop: one
+  ui-designer session reads the standing tokens/components plus each
+  page's picked SKILL.md and writes a concrete per-page spec at
+  `design/pages/<slug>.md` (skill sha pinned per page, ≤3 pages per
+  run) — product files the merge gate sees.
 
 - **D2 BUILD** — you, the main session, write pages **per the spec**. No
   design decisions here — only content and assembly. Colors, font sizes,

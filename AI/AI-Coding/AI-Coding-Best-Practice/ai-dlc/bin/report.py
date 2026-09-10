@@ -39,6 +39,7 @@ import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -51,10 +52,55 @@ from pathlib import Path, PurePosixPath
 # gate can't see design"). Do NOT add design/** to excludes.
 PRODUCT_EXCLUDES = (".ai-dlc/**", "CLAUDE.md", "findings.json",
                     "__pycache__/**", "*.pyc", ".pytest_cache/**",
-                    "audits/**", ".ctx-echo", ".skill-echo", "blueprint.json")
+                    "audits/**", ".ctx-echo", ".skill-echo", "blueprint.json",
+                    # session scaffolding the gateway leaves in the tree
+                    # (02-static-site finding #6)
+                    ".agent_history/**", "coding_memory/**",
+                    "prompt_attachment/**")
 GATE_BLOCKED_EXIT = 17
 GATES = ["G-DELIVER-1", "MERGE_GATE"]
 ROUTE_VALUES = ("inline", "planned")
+
+# P0-3 (effort tiering): the expensive patterns are chosen, never
+# defaulted into — multi-agent token burn runs ~15x a plain chat and
+# token spend alone explained 80% of performance variance (Anthropic's
+# multi-agent retrospection), so the tier a task belongs in is stated
+# at ROUTE with its shape, crew and a budget ceiling, recorded in
+# state.json and echoed by `next`. Tier-3 is entered by explicit choice
+# when the task's breadth names it — never by file count alone.
+ROUTE_TIERS = {
+    "tier-1-inline": {
+        "shape": "1-3 files, one surface, no cross-module blast radius",
+        "crew": "1 coder-hat session (the coding agent itself)",
+        "budget": "3-10 tool calls",
+    },
+    "tier-2-planned": {
+        "shape": "4+ files or spec-bearing; still one repo, one surface",
+        "crew": "jiuwenswarm artifact dispatches (proposal/specs/design/tasks) "
+                "+ validator dispatch; PM/coder are the agent's hats; adversarial "
+                "review round (reviewers run concurrently, default 4)",
+        "budget": "10-15 tool calls per role",
+    },
+    "tier-3-team": {
+        "shape": "breadth: multiple surfaces or repos, or context that "
+                 "overflows a single session",
+        "crew": "tier-2 plus per-surface roles (ui-designer, codegraph) "
+                "fanned out concurrently",
+        "budget": "bounded per role; the round records what was spent",
+    },
+}
+
+
+def route_tier(route: str) -> dict:
+    """The tier block for a recorded route — the standing guidance the
+    ROUTE decision travels with. tier-3-team is never auto-assigned:
+    breadth is named, not counted."""
+    tier = "tier-1-inline" if route == "inline" else "tier-2-planned"
+    return {"tier": tier, **ROUTE_TIERS[tier],
+            "tier_note": ("tier-3-team is entered by explicit choice "
+                          "when the task's breadth names it — the "
+                          "anti-15x rule: effort scales with complexity, "
+                          "never by default")}
 
 
 # ── the plane's records: the only spec surface the caller reads ─────
@@ -617,6 +663,9 @@ def _cmd_next_base(task_dir: Path, repo: Path) -> int:
 
     stage = state.get("stage", "WORK")
     route = state.get("route", "inline")
+    # P0-3: the tier recorded at init (or derived when the state
+    # predates it) travels with every recommendation
+    tier = state.get("tier") or route_tier(route)
     change_id = state.get("change_id")
     report = load_json(task_dir / "report.json", {})
     gate_ans = load_json(task_dir / "gates" / "gate-merge.answer.json")
@@ -778,6 +827,7 @@ def _cmd_next_base(task_dir: Path, repo: Path) -> int:
                         "produces the signed verdict deliver reads"),
                 "do": do,
                 "design_carry": design_carry,
+                "tier": tier["tier"], "tier_budget": tier["budget"],
                 "then": ["then: python3 bin/report.py deliver --task-dir %s "
                          "--repo %s --outcome completed" % (task_dir, repo)],
                 "not_yet": []
@@ -791,6 +841,7 @@ def _cmd_next_base(task_dir: Path, repo: Path) -> int:
             "blocked_on": None,
             "why": "work in progress — deliver when the code and tests pass",
             "do": do, "design_carry": design_carry,
+            "tier": tier["tier"], "tier_budget": tier["budget"],
             "then": [], "not_yet": []
         }, indent=2, ensure_ascii=False))
         return 0
@@ -919,16 +970,55 @@ def cmd_init(task_dir: Path, repo: Path, route: str, task_id: str,
         "stage": stage, "human_state": human, "started_at": now_iso()}
     if branch:
         st["branch"] = branch
+        # 02-static-site finding #5: init run AFTER committing on the
+        # task branch records base==head and every later measurement
+        # comes back empty - twice bitten. Say it while it is fixable.
+        _cur = git(repo, "branch", "--show-current").strip()
+        if _cur == branch:
+            st["base_warning"] = (
+                "HEAD already sits on %s - base recorded at HEAD "
+                "measures nothing; reset base to the fork point (git "
+                "merge-base <target> HEAD) or re-record it, before "
+                "delivering" % branch)
+    # P0-3: the effort tier travels with the route decision — its
+    # shape, crew and budget ceiling are stated at ROUTE, recorded, and
+    # echoed by `next`, so the expensive patterns are chosen
+    st["tier"] = route_tier(route)
+    # finding #2 (AB-lab E2E, 2026-09-08): the plane keys specs trees,
+    # records and task state by the exact repo path — a linked worktree
+    # carries its own path and therefore its own plane identity. That
+    # is legitimate (every task branch uses one) but mixing the main
+    # checkout with the worktree has now stranded work twice (colombia,
+    # AB-lab); the warning states the contract while it can still be
+    # honored: init, every dispatch and deliver name the SAME path.
+    try:
+        _gd = Path(git(repo, "rev-parse", "--git-dir").strip())
+        _gcd = Path(git(repo, "rev-parse",
+                        "--git-common-dir").strip())
+        _linked = (_gd.resolve() != _gcd.resolve())
+    except Exception:                           # noqa: BLE001
+        _linked = False            # unreadable is no reason to warn
+    if _linked:
+        st["repo_identity_note"] = (
+            "linked worktree: the plane keys specs, records and state "
+            "by this exact path (%s) — use it for every dispatch and "
+            "deliver too; mixing it with the main checkout strands "
+            "the work (measured: colombia, AB-lab 2026-09-08)" % repo)
     save_json(task_dir / "state.json", st)
     event(task_dir, event="TASK_STARTED", task_id=task_id, route=route,
           base_sha=base, change_id=change_id)
     out = {"task_dir": str(task_dir), "base_sha": base,
            "route": route, "change_id": change_id,
-           "stage": stage, "human_state": human}
+           "stage": stage, "human_state": human,
+           "tier": st["tier"]["tier"], "tier_budget": st["tier"]["budget"]}
     if branch:
         out["branch"] = branch
         out["work_on"] = (f"git -C {repo} worktree add ../wt/{change_id} "
                           f"-b {branch}")
+    if "repo_identity_note" in st:
+        out["repo_identity_warning"] = st["repo_identity_note"]
+    if "base_warning" in st:
+        out["base_warning"] = st["base_warning"]
     print(json.dumps(out, indent=2, ensure_ascii=False))
     return 0
 
@@ -974,6 +1064,15 @@ def stated_actor(value: str | None, what: str) -> str | None:
 
 def gate_answer(task_dir: Path, gate_id: str) -> dict | None:
     return load_json(task_dir / "gates" / f"{gate_id}.answer.json")
+
+
+# P1-6 (anti-collusion): the merge gate's standing reminder — measured
+# facts outrank consensus. A unanimous approval never overrides a
+# measured failure; the human reads the diff, not the mood.
+GATE_AUTHORITY_NOTE = (
+    "Machine facts are authoritative: the git diff, the execution gate "
+    "and the five-facts frames outrank any reviewer consensus — however "
+    "unanimous an approval reads, it never overrides a measured failure.")
 
 
 def cmd_gate(task_dir: Path, gate_id: str, decision: str | None,
@@ -1039,6 +1138,21 @@ def cmd_gate(task_dir: Path, gate_id: str, decision: str | None,
             else:
                 question = ("Merge this delivery into the target branch? "
                             "(rationale required)")
+        # P1-6: the standing reminder and the execution gate's verdict
+        # ride with every default question — the human at the gate sees
+        # the machine facts' state and their authority before deciding
+        _eg_state = ((_report.get("execution_gate") or {}).get("state"))
+        if not question:
+            question = ""
+        question += "\nExecution gate: %s." % (
+            _eg_state or "not run (this report predates the gate)")
+        _orphans = ((_report.get("alignment") or {})
+                    .get("orphan_requirements") or [])
+        if _orphans:
+            question += ("\nSpec alignment: %d requirement(s) not "
+                         "reflected in the landed diff: %s."
+                         % (len(_orphans), "; ".join(_orphans[:5])))
+        question += "\n" + GATE_AUTHORITY_NOTE
         if not options:
             if _design_warn:
                 options = ["run_design_first", "approve", "request_changes",
@@ -1512,12 +1626,23 @@ def design_auto_due(task_dir: Path, repo: Path, state: dict,
     # — the human at the gate sees design_unverified if no signed record
     # stands, and decides.
     selection = state.get("design_selection")
-    if isinstance(selection, dict) and selection.get("skill"):
+    # panama-v2 finding: cmd_design_select/pick write {chosen,
+    # skill_name, skill_sha256} — the old `skill` key matched neither,
+    # so every selected design looked "not designed" at deliver and
+    # the auto-dispatch re-ran the whole design pipeline (select,
+    # second opinion, specify) over committed artifacts. Two facts
+    # now short-circuit: a selection with a chosen skill path, and a
+    # completed D1 (design_spec.all_written).
+    _selected = isinstance(selection, dict) and bool(
+        selection.get("skill") or selection.get("chosen"))
+    _d1_done = isinstance(state.get("design_spec"), dict) and bool(
+        state["design_spec"].get("all_written"))
+    if _selected or _d1_done:
         _sf = surface.get("surface_files", [])
         _all_have_content = bool(_sf) and all(
             (repo / f).stat().st_size > 200 for f in _sf
             if (repo / f).exists())
-        if _all_have_content:
+        if _all_have_content or _d1_done:
             return False, "designed_in_work"
     planning = load_json(task_dir / "planning.json", {})
     decision = planning.get("design_decision")
@@ -1864,10 +1989,772 @@ def codegraph_auto_dispatch(task_dir: Path, repo: Path, state: dict,
     return rec
 
 
+# ── P0-4 execution gate: the repo's own toolchain gets a vote ──────
+# G-DELIVER-1 already measures two machine facts: the spec validates
+# strictly, and the work landed (git diff). Neither says the code runs.
+# This gate adds the third: the repo's own toolchain verdict — tests,
+# lint, typecheck. A tool runs only when the repo's surface asks for it
+# (changed files of that language + the tool's config/test surface
+# present) AND its binary is available; a language with no usable
+# toolchain is recorded not_applicable, never silently skipped (the
+# design states pattern). Lint/typecheck are scoped to the changed
+# files so feedback stays in seconds; the test suite runs as the repo
+# defines it. The gate reports executability, not correctness — a green
+# gate is necessary, never sufficient (SKILL.md states this).
+# AI_DLC_EXEC_TOOLS_JSON replaces discovery with a fixed plan
+# ([{"name", "cmd", "scope"}], cmd a list) so tests can drive the gate
+# without installing toolchains; AI_DLC_EXEC_TIMEOUT bounds each tool.
+
+EXEC_GATE_TIMEOUT = int(os.environ.get("AI_DLC_EXEC_TIMEOUT", "300"))
+
+EXEC_GATE_LANG_EXTS = {
+    "python": (".py",),
+    "javascript": (".js", ".jsx", ".mjs", ".cjs"),
+    "typescript": (".ts", ".tsx"),
+}
+
+
+def _exec_lang_files(files: list[str]) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    for f in files:
+        for lang, exts in EXEC_GATE_LANG_EXTS.items():
+            if f.endswith(exts):
+                out.setdefault(lang, []).append(f)
+                break
+    return out
+
+
+def _tool_available(tool: str) -> bool:
+    return shutil.which(tool) is not None
+
+
+def execution_tool_plan(repo: Path, files: list[str]) -> list[dict]:
+    """The tools this delivery's changed surface asks for. Every entry
+    carries either a cmd to run or an explicit not_applicable reason —
+    a language present in the change is never absent from the plan."""
+    env_plan = os.environ.get("AI_DLC_EXEC_TOOLS_JSON")
+    if env_plan:
+        return json.loads(env_plan)
+    plan: list[dict] = []
+    langs = _exec_lang_files(files)
+    py = langs.get("python", [])
+    if py:
+        # flat layouts count too: a root-level test_*.py with no tests/
+        # dir and no config is still a pytest surface (the AB-lab E2E
+        # measured this gap live - finding #1, 2026-09-08)
+        has_pytest_surface = ((repo / "tests").is_dir()
+                              or (repo / "pytest.ini").is_file()
+                              or (repo / "pyproject.toml").is_file()
+                              or any(repo.glob("test_*.py"))
+                              or any(repo.glob("*_test.py")))
+        if has_pytest_surface:
+            # 06-records finding: a downloaded project carries its own
+            # venv - the plane interpreter cannot see its deps. Prefer
+            # the project's interpreter when it stands and carries
+            # pytest; the plane's is the fallback.
+            venv_py = repo / ".venv" / "bin" / "python"
+            if venv_py.is_file():
+                probe = subprocess.run(
+                    [str(venv_py), "-c", "import pytest"],
+                    capture_output=True)
+                if probe.returncode == 0:
+                    plan.append({"name": "pytest",
+                                 "cmd": [str(venv_py), "-m", "pytest",
+                                         "-q"],
+                                 "scope": "suite",
+                                 "detect": "project .venv carries "
+                                           "pytest"})
+                else:
+                    plan.append({"name": "pytest",
+                                 "status": "not_applicable",
+                                 "why": (".venv exists but carries no "
+                                         "pytest - the plane "
+                                         "interpreter cannot see the "
+                                         "project deps either")})
+            else:
+                plan.append({"name": "pytest",
+                             "cmd": [sys.executable, "-m", "pytest",
+                                     "-q"],
+                             "scope": "suite",
+                             "detect": "tests/ or pytest config "
+                                       "present"})
+        else:
+            plan.append({"name": "pytest", "status": "not_applicable",
+                         "why": "no tests/ directory or pytest config"})
+        if _tool_available("ruff"):
+            # 04-config-app finding: a foreign repo carries no
+            # ruff.toml - the bare default is style maximalism (UP/SIM/
+            # TRY...) that blocks real deliveries. The gate brings its
+            # own conservative floor, matching the plane's ruff.toml.
+            plan.append({"name": "ruff", "cmd": ["ruff", "check",
+                                                 "--select", "E,F",
+                                                 "--ignore", "E501",
+                                                 *py],
+                         "scope": "changed-files",
+                         "detect": "ruff on PATH"})
+        else:
+            plan.append({"name": "ruff", "status": "not_applicable",
+                         "why": "ruff not on PATH"})
+        if (repo / "pyproject.toml").is_file():
+            if _tool_available("mypy"):
+                plan.append({"name": "mypy", "cmd": ["mypy", *py],
+                             "scope": "changed-files",
+                             "detect": "mypy on PATH + pyproject.toml"})
+            else:
+                plan.append({"name": "mypy", "status": "not_applicable",
+                             "why": "mypy not on PATH (pyproject.toml present)"})
+        else:
+            plan.append({"name": "mypy", "status": "not_applicable",
+                         "why": "no pyproject.toml"})
+    js = langs.get("javascript", []) + langs.get("typescript", [])
+    if js:
+        pkg = {}
+        pkg_path = repo / "package.json"
+        if pkg_path.is_file():
+            try:
+                pkg = json.loads(pkg_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pkg = {}
+        if (pkg.get("scripts") or {}).get("test"):
+            plan.append({"name": "npm test",
+                         "cmd": ["npm", "test", "--silent"],
+                         "scope": "suite",
+                         "detect": "package.json test script present"})
+        else:
+            plan.append({"name": "npm test", "status": "not_applicable",
+                         "why": "package.json has no test script"})
+        if langs.get("typescript") and (repo / "tsconfig.json").is_file():
+            if _tool_available("npx"):
+                plan.append({"name": "tsc", "cmd": ["npx", "--no-install",
+                                                    "tsc", "--noEmit"],
+                             "scope": "suite",
+                             "detect": "tsconfig.json + npx on PATH"})
+            else:
+                plan.append({"name": "tsc", "status": "not_applicable",
+                             "why": "npx not on PATH (tsconfig.json present)"})
+        elif langs.get("typescript"):
+            plan.append({"name": "tsc", "status": "not_applicable",
+                         "why": "no tsconfig.json"})
+    return plan
+
+
+def _changed_lines(repo: Path, base: str | None,
+                   files: list[str]) -> dict[str, set[int]]:
+    """Per-file set of line numbers this change touched (diff base..HEAD;
+    without a recorded base the last commit is the honest fallback) —
+    the input for changed-line-only lint verdicts."""
+    ref = f"{base}..HEAD" if base else "HEAD~1..HEAD"
+    out: dict[str, set[int]] = {}
+    for f in files:
+        proc = subprocess.run(
+            ["git", "-C", str(repo), "diff", "--unified=0", ref, "--", f],
+            capture_output=True, text=True)
+        lines = set()
+        for m in re.finditer(r"^@@ -(?:\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))?",
+                             proc.stdout, re.M):
+            start = int(m.group(2))
+            count = int(m.group(3) or 1)
+            lines.update(range(start, start + count))
+        if lines:
+            out[f] = lines
+    return out
+
+
+def run_execution_gate(repo: Path, files: list[str],
+                       base: str | None = None) -> dict:
+    """Run the plan, one subprocess per tool, bounded by the timeout.
+    The gate runs in the working tree deliver was invoked from — for a
+    task branch that must be the worktree where the work lives (the
+    diff measures the branch; the tools measure the tree)."""
+    plan = execution_tool_plan(repo, files)
+    py_files = [f for f in files if f.endswith(".py")]
+    results = []
+    for entry in plan:
+        if "cmd" not in entry:
+            results.append({"name": entry["name"],
+                            "status": "not_applicable",
+                            "why": entry.get("why", "no command")})
+            continue
+        started = time.monotonic()
+        try:
+            proc = subprocess.run(entry["cmd"], capture_output=True,
+                                  text=True, cwd=str(repo),
+                                  timeout=EXEC_GATE_TIMEOUT)
+            rc = proc.returncode
+            output = ((proc.stdout or "") + "\n" + (proc.stderr or "")).strip()
+            status = "pass" if rc == 0 else "fail"
+            # V3 (process-integrity): a touched file's PRE-EXISTING
+            # debt must not block the delivery — ruff verdicts count
+            # only diagnostics on lines this change actually touched.
+            # The debt is reported honestly, not hidden.
+            if entry["name"] == "ruff" and rc != 0 \
+                    and os.environ.get(
+                        "AI_DLC_EXEC_RUFF_WHOLEFILE") != "1":
+                try:
+                    jproc = subprocess.run(
+                        entry["cmd"] + ["--output-format", "json"],
+                        capture_output=True, text=True, cwd=str(repo),
+                        timeout=EXEC_GATE_TIMEOUT)
+                    diags = json.loads(jproc.stdout or "[]")
+                except (json.JSONDecodeError,
+                        subprocess.TimeoutExpired):
+                    diags = []
+                touched = _changed_lines(repo, base, py_files)
+                mine, debt = [], 0
+                for d in diags:
+                    rel = str(Path(d.get("filename", ""))
+                              .relative_to(repo))
+                    if rel in touched \
+                            and d.get("location", {}).get("row")                             in touched[rel]:
+                        mine.append(d)
+                    else:
+                        debt += 1
+                if not mine:
+                    status = "pass"
+                    output = (f"changed lines clean; "
+                              f"baseline_debt_ignored={debt} "
+                              f"(pre-existing findings on untouched "
+                              f"lines of touched files)")
+                    rc = 0
+                else:
+                    output = ("changed-line findings: "
+                              + "; ".join(
+                                  f"{Path(d['filename']).name}:"
+                                  f"{d['location']['row']} "
+                                  f"{d.get('code', '?')}"
+                                  for d in mine[:5])
+                              + f"; baseline_debt_ignored={debt}")
+        except subprocess.TimeoutExpired:
+            rc, output, status = (None, "timed out after %ss"
+                                  % EXEC_GATE_TIMEOUT, "fail")
+        except FileNotFoundError:
+            rc, output, status = (None, "binary not found: %s"
+                                  % entry["cmd"][0], "fail")
+        # pool20 finding (semver/arrow/wcwidth): a downloaded project's
+        # pytest addopts routinely name plugins the delivery venv does
+        # not carry (pytest-cov in .pytest.ini/tox.ini) — the probe
+        # dies at usage error (rc 4) before running a single test. A
+        # usage error is a broken probe, not a failing suite: retry
+        # once with the project addopts cleared and record both. The
+        # retry's verdict is the gate's.
+        if entry["name"] == "pytest" and rc == 4:
+            fb_cmd = entry["cmd"] + ["-o", "addopts="]
+            try:
+                proc2 = subprocess.run(fb_cmd, capture_output=True,
+                                       text=True, cwd=str(repo),
+                                       timeout=EXEC_GATE_TIMEOUT)
+                fb_out = ((proc2.stdout or "") + "\n"
+                          + (proc2.stderr or "")).strip()
+                output = ("[probe died at usage error] "
+                          + (output.splitlines()[-1]
+                             if output.splitlines() else "")
+                          + "\n[retry with project addopts cleared]\n"
+                          + fb_out)
+                rc = proc2.returncode
+                status = "pass" if rc == 0 else "fail"
+                entry = {**entry, "cmd": fb_cmd,
+                         "fallback": ("project addopts cleared after "
+                                      "usage error")}
+            except subprocess.TimeoutExpired:
+                rc, output, status = (None, "retry timed out after %ss"
+                                      % EXEC_GATE_TIMEOUT, "fail")
+        results.append({
+            "name": entry["name"], "cmd": entry["cmd"],
+            "scope": entry.get("scope"), "status": status, "rc": rc,
+            **({"fallback": entry["fallback"]}
+               if "fallback" in entry else {}),
+            "elapsed_seconds": round(time.monotonic() - started, 3),
+            "output_tail": output.splitlines()[-25:]})
+    ran = [r for r in results if r["status"] != "not_applicable"]
+    state = ("not_applicable" if not ran else
+             "fail" if any(r["status"] == "fail" for r in ran) else "pass")
+    return {"state": state, "ran": len(ran), "tools": results,
+            "timeout_seconds": EXEC_GATE_TIMEOUT}
+
+
+# ── P1-5 (turn checkpoints — ported from grok-build's session/checkpoint.rs):
+# any writing turn can key the worktree's state: HEAD plus the dirty
+# region pinned as a stash-commit object (`git stash create` — nothing
+# is stashed away, the working tree is untouched; the object simply
+# records what was uncommitted). The registry lives in the task dir;
+# restore carries a stash-or-abort guard and never clobbers a dirty
+# tree blind. Ported per Apache-2.0 §4(b) from xai-org/grok-build
+# crates/codegen/xai-grok-workspace/src/session/{checkpoint,git}.rs.
+def checkpoints_path(task_dir: Path) -> Path:
+    return task_dir / "checkpoints.json"
+
+
+def _worktree_dirty(repo: Path) -> list[str]:
+    """Product paths only — .ai-dlc/ and its siblings are bookkeeping,
+    excluded from PRODUCT_EXCLUDES, and never a work region."""
+    out = git(repo, "status", "--porcelain")
+    dirty = []
+    for line in out.splitlines():
+        if not line.strip():
+            continue
+        path = line[3:].strip().strip('"').split(" -> ")[-1]
+        if not excluded(path):
+            dirty.append(line.strip())
+    return dirty
+
+
+def cmd_checkpoint(task_dir: Path, repo: Path, label: str | None,
+                   list_cps: bool, show_seq: int | None,
+                   restore_seq: int | None, stash_first: bool) -> int:
+    if not is_git_repo(repo):
+        print(json.dumps({"refused": True, "why": (
+            "--repo %s is not a git repository" % repo)},
+            indent=2, ensure_ascii=False), file=sys.stderr)
+        return 1
+    cps = load_json(checkpoints_path(task_dir), {"checkpoints": []})
+    items: list = cps.get("checkpoints", [])
+
+    def _find(seq: int) -> dict | None:
+        return next((c for c in items if c.get("seq") == seq), None)
+
+    if restore_seq is not None:
+        cp = _find(restore_seq)
+        if cp is None:
+            print(json.dumps({"refused": True, "why": (
+                "no checkpoint %d on record — checkpoint --list names "
+                "what exists" % restore_seq)}, indent=2,
+                ensure_ascii=False), file=sys.stderr)
+            return 1
+        dirty = _worktree_dirty(repo)
+        if dirty and not stash_first:
+            print(json.dumps({"refused": True, "seq": restore_seq,
+                "dirty_now": dirty[:20],
+                "why": ("restore refuses rather than clobber a dirty "
+                        "tree — pass --stash-first (the stash is named "
+                        "and recorded) or clean by hand"),
+                "guard": "stash-or-abort"}, indent=2, ensure_ascii=False),
+                file=sys.stderr)
+            return 1
+        if dirty and stash_first:
+            stash_msg = ("pre-restore of checkpoint %d — %s"
+                         % (restore_seq, now_iso()))
+            git(repo, "stash", "push", "-m", stash_msg)
+            cp.setdefault("restore_stashes", []).append(
+                {"message": stash_msg, "ts": now_iso()})
+            save_json(checkpoints_path(task_dir), cps)
+        git(repo, "restore", "--source=" + cp["head"],
+            "--staged", "--worktree", "--", ".")
+        created_after = [d for d in _worktree_dirty(repo)
+                         if d.startswith("??")]
+        event(task_dir, event="CHECKPOINT_RESTORED", seq=restore_seq,
+              head=cp["head"], stashed=bool(dirty and stash_first),
+              created_after=created_after[:20])
+        print(json.dumps({"restored": restore_seq, "head": cp["head"],
+                          "stashed_first": bool(dirty and stash_first),
+                          "created_after_remain": created_after[:20],
+                          "dirty_commit_at_checkpoint":
+                              cp.get("dirty_commit"),
+                          "note": ("tracked files are back at the "
+                                   "checkpoint's HEAD; files created "
+                                   "after it remain and are listed; the "
+                                   "checkpoint's uncommitted region is "
+                                   "the dirty_commit object above")},
+                         indent=2, ensure_ascii=False))
+        return 0
+
+    if show_seq is not None:
+        cp = _find(show_seq)
+        if cp is None:
+            print(json.dumps({"refused": True, "why": (
+                "no checkpoint %d on record" % show_seq)},
+                indent=2, ensure_ascii=False), file=sys.stderr)
+            return 1
+        prev = next((c for c in reversed(items)
+                     if c["seq"] < show_seq), None)
+        if prev is None:
+            print(json.dumps({"seq": cp["seq"], "head": cp["head"],
+                              "first": True,
+                              "dirty_files_at_checkpoint":
+                                  cp.get("dirty_count", 0)},
+                             indent=2, ensure_ascii=False))
+            return 0
+        diff = git(repo, "diff", "--stat",
+                   "%s..%s" % (prev["head"], cp["head"]))
+        print(json.dumps({"seq": cp["seq"], "label": cp.get("label"),
+                          "from_seq": prev["seq"],
+                          "diff_stat": diff.strip().splitlines()[-30:]},
+                         indent=2, ensure_ascii=False))
+        return 0
+
+    if list_cps or not label:
+        print(json.dumps({"checkpoints": [
+            {"seq": c["seq"], "ts": c.get("ts"),
+             "label": c.get("label"), "head": c["head"],
+             "dirty_files": c.get("dirty_count", 0)}
+            for c in items]}, indent=2, ensure_ascii=False))
+        return 0
+
+    head = git(repo, "rev-parse", "HEAD").strip()
+    dirty = _worktree_dirty(repo)
+    dirty_commit = git(repo, "stash", "create").strip() or None
+    seq = (items[-1]["seq"] + 1) if items else 1
+    rec = {"seq": seq, "ts": now_iso(), "label": label,
+           "head": head, "dirty_count": len(dirty),
+           "dirty_files": dirty[:50],
+           "dirty_commit": dirty_commit}
+    items.append(rec)
+    cps["checkpoints"] = items
+    save_json(checkpoints_path(task_dir), cps)
+    event(task_dir, event="CHECKPOINT_RECORDED", seq=seq, head=head,
+          dirty_files=len(dirty), label=label)
+    print(json.dumps(rec, indent=2, ensure_ascii=False))
+    return 0
+
+
+# ── P1-4 (decision-pattern dashboard): aggregates over the task's own
+# records — dispatch outcomes, per-role wall-clock, execution-gate
+# states, checkpoint counts. Patterns, never conversation contents
+# (Anthropic's production lesson: monitor decision patterns, not
+# prose, for privacy and for signal).
+def cmd_patterns(task_dir: Path) -> int:
+    planning = load_json(task_dir / "planning.json", {})
+    report_json = load_json(task_dir / "report.json", {})
+    checkpoints = load_json(task_dir / "checkpoints.json",
+                            {"checkpoints": []})
+
+    roles: dict[str, dict] = {}
+
+    def _role(name: str, outcome, elapsed) -> None:
+        r = roles.setdefault(name, {"dispatches": 0, "ok": 0,
+                                    "elapsed": []})
+        r["dispatches"] += 1
+        if outcome == 0:
+            r["ok"] += 1
+        if isinstance(elapsed, (int, float)):
+            r["elapsed"].append(round(float(elapsed), 2))
+
+    review = planning.get("review") or {}
+    for axis, r in (review.get("reviewers") or {}).items():
+        _role("review-%s" % axis, r.get("outcome"),
+              r.get("elapsed_seconds"))
+    for key, tag in (("codegraph_auto", "codegraph"),
+                     ("design_auto", "design-auto")):
+        rec = planning.get(key)
+        if isinstance(rec, dict):
+            _role(tag, rec.get("rc"), rec.get("elapsed_seconds"))
+    for verb, rec in (planning.get("plane_dispatches") or {}).items():
+        if isinstance(rec, dict):
+            _role(verb, rec.get("rc", rec.get("outcome")),
+                  rec.get("elapsed_seconds"))
+
+    role_stats = []
+    for name, r in sorted(roles.items()):
+        elapsed = sorted(r["elapsed"]) or [0.0]
+        role_stats.append({
+            "role": name, "dispatches": r["dispatches"],
+            "ok": r["ok"],
+            "success_rate": round(r["ok"] / r["dispatches"], 3)
+            if r["dispatches"] else None,
+            "elapsed_mean_s": round(sum(elapsed) / len(elapsed), 2),
+            "elapsed_median_s": round(
+                elapsed[len(elapsed) // 2], 2)})
+
+    events: dict[str, int] = {}
+    ev_path = task_dir / "events.jsonl"
+    if ev_path.is_file():
+        for line in ev_path.read_text(encoding="utf-8",
+                                      errors="replace").splitlines():
+            try:
+                ev = json.loads(line).get("event")
+            except (json.JSONDecodeError, ValueError):
+                continue
+            if ev:
+                events[ev] = events.get(ev, 0) + 1
+
+    out = {
+        "task_dir": str(task_dir),
+        "roles": role_stats,
+        "execution_gate": (report_json.get("execution_gate") or {}).get(
+            "state"),
+        "delivered": report_json.get("delivered"),
+        "outcome": report_json.get("outcome"),
+        "landed_files": report_json.get("landed_files"),
+        "checkpoints": len(checkpoints.get("checkpoints", [])),
+        "events": dict(sorted(events.items(),
+                              key=lambda kv: -kv[1])[:15]),
+        "note": ("patterns over the task's own records — dispatch "
+                 "outcomes, wall-clock, gate states; never conversation "
+                 "contents"),
+    }
+    print(json.dumps(out, indent=2, ensure_ascii=False))
+    return 0
+
+
+# ── P1-10 (spec↔implementation alignment): the delivered diff and the
+# change's requirements are laid side by side — every ADDED/MODIFIED
+# Requirement should be reflected in at least one hunk, and a hunk
+# that answers to no requirement is implementation beyond the spec.
+# The mapping is token-overlap (the requirement's significant terms
+# against each hunk's changed lines), reported as visible information
+# with both directions of orphan named — a spec that validates
+# strictly but never lands is a novel, and the human at the gate
+# deserves to see that before approving (SDD's validate-alignment
+# step; Martin Fowler: an unaligned spec degrades into fiction).
+ALIGN_STOPWORDS = frozenset((
+    "the", "and", "shall", "must", "when", "then", "with", "that",
+    "this", "from", "for", "into", "are", "was", "were", "not", "but",
+    "its", "their", "every", "each", "any", "all", "one", "two",
+    "requirement", "scenario", "system", "task", "change", "report",
+    "record", "file", "files", "name", "named", "carry", "carries",
+    "exist", "exists", "present", "before", "after", "never", "always",
+))
+
+
+def _requirement_tokens(text: str) -> set[str]:
+    words = re.findall(r"[A-Za-z]{4,}", text.lower())
+    return {w for w in words if w not in ALIGN_STOPWORDS}
+
+
+def spec_alignment(repo: Path, base: str | None, head: str | None,
+                   specs_dir: Path | None) -> dict | None:
+    """The Requirement↔hunk mapping for a planned change, or None when
+    there is nothing to align (no change, no specs tree, no diff).
+    Tokens: a requirement is covered when a hunk's changed lines carry
+    at least two of its significant terms — one shared word is a
+    coincidence, two is a trace."""
+    if not (base and head and specs_dir and specs_dir.is_dir()):
+        return None
+    requirements: list[dict] = []
+    for spec in sorted(specs_dir.glob("*/spec.md")):
+        body = spec.read_text(encoding="utf-8", errors="replace")
+        for m in re.finditer(r"^#{3,4}\s*Requirement:\s*(.+)$",
+                             body, flags=re.M):
+            title = m.group(1).strip()
+            requirements.append({
+                "title": title,
+                "spec": spec.parent.name,
+                # the title is the requirement's identity — body prose
+                # only dilutes the trace with incidental vocabulary
+                "tokens": _requirement_tokens(title)})
+    if not requirements:
+        return None
+    diff = git(repo, "diff", base, head, "--unified=3") or ""
+    hunks: list[dict] = []
+    current_file = None
+    current_lines: list[str] = []
+    for line in diff.splitlines():
+        if line.startswith("+++ b/"):
+            if current_file and current_lines:
+                hunks.append({"file": current_file,
+                              "lines": "\n".join(current_lines)})
+            current_file, current_lines = line[6:], []
+        elif line.startswith(("+", "-")) and not line.startswith(
+                ("+++", "---")):
+            current_lines.append(line)
+    if current_file and current_lines:
+        hunks.append({"file": current_file,
+                      "lines": "\n".join(current_lines)})
+    matrix: list[dict] = []
+    covered_hunks: set[int] = set()
+    orphan_requirements: list[str] = []
+    hunk_words = [set(re.findall(r"[a-z]{4,}", h["lines"].lower()))
+                  for h in hunks]
+
+    def _hits(tokens: set[str], words: set[str]) -> set[str]:
+        # exact word, or a shared 6-char prefix (checkpointing /
+        # checkpoint) — one shared word is a coincidence, the trace
+        # needs at least two
+        return {t for t in tokens
+                if any(t == w or (len(t) >= 6 and len(w) >= 6
+                                  and t[:6] == w[:6])
+                       for w in words)}
+
+    for req in requirements:
+        hits = []
+        for i in range(len(hunks)):
+            overlap = _hits(req["tokens"], hunk_words[i])
+            if len(overlap) >= 2 or (len(req["tokens"]) == 1
+                                     and overlap):
+                hits.append({"file": hunks[i]["file"],
+                             "matched": sorted(overlap)[:6]})
+                covered_hunks.add(i)
+        matrix.append({"requirement": req["title"],
+                       "spec": req["spec"],
+                       "hunks": hits})
+        if not hits:
+            orphan_requirements.append(req["title"])
+    orphan_hunks = [{"file": hunks[i]["file"]}
+                    for i in range(len(hunks)) if i not in covered_hunks]
+    return {"requirements": len(requirements),
+            "hunks": len(hunks),
+            "matrix": matrix,
+            "orphan_requirements": orphan_requirements,
+            "orphan_hunks": orphan_hunks,
+            "note": ("token-trace alignment, visible information — "
+                     "an orphan requirement is a spec promise the diff "
+                     "does not show; an orphan hunk answers to no "
+                     "requirement (infrastructure, or scope creep — "
+                     "the human reads which)")}
+
+
+# ── P2-1 (stall watch + nudge — ported from OpenBot stall-guard.ts):
+# the clock is kept by the frames, not the wall — a dispatch is quiet
+# when its own evidence has produced no new frame for the timeout, and
+# quiet is judged from the last frame's timestamp alone (content is
+# never parsed: a watchdog that can misread a working run into a
+# broken one is worse than no watchdog). A suspected stall lands in
+# the task's EXISTING event stream — no new event vocabulary for any
+# downstream to learn. The nudge surfaces merge gates that have been
+# waiting on a person for over 48h.
+STALL_TIMEOUT_S = int(os.environ.get("AI_DLC_STALL_TIMEOUT", "300"))
+NUDGE_AFTER_HOURS = 48
+
+
+def cmd_stallguard(task_dir: Path, timeout: int) -> int:
+    """One pass over the task's dispatch evidence: for every evidence
+    jsonl, the last timestamped frame names how long the wire has been
+    quiet; quiet past the timeout is recorded in the task's own event
+    stream and reported. Younger frames — or no evidence at all — are
+    a normal answer, never an error."""
+    now = time.time()
+    findings = []
+    ev_dir = task_dir / "evidence"
+    if ev_dir.is_dir():
+        for ev in sorted(ev_dir.glob("plan-*.jsonl")):
+            last_ts = None
+            try:
+                with ev.open("rb") as fh:
+                    fh.seek(0, os.SEEK_END)
+                    size = fh.tell()
+                    fh.seek(max(0, size - 65536))
+                    tail = fh.read().decode("utf-8", errors="replace")
+                for line in tail.splitlines():
+                    try:
+                        ts = json.loads(line).get("timestamp")
+                    except (json.JSONDecodeError, ValueError):
+                        continue
+                    if isinstance(ts, (int, float)):
+                        last_ts = float(ts)
+            except OSError:
+                continue
+            if last_ts is None:
+                continue   # no timestamped frame: not this guard's fact
+            quiet = now - last_ts
+            if quiet > timeout:
+                findings.append({"evidence": ev.name,
+                                 "quiet_seconds": round(quiet, 1)})
+    if findings:
+        event(task_dir, event="STALL_SUSPECTED", timeout=timeout,
+              findings=findings)
+    print(json.dumps({"task_dir": str(task_dir), "timeout": timeout,
+                      "suspected": findings,
+                      "note": ("the clock is the frames' — quiet past "
+                               "the timeout is named here and in the "
+                               "task's event stream; content is never "
+                               "parsed")}, indent=2, ensure_ascii=False))
+    return 0
+
+
+def cmd_nudge(root: Path, hours: int) -> int:
+    """Merge gates waiting on a person longer than the threshold are
+    surfaced — a gate nobody answers is work nobody can see waiting."""
+    waiting = []
+    for st_path in sorted(root.glob(".ai-dlc/tasks/*/state.json")):
+        st = load_json(st_path, {})
+        if st.get("stage") != "MERGE_GATE":
+            continue
+        if load_json(st_path.parent / "gates"
+                     / "gate-merge.answer.json", {}):
+            continue                      # answered — not waiting
+        requested = load_json(st_path.parent / "gates"
+                              / "gate-merge.request.json",
+                              {}).get("requested_at")
+        try:
+            dt = datetime.fromisoformat(
+                str(requested).replace("Z", "+00:00"))
+            age_h = ((datetime.now(timezone.utc) - dt)
+                     .total_seconds() / 3600)
+        except (TypeError, ValueError):
+            continue                      # no readable request time
+        if age_h > hours:
+            waiting.append({"task": st.get("task_id"),
+                            "dir": str(st_path.parent),
+                            "waiting_hours": round(age_h, 1)})
+            event(st_path.parent, event="MERGE_GATE_NUDGED",
+                  waiting_hours=round(age_h, 1))
+    print(json.dumps({"root": str(root), "after_hours": hours,
+                      "nudged": waiting}, indent=2, ensure_ascii=False))
+    return 0
+
+
+# ── P2-3 (dispatch-doctor): the tool-description repair loop,
+# deterministic half. The measured failure this closes: a cold session
+# spent 1m56s invoking --help five times because the interface was not
+# copy-paste ready — Anthropic's tool-testing finding says rewriting
+# unclear tool descriptions cut later agents' task completion time 40
+# percent. The loop: measure the fumbling in the session archives,
+# emit revision suggestions for a human to review, fix, measure again
+# — the count falling is the acceptance. Content is scanned only for
+# command shapes (--help invocations, repeated commands); the
+# conversation itself is never read.
+DISPATCH_DOCTOR_HELP_RE = re.compile(r"([\w./-]+)\s+--help")
+DISPATCH_DOCTOR_CMD_RE = re.compile(r'"command":\s*"([^"]+)"')
+
+
+def cmd_dispatch_doctor(sessions: Path, write: Path | None,
+                        limit: int) -> int:
+    help_counts: dict[str, int] = {}
+    repeat_counts: dict[str, int] = {}
+    files = sorted(sessions.glob("*/history.jsonl"))[-max(1, limit):]
+    for hf in files:
+        try:
+            text = hf.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for m in DISPATCH_DOCTOR_HELP_RE.finditer(text):
+            tool = m.group(1).rstrip("/").split("/")[-1]
+            help_counts[tool] = help_counts.get(tool, 0) + 1
+        per_file: dict[str, int] = {}
+        for m in DISPATCH_DOCTOR_CMD_RE.finditer(text):
+            per_file[m.group(1)] = per_file.get(m.group(1), 0) + 1
+        for cmd, n in per_file.items():
+            if n >= 3:
+                repeat_counts[cmd] = repeat_counts.get(cmd, 0) + n
+    suggestions = []
+    for tool, n in sorted(help_counts.items(), key=lambda kv: -kv[1]):
+        if n >= 2:
+            suggestions.append({
+                "tool": tool, "help_invocations": n,
+                "suggestion": ("the interface was explored with --help "
+                               "%d times — put a copy-paste usage "
+                               "example in its L0 surface or help text; "
+                               "a ready command needs no exploring" % n)})
+    for cmd, n in sorted(repeat_counts.items(),
+                         key=lambda kv: -kv[1])[:10]:
+        suggestions.append({
+            "command": cmd, "repetitions": n,
+            "suggestion": ("the same command ran %d times — a retry "
+                           "loop smell: either it fails confusingly or "
+                           "its description invites re-running; name "
+                           "the failure mode in its description" % n)})
+    out = {"sessions_root": str(sessions), "files_scanned": len(files),
+           "help_fumbling": help_counts,
+           "repeated_commands": repeat_counts,
+           "suggestions": suggestions,
+           "note": ("measure -> human-reviewed description fix -> "
+                    "measure again; the count falling is the loop's "
+                    "acceptance (Anthropic: -40 percent completion "
+                    "time from description fixes alone)")}
+    if write:
+        write.parent.mkdir(parents=True, exist_ok=True)
+        write.write_text(json.dumps(out, indent=2, ensure_ascii=False)
+                         + "\n", encoding="utf-8")
+    print(json.dumps(out, indent=2, ensure_ascii=False))
+    return 0
+
+
 def cmd_deliver(task_dir: Path, repo: Path, outcome: str,
                 no_design: bool = False,
                 no_design_by: str | None = None,
-                no_design_why: str | None = None) -> int:
+                no_design_why: str | None = None,
+                no_exec_gate: bool = False,
+                no_exec_gate_by: str | None = None,
+                no_exec_gate_why: str | None = None) -> int:
     # N6②: --repo must be an existing git repository (W8 — country-d
     # path-typo: wrote <workspace-root>/... when the repo was in /tmp/).
     if not is_git_repo(repo):
@@ -1893,6 +2780,26 @@ def cmd_deliver(task_dir: Path, repo: Path, outcome: str,
                                   "why": no_design_why.strip(),
                                   "source": "deliver --no-design",
                                   "ts": now_iso()}
+        save_json(task_dir / "planning.json", _pl)
+    # P0-4: --no-exec-gate carries the same contract as --no-design —
+    # a named human and a reason; a model may not self-sign a skip.
+    exec_gate_skipper: str | None = None
+    if no_exec_gate:
+        exec_gate_skipper = stated_actor(no_exec_gate_by,
+                                         "the execution-gate skip's author")
+        if exec_gate_skipper is None:
+            return 1
+        if not (no_exec_gate_why or "").strip():
+            print("refusing: --no-exec-gate requires --no-exec-gate-why — "
+                  "a skip without a reason is the silence this check "
+                  "exists to end", file=sys.stderr)
+            return 1
+        _pl = load_json(task_dir / "planning.json", {})
+        _pl["exec_gate_decision"] = {"skip": True,
+                                     "decided_by": exec_gate_skipper,
+                                     "why": no_exec_gate_why.strip(),
+                                     "source": "deliver --no-exec-gate",
+                                     "ts": now_iso()}
         save_json(task_dir / "planning.json", _pl)
     blocked = stale_route_guard(task_dir)
     if blocked:
@@ -1989,6 +2896,19 @@ def cmd_deliver(task_dir: Path, repo: Path, outcome: str,
         # the recorded exception travels: its reason, who recorded it, when
         rep["route_exception"] = rcheck["exception"]
     rep["spec"] = spec_validation(repo, state.get("change_id"))
+    # 01-notes-cli finding: the gate reader sees the effort tier where
+    # the exec gate and alignment already stand — the tier the task
+    # was run at is delivery information, not just init chatter
+    rep["tier"] = state.get("tier") or route_tier(state.get("route",
+                                                              "inline"))
+    # P1-10: the spec↔diff alignment, both directions of orphan named
+    # — visible information for the human at the gate, never a gate
+    _align_specs = None
+    if state.get("change_id"):
+        _cand = (plane_root(repo) / "openspec" / "changes"
+                 / state["change_id"] / "specs")
+        _align_specs = _cand if _cand.is_dir() else None
+    rep["alignment"] = spec_alignment(repo, base, head, _align_specs)
     # the design auto-dispatch (N1): scheduling, not gating. If the
     # surface is applicable, no record stands, no skip is recorded, no
     # prior attempt is on file, and --no-design was not passed, dispatch
@@ -2027,7 +2947,6 @@ def cmd_deliver(task_dir: Path, repo: Path, outcome: str,
                                       head=head)
     dv = rep["design"]
     design_applicable = bool(dv["surface"]["applicable"])
-    design_state = dv["design_state"]
     planning = load_json(task_dir / "planning.json", {})
     design_override = planning.get("design_override")
     if design_override and design_applicable:
@@ -2042,6 +2961,23 @@ def cmd_deliver(task_dir: Path, repo: Path, outcome: str,
         _d3 = dv.get("d3_checks")
         if _d3:
             rep["design_d3_checks"] = _d3
+    # P0-4 (execution gate): the repo's own toolchain gets a vote. The
+    # verdict is a third machine fact next to spec validity and the
+    # landed diff; results persist to the task dir before the report is
+    # finalised, and the event stream carries the per-tool states.
+    if no_exec_gate:
+        rep["execution_gate"] = {"state": "skipped",
+                                 "skipped_by": exec_gate_skipper,
+                                 "why": (no_exec_gate_why or "").strip()}
+    else:
+        rep["execution_gate"] = run_execution_gate(repo, files, base)
+        save_json(task_dir / "execution-gate.json",
+                  {**rep["execution_gate"], "measured_ref": measured_ref,
+                   "base_sha": base, "ts": now_iso()})
+        event(task_dir, event="EXECUTION_GATE",
+              state=rep["execution_gate"]["state"],
+              tools={t["name"]: t["status"]
+                     for t in rep["execution_gate"]["tools"]})
     ans = gate_answer(task_dir, "gate-merge")
     merge_approved = bool(ans and ans.get("decision") == "approve"
                           and str(ans.get("rationale", "")).strip())
@@ -2054,7 +2990,8 @@ def cmd_deliver(task_dir: Path, repo: Path, outcome: str,
     # landed_files/landed_bytes, so the merge gate sees them structurally.)
     delivered = bool(rep["head_advanced"] and rep["landed_files"]
                      and rep["spec"]["spec_valid"]
-                     and merge_approved)
+                     and merge_approved
+                     and rep["execution_gate"].get("state") != "fail")
     # honest derivation, in precedence: a broken spec is named before an
     # unanswered merge gate, which is named before unlanded work, which
     # is named before a missing design record. An unverified spec is
@@ -2085,6 +3022,13 @@ def cmd_deliver(task_dir: Path, repo: Path, outcome: str,
     if not rep["spec"]["spec_valid"]:
         outcome = rep["spec"].get("spec_state") or "spec_invalid"
         delivered = False
+    elif rep["execution_gate"].get("state") == "fail":
+        # P0-4: executability is a gate, not advice — a failing tool is
+        # named before the unanswered merge gate, because a human asked
+        # to approve a merge deserves to know the code failed its own
+        # toolchain first.
+        outcome = "exec_gate_failed"
+        delivered = False
     elif not merge_approved:
         outcome = "merge_pending"
         delivered = False
@@ -2100,6 +3044,9 @@ def cmd_deliver(task_dir: Path, repo: Path, outcome: str,
     rep["correctness"] = {
         "machine_checked": False,
         "criteria_applied": ["spec validity (openspec validate --strict)",
+                             "execution gate (the repo's own tests/lint/"
+                             "typecheck — executability, not correctness; "
+                             "green is necessary, never sufficient)",
                              "human merge approval",
                              "design state (visible information — v2 "
                              "product-side artifacts and D3 verify checks, "
@@ -2271,8 +3218,61 @@ def _build_subparsers(sub) -> None:
                    help="who skips the design round — required with "
                         "--no-design, must be a named human (L6)")
     p.add_argument("--no-design-why", default=None, dest="no_design_why",
-                   help="why the design round is skipped — required "
-                        "with --no-design")
+                   help="why the design round is skipped — required with "
+                        "--no-design")
+    p.add_argument("--no-exec-gate", action="store_true",
+                   dest="no_exec_gate",
+                   help="skip the execution gate even when toolchains are "
+                        "present (the skip is reported, never silent)")
+    p.add_argument("--no-exec-gate-by", default=None,
+                   dest="no_exec_gate_by",
+                   help="who skips the execution gate — required with "
+                        "--no-exec-gate, must be a named human")
+    p.add_argument("--no-exec-gate-why", default=None,
+                   dest="no_exec_gate_why",
+                   help="why the execution gate is skipped — required "
+                        "with --no-exec-gate")
+    p = sub.add_parser("dispatch-doctor")
+    p.add_argument("--sessions", type=Path,
+                   default=Path.home() / ".jiuwenswarm" / "agent"
+                   / "sessions",
+                   help="the session archives to replay (P2-3)")
+    p.add_argument("--write", default=None, type=Path,
+                   help="also write the suggestions JSON for human "
+                        "review")
+    p.add_argument("--limit", type=int, default=50,
+                   help="the newest N session archives to scan")
+    p = sub.add_parser("stallguard")
+    p.add_argument("--task-dir", required=True, type=Path)
+    p.add_argument("--timeout", type=int, default=STALL_TIMEOUT_S,
+                   help="seconds of frame quiet before a dispatch is "
+                        "suspected (default from AI_DLC_STALL_TIMEOUT)")
+    p = sub.add_parser("nudge")
+    p.add_argument("--root", default=".", type=Path,
+                   help="the repo whose .ai-dlc/tasks to scan")
+    p.add_argument("--hours", type=int, default=NUDGE_AFTER_HOURS,
+                   help="waiting threshold in hours (default 48)")
+    p = sub.add_parser("patterns")
+    p.add_argument("--task-dir", required=True, type=Path,
+                   help="aggregate decision patterns over one task's "
+                        "records (P1-4)")
+    p = sub.add_parser("checkpoint")
+    p.add_argument("--task-dir", required=True, type=Path)
+    p.add_argument("--repo", required=True, type=Path)
+    p.add_argument("--label", default=None,
+                   help="what this turn did — recorded with the "
+                        "checkpoint")
+    p.add_argument("--list", action="store_true", dest="list_cps",
+                   help="list the checkpoints on record")
+    p.add_argument("--show", type=int, default=None, dest="show_seq",
+                   help="show a checkpoint's diff against the previous")
+    p.add_argument("--restore", type=int, default=None,
+                   dest="restore_seq",
+                   help="restore the worktree to a checkpoint "
+                        "(stash-or-abort guard on a dirty tree)")
+    p.add_argument("--stash-first", action="store_true",
+                   help="with --restore: stash a dirty tree first "
+                        "(named and recorded) instead of aborting")
     p = sub.add_parser("gate")
     p.add_argument("--task-dir", required=True, type=Path)
     p.add_argument("--gate-id", default="gate-merge")
@@ -2363,10 +3363,26 @@ def main() -> None:
     if args.cmd == "correct":
         sys.exit(cmd_correct(args.task_dir, args.remove_keys,
                              args.corrected_by, args.correct_why))
+    if args.cmd == "checkpoint":
+        sys.exit(cmd_checkpoint(args.task_dir, args.repo, args.label,
+                                args.list_cps, args.show_seq,
+                                args.restore_seq, args.stash_first))
+    if args.cmd == "patterns":
+        sys.exit(cmd_patterns(args.task_dir))
+    if args.cmd == "dispatch-doctor":
+        sys.exit(cmd_dispatch_doctor(args.sessions, args.write,
+                                     args.limit))
+    if args.cmd == "stallguard":
+        sys.exit(cmd_stallguard(args.task_dir, args.timeout))
+    if args.cmd == "nudge":
+        sys.exit(cmd_nudge(args.root.resolve(), args.hours))
     if args.cmd == "deliver":
         sys.exit(cmd_deliver(args.task_dir, args.repo, args.outcome,
                              args.no_design, args.no_design_by,
-                             args.no_design_why))
+                             args.no_design_why,
+                             no_exec_gate=args.no_exec_gate,
+                             no_exec_gate_by=args.no_exec_gate_by,
+                             no_exec_gate_why=args.no_exec_gate_why))
     ap.error(f"unhandled {args.cmd}")
 
 

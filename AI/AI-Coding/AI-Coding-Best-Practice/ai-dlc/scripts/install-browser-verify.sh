@@ -117,4 +117,31 @@ PYEOF
     || die "the pin did not survive the read-back"
 fi
 
+# ── install-readme-sync P1-2: the OS libraries (the P1-7 live lesson:
+# the npm tree stands while the headless shell cannot start). Probe the
+# binary; best-effort install the EL/Debian dependency set; re-probe;
+# a failure names the remedy and leaves the install otherwise standing
+# (the doctor carries this check long-term).
+HS="$(ls -1 "$HOME"/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell 2>/dev/null | head -1 || true)"
+probe() { [[ -n "$HS" ]] && "$HS" --no-sandbox --version >/dev/null 2>&1; }
+if probe; then
+  say "chromium headless shell launches — OS libraries in place"
+else
+  say "chromium cannot start — installing OS libraries (best effort)"
+  if command -v dnf >/dev/null 2>&1; then
+    dnf install -y atk at-spi2-atk cups-libs libdrm libXcomposite \
+      libXdamage libXrandr mesa-libgbm pango alsa-lib nss nspr \
+      libxkbcommon gtk3 >/dev/null 2>&1 || true
+  elif command -v apt-get >/dev/null 2>&1; then
+    apt-get install -y libatk1.0-0 libatk-bridge2.0-0 libcups2 \
+      libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 \
+      libgbm1 libpango-1.0-0 libcairo2 libasound2 >/dev/null 2>&1 || true
+  fi
+  if probe; then
+    say "chromium launches after the OS dependency install"
+  else
+    say "chromium STILL cannot start — remedy (EL8): dnf install -y atk at-spi2-atk cups-libs libdrm libXcomposite libXdamage libXrandr mesa-libgbm pango alsa-lib nss nspr libxkbcommon gtk3 — the pin stands; ./install.sh --doctor carries this check"
+  fi
+fi
+
 say "done — @playwright/mcp@$TAG + chromium at $ROOT, pin $([[ -f $ROOT/.aidlc-pin.json ]] && echo standing || echo absent)"

@@ -1,0 +1,144 @@
+{
+  "mode": "design-select",
+  "root": "/opt/open-design",
+  "intent_meta": "off (before-arm)",
+  "queries": 12,
+  "hit@1": 0.833,
+  "hit@3": 0.917,
+  "rows": [
+    {
+      "q": "blog long-form articles page",
+      "golden": "blog-post",
+      "top3": [
+        "blog-post",
+        "full-page-screenshot",
+        "magazine-poster"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "documentation docs page for developers",
+      "golden": "docs-page",
+      "top3": [
+        "docs-page",
+        "faq-page",
+        "pricing-page"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "admin dashboard with charts",
+      "golden": "dashboard",
+      "top3": [
+        "flowai-live-dashboard-template",
+        "social-media-dashboard",
+        "trading-analysis-dashboard-template"
+      ],
+      "hit@1": false,
+      "hit@3": false
+    },
+    {
+      "q": "contact widget form page",
+      "golden": "contact-widget",
+      "top3": [
+        "contact-widget",
+        "faq-page",
+        "pricing-page"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "email marketing campaign page",
+      "golden": "email-marketing",
+      "top3": [
+        "email-marketing",
+        "waitlist-page",
+        "screenshots-marketing"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "github profile dashboard",
+      "golden": "github-dashboard",
+      "top3": [
+        "github-dashboard",
+        "orbit-github",
+        "live-dashboard"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "hr onboarding flow pages",
+      "golden": "hr-onboarding",
+      "top3": [
+        "hr-onboarding",
+        "mobile-onboarding",
+        "wireframe-mobile-flow"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "finance report page",
+      "golden": "finance-report",
+      "top3": [
+        "finance-report",
+        "html-ppt-weekly-report",
+        "clinical-case-report"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "dating web landing",
+      "golden": "dating-web",
+      "top3": [
+        "dating-web",
+        "imagegen-frontend-web",
+        "web-prototype"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "digital eguide page",
+      "golden": "digital-eguide",
+      "top3": [
+        "digital-eguide",
+        "faq-page",
+        "pricing-page"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "博客 长文 页面",
+      "golden": "blog-post",
+      "top3": [
+        "blog-post",
+        "waitlist-page",
+        "open-design-landing"
+      ],
+      "hit@1": true,
+      "hit@3": true
+    },
+    {
+      "q": "文档 开发者 页面",
+      "golden": "docs-page",
+      "top3": [
+        "pm-spec",
+        "orbit-notion",
+        "docs-page"
+      ],
+      "hit@1": false,
+      "hit@3": true
+    }
+  ],
+  "plane_git": "030ec33be7db00fbc1914095d4041b244548a805",
+  "ts": "2026-09-09T04:08:09.397315+00:00"
+}

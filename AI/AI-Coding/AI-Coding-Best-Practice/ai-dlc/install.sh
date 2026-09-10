@@ -1,15 +1,24 @@
 #!/usr/bin/env bash
-# ── AI-DLC installer (v0.10 — install-targets) ──
+# ── AI-DLC installer (v0.11 — measured plane) ──
 # Idempotent. Does NOT fork, vendor, or modify any upstream source.
 #
 # The layout after landing:
 #   supervisor/skills/claude/     → CC skills (ai-dlc, ai-dlc-doctor)
 #                                   installed into each target's <config_dir>/skills/
-#   supervisor/skills/workspace/  → workspace skills (ui-designer)
-#                                   installed into the gateway workspace + registered
-#   bin/                → report.py (human surface, G-DELIVER-1,
-#                         MERGE_GATE) + plan.py (planning dispatch, close)
-#   config/             → collapsed.config.yaml
+#   supervisor/skills/workspace/  → workspace skills (ui-designer,
+#                                   openspec-author, codegraph, browser-verify,
+#                                   agent-bench) installed into the gateway
+#                                   workspace + registered
+#   bin/                → report.py (human surface + gates: deliver with the
+#                         execution gate and alignment, checkpoint, patterns,
+#                         stallguard, nudge, dispatch-doctor)
+#                         + plan.py (planning dispatch, review, design,
+#                         codegraph query, browser-verify, close)
+#                         + eval.py (the small fixed eval set, --compare)
+#   scripts/            → browser-spec-runner.js (deterministic replay)
+#   evals/              → set.json (8 deterministic-judged tasks) + results/
+#   config/             → collapsed.config.yaml (roster, review axes,
+#                         dispatch_policy)
 #
 # Retired earlier: the delegated plane (tag v0.5.1-delegated-final), the
 # oracle plane (tag v0.8.0), the budget capability (landing L1 — no
@@ -209,6 +218,38 @@ print("\n".join(json.loads(sys.argv[1])["writable_extras"]))' "$audit" \
     ok "Harbor/Terminal-Bench venv present: ${ab_root}"
   else
     warn "Harbor/Terminal-Bench venv missing — plan.py bench will report unavailable. Run: ./install.sh --agent-bench"
+  fi
+
+  # ── install-readme-sync P1-1: the campaign assets (warn-level — a
+  # missing asset disables a capability, it never breaks the plane) ──
+  if [[ -f "${SCRIPT_DIR}/evals/set.json" ]]; then
+    ok "eval set present: evals/set.json ($(python3 -c "import json;print(len(json.load(open('${SCRIPT_DIR}/evals/set.json'))['tasks']))" 2>/dev/null || echo '?') tasks)"
+  else
+    warn "eval set missing (evals/set.json) — bin/eval.py has nothing to run"
+  fi
+  if [[ -f "${SCRIPT_DIR}/scripts/browser-spec-runner.js" ]] && command -v node &>/dev/null; then
+    ok "deterministic browser replay present: scripts/browser-spec-runner.js + node"
+  else
+    warn "browser replay incomplete — scripts/browser-spec-runner.js or node missing; browser-verify --run-spec will refuse"
+  fi
+  # the P1-7 live lesson: the tree can stand while the shell cannot
+  # start (missing OS libraries). Probe the binary, not the directory.
+  local hs
+  hs="$(ls -1 "$HOME"/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell 2>/dev/null | head -1 || true)"
+  if [[ -n "${hs}" ]] && "${hs}" --no-sandbox --version &>/dev/null; then
+    ok "chromium launches: $(basename "$(dirname "$(dirname "${hs}")")")"
+  else
+    warn "chromium headless shell missing or cannot start — deterministic replay and MCP exploration both dead. EL8 remedy: dnf install -y atk at-spi2-atk cups-libs libdrm libXcomposite libXdamage libXrandr mesa-libgbm pango alsa-lib nss nspr libxkbcommon gtk3"
+  fi
+  if grep -qE "^\s*dispatch_policy:" config/collapsed.config.yaml 2>/dev/null; then
+    ok "dispatch_policy section present in collapsed.config.yaml"
+  else
+    warn "no dispatch_policy section — the gate runs on the builtin roster (default-deny still holds)"
+  fi
+  if [[ -n "${AI_DLC_VALIDATOR_MODEL:-}" ]] || grep -qE "^\s*validator_model:" config/collapsed.config.yaml 2>/dev/null; then
+    ok "validator model intent configured"
+  else
+    warn "no validator model configured — the validator runs the gateway default, same-source with every other role (collusion posture; the verdict record carries this)"
   fi
 
   # Skills — three segments (N7):
@@ -822,6 +863,13 @@ install_full_toolkit() {
   # K6: read-back assert — the toolkit travelled, not just the SKILL.md
   if [[ ! -f "${dest}/SKILL.md" || ! -f "${dest}/bin/plan.py" ]]; then
     fail "read-back failed: ${dest}/SKILL.md or bin/plan.py missing after install"
+    return 1
+  fi
+  # K6 extension (install-readme-sync P0-2): the campaign assets travel
+  # too — the eval set and the deterministic browser runner
+  if [[ ! -f "${dest}/bin/eval.py" || ! -f "${dest}/evals/set.json" \
+        || ! -f "${dest}/scripts/browser-spec-runner.js" ]]; then
+    fail "read-back failed: eval.py, evals/set.json or scripts/browser-spec-runner.js missing after install"
     return 1
   fi
   # G4: VERSION travels with the toolkit (cp -r already carried it);
@@ -1470,7 +1518,7 @@ QEOF
     exit $?
   fi
 
-  echo "AI-DLC Installer (v0.10 — install-targets)"
+  echo "AI-DLC Installer (v0.11 — measured plane)"
   echo "══════════════════════════════════════════════════"
   install_upstreams
   local rc=0

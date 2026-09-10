@@ -120,6 +120,8 @@ class TestM1DesignSelect:
         expected_sha = hashlib.sha256(
             Path(skill_path).read_bytes()).hexdigest()
 
+        for _d in od_root.rglob("SKILL.md"):
+            (_d.parent / "example.html").write_text("<html>x</html>", encoding="utf-8")
         monkeypatch.setattr(plan, "OPENDESIGN_ROOT", str(od_root))
 
         def fake_session(change, verb, prompt, repo, task_dir, mode, timeout):
@@ -127,7 +129,7 @@ class TestM1DesignSelect:
 
         monkeypatch.setattr(plan, "run_plane_session", fake_session)
 
-        rc = plan.cmd_design_select("c1", repo, task_dir)
+        plan.cmd_design_select("c1", repo, task_dir)
         capsys.readouterr()  # swallow stdout
 
         state = report.load_json(task_dir / "state.json", {})
@@ -153,6 +155,8 @@ class TestM1DesignSelect:
         # empty OpenDesign root — no candidates
         od_root = tmp_path / "opendesign"
         od_root.mkdir()
+        for _d in od_root.rglob("SKILL.md"):
+            (_d.parent / "example.html").write_text("<html>x</html>", encoding="utf-8")
         monkeypatch.setattr(plan, "OPENDESIGN_ROOT", str(od_root))
 
         rc = plan.cmd_design_select("c1", repo, task_dir)
@@ -174,6 +178,8 @@ class TestM1DesignSelect:
         _state(task_dir, repo, base)
 
         od_root = _make_opendesign_root(tmp_path / "opendesign", n=1)
+        for _d in od_root.rglob("SKILL.md"):
+            (_d.parent / "example.html").write_text("<html>x</html>", encoding="utf-8")
         monkeypatch.setattr(plan, "OPENDESIGN_ROOT", str(od_root))
 
         def fake_timeout(change, verb, prompt, repo, task_dir, mode, timeout):
@@ -182,7 +188,7 @@ class TestM1DesignSelect:
 
         monkeypatch.setattr(plan, "run_plane_session", fake_timeout)
 
-        rc = plan.cmd_design_select("c1", repo, task_dir)
+        plan.cmd_design_select("c1", repo, task_dir)
         capsys.readouterr()
 
         state = report.load_json(task_dir / "state.json", {})
@@ -218,7 +224,7 @@ class TestM2DesignSpecify:
 
         design_dir = repo / "design"
 
-        def fake_design_session(change, prompt, repo, task_dir, mode, timeout):
+        def fake_design_session(change, prompt, repo, task_dir, mode, timeout, generation=1):
             # simulate the session writing the 5 artifacts
             design_dir.mkdir(exist_ok=True)
             (design_dir / "tokens.css").write_text(":root{--c:#fff;}\n")
@@ -230,7 +236,7 @@ class TestM2DesignSpecify:
 
         monkeypatch.setattr(plan, "run_design_session", fake_design_session)
 
-        rc = plan.cmd_design_specify("c1", repo, task_dir)
+        plan.cmd_design_specify("c1", repo, task_dir)
         capsys.readouterr()
 
         for name in self._ARTIFACTS:
@@ -259,7 +265,7 @@ class TestM2DesignSpecify:
 
         design_dir = repo / "design"
 
-        def fake_timeout(change, prompt, repo, task_dir, mode, timeout):
+        def fake_timeout(change, prompt, repo, task_dir, mode, timeout, generation=1):
             # session times out before writing anything
             return {"timed_out": True, "round_complete": False,
                     "interrupted": False, "client_rc": None}, []
@@ -315,7 +321,7 @@ class TestM3DesignVerify:
         (repo / "index.html").write_text(
             '<div style="color:#1a73e8;padding:16px;">hi</div>')
 
-        rc = plan.cmd_design_verify("c1", repo, task_dir)
+        plan.cmd_design_verify("c1", repo, task_dir)
         out = json.loads(capsys.readouterr().out)
 
         assert out["design_state"] == "design_verified"
@@ -338,7 +344,7 @@ class TestM3DesignVerify:
         (repo / "index.html").write_text(
             '<div style="color:#deadbeef;">hi</div>')
 
-        rc = plan.cmd_design_verify("c1", repo, task_dir)
+        plan.cmd_design_verify("c1", repo, task_dir)
         out = json.loads(capsys.readouterr().out)
 
         assert out["design_state"] == "design_nonconforming"
@@ -355,7 +361,7 @@ class TestM3DesignVerify:
         (repo / "index.html").write_text(
             '<p>lorem ipsum dolor sit amet</p>')
 
-        rc = plan.cmd_design_verify("c1", repo, task_dir)
+        plan.cmd_design_verify("c1", repo, task_dir)
         out = json.loads(capsys.readouterr().out)
         assert out["checks"]["no_placeholder"]["pass"] is False
         assert out["checks"]["no_placeholder"]["hit_count"] >= 1
@@ -369,7 +375,7 @@ class TestM3DesignVerify:
         self._setup_spec(repo, task_dir, skill_sha="match")
         (repo / "app.js").write_text("// TODO: implement this\n// FIXME: bug")
 
-        rc = plan.cmd_design_verify("c1", repo, task_dir)
+        plan.cmd_design_verify("c1", repo, task_dir)
         out = json.loads(capsys.readouterr().out)
         assert out["checks"]["no_placeholder"]["pass"] is False
         assert out["checks"]["no_placeholder"]["hit_count"] >= 2
@@ -388,7 +394,7 @@ class TestM3DesignVerify:
         st["design_spec"]["skill_sha256"] = "different"
         report.save_json(task_dir / "state.json", st)
 
-        rc = plan.cmd_design_verify("c1", repo, task_dir)
+        plan.cmd_design_verify("c1", repo, task_dir)
         out = json.loads(capsys.readouterr().out)
         assert out["checks"]["skill_sha_match"]["pass"] is False
 
@@ -402,7 +408,7 @@ class TestM3DesignVerify:
         # corrupt tokens.json
         (repo / "design" / "tokens.json").write_text("{invalid json}")
 
-        rc = plan.cmd_design_verify("c1", repo, task_dir)
+        plan.cmd_design_verify("c1", repo, task_dir)
         out = json.loads(capsys.readouterr().out)
         assert out["checks"]["tokens_json_valid"]["pass"] is False
 
@@ -464,7 +470,7 @@ class TestM4DesignProductFiles:
             "reason": "M4 fixture: design surface change, not a routing test",
             "author": "tester", "ts": report.now_iso()})
 
-        rc = report.cmd_deliver(task_dir, repo, "working",
+        report.cmd_deliver(task_dir, repo, "working",
                                 no_design=True, no_design_by="tester",
                                 no_design_why="test")
         out = json.loads(capsys.readouterr().out)
@@ -647,7 +653,7 @@ class TestM6DesignNoBlock:
             "design_auto": {"rc": 0, "attempts": 1, "state": "complete",
                             "outcome": "design_nonconforming"}})
 
-        rc = report.cmd_deliver(task_dir, repo, "working")
+        report.cmd_deliver(task_dir, repo, "working")
         out = json.loads(capsys.readouterr().out)
 
         assert out["delivered"] is True, \
@@ -671,7 +677,7 @@ class TestM6DesignNoBlock:
             "design_auto": {"rc": 0, "attempts": 1, "state": "complete",
                             "outcome": "design_unspecified"}})
 
-        rc = report.cmd_deliver(task_dir, repo, "working")
+        report.cmd_deliver(task_dir, repo, "working")
         out = json.loads(capsys.readouterr().out)
 
         assert out["delivered"] is False
@@ -838,6 +844,8 @@ class TestNarrowAestheticGate:
                 "category: web\n---\n# Dummy %d\n" % (i, i),
                 encoding="utf-8")
 
+        for _d in od_root.rglob("SKILL.md"):
+            (_d.parent / "example.html").write_text("<html>x</html>", encoding="utf-8")
         monkeypatch.setattr(plan, "OPENDESIGN_ROOT", str(od_root))
 
         generic_path = str(generic_skill)
@@ -850,7 +858,7 @@ class TestNarrowAestheticGate:
 
         monkeypatch.setattr(plan, "run_plane_session", fake_session)
 
-        rc = plan.cmd_design_select("c1", repo, task_dir)
+        plan.cmd_design_select("c1", repo, task_dir)
         capsys.readouterr()
 
         state = report.load_json(task_dir / "state.json", {})
@@ -940,6 +948,8 @@ class TestNarrowAestheticGate:
                 "category: web\n---\n# Dummy %d\n" % (i, i),
                 encoding="utf-8")
 
+        for _d in od_root.rglob("SKILL.md"):
+            (_d.parent / "example.html").write_text("<html>x</html>", encoding="utf-8")
         monkeypatch.setattr(plan, "OPENDESIGN_ROOT", str(od_root))
 
         generic_path = str(generic_skill)
@@ -951,7 +961,7 @@ class TestNarrowAestheticGate:
 
         monkeypatch.setattr(plan, "run_plane_session", fake_timeout)
 
-        rc = plan.cmd_design_select("c1", repo, task_dir)
+        plan.cmd_design_select("c1", repo, task_dir)
         capsys.readouterr()
 
         state = report.load_json(task_dir / "state.json", {})

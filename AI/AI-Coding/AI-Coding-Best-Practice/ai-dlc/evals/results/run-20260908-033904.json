@@ -1,0 +1,40 @@
+{
+  "ran_at": "2026-09-07T19:38:48.301553+00:00",
+  "plane_git": "f116d047d0812159943cc3a464aa29aeff7608dd",
+  "client": "/root/.local/bin/jiuwenswarm",
+  "tasks": [
+    {
+      "id": "html-page",
+      "client_rc": 0,
+      "passed": true,
+      "elapsed_seconds": 15.7,
+      "checks": [
+        {
+          "kind": "exists",
+          "ok": true,
+          "detail": "index.html"
+        },
+        {
+          "kind": "contains",
+          "ok": true,
+          "detail": "index.html ~ <title>"
+        },
+        {
+          "kind": "contains",
+          "ok": true,
+          "detail": "index.html ~ <nav>"
+        },
+        {
+          "kind": "contains",
+          "ok": true,
+          "detail": "index.html ~ <h1>"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "pass_rate": 1.0
+  }
+}

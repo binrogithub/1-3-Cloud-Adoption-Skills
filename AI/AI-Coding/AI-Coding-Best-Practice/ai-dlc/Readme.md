@@ -94,7 +94,7 @@ the validator is a different session reading the same signed records.
 - **Resume, not restart** — re-entering planning skips artifacts already done and
   continues a role's own named session; work already paid for is never paid for
   again.
-- **Structure-first planning (codegraph)** — before the author dispatch, a
+- **Structure-first planning (codegraph)** — before the artifact dispatches, a
   codegraph role builds a code-structure graph (Understand-Anything backend,
   fanned out through Jiuwenswarm's Task tool) and produces an impact brief, so
   planning starts from the real dependency structure.
@@ -105,19 +105,65 @@ the validator is a different session reading the same signed records.
   internal contradictions in a delivery report fail the delivery instead of being
   written to disk.
 
+## The measured plane — the 2026-09 capability campaign
+
+Fourteen gated tasks landed (every merge human-approved, every delivery
+machine-measured; the full ledger sits in DevTeam's
+`devteam-agent-team-best-practices-prd-20260907.md` appendix 2):
+
+- **Execution gate (P0-4)** — `deliver` runs the repo's own toolchain
+  (pytest / ruff / mypy / npm test / tsc, scoped to the change) and a
+  failing tool names the outcome `exec_gate_failed`; languages without
+  a toolchain record `not_applicable`, never silent.
+- **Evidence-constrained review (P0-1)** — a Finding without `file:line`
+  evidence is refused; ungrounded suspicions file as Concerns; the
+  synthesis verifies every citation `confirmed:`/`refuted:` against the
+  code. Reviewers dispatch concurrently (default 4).
+- **The brief contract (P0-2)** — a dispatch missing Objective / Expected
+  output / Tools / Boundary is refused before a session opens.
+  **Measured: 60 live sessions, 56.7% → 100% pass, −20.6% wall-clock,
+  Fisher p = 4.6e-05** (`/tmp/ab2/`).
+- **Effort tiers (P0-3)** — init/next state the tier, crew and tool-call
+  budget; the multi-agent tier is entered by explicit choice (anti-15×).
+- **Dispatch policy gate (P1-2)** — deny first, allow second,
+  default-deny; broken rules fail closed naming themselves; every
+  decision audited before anything runs (`dispatch-policy.jsonl`).
+- **Turn checkpoints (P1-5)** — `report.py checkpoint`: `git stash
+  create` pins the dirty region without touching the tree; restore
+  carries a stash-or-abort guard.
+- **Spec↔implementation alignment (P1-10)** — every Requirement traced
+  to landed hunks; orphan requirements surface at the merge gate.
+- **Anti-collusion surfaces (P1-6)** — the gate question states that
+  measured facts outrank consensus; the verdict records the model that
+  actually served it.
+- **Decision patterns (P1-4)**, **stall watch + nudge (P2-1)**,
+  **dispatch-doctor (P2-3)** — `report.py patterns / stallguard /
+  nudge / dispatch-doctor`.
+- **Eval set (P1-3)** — `bin/eval.py`: eight deterministic-judged
+  tasks, results tagged with the plane git sha, `--compare` names
+  regressions between two plane versions.
+- **Browser verification split (P1-7)** — exploration (MCP) persists
+  `browser-verify/spec.json`; replay is deterministic
+  (`browser-verify --run-spec`), flake-classified, traced.
+- **Codegraph query channel (P1-8)** and **SELECT rubric (P1-9)** —
+  query the graph not the code; every selection names its reasons.
+
 ## Repository layout
 
 ```
-├── bin/plan.py          planning dispatch: roles, validate, design, review, close, next…
-├── bin/report.py        delivery measurement, gate presentation, four deliver states
+├── bin/plan.py          planning dispatch: roles, validate, design, review, codegraph query, close, next…
+├── bin/report.py        delivery measurement + gates: execution gate, alignment, checkpoint, patterns, stallguard, nudge, dispatch-doctor
+├── bin/eval.py          the small fixed eval set (--compare between plane versions)
+├── evals/               set.json (the tasks) + results/ (runs tagged with plane git)
 ├── install.sh           multi-target installer (--doctor, --provision-plane, --uninstall)
 ├── SKILL.md             the agent-facing entry point (first screen is self-contained)
+├── roles/               coding-agent hats (project-manager, coder) + the full roster table
 ├── config/              collapsed.config.yaml (planning threshold, review axes, …)
 ├── openspec/            spec templates + archived changes (strict validation target)
 ├── docs/                PRDs — every change starts as one, decisions and evidence included
 ├── supervisor/          runtime supervision skills
 ├── targets/             install target definitions (claude, codex, cursor, copilot, …)
-├── scripts/             installer helper scripts
+├── scripts/             installer helpers + browser-spec-runner.js (deterministic replay)
 ├── tests/               the measured test suite
 ├── CHANGELOG.md         every version entry carries its measurements
 └── LICENSE
@@ -154,7 +200,11 @@ Manually, the flow is:
 ```bash
 python3 bin/report.py init  --route planned --change <id> --repo <repo> --task-dir <td>
 python3 bin/plan.py   scaffold --kind <site|tool|…> --task-dir <td>      # planned route
-# … roles are dispatched through jiuwenswarm: proposal → specs → author → design → review …
+# … roles are dispatched through jiuwenswarm: proposal → specs → design …
+#   then the coding agent wears its two hats (roles/*.md, not dispatched):
+#   project-manager (wbs.json + handoff packages, never codes —
+#   `plan.py wbs` proves the tree clean) → coder (codes + tests each
+#   subtask in order) … review …
 python3 bin/plan.py   validate --change <id> --repo <repo>               # signed verdict
 python3 bin/report.py deliver --task-dir <td> --repo <repo> --outcome completed
 python3 bin/report.py gate   --request --task-dir <td>                   # human decides
@@ -165,6 +215,20 @@ Routing is measured, not guessed: 1–3 changed files go **inline**; 4 or more g
 through the **planned** route (the threshold is one number in
 `config/collapsed.config.yaml`, and `deliver` re-measures it against the real
 diff — an inline route carrying too large a change stops the task for a person).
+
+The measured plane's surfaces, beside the flow above:
+
+```bash
+python3 bin/report.py checkpoint --task-dir <td> --repo <repo> --label "<turn>"   # turn checkpoint
+python3 bin/report.py checkpoint --task-dir <td> --repo <repo> --show <seq>       # diff vs previous
+python3 bin/plan.py   codegraph query --repo <repo> --file <path> --hop 1          # read the graph, not the code
+python3 bin/plan.py   browser-verify --repo <repo> --change <id> --run-spec browser-verify/spec.json   # deterministic replay
+python3 bin/report.py patterns   --task-dir <td>    # decision-pattern dashboard
+python3 bin/report.py stallguard --task-dir <td>    # frame-clock stall watch
+python3 bin/report.py nudge      --root <repo>      # merge gates unanswered >48h
+python3 bin/report.py dispatch-doctor               # tool-description fumbling measurement
+python3 bin/eval.py                                # the eval set; --compare A.json B.json
+```
 
 ### 3. Every change starts as a PRD
 
@@ -212,6 +276,8 @@ Claude Code (executor) ── bin/report.py   four states · G-DELIVER-1
 
 ## Status
 
-Runtime at v0.18.x (see `CHANGELOG.md` — every version entry carries its
-measurements). Active lines: codegraph structure-first planning, phase-chain
-automation, multi-target installs.
+Runtime at v0.22.0 + the 2026-09 measured-plane campaign (14 gated tasks;
+292 tests; the ledger lives in DevTeam's PRD appendix 2). Active lines:
+execution-gated delivery, evidence-constrained review, the measured
+brief contract (A/B-validated), deterministic browser replay, and the
+codegraph query channel.

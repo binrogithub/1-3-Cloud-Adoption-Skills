@@ -1,5 +1,48 @@
 # CHANGELOG
 
+## v0.23.1 — PM moves agent-side, coder added; the roster table (Robin 2026-09-09)
+
+Correction to v0.23.0: the project-manager is a HAT the coding agent
+wears, not a dispatchable gateway role — its contract (and the coder's:
+code + test in one delivery, never judge your own work) lives in
+`roles/*.md`. The gateway roster is unchanged and remains the only
+dispatched surface; `plan.py wbs` keeps validating the decomposition
+artifact and the clean-tree proof regardless of who produced it.
+
+- roles/project-manager.md, roles/coder.md, roles/README.md (the full
+  roster table: who plays which role, what it produces, what checks it)
+- assemble_prompt: the PM dispatch branch removed (nothing dispatches
+  as project-manager now); artifact-role prompts unchanged
+- config roster comment drops project-manager; SKILL.md and Readme.md
+  flow lines corrected; the repository layout lists roles/
+- tests: the two PM-prompt tests became role-md contract tests (the
+  mds must carry the four-marker contract and the manage-not-code /
+  code-and-test semantics); wbs tests unchanged. Suite: 309 passed.
+
+## v0.23.0 — the project-manager role: decompose without coding (PRD `prd-pm-role-20260909`, Robin 2026-09-09)
+
+Four test rounds audited that every implementation was written by the
+orchestrating agent directly — the author-side dispatch loop only ever
+carried the validator. The decided architecture separates managing
+from coding: a `project-manager` role dispatched through jiuwenswarm
+reads the repo and produces `wbs.json` plus one handoff package per
+subtask (four-marker briefs), but codes and tests nothing; the coding
+agent — the interactive agent running this skill — executes the
+subtasks in order (decisions: A-mode decomposition, no nesting; no
+separate tester role; gateway untouched).
+
+- `plan.py wbs --change <id> --repo <repo>`: mechanical validation —
+  wbs schema (unique ids, packages/<id>.json naming, depends_on a DAG
+  via Kahn ordering), per-package keys, the four-marker brief contract
+  on every package, and the clean-tree proof (git status --porcelain
+  empty — the PM managed, never coded). Violations exit
+  EXIT_PACKAGE_INVALID (5) with the reason named; success emits the
+  topo-ordered subtask list the coding agent walks.
+- assemble_prompt carries a PM-specific contract: same four markers,
+  manage-not-code semantics, wbs.json/packages/ output boundary.
+- config roster comment, SKILL.md WORK section, Readme flow line;
+  9 new tests (tests/test_project_manager_role.py). Suite: 307 passed.
+
 ## v0.19.0 — phase-chain automation, Phase A: queue the next phase's task skeleton on an approved close (PRD `phase-chain-automation`, Robin's approval 2026-09-03)
 
 A multi-phase initiative (a proposal that splits work into "Phase 1 / Phase
