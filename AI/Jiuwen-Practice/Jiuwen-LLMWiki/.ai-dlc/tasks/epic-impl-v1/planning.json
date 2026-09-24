@@ -1,0 +1,18 @@
+{
+  "plane_dispatches": {
+    "archive": {
+      "session_name": "archive-epic-impl-v1-1",
+      "attempts": 1,
+      "client_rc": 0,
+      "timed_out": false,
+      "round_complete": true,
+      "interrupted": false,
+      "commands_seen": 5,
+      "evidence": "/root/HuaweiCloudLatam_LLMWiki/.ai-dlc/tasks/epic-impl-v1/evidence/plan-archive-1.jsonl",
+      "started_at": "2026-09-24T08:39:03Z",
+      "ended_at": "2026-09-24T08:39:55Z",
+      "elapsed_seconds": 51.558,
+      "recorded_at": "2026-09-24T08:39:55Z"
+    }
+  }
+}

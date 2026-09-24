@@ -1,0 +1,20 @@
+# live config & secrets
+llmwiki.toml
+*.env
+.env
+runtime/
+
+# JiuwenSwarm code-mode working folders (R-10; must never live in the repo root)
+coding_memory/
+sub_agents/
+prompt_attachment/
+logs/
+
+# macOS AppleDouble junk
+._*
+.DS_Store
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/

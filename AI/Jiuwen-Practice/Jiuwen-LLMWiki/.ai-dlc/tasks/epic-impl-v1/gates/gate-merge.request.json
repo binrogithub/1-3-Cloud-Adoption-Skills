@@ -1,0 +1,26 @@
+{
+  "gate_id": "gate-merge",
+  "gate_type": "MERGE_GATE",
+  "question": "Merge this delivery into the target branch? (rationale required)",
+  "options": [
+    "approve",
+    "request_changes",
+    "cancel"
+  ],
+  "summary": {
+    "design_state": "design_not_applicable",
+    "surface": {
+      "applicable": false,
+      "classes": [],
+      "surface_files": [],
+      "surface_files_total": 0,
+      "measured_files": 60
+    },
+    "failed_d3_checks": [],
+    "outcome": "merge_pending",
+    "delivered": false,
+    "measured_ref": "refs/heads/task/epic-impl-v1",
+    "ref_kind": "task_branch"
+  },
+  "requested_at": "2026-09-23T20:37:35Z"
+}

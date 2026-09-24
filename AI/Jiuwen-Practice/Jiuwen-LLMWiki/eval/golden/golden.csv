@@ -1,0 +1,13 @@
+lang,question,expected_slug,unanswerable
+en,What is the maximum size of a single OBS object?,services/obs,0
+en,Which storage classes does OBS provide?,services/obs,0
+en,In which Brazilian region is OBS available?,regions/la-sao-paulo1,0
+en,What is the price of OBS standard storage per GB in LA-Sao Paulo1?,,1
+en,How many availability zones does LA-Santiago have?,,1
+es,¿Cuál es el tamaño máximo de un objeto de OBS?,services/obs,0
+es,¿Qué clases de almacenamiento ofrece OBS?,services/obs,0
+es,¿En qué región de Brasil está disponible OBS?,regions/la-sao-paulo1,0
+es,¿Cuál es el SLA de disponibilidad de OBS en LATAM?,,1
+pt-BR,Qual é o tamanho máximo de um objeto do OBS?,services/obs,0
+pt-BR,Quais classes de armazenamento o OBS oferece?,services/obs,0
+pt-BR,Em qual região do Brasil o OBS está disponível?,regions/la-sao-paulo1,0

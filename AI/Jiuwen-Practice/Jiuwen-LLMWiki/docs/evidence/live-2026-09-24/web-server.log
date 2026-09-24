@@ -1,0 +1,38 @@
+llmwiki-web 0.1.0 on http://127.0.0.1:20080  (git 7895fd8)
+llmwiki-web 0.1.0 on http://172.20.0.1:20080  (git 7895fd8)
+llmwiki-web 0.1.0 on http://127.0.0.1:20080  (git 9461b5a)
+llmwiki-web 0.1.0 on http://172.20.0.1:20080  (git 9461b5a)
+llmwiki-web 0.1.0 on http://127.0.0.1:20080  (git f159ba3)
+llmwiki-web 0.1.0 on http://172.20.0.1:20080  (git f159ba3)
+llmwiki-web 0.1.0 on http://127.0.0.1:20080  (git f159ba3)
+llmwiki-web 0.1.0 on http://172.20.0.1:20080  (git f159ba3)
+llmwiki-web 0.1.0 on http://127.0.0.1:20080  (git f159ba3)
+llmwiki-web 0.1.0 on http://172.20.0.1:20080  (git f159ba3)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/root/wt/epic-impl-v1/llmwiki/cli.py", line 243, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/root/wt/epic-impl-v1/llmwiki/cli.py", line 61, in main
+    web.serve(cfg, args.host, args.port)
+  File "/root/wt/epic-impl-v1/llmwiki/web.py", line 607, in serve
+    httpd = ThreadingHTTPServer((b, port), Handler)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/socketserver.py", line 457, in __init__
+    self.server_bind()
+  File "/usr/lib/python3.12/http/server.py", line 136, in server_bind
+    socketserver.TCPServer.server_bind(self)
+  File "/usr/lib/python3.12/socketserver.py", line 473, in server_bind
+    self.socket.bind(self.server_address)
+OSError: [Errno 98] Address already in use
+llmwiki-web 0.1.0 on http://127.0.0.1:20080  (git 9a219aa)
+llmwiki-web 0.1.0 on http://172.20.0.1:20080  (git 9a219aa)
+llmwiki-web 0.1.0 on http://127.0.0.1:20080  (git 9a219aa)
+llmwiki-web 0.1.0 on http://172.20.0.1:20080  (git 9a219aa)
+llmwiki-web 0.1.0 on http://127.0.0.1:20080  (git 4b9896e)
+llmwiki-web 0.1.0 on http://172.20.0.1:20080  (git 4b9896e)
+llmwiki-web 0.1.0 on http://127.0.0.1:20080  (git 4b9896e)
+llmwiki-web 0.1.0 on http://172.20.0.1:20080  (git 4b9896e)
+llmwiki-web 0.1.0 on http://127.0.0.1:20080  (git ee6d8d5)
+llmwiki-web 0.1.0 on http://172.20.0.1:20080  (git ee6d8d5)

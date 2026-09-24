@@ -1,0 +1,6 @@
+[Unit]
+Description=LLMWiki gbrain nightly dream (propose-only, never writes pages)
+
+[Service]
+Type=oneshot
+ExecStart=/root/HuaweiCloudLatam_LLMWiki/deploy/gbrain-dream.sh

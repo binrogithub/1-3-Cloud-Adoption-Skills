@@ -1,0 +1,553 @@
+2026-09-24 02:30:54 | common | default_trace_id | INFO | Registered connector pool type: default
+2026-09-24 02:30:54 | common | default_trace_id | INFO | Registered connector pool type: httpx
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered query expression support for milvus
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered query expression support for chroma
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser ExcelParser for .xlsx
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser ExcelParser for .csv
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser ExcelParser for .tsv
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser TxtMdParser for .txt
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser TxtMdParser for .md
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser TxtMdParser for .markdown
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser HTMLFileParser for .htm
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser HTMLFileParser for .html
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser JSONParser for .json
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser PDFParser for .pdf
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser WordParser for .docx
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser ImageParser for .png
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser ImageParser for .jpg
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser ImageParser for .jpeg
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser ImageParser for .webp
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser ImageParser for .gif
+2026-09-24 02:30:56 | common | default_trace_id | INFO | Registered parser ImageParser for .jfif
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.code.execute_code, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.code.execute_code_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.read_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.read_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.write_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.upload_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.upload_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.download_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.download_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.list_files, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.list_directories, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.search_files, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.shell.execute_cmd, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.shell.execute_cmd_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.shell.execute_cmd_background, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | [mcp-timeout] patch applied (default_timeout=30.0s, covered=StreamableHttpClient,SseClient)
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=b7d17387f31f4f619f73fa7070f36819, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=d4947482d07c4e0c9e779d45ec8d365f, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=b34eb87fba754dc8810bf76a4b895424, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=WebFreeSearchTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=WebFetchWebpageTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=AudioMetadataTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=search_skill, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=install_skill, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=uninstall_skill, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=f4c0e7476ca6456bbd6e53ee7d366850, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.code.execute_code, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.code.execute_code_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.fs.read_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.fs.read_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.fs.write_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.fs.upload_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.fs.upload_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.fs.download_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.fs.download_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.fs.list_files, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.fs.list_directories, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.fs.search_files, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.shell.execute_cmd, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.shell.execute_cmd_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c81ba955056e410da1aa8fb86943b9c4.shell.execute_cmd_background, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=read_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=write_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=edit_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=glob_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=list_files_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=grep_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=bash_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=SkillTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=ReadFileTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=CodeTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=BashTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | WARNING | Duplicate tool ability detected: name='read_file', existing_id='read_file_jiuwenswarm', new_id='ReadFileTool_jiuwenswarm'. Keep existing ability and skip new one.
+2026-09-24 02:31:19 | common | default_trace_id | WARNING | Duplicate tool ability detected: name='bash', existing_id='bash_jiuwenswarm', new_id='BashTool_jiuwenswarm'. Keep existing ability and skip new one.
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_create_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_list_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_get_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_modify_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=task_tool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:19 | common | default_trace_id | INFO | [SubagentRail] Registered sync task tool with 2 subagent(s)
+2026-09-24 02:31:19 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=ask_user_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=8c7978e197a6451b83f7fd048fd5184e, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.code.execute_code, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.code.execute_code_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.fs.read_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.fs.read_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.fs.write_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.fs.upload_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.fs.upload_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.fs.download_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.fs.download_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.fs.list_files, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.fs.list_directories, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.fs.search_files, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.shell.execute_cmd, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.shell.execute_cmd_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=c31d1db81dcf4045a3e2d251f2d44ee4.shell.execute_cmd_background, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=read_file_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=read_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=write_file_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=write_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=edit_file_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=edit_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=glob_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=glob_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=list_files_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=list_files_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=grep_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=grep_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=bash_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=bash_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=SkillTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=SkillTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=ReadFileTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=ReadFileTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=CodeTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=CodeTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=BashTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=BashTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | WARNING | Duplicate tool ability detected: name='read_file', existing_id='read_file_jiuwenswarm', new_id='ReadFileTool_jiuwenswarm'. Keep existing ability and skip new one.
+2026-09-24 02:31:20 | common | default_trace_id | WARNING | Duplicate tool ability detected: name='bash', existing_id='bash_jiuwenswarm', new_id='BashTool_jiuwenswarm'. Keep existing ability and skip new one.
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=todo_create_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_create_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=todo_list_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_list_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=todo_get_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_get_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=todo_modify_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_modify_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=task_tool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=task_tool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | [SubagentRail] Registered sync task tool with 2 subagent(s)
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Removed resource. resource_id=ask_user_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=ask_user_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=memory_search_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | [MemoryRail] Registered tool: memory_search
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=memory_get_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | [MemoryRail] Registered tool: memory_get
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=write_memory_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | [MemoryRail] Registered tool: write_memory
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=edit_memory_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | [MemoryRail] Registered tool: edit_memory
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=read_memory_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | [MemoryRail] Registered tool: read_memory
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=prepare_skill_evolution_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=evolve_review_task_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=list_skill_experiences_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=read_skill_experiences_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=evolve_skill_experiences_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=simplify_skill_experiences_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:20 | common | default_trace_id | INFO | [SubagentRail] Refreshed available_agents for task_tool
+2026-09-24 02:31:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_runtime_7a24d6317710_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_list_jobs_runtime_7a24d6317710_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_get_job_runtime_7a24d6317710_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_create_job_runtime_7a24d6317710_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_update_job_runtime_7a24d6317710_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_delete_job_runtime_7a24d6317710_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_toggle_job_runtime_7a24d6317710_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_preview_job_runtime_7a24d6317710_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:21 | common | default_trace_id | WARNING | [MemoryRail] Memory manager initialization failed
+2026-09-24 02:31:21 | common | default_trace_id | INFO | ReAct iteration 1/100
+2026-09-24 02:31:21 | common | default_trace_id | INFO | [BaseSecurityRail] get_user_input subject_id='SafetyPromptRail:before_model_call' raw_input_type=None
+2026-09-24 02:31:21 | common | default_trace_id | INFO | [PromptAttachmentManager] collect prompt attachments: session_id=cli-20260923-183119-0509d816, collected_ids=['session.cli-20260923-183119-0509d816.runtime.setting']
+2026-09-24 02:31:21 | common | default_trace_id | INFO | [PromptAttachmentManager] injected prompt attachments: session_id=cli-20260923-183119-0509d816, prompt_attachment_ids=['session.cli-20260923-183119-0509d816.runtime.setting'], rendered_prompt_attachment_hash=483f8804a171484e414abe79cc185d93970167c5c67a141131a762452ce1edf8
+2026-09-24 02:31:21 | common | default_trace_id | INFO | [LLM] >>> request: msg_count=3, tool_count=44
+2026-09-24 02:31:36 | common | default_trace_id | INFO | [LLM] <<< response: content_len=0, tool_call_count=1, tokens={input=24282, output=353}
+2026-09-24 02:31:36 | common | default_trace_id | INFO | Executing tool: task_tool with args: {'kind': 'task_tool', 'keys': ['subagent_type', 'task_description'], 'subagent_type': 'llmwiki', 'task_description': {'redacted': True, 'length': 1030, 'sha256_12': 'a74f550bb26e'}}
+2026-09-24 02:31:36 | common | default_trace_id | INFO | [TaskTool] Creating subagent: llmwiki, parent_session=cli-20260923-183119-0509d816, sub_session=cli-20260923-183119-0509d816_sub_llmwiki_2fea8cbc
+2026-09-24 02:31:36 | common | default_trace_id | ERROR | [TaskTool] Subagent creation failed: type=llmwiki, error='str' object has no attribute 'name'
+2026-09-24 02:31:36 | common | default_trace_id | ERROR | Tool execution error: [182505] task tool invoked failed, error='Subagent llmwiki creation failed: 'str' object has no attribute 'name''
+2026-09-24 02:31:36 | common | default_trace_id | ERROR | Ability execution error: [120001] Tool execution error: [182505] task tool invoked failed, error='Subagent llmwiki creation failed: 'str' object has no attribute 'name''
+2026-09-24 02:31:36 | common | default_trace_id | INFO | ReAct iteration 2/100
+2026-09-24 02:31:36 | common | default_trace_id | INFO | [BaseSecurityRail] get_user_input subject_id='SafetyPromptRail:before_model_call' raw_input_type=None
+2026-09-24 02:31:36 | common | default_trace_id | INFO | [PromptAttachmentManager] collect prompt attachments: session_id=cli-20260923-183119-0509d816, collected_ids=['session.cli-20260923-183119-0509d816.runtime.setting']
+2026-09-24 02:31:36 | common | default_trace_id | INFO | [PromptAttachmentManager] injected prompt attachments: session_id=cli-20260923-183119-0509d816, prompt_attachment_ids=['session.cli-20260923-183119-0509d816.runtime.setting'], rendered_prompt_attachment_hash=483f8804a171484e414abe79cc185d93970167c5c67a141131a762452ce1edf8
+2026-09-24 02:31:36 | common | default_trace_id | INFO | [LLM] >>> request: msg_count=5, tool_count=44
+2026-09-24 02:31:49 | common | default_trace_id | INFO | [LLM] <<< response: content_len=389, tool_call_count=0, tokens={input=24673, output=248}
+2026-09-24 02:31:49 | common | default_trace_id | INFO | TaskPlanningRail token usage: model_id=fd0a570a-49b1-4a96-9fa6-a40fc9f71ed4 input=48955 output=601
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.code.execute_code, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.code.execute_code_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.fs.read_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.fs.read_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.fs.write_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.fs.upload_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.fs.upload_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.fs.download_file, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.fs.download_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.fs.list_files, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.fs.list_directories, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.fs.search_files, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.shell.execute_cmd, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.shell.execute_cmd_stream, changed from [] to [GLOBAL]
+2026-09-24 02:31:57 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=34a1b9f6fe4e4f52bd942444faf25213.shell.execute_cmd_background, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=read_file_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=read_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=write_file_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=write_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=edit_file_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=edit_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=glob_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=glob_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=list_files_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=list_files_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=grep_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=grep_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=bash_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=bash_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=SkillTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=SkillTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=ReadFileTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=ReadFileTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=CodeTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=CodeTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=BashTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=BashTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | WARNING | Duplicate tool ability detected: name='read_file', existing_id='read_file_jiuwenswarm', new_id='ReadFileTool_jiuwenswarm'. Keep existing ability and skip new one.
+2026-09-24 02:31:58 | common | default_trace_id | WARNING | Duplicate tool ability detected: name='bash', existing_id='bash_jiuwenswarm', new_id='BashTool_jiuwenswarm'. Keep existing ability and skip new one.
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=todo_create_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_create_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=todo_list_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_list_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=todo_get_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_get_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=todo_modify_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_modify_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=task_tool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=task_tool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | [SubagentRail] Registered sync task tool with 2 subagent(s)
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=ask_user_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=ask_user_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=memory_search_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=memory_search_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | [MemoryRail] Registered tool: memory_search
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=memory_get_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=memory_get_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | [MemoryRail] Registered tool: memory_get
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=write_memory_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=write_memory_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | [MemoryRail] Registered tool: write_memory
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=edit_memory_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=edit_memory_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | [MemoryRail] Registered tool: edit_memory
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=read_memory_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=read_memory_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | [MemoryRail] Registered tool: read_memory
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=prepare_skill_evolution_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=prepare_skill_evolution_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=evolve_review_task_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=evolve_review_task_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=list_skill_experiences_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=list_skill_experiences_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=read_skill_experiences_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=read_skill_experiences_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=evolve_skill_experiences_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=evolve_skill_experiences_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Removed resource. resource_id=simplify_skill_experiences_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=simplify_skill_experiences_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | [SubagentRail] Refreshed available_agents for task_tool
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_runtime_7a24c5fe4b90_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_list_jobs_runtime_7a24c5fe4b90_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_get_job_runtime_7a24c5fe4b90_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_create_job_runtime_7a24c5fe4b90_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_update_job_runtime_7a24c5fe4b90_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_delete_job_runtime_7a24c5fe4b90_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_toggle_job_runtime_7a24c5fe4b90_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_preview_job_runtime_7a24c5fe4b90_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:31:58 | common | default_trace_id | WARNING | [MemoryRail] Memory manager initialization failed
+2026-09-24 02:31:58 | common | default_trace_id | INFO | ReAct iteration 1/100
+2026-09-24 02:31:58 | common | default_trace_id | INFO | [BaseSecurityRail] get_user_input subject_id='SafetyPromptRail:before_model_call' raw_input_type=None
+2026-09-24 02:31:58 | common | default_trace_id | INFO | [PromptAttachmentManager] collect prompt attachments: session_id=cli-20260923-183157-50f0c397, collected_ids=['session.cli-20260923-183157-50f0c397.runtime.setting']
+2026-09-24 02:31:58 | common | default_trace_id | INFO | [PromptAttachmentManager] injected prompt attachments: session_id=cli-20260923-183157-50f0c397, prompt_attachment_ids=['session.cli-20260923-183157-50f0c397.runtime.setting'], rendered_prompt_attachment_hash=483f8804a171484e414abe79cc185d93970167c5c67a141131a762452ce1edf8
+2026-09-24 02:31:58 | common | default_trace_id | INFO | [LLM] >>> request: msg_count=3, tool_count=44
+2026-09-24 02:32:10 | common | default_trace_id | INFO | [LLM] <<< response: content_len=0, tool_call_count=1, tokens={input=23986, output=208}
+2026-09-24 02:32:10 | common | default_trace_id | INFO | Executing tool: task_tool with args: {'kind': 'task_tool', 'keys': ['subagent_type', 'task_description'], 'subagent_type': 'llmwiki', 'task_description': {'redacted': True, 'length': 311, 'sha256_12': 'a93de09fef92'}}
+2026-09-24 02:32:10 | common | default_trace_id | INFO | [TaskTool] Creating subagent: llmwiki, parent_session=cli-20260923-183157-50f0c397, sub_session=cli-20260923-183157-50f0c397_sub_llmwiki_8f1866fc
+2026-09-24 02:32:10 | common | default_trace_id | ERROR | [TaskTool] Subagent creation failed: type=llmwiki, error='str' object has no attribute 'name'
+2026-09-24 02:32:10 | common | default_trace_id | ERROR | Tool execution error: [182505] task tool invoked failed, error='Subagent llmwiki creation failed: 'str' object has no attribute 'name''
+2026-09-24 02:32:10 | common | default_trace_id | ERROR | Ability execution error: [120001] Tool execution error: [182505] task tool invoked failed, error='Subagent llmwiki creation failed: 'str' object has no attribute 'name''
+2026-09-24 02:32:10 | common | default_trace_id | INFO | ReAct iteration 2/100
+2026-09-24 02:32:10 | common | default_trace_id | INFO | [BaseSecurityRail] get_user_input subject_id='SafetyPromptRail:before_model_call' raw_input_type=None
+2026-09-24 02:32:10 | common | default_trace_id | INFO | [PromptAttachmentManager] collect prompt attachments: session_id=cli-20260923-183157-50f0c397, collected_ids=['session.cli-20260923-183157-50f0c397.runtime.setting']
+2026-09-24 02:32:10 | common | default_trace_id | INFO | [PromptAttachmentManager] injected prompt attachments: session_id=cli-20260923-183157-50f0c397, prompt_attachment_ids=['session.cli-20260923-183157-50f0c397.runtime.setting'], rendered_prompt_attachment_hash=483f8804a171484e414abe79cc185d93970167c5c67a141131a762452ce1edf8
+2026-09-24 02:32:10 | common | default_trace_id | INFO | [LLM] >>> request: msg_count=5, tool_count=44
+2026-09-24 02:32:18 | common | default_trace_id | INFO | [LLM] <<< response: content_len=63, tool_call_count=0, tokens={input=24232, output=71}
+2026-09-24 02:32:18 | common | default_trace_id | INFO | TaskPlanningRail token usage: model_id=59b966dc-025c-4f02-bab6-1fb62ed29519 input=48218 output=279
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=70af0a3f07dc4435b5684fe25d39f33d, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.code.execute_code, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.code.execute_code_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.fs.read_file, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.fs.read_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.fs.write_file, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.fs.upload_file, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.fs.upload_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.fs.download_file, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.fs.download_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.fs.list_files, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.fs.list_directories, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.fs.search_files, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.shell.execute_cmd, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.shell.execute_cmd_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:00 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=5f3e8ead9b134bce806ae4ae44674b0f.shell.execute_cmd_background, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | WARNING | LspRail: failed to initialize LSP subsystem: 
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=lsp_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | LspRail: initialized LSP subsystem and registered LspTool (cwd=/root/HuaweiCloudLatam_LLMWiki)
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=read_file_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=read_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=write_file_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=write_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=edit_file_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=edit_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=glob_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=glob_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=list_files_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=list_files_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=grep_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=grep_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=bash_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=bash_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=coding_memory_read_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | [CodingMemoryRail] Registered tool: coding_memory_read
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=coding_memory_write_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | [CodingMemoryRail] Registered tool: coding_memory_write
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=coding_memory_edit_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | [CodingMemoryRail] Registered tool: coding_memory_edit
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=switch_mode_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=enter_plan_mode_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=exit_plan_mode_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | [AgentModeRail] Registered enter/exit plan mode tools
+2026-09-24 02:33:20 | common | default_trace_id | INFO | [AgentModeRail] Patched enter_plan_mode.invoke() to return full plan instructions in tool_result
+2026-09-24 02:33:20 | common | default_trace_id | INFO | [AgentModeRail] Patched exit_plan_mode.invoke() to append plan mode exit notification in tool_result
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=ask_user_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=ask_user_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=todo_create_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_create_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=todo_list_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_list_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=todo_get_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_get_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=todo_modify_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_modify_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=Agent_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | [CodeAgentRail] Agent tool registered with 1 custom agent(s): llmwiki
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=SkillTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=SkillTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=ReadFileTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=ReadFileTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=CodeTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=CodeTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=BashTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=BashTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | WARNING | Duplicate tool ability detected: name='read_file', existing_id='read_file_jiuwenswarm', new_id='ReadFileTool_jiuwenswarm'. Keep existing ability and skip new one.
+2026-09-24 02:33:20 | common | default_trace_id | WARNING | Duplicate tool ability detected: name='bash', existing_id='bash_jiuwenswarm', new_id='BashTool_jiuwenswarm'. Keep existing ability and skip new one.
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=enter_worktree_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=exit_worktree_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Removed resource. resource_id=task_tool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:20 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=task_tool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:20 | common | default_trace_id | INFO | [SubagentRail] Registered sync task tool with 2 subagent(s)
+2026-09-24 02:33:21 | common | default_trace_id | INFO | LspRail: LSP subsystem initialized successfully
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.code.execute_code, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.code.execute_code_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.fs.read_file, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.fs.read_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.fs.write_file, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.fs.upload_file, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.fs.upload_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.fs.download_file, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.fs.download_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.fs.list_files, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.fs.list_directories, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.fs.search_files, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.shell.execute_cmd, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.shell.execute_cmd_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=30b4a3a4c4394b7e80c674707d5749bf.shell.execute_cmd_background, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | LspRail: LSP subsystem already initialized
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=lsp_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=lsp_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | LspRail: initialized LSP subsystem and registered LspTool (cwd=/root/HuaweiCloudLatam_LLMWiki)
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=read_file_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=read_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=write_file_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=write_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=edit_file_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=edit_file_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=glob_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=glob_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=list_files_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=list_files_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=grep_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=grep_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=bash_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=bash_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=coding_memory_read_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=coding_memory_read_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | [CodingMemoryRail] Registered tool: coding_memory_read
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=coding_memory_write_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=coding_memory_write_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | [CodingMemoryRail] Registered tool: coding_memory_write
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=coding_memory_edit_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=coding_memory_edit_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | [CodingMemoryRail] Registered tool: coding_memory_edit
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=switch_mode_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=switch_mode_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=enter_plan_mode_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=enter_plan_mode_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=exit_plan_mode_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=exit_plan_mode_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | [AgentModeRail] Registered enter/exit plan mode tools
+2026-09-24 02:33:21 | common | default_trace_id | INFO | [AgentModeRail] Patched enter_plan_mode.invoke() to return full plan instructions in tool_result
+2026-09-24 02:33:21 | common | default_trace_id | INFO | [AgentModeRail] Patched exit_plan_mode.invoke() to append plan mode exit notification in tool_result
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=ask_user_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=ask_user_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=todo_create_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_create_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=todo_list_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_list_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=todo_get_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_get_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=todo_modify_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=todo_modify_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=Agent_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=Agent_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | [CodeAgentRail] Agent tool registered with 1 custom agent(s): llmwiki
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=SkillTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=SkillTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=ReadFileTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=ReadFileTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=CodeTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=CodeTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=BashTool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=BashTool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | WARNING | Duplicate tool ability detected: name='read_file', existing_id='read_file_jiuwenswarm', new_id='ReadFileTool_jiuwenswarm'. Keep existing ability and skip new one.
+2026-09-24 02:33:21 | common | default_trace_id | WARNING | Duplicate tool ability detected: name='bash', existing_id='bash_jiuwenswarm', new_id='BashTool_jiuwenswarm'. Keep existing ability and skip new one.
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=enter_worktree_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=enter_worktree_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=exit_worktree_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=exit_worktree_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=task_tool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=task_tool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | [SubagentRail] Registered sync task tool with 2 subagent(s)
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Removed resource. resource_id=task_tool_jiuwenswarm, removed_tags=['__global__']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=task_tool_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | WARNING | Duplicate tool ability detected: name='task_tool', existing_id='task_tool_jiuwenswarm', new_id='task_tool_jiuwenswarm'. Keep existing ability and skip new one.
+2026-09-24 02:33:21 | common | default_trace_id | INFO | [SubagentRail] Registered sync task tool with 2 subagent(s)
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_runtime_7a24c6025040_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_list_jobs_runtime_7a24c6025040_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_get_job_runtime_7a24c6025040_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_create_job_runtime_7a24c6025040_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_update_job_runtime_7a24c6025040_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_delete_job_runtime_7a24c6025040_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_toggle_job_runtime_7a24c6025040_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=cron_preview_job_runtime_7a24c6025040_jiuwenswarm, changed from [] to [GLOBAL]
+2026-09-24 02:33:21 | common | default_trace_id | WARNING | Duplicate tool ability detected: name='user_todos', existing_id='70af0a3f07dc4435b5684fe25d39f33d', new_id='70af0a3f07dc4435b5684fe25d39f33d'. Keep existing ability and skip new one.
+2026-09-24 02:33:21 | common | default_trace_id | WARNING | [CodingMemoryRail] Coding memory manager initialization failed
+2026-09-24 02:33:21 | common | default_trace_id | INFO | ReAct iteration 1/100
+2026-09-24 02:33:21 | common | default_trace_id | INFO | [BaseSecurityRail] get_user_input subject_id='SafetyPromptRail:before_model_call' raw_input_type=None
+2026-09-24 02:33:21 | common | default_trace_id | INFO | [PromptAttachmentManager] collect prompt attachments: session_id=cli-20260923-183259-ee4e95c6, collected_ids=['session.cli-20260923-183259-ee4e95c6.runtime.setting']
+2026-09-24 02:33:21 | common | default_trace_id | INFO | [PromptAttachmentManager] injected prompt attachments: session_id=cli-20260923-183259-ee4e95c6, prompt_attachment_ids=['session.cli-20260923-183259-ee4e95c6.runtime.setting'], rendered_prompt_attachment_hash=a06988944f5927de252bb83830176e5ce01a51b63f66528de262e909bd18bb3f
+2026-09-24 02:33:21 | common | default_trace_id | INFO | [LLM] >>> request: msg_count=3, tool_count=36
+2026-09-24 02:33:31 | common | default_trace_id | INFO | [LLM] <<< response: content_len=0, tool_call_count=1, tokens={input=21606, output=172}
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Executing tool: Agent with args: {"description": "Answer OBS object size question", "prompt": "LLMWIKI_TASK: answer\nDelegate this whole request to the llmwiki sub-agent verbatim and return its output verbatim.\nANSWER_LANGUAGE: en\nQUESTION: What is the maximum OBS object size?\nEVIDENCE PACK:\n<<<PAGE slug=services/obs stale=false>>>\nA single object can be up to 48.8 TB [S:aaaaaaaaaaaaaaaa].\n<<<END PAGE>>>", "subagent_type": "llmwiki"}
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.code.execute_code, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.code.execute_code_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.fs.read_file, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.fs.read_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.fs.write_file, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.fs.upload_file, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.fs.upload_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.fs.download_file, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.fs.download_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.fs.list_files, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.fs.list_directories, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.fs.search_files, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.shell.execute_cmd, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.shell.execute_cmd_stream, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=llmwiki_795d650100fe4ca0a58651c088b77a38.shell.execute_cmd_background, changed from [] to [GLOBAL]
+2026-09-24 02:33:31 | common | default_trace_id | INFO | [AgentTool] Created sub-agent for 'llmwiki' via create_deep_agent()
+2026-09-24 02:33:32 | common | default_trace_id | WARNING | [ImageModalityProbe] image modality probe call failed: [181001] model call failed, reason: openAI API async invoke error: Error code: 400 - {'error': {'code': 'ModelArts.81001', 'message': "request param validation error, Value error, message[0].content[0] has unsupported content type: 'image_url', only supported type(s): 'text'. ", 'param': None, 'type': 'BadRequest'}, 'error_code': 'ModelArts.81001', 'error_msg': "request param validation error, Value error, message[0].content[0] has unsupported content type: 'image_url', only supported type(s): 'text'. ", 'span_id': '27c05c22482a23187a2483ad9baa7d6c'}
+2026-09-24 02:33:32 | common | default_trace_id | WARNING | [DeepAgent] image multimodal probe inconclusive; leaving auto and degrading to metadata-only for this run
+2026-09-24 02:33:32 | common | default_trace_id | INFO | TaskScheduler started
+2026-09-24 02:33:32 | common | default_trace_id | INFO | Controller started in event loop 134298683797152
+2026-09-24 02:33:32 | common | default_trace_id | INFO | No saved state found for session cli-20260923-183259-ee4e95c6, clearing task manager
+2026-09-24 02:33:32 | common | default_trace_id | INFO | [OuterLoop] round=1 started
+2026-09-24 02:33:32 | common | default_trace_id | INFO | TaskScheduler schedule loop started
+2026-09-24 02:33:32 | common | default_trace_id | INFO | Task e02c26c2c8234fd29f329bee680ad79f (deep_agent_task) started, running_tasks=['e02c26c2c8234fd29f329bee680ad79f']
+2026-09-24 02:33:32 | common | default_trace_id | INFO | Executing task e02c26c2c8234fd29f329bee680ad79f (type: deep_agent_task)
+2026-09-24 02:33:32 | common | default_trace_id | INFO | [OuterLoop] iteration=1 task_id=e02c26c2c8234fd29f329bee680ad79f
+2026-09-24 02:33:32 | common | default_trace_id | INFO | ReAct iteration 1/9223372036854775807
+2026-09-24 02:33:32 | common | default_trace_id | INFO | [BaseSecurityRail] get_user_input subject_id='SafetyPromptRail:before_model_call' raw_input_type=None
+2026-09-24 02:33:32 | common | default_trace_id | INFO | [PromptAttachmentManager] collect prompt attachments: session_id=cli-20260923-183259-ee4e95c6, collected_ids=[]
+2026-09-24 02:33:32 | common | default_trace_id | INFO | [LLM] >>> request: msg_count=2, tool_count=0
+2026-09-24 02:33:42 | common | default_trace_id | INFO | [LLM] <<< response: content_len=54, tool_call_count=0, tokens={input=992, output=193}
+2026-09-24 02:33:42 | common | default_trace_id | INFO | [OuterLoop] iteration=1 task_id=e02c26c2c8234fd29f329bee680ad79f completed
+2026-09-24 02:33:42 | common | default_trace_id | INFO | Task e02c26c2c8234fd29f329bee680ad79f completed
+2026-09-24 02:33:42 | common | default_trace_id | INFO | [OuterLoop] round=1 completed, result_type=answer
+2026-09-24 02:33:42 | common | default_trace_id | INFO | [OuterLoop] no remaining tasks, loop finished
+2026-09-24 02:33:42 | common | default_trace_id | INFO | Task persistence disabled, no need to save TaskManager state for session
+2026-09-24 02:33:42 | common | default_trace_id | INFO | Published EventType.TASK_COMPLETION for task e02c26c2c8234fd29f329bee680ad79f
+2026-09-24 02:33:42 | common | default_trace_id | INFO | TaskScheduler schedule loop cancelled
+2026-09-24 02:33:42 | common | default_trace_id | INFO | TaskScheduler schedule end
+2026-09-24 02:33:42 | common | default_trace_id | INFO | TaskScheduler stopped
+2026-09-24 02:33:42 | common | default_trace_id | INFO | [OuterLoop] all tasks completed, controller cleaned up
+2026-09-24 02:33:42 | common | default_trace_id | INFO | ReAct iteration 2/100
+2026-09-24 02:33:42 | common | default_trace_id | INFO | [BaseSecurityRail] get_user_input subject_id='SafetyPromptRail:before_model_call' raw_input_type=None
+2026-09-24 02:33:42 | common | default_trace_id | INFO | [PromptAttachmentManager] collect prompt attachments: session_id=cli-20260923-183259-ee4e95c6, collected_ids=['session.cli-20260923-183259-ee4e95c6.runtime.setting']
+2026-09-24 02:33:42 | common | default_trace_id | INFO | [PromptAttachmentManager] injected prompt attachments: session_id=cli-20260923-183259-ee4e95c6, prompt_attachment_ids=['session.cli-20260923-183259-ee4e95c6.runtime.setting'], rendered_prompt_attachment_hash=a06988944f5927de252bb83830176e5ce01a51b63f66528de262e909bd18bb3f
+2026-09-24 02:33:42 | common | default_trace_id | INFO | [LLM] >>> request: msg_count=5, tool_count=36
+2026-09-24 02:33:49 | common | default_trace_id | INFO | [LLM] <<< response: content_len=54, tool_call_count=0, tokens={input=21820, output=38}
+2026-09-24 02:33:49 | common | default_trace_id | INFO | TaskPlanningRail token usage: model_id=3e8c9c76-e148-4e20-ae3e-8eb3ded71f69 input=43426 output=210
+2026-09-24 02:35:06 | common | default_trace_id | INFO | Registered connector pool type: default
+2026-09-24 02:35:06 | common | default_trace_id | INFO | Registered connector pool type: httpx
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered query expression support for milvus
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered query expression support for chroma
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser ExcelParser for .xlsx
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser ExcelParser for .csv
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser ExcelParser for .tsv
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser TxtMdParser for .txt
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser TxtMdParser for .md
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser TxtMdParser for .markdown
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser HTMLFileParser for .htm
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser HTMLFileParser for .html
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser JSONParser for .json
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser PDFParser for .pdf
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser WordParser for .docx
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser ImageParser for .png
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser ImageParser for .jpg
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser ImageParser for .jpeg
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser ImageParser for .webp
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser ImageParser for .gif
+2026-09-24 02:35:07 | common | default_trace_id | INFO | Registered parser ImageParser for .jfif
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.code.execute_code, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.code.execute_code_stream, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.read_file, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.read_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.write_file, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.upload_file, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.upload_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.download_file, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.download_file_stream, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.list_files, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.list_directories, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.fs.search_files, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.shell.execute_cmd, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.shell.execute_cmd_stream, changed from [] to [GLOBAL]
+2026-09-24 02:35:11 | common | default_trace_id | INFO | Added GLOBAL tag to resource. resource_id=proactive_agent_proactive_agent.shell.execute_cmd_background, changed from [] to [GLOBAL]

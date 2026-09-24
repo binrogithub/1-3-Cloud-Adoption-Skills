@@ -1,0 +1,21 @@
+[Unit]
+Description=LLMWiki dedicated JiuwenSwarm gateway (stock binary, isolated data dir)
+After=network-online.target
+Requires=llmwiki-jiuwen-agentserver.service
+After=llmwiki-jiuwen-agentserver.service
+
+[Service]
+Type=simple
+Environment=HOME=/root
+Environment=PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=JIUWENSWARM_DATA_DIR=/root/HuaweiCloudLatam_LLMWiki/runtime/jiuwen
+Environment=AGENT_SERVER_PORT=20092
+Environment=GATEWAY_PORT=20001
+Environment=WEB_PORT=20000
+WorkingDirectory=/root/HuaweiCloudLatam_LLMWiki/runtime/jiuwen/work
+ExecStart=/root/.local/bin/jiuwenswarm-gateway --dotenv /root/HuaweiCloudLatam_LLMWiki/runtime/jiuwen/config/.env
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

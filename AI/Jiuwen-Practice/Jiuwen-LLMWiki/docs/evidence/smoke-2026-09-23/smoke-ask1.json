@@ -1,0 +1,19 @@
+{
+  "question": "What is the maximum OBS object size, and how many availability zones does LA-Sao Paulo1 have?",
+  "lang": "en",
+  "answer": "",
+  "status": "error",
+  "citations": [],
+  "retrieved": [
+    "regions/la-sao-paulo1",
+    "services/obs"
+  ],
+  "stale": [],
+  "issues": [],
+  "error": "role_not_dispatched: answer did not come from the 'llmwiki' sub-agent; refusing it",
+  "raw_answer": "",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "ttft_ms": null,
+  "elapsed_s": 30.26
+}

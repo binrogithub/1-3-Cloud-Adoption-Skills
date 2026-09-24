@@ -1,0 +1,7 @@
+{"positive": "grounded", "citations": ["services/obs"], "reverse_role_dispatched": null, "tokens_in": 52367, "ttft_ms": 6000.34, "pass": true, "at": "2026-09-23T20:08:13Z"}
+{"positive": "grounded", "citations": ["faq/what-is-the-maximum-size-of-a-single", "services/obs"], "reverse_role_dispatched": null, "tokens_in": 54165, "ttft_ms": 3202.16, "pass": true, "at": "2026-09-23T23:39:37Z"}
+{"positive": "grounded", "citations": ["faq/what-is-the-maximum-size-of-a-single", "services/obs"], "reverse_role_dispatched": null, "tokens_in": 54341, "ttft_ms": 3102.35, "pass": true, "at": "2026-09-24T00:00:33Z"}
+{"positive": "grounded", "citations": ["faq/what-is-the-maximum-size-of-a-single", "services/obs"], "reverse_role_dispatched": null, "tokens_in": 50473, "ttft_ms": 5234.7, "pass": true, "at": "2026-09-24T09:52:58Z"}
+{"positive": "error", "citations": [], "reverse_role_dispatched": null, "tokens_in": 0, "ttft_ms": null, "pass": false, "at": "2026-09-24T10:06:13Z"}
+{"positive": "grounded", "citations": ["faq/what-is-the-maximum-size-of-a-single", "services/obs"], "reverse_role_dispatched": null, "tokens_in": 50357, "ttft_ms": 3141.02, "pass": true, "at": "2026-09-24T10:13:20Z"}
+{"positive": "grounded", "citations": ["faq/what-is-the-maximum-size-of-a-single", "services/obs"], "reverse_role_dispatched": null, "tokens_in": 51173, "ttft_ms": 3106.44, "pass": true, "at": "2026-09-24T10:43:55Z"}

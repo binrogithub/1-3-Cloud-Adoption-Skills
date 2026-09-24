@@ -1,0 +1,10 @@
+2026-09-24 02:31:21 | memory | default_trace_id | ERROR | Failed to initialize embedding provider: Embedding API key not configured. Set EMBEDDING_API_KEY environment variable or provide embedding_config parameter.
+2026-09-24 02:31:21 | memory | default_trace_id | ERROR | Failed to initialize memory manager: Embedding API key not configured. Set EMBEDDING_API_KEY environment variable or provide embedding_config parameter.
+2026-09-24 02:31:26 | memory | default_trace_id | ERROR | Failed to initialize embedding provider: Embedding API key not configured. Set EMBEDDING_API_KEY environment variable or provide embedding_config parameter.
+2026-09-24 02:31:26 | memory | default_trace_id | ERROR | Failed to initialize memory manager: Embedding API key not configured. Set EMBEDDING_API_KEY environment variable or provide embedding_config parameter.
+2026-09-24 02:31:58 | memory | default_trace_id | ERROR | Failed to initialize embedding provider: Embedding API key not configured. Set EMBEDDING_API_KEY environment variable or provide embedding_config parameter.
+2026-09-24 02:31:58 | memory | default_trace_id | ERROR | Failed to initialize memory manager: Embedding API key not configured. Set EMBEDDING_API_KEY environment variable or provide embedding_config parameter.
+2026-09-24 02:32:03 | memory | default_trace_id | ERROR | Failed to initialize embedding provider: Embedding API key not configured. Set EMBEDDING_API_KEY environment variable or provide embedding_config parameter.
+2026-09-24 02:32:03 | memory | default_trace_id | ERROR | Failed to initialize memory manager: Embedding API key not configured. Set EMBEDDING_API_KEY environment variable or provide embedding_config parameter.
+2026-09-24 02:33:21 | memory | default_trace_id | ERROR | Failed to initialize embedding provider: Embedding API key not configured. Set EMBEDDING_API_KEY environment variable or provide embedding_config parameter.
+2026-09-24 02:33:21 | memory | default_trace_id | ERROR | Failed to initialize memory manager: Embedding API key not configured. Set EMBEDDING_API_KEY environment variable or provide embedding_config parameter.

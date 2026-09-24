@@ -1,0 +1,59 @@
+# Copy to llmwiki.toml. Relative paths are relative to the project root.
+runtime_dir = "runtime"
+
+[gbrain]
+# "gbrain" = GBrain CLI (unmodified, garrytan/gbrain via bun); "files" = keyword-only
+# Markdown dir (PRD B-1 fallback, development only — cross-language search does not work).
+backend = "gbrain-mcp"
+bin = "/root/.bun/bin/gbrain"
+# Verified against gbrain 0.53.0.0 on 247 (2026-09-24, E0-S5):
+#   query = hybrid RRF search; degrades to keyword-only with a stderr warning if the
+#           embedding endpoint is unreachable (rc still 0, results still parsed).
+#   get   = page markdown on stdout. put = page markdown on stdin (rc 0, JSON status).
+#   list  = "slug<TAB>type<TAB>date<TAB>title" lines.
+search_cmd = ["{bin}", "query", "{q}"]
+get_cmd = ["{bin}", "get", "{slug}"]
+put_cmd = ["{bin}", "put", "{slug}", "--force"]   # replace-existing semantics; glue is the only writer
+list_cmd = ["{bin}", "list", "--limit", "10000"]
+timeout_s = 60
+files_dir = "runtime/wiki"          # local mirror; the wiki stays diffable on disk (D-6)
+maintenance_mode = "propose-only"   # E8-S5: dream/autopilot must never apply page writes
+
+[gbrain.env]
+# Env for every gbrain CLI invocation. GBRAIN_HOME points at the dedicated brain
+# (Postgres llmwiki_pg container, never litellm's DB); LITELLM_BASE_URL is the
+# self-hosted embedding endpoint — see docs/adr/ADR-001-embeddings.md.
+GBRAIN_HOME = "runtime/gbrain"
+LITELLM_BASE_URL = "http://127.0.0.1:20081/v1"
+
+[jiuwen]
+bin = "/root/.local/bin/jiuwenswarm"
+data_dir = "runtime/jiuwen"        # dedicated instance, see deploy/install_instance.py
+gateway_port = 20001
+mode = "code"                      # custom roles only work in code mode on 0.2.3 (R-6)
+role = "llmwiki"
+timeout_s = 180
+require_role_dispatch = true
+
+[ask]
+top_k = 6
+max_evidence_chars = 60000
+stale_after_days = 90
+pricing_stale_after_days = 90
+url_domains = ["huaweicloud.com"]
+# claim-term namespaces (GR-1): region, certification AND service page titles (E6-S7)
+term_namespaces = ["regions", "compliance", "services"]
+glossary_terms_file = "wiki/glossary-terms.txt"
+log_retention_days = 180           # OQ-4 interim; tighten after the legal review
+log_raw_answers = false
+
+[review]
+# FR-C4/E7-S7: when true, non-protected, conflict-free, timeline/link-only change sets
+# from public sources are applied by policy without a human click.
+auto_approve_nonprotected = false
+auto_approve_actor = "auto-approve-policy"
+
+[web]
+host = "127.0.0.1"                 # front with the existing Caddy for TLS (E11-S5)
+port = 20080
+tokens_file = "runtime/auth/tokens.json"

@@ -1,0 +1,8 @@
+{
+  "provenance": {
+    "note": "Authoritative LATAM region list (GL-K4 / E3-S8). EMPTY BY DESIGN: the source of truth is open question OQ-1 (LATAM product team). Populate via 'llmwiki regions-verify' once the source is decided; do not hand-edit.",
+    "expected_source": "OQ-1 decision pending (PRD section 13)",
+    "fetched_at": null
+  },
+  "regions": []
+}

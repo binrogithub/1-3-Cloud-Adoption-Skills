@@ -1,0 +1,69 @@
+# Checked claim terms (E12-S2): official product names and abbreviations.
+# One term per line; loaded by Wiki.terms() in addition to page titles.
+# Product names are never translated (G3) — ES/PT answers keep these exact strings.
+Object Storage Service
+OBS
+Elastic Volume Service
+EVS
+Elastic Load Balance
+ELB
+Virtual Private Cloud
+VPC
+Cloud Container Engine
+CCE
+Relational Database Service
+RDS
+GaussDB
+GaussDB(for MySQL)
+Document Database Service
+DDS
+Distributed Cache Service
+DCS
+ModelArts
+Data Warehouse Service
+DWS
+MapReduce Service
+MRS
+FunctionGraph
+Simple Message Notification
+SMN
+Domain Name Service
+DNS
+Cloud Eye
+CES
+Identity and Access Management
+IAM
+Key Management Service
+KMS
+Cloud Trace Service
+CTS
+Anti-DDoS
+Web Application Firewall
+WAF
+Data Replication Service
+DRS
+Dedicated Distributed Storage Service
+DSS
+Bare Metal Server
+BMS
+Elastic Cloud Server
+ECS
+Image Management Service
+IMS
+Cloud Desktop
+Workspace
+TaurusDB
+GeminiDB
+MongoDB-Compatible
+LGPD
+Lei Geral de Proteção de Dados
+LFPDPPP
+Ley Federal de Protección de Datos Personales en Posesión de los Particulares
+ISO 27001
+ISO 27017
+ISO 27018
+ISO 27701
+PCI DSS
+TÜV Rheinland
+CSA STAR
+KVM
