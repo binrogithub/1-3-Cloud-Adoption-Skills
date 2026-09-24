@@ -36,6 +36,8 @@ review:                          # the adversarial design-review round (design-r
 design:                           # v2 design architecture: D0 SELECT → D1 SPECIFY → D2 BUILD → D3 VERIFY
                                   # design is a product code must conform to, not an action on finished code
   select_timeout_s: 120           # D0 session timeout — small session judges pre-filter shortlist
+  visual_rerank_weight: 0.6       # E4: the multimodal arbiter's weight vs the IDF score
+                                  # in the fused ranking (0 = text only, 1 = ignore IDF)
   specify_timeout_s: 600          # D1 session timeout — ui-designer produces concrete spec from SKILL.md
   prefilter_top_k: 12             # D0 pre-filter shortlist size from the 428-candidate design-index
   retrofit_timeout_s: 1800        # legacy full-rewrite path, --retrofit only; --shard N is the default

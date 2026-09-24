@@ -46,6 +46,9 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from design_checks import spec_stands  # noqa: E402
+
 # v2 design architecture: design/ IS a product directory. Its files
 # (tokens.css, tokens.json, components.md, pages.md, assets.md) count
 # toward landed_files/landed_bytes — the structural fix for S1 ("merge
@@ -1648,7 +1651,21 @@ def design_auto_due(task_dir: Path, repo: Path, state: dict,
     decision = planning.get("design_decision")
     if isinstance(decision, dict) and decision.get("skip"):
         return False, "declined"
-    # N4: a prior design_auto record that completed (rc is not None)
+    # E1/S1.1+S1.2 — the record question is a union, never one source: a
+    # D1 design spec standing in state.json (written by `plan.py design`)
+    # counts exactly like a plane-side signed record. Before this, a
+    # design run followed by deliver re-entered D0+D1 (381.6s on the
+    # chile-tourism-site baseline) and rewrote design/ into a second,
+    # diverging generation — the site followed generation one while the
+    # repo carried generation two. A standing spec still earns ONE
+    # verify-only pass (mode below): a fresh D3 measurement against the
+    # surface as it stands at deliver time — the chile run's all_pass
+    # was measured against a pageless tree, which proved nothing. A D1
+    # rewrite needs an explicit human-triggered --redesign; it never
+    # happens implicitly here.
+    if spec_stands(state):
+        return True, "verify_only"
+
     # counts as an attempt; an incomplete one (rc is None) does not.
     # The limit is 2 completed attempts — a half-finished crash doesn't
     # burn one.
@@ -1704,13 +1721,25 @@ def backfill_design_auto(task_dir: Path, state: dict) -> dict | None:
 
 def design_auto_dispatch(task_dir: Path, repo: Path, state: dict,
                          landed: list,
-                         head: str | None = None) -> dict:
+                         head: str | None = None,
+                         redesign: bool = False) -> dict:
     """One automatic design dispatch via subprocess (E4). The attempt is
     recorded in planning.json.design_auto BEFORE the session opens — a
     killed process still leaves the fact (J2/A10). The dispatch's rc
-    and outcome never change deliver's exit code or `delivered` (J3)."""
+    and outcome never change deliver's exit code or `delivered` (J3).
+
+    E1/S1.2 — two modes, chosen by what already stands:
+      verify_only  — a D1 spec stands (state.json design_spec): run the
+                     D3 checks and nothing else. No session opens, no
+                     artifact is rewritten, and the pass does not burn
+                     the 2-attempt budget (a verify costs nothing to
+                     repeat against a fresh surface).
+      full         — nothing stands: the original D0→D1→D3 dispatch.
+    A full rewrite over a standing spec requires a human-triggered
+    --redesign; it never happens implicitly."""
     # M4: use change_id or task_id as the dispatch and record key.
     change = str(state.get("change_id") or state.get("task_id"))
+    mode = "verify_only" if (spec_stands(state) and not redesign) else "full"
     started = time.monotonic()
     attempted_at = now_iso()
     # N4: carry the attempts counter forward — a prior incomplete record
@@ -1726,24 +1755,32 @@ def design_auto_dispatch(task_dir: Path, repo: Path, state: dict,
     # regardless of rc. A crash between this write and the session's
     # end still counts as "tried".
     pre = {"attempted_at": attempted_at, "change": change,
-           "trigger": "deliver", "rc": None, "outcome": None,
+           "trigger": "deliver", "mode": mode, "rc": None, "outcome": None,
            "session": None, "elapsed_seconds": None,
            "attempts": prior_attempts, "state": "incomplete"}
     planning["design_auto"] = pre
     save_json(task_dir / "planning.json", planning)
     event(task_dir, event="DESIGN_AUTO_DISPATCHED", change=change,
-          trigger="deliver", attempted_at=attempted_at)
-    cmd = [sys.executable, str(PLAN_PY), "design",
-           "--change", change, "--repo", str(repo),
-           "--task-dir", str(task_dir.resolve())]
+          trigger="deliver", attempted_at=attempted_at, mode=mode)
+    if mode == "verify_only":
+        # D3 only — the shared C-D3 checks through the plan.py verb; no
+        # D0, no D1, no session, nothing rewritten (E1/S1.2).
+        cmd = [sys.executable, str(PLAN_PY), "design-verify",
+               "--change", change, "--repo", str(repo),
+               "--task-dir", str(task_dir.resolve())]
+    else:
+        cmd = [sys.executable, str(PLAN_PY), "design",
+               "--change", change, "--repo", str(repo),
+               "--task-dir", str(task_dir.resolve())]
     # A4: retrofit sharding — one file per session, all concurrent.
     # The auto-dispatch is the retrofit path (A2); the correct
     # granularity is one file per session, not one serial session
     # over all files.  5 files → 5 ~300s sessions, not 1 × 1800s.
-    _surface = design_surface(landed, repo, head=head)
-    _n_files = _surface.get("surface_files_total", 0)
-    if _n_files > 1:
-        cmd += ["--shard", str(_n_files)]
+    if mode == "full":
+        _surface = design_surface(landed, repo, head=head)
+        _n_files = _surface.get("surface_files_total", 0)
+        if _n_files > 1:
+            cmd += ["--shard", str(_n_files)]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True,
                               cwd=str(repo))
@@ -1768,27 +1805,22 @@ def design_auto_dispatch(task_dir: Path, repo: Path, state: dict,
             session = out.get("session_name")
         except (json.JSONDecodeError, ValueError):
             pass
+    # E1: verify_only passes never burn the attempt budget — a verify
+    # opens no session and rewrites nothing, so repeating it against a
+    # fresh surface is free.
+    new_attempts = prior_attempts if mode == "verify_only" \
+        else prior_attempts + 1
     rec = {"attempted_at": attempted_at, "change": change,
-           "trigger": "deliver", "rc": rc, "outcome": outcome,
+           "trigger": "deliver", "mode": mode, "rc": rc, "outcome": outcome,
            "session": session, "elapsed_seconds": elapsed,
-           "attempts": prior_attempts + 1, "state": "complete"}
+           "attempts": new_attempts, "state": "complete"}
     planning = load_json(task_dir / "planning.json", {})
     planning["design_auto"] = rec
     save_json(task_dir / "planning.json", planning)
     event(task_dir, event="DESIGN_AUTO_DISPATCHED", change=change,
           rc=rc, outcome=outcome, elapsed_seconds=elapsed,
-          session=session)
+          session=session, mode=mode)
     return rec
-
-
-# ── codegraph auto-dispatch: scheduling, not gating (codegraph-author-
-#    autodispatch) ──
-#
-# Same discipline as design_auto_due/design_auto_dispatch above, but
-# triggered at the START of author dispatch (WORK phase), not at deliver
-# — the brief is an input for the author, so it must exist before the
-# author starts writing, not after.  The dispatch's outcome never changes
-# cmd_phase/cmd_dispatch's exit code or stops role dispatch (INV-14).
 
 def _change_files_for_codegraph(repo: Path,
                                 task_dir: Path) -> tuple[list, str | None]:
@@ -2748,13 +2780,96 @@ def cmd_dispatch_doctor(sessions: Path, write: Path | None,
     return 0
 
 
+def design_residue(repo: Path) -> dict | None:
+    """E1/S1.3 — uncommitted design/ files in the working tree. The
+    chile-tourism-site baseline ended with generation-two design/ files
+    sitting uncommitted in the main tree while the branch carried
+    generation one — invisible until someone diffed. Reported in the
+    delivery report; never a gate."""
+    r = subprocess.run(["git", "-C", str(repo), "status", "--porcelain",
+                        "--", "design/"], capture_output=True, text=True)
+    if r.returncode != 0:
+        return None
+    paths = [line[3:].strip() for line in r.stdout.splitlines()
+             if line.strip()]
+    if not paths:
+        return None
+    return {"paths": paths[:20], "count": len(paths),
+            "why": ("uncommitted design/ files in the working tree — the "
+                    "delivery may carry a design generation the task "
+                    "branch does not; commit or remove them before the "
+                    "merge gate reads the diff")}
+
+
+def _parse_ts(value) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _collect_intervals(node, out: list) -> None:
+    """Every dict carrying started_at/ended_at (or elapsed_seconds alone)
+    contributes one interval — planning.json nests dispatches, reviews
+    and design runs at different depths, and all of them are plane
+    work."""
+    if isinstance(node, dict):
+        start = _parse_ts(node.get("started_at"))
+        end = _parse_ts(node.get("ended_at"))
+        if start and end and end >= start:
+            out.append((start, end))
+        elif isinstance(node.get("elapsed_seconds"), (int, float)):
+            out.append((None, float(node["elapsed_seconds"])))
+        for v in node.values():
+            _collect_intervals(v, out)
+    elif isinstance(node, list):
+        for v in node:
+            _collect_intervals(v, out)
+
+
+def cycle_time(planning: dict) -> dict:
+    """E2/S2.4 — busy/wall/waiting from the planning record. busy is the
+    UNION of dispatch intervals (concurrent reviewers are not counted
+    twice); timed intervals without timestamps fall back to a summed
+    floor. waiting = wall - busy, which is mostly time standing before
+    a person. Honest on empty records: zeros, never guesses."""
+    intervals: list = []
+    _collect_intervals(planning, intervals)
+    spanned = [(s, e) for s, e in intervals if s is not None]
+    floor = sum(e for s, e in intervals if s is None)
+    busy = floor
+    if spanned:
+        spanned.sort()
+        merged: list = []
+        for s, e in spanned:
+            if merged and s <= merged[-1][1]:
+                merged[-1] = (merged[-1][0], max(merged[-1][1], e))
+            else:
+                merged.append((s, e))
+        busy += sum((e - s).total_seconds() for s, e in merged)
+        wall = (max(e for _s, e in spanned)
+                - min(s for s, _e in spanned)).total_seconds()
+    else:
+        wall = 0.0
+    return {"plane_busy_s": round(busy, 1),
+            "wall_s": round(wall, 1),
+            "waiting_s": round(max(wall - busy, 0.0), 1),
+            "dispatches_timed": len(intervals),
+            "note": ("busy is the union of dispatch intervals; waiting is "
+                     "mostly time before a human — it is not waste to "
+                     "optimize away")}
+
+
 def cmd_deliver(task_dir: Path, repo: Path, outcome: str,
                 no_design: bool = False,
                 no_design_by: str | None = None,
                 no_design_why: str | None = None,
                 no_exec_gate: bool = False,
                 no_exec_gate_by: str | None = None,
-                no_exec_gate_why: str | None = None) -> int:
+                no_exec_gate_why: str | None = None,
+                redesign: bool = False) -> int:
     # N6②: --repo must be an existing git repository (W8 — country-d
     # path-typo: wrote <workspace-root>/... when the repo was in /tmp/).
     if not is_git_repo(repo):
@@ -2928,7 +3043,8 @@ def cmd_deliver(task_dir: Path, repo: Path, outcome: str,
             due = False  # already recovered — don't re-dispatch
     if due:
         rep["design_auto"] = design_auto_dispatch(task_dir, repo, state,
-                                                   files, head=head)
+                                                   files, head=head,
+                                                   redesign=redesign)
     else:
         rep["design_auto_skipped"] = why_not
         skip_evt = {"change": state.get("change_id"), "why": why_not,
@@ -2978,6 +3094,18 @@ def cmd_deliver(task_dir: Path, repo: Path, outcome: str,
               state=rep["execution_gate"]["state"],
               tools={t["name"]: t["status"]
                      for t in rep["execution_gate"]["tools"]})
+    # E1/S1.3 — design residue is reported, never silently left: an
+    # uncommitted design/ tree in the main working tree is how the
+    # chile-tourism-site run ended up with two diverging generations
+    # (the branch followed one, the working tree carried the other).
+    residue = design_residue(repo)
+    if residue:
+        rep["design_residue"] = residue
+    # E2/S2.4 — cycle time from the planning record's own dispatch
+    # intervals: how long the plane was busy, how long the task stood
+    # overall, and the difference, which is mostly time waiting on a
+    # person. Reported, never gated.
+
     ans = gate_answer(task_dir, "gate-merge")
     merge_approved = bool(ans and ans.get("decision") == "approve"
                           and str(ans.get("rationale", "")).strip())
@@ -3220,6 +3348,11 @@ def _build_subparsers(sub) -> None:
     p.add_argument("--no-design-why", default=None, dest="no_design_why",
                    help="why the design round is skipped — required with "
                         "--no-design")
+    p.add_argument("--redesign", action="store_true",
+                   help="E1: force a full D0+D1 design dispatch even when "
+                        "a design spec stands — the human-triggered path "
+                        "to a D1 rewrite; without it deliver only "
+                        "re-verifies (D3) over a standing spec")
     p.add_argument("--no-exec-gate", action="store_true",
                    dest="no_exec_gate",
                    help="skip the execution gate even when toolchains are "
@@ -3382,7 +3515,8 @@ def main() -> None:
                              args.no_design_why,
                              no_exec_gate=args.no_exec_gate,
                              no_exec_gate_by=args.no_exec_gate_by,
-                             no_exec_gate_why=args.no_exec_gate_why))
+                             no_exec_gate_why=args.no_exec_gate_why,
+                             redesign=args.redesign))
     ap.error(f"unhandled {args.cmd}")
 
 

@@ -265,6 +265,8 @@ from report import (RECORDS_ROOT, artifacts_view, codegraph_auto_dispatch,  # no
                     load_json, newest_verdict, now_iso,
                     plane_graph, plane_root, plane_status, plane_tree,
                     save_json, signed_records, write_record)
+from design_checks import (BANNED_WORDS_DOC, PLACEHOLDER_PATTERN,  # noqa: E402
+                           run_checks, spec_stands, summarize)
 from initiative import (  # noqa: E402
     cmd_advance as init_advance, cmd_register as init_register,
     cmd_status as init_status,
@@ -2449,13 +2451,91 @@ def cmd_sweep(change: str, repo: Path, task_dir: Path | None,
                           "survive")}, 0)
 
 
+def _artifact_fill_paths(change: str, role: str, repo: Path,
+                         ws: dict | None) -> list[Path]:
+    """E5 — the files of one artifact that still carry scaffold FILL
+    markers. Searched where the artifact graph says the round's files
+    live: the plane workspace first, the repo's own openspec tree as
+    the fallback (a repo-local change). `specs` is a glob; the three
+    named artifacts are single files."""
+    trees = []
+    if ws and ws.get("path"):
+        trees.append(Path(ws["path"]))
+    trees.append(Path(repo))
+    names = {"proposal": ["proposal.md"], "design": ["design.md"],
+             "tasks": ["tasks.md"], "specs": None}.get(role)
+    found: list[Path] = []
+    for tree in trees:
+        change_dir = tree / "openspec" / "changes" / change
+        if names is None:
+            if change_dir.is_dir():
+                found += sorted((change_dir / "specs").rglob("*.md"))
+        else:
+            found += [change_dir / n for n in names]
+    return [p for p in found if p.is_file()
+            and "<!-- FILL" in p.read_text(encoding="utf-8",
+                                           errors="replace")]
+
+
+def _done_artifact_decision(change: str, role: str, repo: Path,
+                            ws: dict | None, task_dir: Path | None,
+                            force: bool) -> tuple[str, dict | None,
+                                                  list[Path]]:
+    """E5 — what to do with a role the plane reports done. Returns
+    (action, payload, fills): action "dispatch" proceeds (a validator
+    revision is pending, or --force found FILL markers — fills lists
+    them for the record); action "skip" emits payload. Pure: the
+    planning-bookkeeping side effects stay with the caller."""
+    art = next((a for a in artifacts_view(change)
+                if a.get("id") == role), None)
+    if art is None or art.get("status") != "done":
+        return "dispatch", None, []
+    # …unless a validator rejection is pending on this role: the
+    # artifact exists but was returned for revision, and the
+    # revision dispatch must run, not skip
+    pending = load_json(planning_path(task_dir), {}) \
+        .get("revision_pending") or {}
+    if pending.get("artifact") == role:
+        return "dispatch", None, []
+    # E5: --force re-opens a role the plane reports done — but only
+    # over an unfilled scaffold (FILL markers still in the artifact).
+    # Anything else is real work the plane judged done; overriding THAT
+    # is an exception a person records, not a flag (the chile-tourism-
+    # site design.md/tasks.md scaffolds are exactly this case).
+    if force:
+        fills = _artifact_fill_paths(change, role, repo, ws)
+        if fills:
+            return "dispatch", None, fills
+        return "skip", {"artifact": role, "change": change,
+                        "skipped": True,
+                        "reason": ("openspec reports this artifact done "
+                                   "and no FILL markers remain — --force "
+                                   "changes nothing"),
+                        "remedy": ("record an exception for a done "
+                                   "artifact a person wants re-authored: "
+                                   "report.py exception --task-dir <dir> "
+                                   "--reason <why> --author <who>"),
+                        "note": ("the client was not invoked; the skip is "
+                                 "recorded in planning.json")}, []
+    return "skip", {"artifact": role, "change": change,
+                    "skipped": True,
+                    "reason": ("openspec reports this artifact done — "
+                               "the role is not dispatched again"),
+                    "note": ("the client was not invoked and no session "
+                             "was created; the skip is recorded in "
+                             "planning.json"),
+                    "remedy": ("--force re-dispatches only when FILL "
+                               "markers remain in the artifact")}, []
+
+
 def cmd_dispatch(change: str, role: str, package_file: Path,
                  task_dir: Path | None, mode: str, timeout: int,
                  frames_file: Path | None,
                  accept_partial_view: bool = False,
                  baseline_file: Path | None = None,
                  split_project: Path | None = None,
-                 project_manifest: Path | None = None) -> int:
+                 project_manifest: Path | None = None,
+                 force: bool = False) -> int:
     if frames_file is not None:
         # offline judge mode — the test hook: judge the frame file and
         # exit. No client, no billing, no boundary, no live guards. The
@@ -2673,27 +2753,24 @@ def cmd_dispatch(change: str, role: str, package_file: Path,
     # dispatched. The skip is recorded so a resume shows what was
     # reached. The status is read from the plane's records — that is
     # where this round's artifact states live.
-    art = next((a for a in artifacts_view(change)
-                if a.get("id") == role), None)
-    if art is not None and art.get("status") == "done":
-        # …unless a validator rejection is pending on this role: the
-        # artifact exists but was returned for revision, and the
-        # revision dispatch must run, not skip
-        pending = load_json(planning_path(task_dir), {}) \
-            .get("revision_pending") or {}
-        if pending.get("artifact") != role:
-            def _record_skip(p):
-                p.setdefault("skips", {})[role] = {
-                    "reason": "openspec reports this artifact done",
-                    "ts": now_iso()}
-            update_planning(task_dir, _record_skip)
-            return emit({"artifact": role, "change": change,
-                         "skipped": True,
-                         "reason": ("openspec reports this artifact done — "
-                                    "the role is not dispatched again"),
-                         "note": ("the client was not invoked and no "
-                                  "session was created; the skip is "
-                                  "recorded in planning.json")}, 0)
+    action, skip_payload, fills = _done_artifact_decision(
+        change, role, repo, ws, task_dir, force)
+    if action == "skip":
+        def _record_skip(p):
+            p.setdefault("skips", {})[role] = {
+                "reason": "openspec reports this artifact done",
+                "ts": now_iso()}
+        update_planning(task_dir, _record_skip)
+        return emit(skip_payload, 0)
+    if fills:
+        def _record_force(p):
+            p.setdefault("forced_redispatches", {})[role] = {
+                "reason": "scaffold FILL markers present",
+                "files": [str(f) for f in fills],
+                "ts": now_iso()}
+        update_planning(task_dir, _record_force)
+
+
 
     out, code = dispatch_role(change, role, pkg, repo, prompt, task_dir,
                               mode, timeout, ws=ws)
@@ -8619,6 +8696,148 @@ def _degraded_pick(scored: list, fallback: dict) -> dict:
     return unflagged_dev or dev or _first_unflagged(scored, fallback)
 
 
+# ── E4: the multimodal arbiter (deepseek-v4.1-flash through the plane
+#    client) ──────────────────────────────────────────────────────────
+#
+# The chile-tourism-site baseline selected a dating-web template for a
+# national tourism site: D0's every input was text (frontmatter, IDF),
+# so "editorial paper" and "dating app" read alike. The OpenDesign tree
+# ships example renders beside 62 of its 115 templates — the visual
+# register the text cannot express. A multimodal arbiter session opens
+# those images and judges fit by LOOKING, then its per-candidate fit
+# scores are fused with the IDF scores (weight from the configuration,
+# default 0.6 visual). Every failure degrades to the text-only path —
+# the selection never blocks on the images.
+
+_PREVIEW_PREFERRED = ("hero", "cover", "preview", "screenshot", "example",
+                      "sample", "landing", "home")
+_PREVIEW_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".gif")
+
+
+def _candidate_previews(skill_path, limit=2):
+    """Up to `limit` example-render image paths beside one SKILL.md —
+    preferred names first (hero/cover/preview…), then alphabetical.
+    Returns [] when the template ships no images (53 of 115): the
+    candidate is judged text-only, never excluded."""
+    try:
+        tdir = Path(skill_path).resolve().parent
+        imgs = [p for p in tdir.rglob("*")
+                if p.is_file() and p.suffix.lower() in _PREVIEW_EXTS
+                and ".git" not in p.parts]
+    except (OSError, ValueError):
+        return []
+
+    def _rank(p):
+        n = p.name.lower()
+        pref = next((i for i, kw in enumerate(_PREVIEW_PREFERRED)
+                     if kw in n), len(_PREVIEW_PREFERRED))
+        return (pref, str(p.relative_to(tdir)))
+
+    return [str(p) for p in sorted(imgs, key=_rank)[:limit]]
+
+
+_VISUAL_LINE_RE = re.compile(
+    r"^\s*\d+\.\s*(.+?)\s*\|\s*fit\s*([0-9](?:\.\d+)?)\s*\|\s*(.+?)\s*$",
+    re.IGNORECASE)
+
+
+def _parse_visual_ranking(text):
+    """Parse the arbiter's strict reply format — one ranked line per
+    candidate: `1. <path> | fit <0-10> | <one-line reason>`. Anything
+    else parses to [] and the caller degrades to the path-pick logic."""
+    out = []
+    for line in (text or "").splitlines():
+        m = _VISUAL_LINE_RE.match(line)
+        if m:
+            out.append({"path": m.group(1).strip(),
+                        "fit": float(m.group(2)),
+                        "reason": m.group(3).strip()})
+    return out
+
+
+def _fuse_visual_ranking(scored, visual, weight):
+    """Fuse the session's visual fit scores with the IDF scores.
+    fused = w * (fit/10) + (1-w) * (idf / max_idf). The winner is the
+    argmax among candidates carrying BOTH scores; an empty or
+    single-entry visual ranking is not a ranking — the caller falls
+    back. The record travels into the selection for the human to read."""
+    idf_by_path = {c["path"]: s for s, c in scored}
+    vis_by_path = {v["path"]: v for v in visual if v["path"] in idf_by_path}
+    record = {"weight_visual": weight,
+              "fused": {},
+              "fits": {p: v["fit"] for p, v in vis_by_path.items()},
+              "reasons": {p: v["reason"] for p, v in vis_by_path.items()}}
+    if len(vis_by_path) < 2:
+        return None, record
+    max_idf = max(idf_by_path.values()) or 1.0
+    for p, v in vis_by_path.items():
+        record["fused"][p] = round(
+            weight * (v["fit"] / 10.0)
+            + (1.0 - weight) * (idf_by_path[p] / max_idf), 4)
+    winner = max(record["fused"], key=record["fused"].get)
+    cand = next((c for _s, c in scored if c["path"] == winner), None)
+    return cand, record
+
+
+def _visual_rerank_weight():
+    """design.visual_rerank_weight from the collapsed configuration,
+    default 0.6. Clamped to [0, 1] — a hand-edited 7 must not silently
+    invert the fusion."""
+    for line in _config_lines():
+        m = re.match(r"\s*visual_rerank_weight:\s*([0-9.]+)\s*$", line)
+        if m:
+            try:
+                return min(1.0, max(0.0, float(m.group(1))))
+            except ValueError:
+                break
+    return 0.6
+
+
+def _select_timeout_with_visual(n_previews):
+    """The arbiter's wall budget: 90s text-only, plus 10s per candidate
+    whose previews the session must open and view, capped at 240s — a
+    flash-class multimodal reads an image in seconds, but twelve of
+    them are still twelve round trips. The config's select_timeout_s
+    stays the text-only ceiling."""
+    return min(240, 90 + 10 * max(0, n_previews))
+
+
+def _last_reply_text(frames):
+    """The session's final visible reply, rebuilt from the evidence
+    frames. The frames arrive as wrapped gateway events
+    ({type: event, event: chat.delta, payload: {content}}) — the
+    legacy unwrapped assistant-message shape is honoured too. This is
+    E4's second fix: the old extractor matched only the unwrapped
+    shape, so every arbiter reply parsed to "" and its judgment was
+    silently discarded (the chile baseline's dating-web selection
+    slipped through exactly this gap)."""
+    deltas = []
+    legacy = ""
+    for line in frames:
+        try:
+            obj = json.loads(line)
+        except (json.JSONDecodeError, ValueError, TypeError):
+            continue
+        if obj.get("type") == "event":
+            payload = obj.get("payload") or {}
+            if obj.get("event") == "chat.delta" \
+                    and isinstance(payload.get("content"), str):
+                deltas.append(payload["content"])
+            continue
+        if obj.get("type") == "assistant" and obj.get("message"):
+            msg = obj["message"]
+            content = msg.get("content") if isinstance(msg, dict) else msg
+            if isinstance(content, str):
+                legacy = content
+            elif isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) \
+                            and block.get("type") == "text" \
+                            and block.get("text", "").strip():
+                        legacy = block["text"]
+    return "".join(deltas) or legacy
+
+
 def _first_unflagged(scored: list, fallback: dict) -> dict:
     for _, c in scored:
         if not _needs_arbitration(c) and c.get("has_example_html"):
@@ -8692,6 +8911,20 @@ def cmd_design_select(change: str, repo: Path,
                              "carries no web or deck file — design-select "
                              "produces no selection"),
                      **detail, "measured_surface": surface}, 0)
+    # E3/S3.1 — spec-first: when no product file stands yet, the classes
+    # the change's own spec text declares unblock D0 (stamped
+    # source: planned). The seed-pages pass the chile baseline ran only
+    # to satisfy this measurement; D3 still verifies nothing until real
+    # pages land.
+    surface, planned_fallback = with_planned_fallback(surface, change,
+                                                      repo, task_dir)
+    if not surface.get("applicable"):
+        return emit({"change": change, "repo": str(repo),
+                     "applicable": False,
+                     "why": ("the change's measured product surface "
+                             "carries no web or deck file — design-select "
+                             "produces no selection"),
+                     **detail, "measured_surface": surface}, 0)
     # L1 + L2 via _design_prefilter
     shortlist, scored, change_kw = _design_prefilter(change, repo, task_dir,
                                                       top_n=12)
@@ -8729,15 +8962,40 @@ def cmd_design_select(change: str, repo: Path,
         margin = 0.0
 
     # L4: margin-gated session — only when top1 and top2 are close
+    visual_record: dict | None = None
     if margin < 0.25:
+        # v2.1: previews are discovered over the top-12, not the top-6
+        # — the chile-guide rerun's top-6 carried ZERO images, so the
+        # multimodal path degraded to text by nobody's choice while
+        # open-design-landing (16 renders) sat one rank below. A
+        # preview-bearing candidate enters the arbitration list even at
+        # IDF 0.0: when the text signal cannot separate candidates, the
+        # images are the only discriminator left.
+        previews = {c["path"]: _candidate_previews(c["path"])
+                    for _s, c in scored[:12]}
+        n_previews = sum(1 for v in previews.values() if v)
+        listed = [sc for i, sc in enumerate(scored[:12])
+                  if i < 6 or previews.get(sc[1]["path"])]
         shortlist_lines = "\n".join(
             f"  {i+1}. {c['path']}\n"
             f"     kind={c['kind']}, name={c['name']}, score={s:.1f}\n"
             f"     triggers={c.get('triggers', [])[:6]}\n"
             f"     description={c.get('description', '')[:200]}"
             + (f"\n     audience={c.get('audience')}  tone={c.get('tone')}"
-               if c.get('audience') or c.get('tone') else "")
-            for i, (s, c) in enumerate(scored[:6]))
+               if c.get("audience") or c.get("tone") else "")
+            + ("\n     PREVIEW (open and LOOK at these images before "
+               f"judging):\n       " + "\n       ".join(previews[c["path"]])
+               if previews.get(c["path"]) else "")
+            for i, (s, c) in enumerate(listed))
+        visual_block = (
+            f"\nYou are multimodal. {n_previews} of the candidates ship "
+            f"example renders (PREVIEW lines above): open and view every "
+            f"PREVIEW image before judging them. Judge the VISUAL "
+            f"REGISTER — editorial vs product-app vs playful vs "
+            f"corporate — against the change's business context; keyword "
+            f"overlap is what already failed to separate these "
+            f"candidates, so look, do not re-read.\n"
+            if n_previews else "")
         select_prompt = (
             f"You are judging which OpenDesign skill to use for the change "
             f"'{change}'.\n\n"
@@ -8745,92 +9003,72 @@ def cmd_design_select(change: str, repo: Path,
             f"Surface hint: {change_kw.get('surface_hint')}\n\n"
             f"Top {min(6, len(shortlist))} candidates (margin {margin:.2f} — "
             f"too close to decide deterministically):\n"
-            f"{shortlist_lines}\n\n"
-            f"Pick exactly one SKILL.md path from the list above. "
-            f"Reply with its full path (or just its directory name) "
-            f"on the first line, then one line explaining why you "
-            f"chose it. Nothing else.")
+            f"{shortlist_lines}\n{visual_block}\n"
+            f"Reply with your top 3 candidates, highest first, EXACTLY in "
+            f"this format (one line each, fit is 0-10 for how well the "
+            f"candidate's look and scope fit this change):\n"
+            f"1. <full SKILL.md path> | fit <0-10> | <one-line reason>\n"
+            f"2. <full SKILL.md path> | fit <0-10> | <one-line reason>\n"
+            f"3. <full SKILL.md path> | fit <0-10> | <one-line reason>\n"
+            f"Nothing else.")
         out, _rc = run_plane_session(change, "design-select", select_prompt,
-                                     repo, task_dir, mode, 90)
+                                     repo, task_dir, mode,
+                                     _select_timeout_with_visual(
+                                         n_previews))
         frames = out.get("frames", [])
-        first_failed = (out.get("timed_out")
-                        or not out.get("round_complete")
-                        or out.get("interrupted"))
-        # P1 (verdebet): the frames' named answer is a machine fact —
-        # a round that ran past the timeout flag but already names a
-        # valid shortlist candidate is a pick, not a failure; the
-        # recurring "both sessions failed" was exactly this. The
-        # selection records round_incomplete so the human still sees
-        # the unclosed round.
-        named = _session_named_pick(_last_assistant_text(frames),
-                                    shortlist) if frames else None
-        if named is not None:
-            chosen = named
-            lines = _last_assistant_text(frames).strip().splitlines()
-            reason = lines[1].strip() if len(lines) > 1 else \
-                "selected by 90s arbiter session"
-            if first_failed:
-                reason = ("round incomplete but the reply already "
-                          "names the pick — " + reason)
-            method = "judged"
-        if named is None and not first_failed \
-                and method == "deterministic":
-            # a complete round that named no shortlist path — the
-            # same failure class as not completing, for retry purposes
-            first_failed = True
-        if first_failed and named is None:
-            # P2-3 (PRD v9): before accepting a degraded pick, one 45s
-            # second-opinion mini-session — top-3 only, path + name,
-            # the reply is the pick. Degradation is an honest fallback,
-            # but "one session failed" and "no conclusion exists" are
-            # not the same fact, and the retry costs 45s while a
-            # mispick costs the whole build.
-            second_opinion["attempted"] = True
-            second_prompt = (
-                "Second opinion, kept deliberately small: pick exactly "
-                f"one design template for the change '{change}'.\n"
-                + "\n".join(f"  {i2 + 1}. {c['path']}  ({c['name']})"
-                             for i2, (_sc, c) in enumerate(scored[:3]))
-                + "\n\nReply with its full path (or just its "
-                  "directory name) on the first line, one short reason "
-                  "on the second, nothing else.")
-            out2, _rc2 = run_plane_session(change, "design-select-2nd",
-                                           second_prompt, repo, task_dir,
-                                           mode, 45)
-            second_opinion["session"] = out2.get("session_name")
-            named2 = _session_named_pick(
-                _last_assistant_text(out2.get("frames", []) or []),
-                shortlist)
-            if named2 is not None:
-                    chosen = named2
-                    lines = _last_assistant_text(
-                    out2.get("frames", [])).strip().splitlines()
-                    reason = lines[1].strip() if len(lines) > 1 else (
-                        "picked by the 45s second-opinion session "
-                        "after the 90s arbiter failed")
-                    method = "judged-2nd"
-                    second_opinion["outcome"] = "picked"
-                    second_opinion["pick"] = named2["dir"]
-            if "outcome" not in second_opinion:
-                second_opinion["outcome"] = "failed"
-                chosen = _degraded_pick(scored, best)
-                if out.get("timed_out") or not out.get("round_complete") \
-                        or out.get("interrupted"):
-                    fail_why = "the 90s arbiter session did not complete"
-                else:
-                    fail_why = ("arbiter session replied but named no "
-                                "shortlist path")
+        if out.get("timed_out") or not out.get("round_complete") \
+                or out.get("interrupted"):
+            chosen = _first_unflagged(scored, best)
+            if chosen is not best:
+                reason = (f"degraded — the arbiter session did not complete; "
+                          f"top-scored candidate {best['name']} needs arbitration "
+                          f"(audience/tone/standalone-scope declared) and was "
+                          f"skipped; using next candidate {chosen['name']} instead")
+            else:
+                reason = (f"degraded — the arbiter session did not complete; "
+                          f"using the top-scored candidate (score {best_score:.1f})")
+            degraded = True
+            method = "degraded"
+        else:
+            last_msg = _last_reply_text(frames)
+            # (visual_record initialized before the L4 block)
+            if n_previews:
+                ranking = _parse_visual_ranking(last_msg)
+                fused_winner, visual_record = _fuse_visual_ranking(
+                    scored, ranking, _visual_rerank_weight())
+                visual_record["candidates_with_previews"] = n_previews
+                visual_record["attempted"] = True
+            if visual_record is not None and visual_record.get("fused"):
+                cand_by_path = {c["path"]: c for _s, c in scored}
+                winner_path = max(visual_record["fused"],
+                                  key=visual_record["fused"].get)
+                chosen = cand_by_path.get(winner_path, chosen)
+                reason = (visual_record["reasons"].get(winner_path)
+                          or "selected by multimodal arbiter (visual + IDF "
+                             "fusion)")
+                method = "judged+visual"
+            else:
+                for cand in shortlist:
+                    if cand["path"] in last_msg:
+                        chosen = cand
+                        lines = last_msg.strip().splitlines()
+                        reason = lines[1].strip() if len(lines) > 1 else \
+                            f"selected by arbiter session"
+                        method = "judged"
+                        break
+            if method == "deterministic":
+                chosen = _first_unflagged(scored, best)
                 if chosen is not best:
-                    reason = (f"degraded — second opinion also failed; "
-                              f"{fail_why}; top-scored candidate "
+                    reason = (f"degraded — arbiter session replied but named no "
+                              f"shortlist path; top-scored candidate "
                               f"{best['name']} needs arbitration "
-                              f"(audience/tone/standalone-scope declared) "
-                              f"and was skipped; using next candidate "
+                              f"(audience/tone/standalone-scope declared) and "
+                              f"was skipped; using next candidate "
                               f"{chosen['name']} instead")
                 else:
-                    reason = (f"degraded — second opinion also failed; "
-                              f"{fail_why}; using the top-scored "
-                              f"candidate (score {best_score:.1f})")
+                    reason = (f"degraded — arbiter session replied but named no "
+                              f"shortlist path; using top-scored "
+                              f"(score {best_score:.1f})")
                 degraded = True
                 method = "degraded"
 
@@ -8875,9 +9113,19 @@ def cmd_design_select(change: str, repo: Path,
         "degraded": degraded,
         "narrow_aesthetic_gate": narrow_aesthetic,
     }
-    state_path = task_dir / "state.json"
-    state = load_json(state_path, {})
-    state["design_selection"] = selection
+    # E4: the multimodal round's own record — what the session was
+    # shown, what it scored, how the fusion decided. Travels beside the
+    # reason for the human at the gate to read.
+    if visual_record:
+        selection["visual_rerank"] = visual_record
+        selection["multimodal"] = True
+    elif method.startswith("judged"):
+        selection["multimodal"] = False
+    selection["surface_source"] = (planned_fallback or {}).get(
+        "ref", "measured")
+    if planned_fallback:
+        selection["planned_surface"] = planned_fallback
+
     save_json(state_path, state)
     return emit({"change": change, "repo": str(repo),
                  "applicable": True,
@@ -9057,6 +9305,16 @@ def cmd_design_specify(change: str, repo: Path,
         f"Write only inside this repository's design/ directory. "
         f"Real content and real data throughout — lorem ipsum, placeholder "
         f"text and TODO markers are failures.\n\n"
+        f"D3 will mechanically verify the built pages against your spec. "
+        f"State the lexical rules the builder must meet inside "
+        f"design/assets.md so they are never implicit: pages carry no "
+        f"colour/size/spacing value that tokens.css does not define "
+        f"(no raw hex/px/rem/em outside design/tokens.css — breakpoints "
+        f"must appear in tokens.css as documented literals); no dashed "
+        f"custom-element tags in HTML unless components.md lists them as "
+        f"## headings; and none of these banned words anywhere in "
+        f"delivered HTML/CSS/JS: {BANNED_WORDS_DOC}. A spec that states "
+        f"its own constraints costs the builder one pass, not a rework.\n\n"
         f"When you are done, report: the SKILL.md path you read, and every "
         f"file you wrote.")
     # dispatch the ui-designer session
@@ -9115,7 +9373,9 @@ def cmd_design_verify(change: str, repo: Path,
                       task_dir: Path | None) -> int:
     """D3 VERIFY — the v2 design architecture's fourth phase (D2 BUILD is
     the main session's job, not plan.py's).  Six mechanical checks
-    against the filesystem (NOT frames):
+    against the filesystem (NOT frames), run through the shared C-D3
+    module (design_checks.py — E1/S1.4) so design-lint and report.py's
+    D3-only re-verify judge by exactly the same code:
 
       tokens_used          — all color/font-size/spacing values in HTML/CSS
                              pages come from design/tokens.css
@@ -9135,168 +9395,20 @@ def cmd_design_verify(change: str, repo: Path,
     task_dir = Path(task_dir).resolve() if task_dir else default_task_dir(repo,
                                                                 change)
     state = load_json(task_dir / "state.json", {})
-    selection = state.get("design_selection")
-    design_spec = state.get("design_spec")
     design_dir = repo / "design"
     # if no spec was ever produced, the state is design_unspecified
-    if not design_spec and not (design_dir / "tokens.css").is_file():
+    if not state.get("design_spec") \
+            and not (design_dir / "tokens.css").is_file():
         return emit({"change": change, "repo": str(repo),
                      "phase": "D3_VERIFY",
                      "design_state": "design_unspecified",
                      "why": ("no design spec exists — D1 SPECIFY was never "
                              "run or produced no artifacts"),
                      "checks": {}}, 0)
-    checks = {}
-    # 1. design_artifacts_exist — all 5 design files exist and non-empty
-    expected = ["tokens.css", "tokens.json", "components.md",
-                "pages.md", "assets.md"]
-    missing = []
-    for name in expected:
-        p = design_dir / name
-        if not p.is_file() or p.stat().st_size == 0:
-            missing.append(name)
-    checks["design_artifacts_exist"] = {
-        "pass": not missing,
-        "missing": missing,
-    }
-    # 2. tokens_json_valid — tokens.json parses as valid JSON
-    tokens_json_path = design_dir / "tokens.json"
-    if tokens_json_path.is_file():
-        try:
-            json.loads(tokens_json_path.read_text(encoding="utf-8"))
-            checks["tokens_json_valid"] = {"pass": True}
-        except (json.JSONDecodeError, OSError) as exc:
-            checks["tokens_json_valid"] = {"pass": False,
-                                           "error": str(exc)}
-    else:
-        checks["tokens_json_valid"] = {"pass": False,
-                                       "error": "tokens.json not found"}
-    # 3. skill_sha_match — SKILL.md sha256 in record equals design_selection
-    expected_sha = (selection or {}).get("skill_sha256")
-    actual_sha = (design_spec or {}).get("skill_sha256")
-    if expected_sha and actual_sha:
-        checks["skill_sha_match"] = {
-            "pass": expected_sha == actual_sha,
-            "expected": expected_sha[:12],
-            "actual": actual_sha[:12],
-        }
-    elif expected_sha and not actual_sha:
-        checks["skill_sha_match"] = {"pass": False,
-                                     "error": "no sha in design_spec record"}
-    else:
-        checks["skill_sha_match"] = {"pass": False,
-                                     "error": "no skill_sha256 in "
-                                              "design_selection"}
-    # 4. tokens_used — colors/font-sizes/spacing in pages come from tokens.css
-    #    parse token values from tokens.css (CSS custom properties)
-    token_values = set()
-    tokens_css_path = design_dir / "tokens.css"
-    if tokens_css_path.is_file():
-        css_text = tokens_css_path.read_text(encoding="utf-8",
-                                             errors="replace")
-        for m in re.finditer(r"--[\w-]+\s*:\s*([^;]+);", css_text):
-            val = m.group(1).strip()
-            # extract hex colors, px sizes, rem sizes
-            for unit_match in re.finditer(
-                    r"(#[0-9a-fA-F]{3,8}|\d+px|\d+rem|\d+em|\d+%)",
-                    val):
-                token_values.add(unit_match.group(1))
-    # scan HTML/CSS pages for values not in tokens
-    rogue_values = []
-    if token_values:
-        for ext in ("*.html", "*.htm", "*.css"):
-            for p in repo.rglob(ext):
-                # skip design/ dir itself and .ai-dlc/
-                rel = p.relative_to(repo)
-                if str(rel).startswith("design/") \
-                        or str(rel).startswith(".ai-dlc/") \
-                        or str(rel).startswith("openspec/"):
-                    continue
-                try:
-                    text = p.read_text(encoding="utf-8", errors="replace")
-                except OSError:
-                    continue
-                for m in re.finditer(
-                        r"(#[0-9a-fA-F]{3,8}|\d+px|\d+rem|\d+em)",
-                        text):
-                    val = m.group(1)
-                    if val not in token_values:
-                        rogue_values.append({"file": str(rel),
-                                             "value": val})
-    checks["tokens_used"] = {
-        "pass": not rogue_values,
-        "token_count": len(token_values),
-        "rogue_count": len(rogue_values),
-        "rogue_samples": rogue_values[:10],
-    }
-    # 5. components_conform — components in pages match specs in components.md
-    components_md_path = design_dir / "components.md"
-    spec_components = set()
-    if components_md_path.is_file():
-        cm_text = components_md_path.read_text(encoding="utf-8",
-                                               errors="replace")
-        # component names are typically ## headings or <Component> tags
-        for m in re.finditer(r"^##\s+(.+)$", cm_text, re.MULTILINE):
-            spec_components.add(m.group(1).strip().lower())
-    # scan pages for component-like tags and check against spec
-    unlisted_components = []
-    if spec_components:
-        for ext in ("*.html", "*.htm"):
-            for p in repo.rglob(ext):
-                rel = p.relative_to(repo)
-                if str(rel).startswith("design/") \
-                        or str(rel).startswith(".ai-dlc/") \
-                        or str(rel).startswith("openspec/"):
-                    continue
-                try:
-                    text = p.read_text(encoding="utf-8", errors="replace")
-                except OSError:
-                    continue
-                # find custom element tags <X-...> or data-component="..."
-                for m in re.finditer(r"<([\w-]+)[\s/>]", text):
-                    tag = m.group(1).lower()
-                    if "-" in tag and tag not in spec_components:
-                        unlisted_components.append({"file": str(rel),
-                                                    "tag": tag})
-    checks["components_conform"] = {
-        "pass": not unlisted_components,
-        "spec_count": len(spec_components),
-        "unlisted_count": len(unlisted_components),
-        "unlisted_samples": unlisted_components[:10],
-    }
-    # 6. no_placeholder — no lorem/TODO/FIXME/placeholder in delivered pages
-    placeholder_hits = []
-    placeholder_patterns = re.compile(
-        r"\b(lorem\s+ipsum|TODO|FIXME|placeholder|FILL)\b", re.IGNORECASE)
-    for ext in ("*.html", "*.htm", "*.css", "*.js", "*.ts"):
-        for p in repo.rglob(ext):
-            rel = p.relative_to(repo)
-            if str(rel).startswith("design/") \
-                    or str(rel).startswith(".ai-dlc/") \
-                    or str(rel).startswith("openspec/"):
-                continue
-            try:
-                text = p.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-            for m in placeholder_patterns.finditer(text):
-                placeholder_hits.append({"file": str(rel),
-                                         "match": m.group(0)})
-    checks["no_placeholder"] = {
-        "pass": not placeholder_hits,
-        "hit_count": len(placeholder_hits),
-        "hits_samples": placeholder_hits[:10],
-    }
-    # determine design_state
-    all_pass = all(c.get("pass", False) for c in checks.values())
-    if all_pass:
-        design_state = "design_verified"
-        exit_code = 0
-    else:
-        design_state = "design_nonconforming"
-        exit_code = EXIT_INCONCLUSIVE
+    checks = run_checks(repo, task_dir=task_dir, state=state)
+    design_state = summarize(checks)
+    exit_code = 0 if design_state == "design_verified" else EXIT_INCONCLUSIVE
     # record in state.json
-    state = load_json(task_dir / "state.json", {})
     state["design_verification"] = {
         "design_state": design_state,
         "checks": {k: v.get("pass", False) for k, v in checks.items()},
@@ -9306,6 +9418,31 @@ def cmd_design_verify(change: str, repo: Path,
     return emit({"change": change, "repo": str(repo),
                  "phase": "D3_VERIFY",
                  "design_state": design_state,
+                 "checks": checks}, exit_code)
+
+
+def cmd_design_lint(repo: Path, task_dir: Path | None = None) -> int:
+    """E3/S3.2 — design-lint: the D3 checks as a standalone D2-time
+    linter. No task state is required (skill_sha_match is omitted in
+    lint mode); exit 0 when every check passes, EXIT_INCONCLUSIVE when
+    one fails. The banned-word list is documented in the output so the
+    builder meets the rules before the plane ever runs (the `fill`
+    lesson: the rules are stated, never implied)."""
+    repo = repo.resolve()
+    design_dir = repo / "design"
+    if not (design_dir / "tokens.css").is_file():
+        return emit({"repo": str(repo), "lint": "design-lint",
+                     "design_state": "design_unspecified",
+                     "why": ("no design/tokens.css in this tree — run "
+                             "design-lint from the repo root after D1 "
+                             "SPECIFY has produced design/"),
+                     "checks": {}}, EXIT_INCONCLUSIVE)
+    checks = run_checks(repo, task_dir=task_dir)
+    design_state = summarize(checks)
+    exit_code = 0 if design_state == "design_verified" else EXIT_INCONCLUSIVE
+    return emit({"repo": str(repo), "lint": "design-lint",
+                 "design_state": design_state,
+                 "banned_words": BANNED_WORDS_DOC,
                  "checks": checks}, exit_code)
 
 
@@ -9638,11 +9775,22 @@ def cmd_design_scope(change: str, repo: Path,
     surface = design_surface(files, repo,
                              head=detail.get("ref_kind") == "task_branch"
                              and detail.get("head") or None)
-    return emit({"change": change, "repo": str(repo), **detail,
-                 **surface,
-                 "note": ("applicability is this measurement — "
-                          "`plan.py design` refuses exit 24 when "
-                          "applicable is false")}, 0)
+    files, detail = change_surface(repo, task_dir)
+    surface = design_surface(files, repo,
+                             head=detail.get("ref_kind") == "task_branch"
+                             and detail.get("head") or None)
+    # E3: a spec-first change reports the declared surface beside the
+    # measured one — the measurement stays what it is (files); the
+    # declared classes say why design would still run.
+    surface, planned = with_planned_fallback(surface, change, repo, task_dir)
+    out = {"change": change, "repo": str(repo), **detail,
+           **surface,
+           "note": ("applicability is this measurement — "
+                    "`plan.py design` refuses exit 24 when "
+                    "applicable is false; a planned surface "
+                    "(source: planned) unblocks D0 from the spec "
+                    "text alone")}
+
 
 
 def cmd_codegraph_scope(change: str, repo: Path,
@@ -11349,6 +11497,166 @@ _SCAFFOLD_KINDS = {
 }
 
 
+_PLANNED_WEB_RE = re.compile(
+    r"\b(html|css|javascript|website|web page|web site|static site|"
+    r"browser|landing page|webapp)\b", re.IGNORECASE)
+_PLANNED_DECK_RE = re.compile(
+    r"\b(slide|slides|deck|pptx|presentation|keynote)\b", re.IGNORECASE)
+
+
+def planned_surface_classes(change: str, repo: Path,
+                            task_dir: Path | None) -> list[str]:
+    """E3/S3.1 — the surface the spec itself declares, for the moment
+    before any page exists. change_surface measures landed files, so a
+    spec-first task (D1 before D2) measured an empty surface and design
+    refused — the chile baseline paid a seed-pages pass just to unlock
+    D0. This reads the change's proposal/design/spec deltas (plane
+    workspace tree first, the repo's own openspec/ as fallback) and
+    returns the classes the text names. [] when nothing names a web or
+    deck surface — a plumbing-free refusal, never a guess."""
+    trees: list[Path] = []
+    # plane_tree() already IS the openspec/ dir; plane_root() is the
+    # clone root — the change dir hangs off the root's openspec/
+    proot = plane_root(Path(repo))
+    if proot is not None and Path(proot).is_dir():
+        trees.append(Path(proot))
+    trees.append(Path(repo))
+    texts: list[str] = []
+    for tree in trees:
+        cdir = tree / "openspec" / "changes" / change
+        for name in ("proposal.md", "design.md"):
+            pf = cdir / name
+            if pf.is_file():
+                texts.append(pf.read_text(encoding="utf-8",
+                                          errors="replace"))
+        specs_dir = cdir / "specs"
+        if specs_dir.is_dir():
+            texts += [f.read_text(encoding="utf-8", errors="replace")
+                      for f in sorted(specs_dir.rglob("*.md"))]
+        if texts:
+            break
+    blob = "\n".join(texts)
+    if not blob.strip():
+        return []
+    classes: list[str] = []
+    if _PLANNED_WEB_RE.search(blob):
+        classes.append("web")
+    if _PLANNED_DECK_RE.search(blob):
+        classes.append("deck")
+    return classes
+
+
+def with_planned_fallback(surface: dict, change: str, repo: Path,
+                          task_dir: Path | None) -> tuple[dict, dict | None]:
+    """E3 — apply the planned-surface fallback to a measured surface.
+    The file list and every count stay untouched (route_check measures
+    product FILES; a declared surface is not a file); only applicability
+    and classes are unblocked, stamped `source: planned`. D3 stays
+    file-based — it still verifies nothing until pages exist."""
+    if surface.get("applicable"):
+        return surface, None
+    planned = planned_surface_classes(change, repo, task_dir)
+    if not planned:
+        return surface, None
+    out = dict(surface)
+    out.update({"applicable": True,
+                "classes": sorted(set(planned)),
+                "surface_files": [],
+                "surface_files_total": 0,
+                "source": "planned"})
+    return out, {"ref": "planned", "classes": sorted(set(planned)),
+                 "note": ("no product files stand yet — the classes come "
+                          "from the change's own spec text; D3 verifies "
+                          "nothing until the pages land")}
+
+
+def _kickoff_migrate_prelude(repo: Path) -> str:
+    """E2/S2.2 — disambiguate the one state migrate refuses: the plane
+    root holds an EMPTY openspec/ while the repo carries the real one
+    (a first migrate that created the plane root but never moved the
+    tree). The empty child is removed so migrate's both-trees refusal
+    cannot fire; a plane tree with real content is left alone."""
+    proot = plane_root(Path(repo))
+    if proot is None:
+        return "no_plane_tree"
+    child = Path(proot) / "openspec"
+    if child.is_dir() and not any(child.iterdir()):
+        child.rmdir()
+        return "removed_empty_plane_tree"
+    if child.is_dir():
+        return "plane_tree_stands"
+    return "no_plane_tree"
+
+
+def cmd_kickoff(change: str, repo: Path, kind: str) -> int:
+    """E2/S2.1 — scaffold → migrate → graph → status as one verb, over
+    subprocesses so each step's output stays intact and its rc is the
+    step's own. INIT is included: a missing repo is created and given
+    an empty initial commit so worktree operations work. The chile
+    baseline paid two failed graph dispatches to learn this ordering;
+    kickoff encodes it."""
+    repo = Path(repo)
+    steps: list[dict] = []
+    if not is_git_repo(repo):
+        repo.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["git", "-C", str(repo), "init"],
+                       capture_output=True, text=True)
+        # an identity-less environment makes the empty commit fail
+        # silently (v2.1: found by the chile-v2 rerun) — configure a
+        # local one when none is set, so HEAD exists for worktree ops
+        ident = subprocess.run(["git", "-C", str(repo), "config",
+                                "user.email"], capture_output=True,
+                               text=True)
+        if ident.returncode != 0 or not ident.stdout.strip():
+            subprocess.run(["git", "-C", str(repo), "config",
+                            "user.email", "ai-dlc@local"],
+                           capture_output=True, text=True)
+            subprocess.run(["git", "-C", str(repo), "config",
+                            "user.name", "AI-DLC"],
+                           capture_output=True, text=True)
+        c = subprocess.run(["git", "-C", str(repo), "commit",
+                            "--allow-empty", "-m", "init"],
+                           capture_output=True, text=True)
+        steps.append({"step": "init",
+                      "rc": c.returncode,
+                      "note": "repo created with an empty initial commit"})
+    me = str(Path(__file__).resolve())
+    plan_py = ["python3", me]
+
+    def run(name: str, args_list: list) -> int:
+        proc = subprocess.run(plan_py + args_list,
+                              capture_output=True, text=True)
+        steps.append({"step": name, "argv": args_list, "rc":
+                      proc.returncode,
+                      "stdout_head": proc.stdout[:400]})
+        return proc.returncode
+
+    rc = run("scaffold", ["scaffold", "--change", change, "--kind", kind,
+                          "--repo", str(repo)])
+    if rc != 0:
+        return emit({"change": change, "repo": str(repo), "kickoff":
+                     "stopped", "at": "scaffold", "steps": steps}, rc)
+    prelude = _kickoff_migrate_prelude(repo)
+    steps.append({"step": "migrate-prelude", "action": prelude})
+    rc = run("migrate", ["migrate", "--repo", str(repo)])
+    if rc != 0:
+        return emit({"change": change, "repo": str(repo), "kickoff":
+                     "stopped", "at": "migrate", "steps": steps,
+                     "prelude": prelude}, rc)
+    rc = run("graph", ["graph", "--change", change, "--repo", str(repo)])
+    if rc != 0:
+        return emit({"change": change, "repo": str(repo), "kickoff":
+                     "stopped", "at": "graph", "steps": steps}, rc)
+    rc = run("status", ["status", "--change", change, "--repo", str(repo)])
+    stopped_at = None if rc == 0 else "status"
+    return emit({"change": change, "repo": str(repo),
+                 "kickoff": "complete" if rc == 0 else "stopped",
+                 "at": stopped_at, "steps": steps,
+                 "note": ("scaffold → migrate → graph → status; the next "
+                          "step is a proposal dispatch (plan.py dispatch "
+                          "--role proposal …)")}, rc)
+
+
 def cmd_scaffold(change: str, kind: str, repo: Path | None) -> int:
     """Generate a four-file spec skeleton under openspec/changes/<id>/.
 
@@ -11451,6 +11759,11 @@ def _build_subparsers(sub) -> None:
     p.add_argument("--task-dir", default=None, type=Path)
     p.add_argument("--mode", default="code.normal")
     p.add_argument("--timeout", type=int, default=1800)
+    p.add_argument("--force", action="store_true",
+                   help="E5: re-dispatch a role the plane reports done — "
+                        "allowed only while the artifact still carries "
+                        "scaffold FILL markers; a done artifact without "
+                        "them needs a recorded exception, not a flag")
     p.add_argument("--frames-file", default=None, type=Path,
                    help="offline judge mode: judge this frame file and "
                         "exit — no client, no billing")
@@ -11661,6 +11974,34 @@ def _build_subparsers(sub) -> None:
                    help="run the legacy N1 single-session dispatch (the "
                         "1800s full-rewrite path) instead of the v2 "
                         "four-phase flow")
+    p = sub.add_parser("design-verify",
+                       help="D3 VERIFY alone — the six mechanical checks "
+                            "through the shared C-D3 module; deliver's "
+                            "verify-only path (E1) and the post-build "
+                            "re-check both land here. No session opens, "
+                            "nothing is rewritten")
+    p.add_argument("--change", required=True)
+    p.add_argument("--repo", required=True, type=Path)
+    p.add_argument("--task-dir", default=None, type=Path)
+    p = sub.add_parser("design-lint",
+                       help="E3: the D3 checks as a D2-time linter over "
+                            "any built tree — run it while you style "
+                            "pages; the banned words and the token-only "
+                            "value rule are stated in the output, so a "
+                            "violation costs seconds, not a rework")
+    p.add_argument("--repo", required=True, type=Path)
+    p = sub.add_parser("kickoff",
+                       help="E2: scaffold → migrate → graph → status as "
+                            "one verb — the plane tree is created and "
+                            "disambiguated automatically; a fresh task "
+                            "reaches a signed graph record without the "
+                            "two failed dispatches the chile baseline "
+                            "paid")
+    p.add_argument("--change", required=True)
+    p.add_argument("--repo", required=True, type=Path)
+    p.add_argument("--kind", default="site",
+                   help="the scaffold kind — determines the design "
+                        "template included")
     p = sub.add_parser("design-index",
                        help="build or show the OpenDesign index "
                             "(candidates + tree_id + IDF table)")
@@ -11917,7 +12258,8 @@ def main() -> None:
                               args.accept_partial_view,
                               args.baseline_file,
                               args.split_project,
-                              args.project_manifest))
+                              args.project_manifest,
+                              args.force))
     if args.cmd == "phase":
         sys.exit(cmd_phase(args.change, args.repo.resolve(),
                            args.package_file, args.task_dir, args.mode,
@@ -11986,6 +12328,13 @@ def main() -> None:
                             args.task_dir, args.template, args.system,
                             args.mode, args.timeout, args.shard,
                             args.retrofit))
+    if args.cmd == "design-verify":
+        sys.exit(cmd_design_verify(args.change, args.repo.resolve(),
+                                   args.task_dir))
+    if args.cmd == "design-lint":
+        sys.exit(cmd_design_lint(args.repo.resolve()))
+    if args.cmd == "kickoff":
+        sys.exit(cmd_kickoff(args.change, args.repo.resolve(), args.kind))
     if args.cmd == "scaffold":
         sys.exit(cmd_scaffold(args.change, args.kind,
                               args.repo.resolve() if args.repo else None))
