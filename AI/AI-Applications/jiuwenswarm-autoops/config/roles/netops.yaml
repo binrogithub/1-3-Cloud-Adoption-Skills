@@ -1,0 +1,17 @@
+id: netops
+display_name: NetOps
+responsibility: Read bounded NOLI network incidents, A10 pools, and fixed-access FTTH/PON/BNG evidence through ProjectManager.
+tools:
+  allow:
+    - netops.incidents.read
+  deny:
+    - runbook.execute
+    - host.ensure_service
+    - ansible.playbook.run
+    - kubectl.apply
+    - kubectl.delete
+execution:
+  mode: inspect
+  max_model_rounds: 2
+  timeout_seconds: 60
+  require_structured_result: true

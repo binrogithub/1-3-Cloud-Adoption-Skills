@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "profile_id": "autoops-demo-test",
+  "visibility": "test",
+  "lifecycle": "active",
+  "display_name": "AutoOps 演示服务",
+  "canonical_object_id": "autoops-demo:test:test-host-01",
+  "revision": 1,
+  "application_id": "autoops-demo",
+  "application": "autoops-demo",
+  "aliases": ["demo-service", "demo"],
+  "environment": "test",
+  "target_kind": "host",
+  "target_id": "test-host-01",
+  "scope_id": "autoops-development",
+  "services": [
+    {
+      "service_id": "autoops-demo",
+      "aliases": ["autoops-demo.service"],
+      "systemd_unit": "autoops-demo.service",
+      "sources": [
+        {"kind": "journal", "unit": "autoops-demo.service", "required": true},
+        {"kind": "file", "path": "/var/log/autoops-demo/*.log", "required": false},
+        {"kind": "loki", "labels": {"service": "autoops-demo"}, "required": false}
+      ],
+      "prometheus_profile": "service_up",
+      "opensearch_profile": "autoops-events",
+      "capabilities": {
+        "ensure": {
+          "capability": "host.ensure_service.v1",
+          "job": "ansible-ensure-autoops-demo",
+          "effect": "write",
+          "requires_approval": true
+        }
+      },
+      "verification": {
+        "health_url": "http://127.0.0.1:18080/health",
+        "probe_attempts": 7,
+        "probe_interval_seconds": 10
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "require_engine_health": {"type": "boolean"},
+    "require_business": {"type": "boolean"},
+    "minimum_samples": {"type": "integer", "minimum": 1},
+    "stable_business_minutes": {"type": "integer", "minimum": 1},
+    "probe_url": {"type": "string", "format": "uri"},
+    "method": {"enum": ["GET", "POST"]},
+    "headers_file": {"type": "string"},
+    "body_file": {"type": "string"},
+    "expected_status": {"type": "integer", "minimum": 200, "maximum": 299},
+    "expected_json": {"type": "object", "minProperties": 1},
+    "max_error_rate": {"type": "number", "minimum": 0, "maximum": 1},
+    "max_p95_latency_ms": {"type": "number", "exclusiveMinimum": 0},
+    "sample_interval_seconds": {"type": "integer", "minimum": 1},
+    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 120},
+    "tls_verify": {"type": "boolean"},
+    "max_scale_in_step": {"type": "integer", "minimum": 1, "maximum": 10}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kind": "AutoOpsReleaseSoakPlan",
+  "plan_id": "release-soak-v1",
+  "minimum_duration_seconds": 86400,
+  "watch_service": "jiuwenswarm-autoops-watch.service",
+  "dispatcher_service": "jiuwenswarm-autoops-alert-dispatch.service",
+  "events": [
+    {"incident_id": "soak-01", "truth": "clean-window", "expected": "NO_ANOMALY"},
+    {"incident_id": "soak-02", "truth": "log-anomaly", "expected": "TRACE_OR_PARTIAL"},
+    {"incident_id": "soak-03", "truth": "duplicate-delivery", "expected": "ONE_LOGICAL_ACTION"},
+    {"incident_id": "soak-04", "truth": "loki-unavailable", "expected": "DEGRADED"},
+    {"incident_id": "soak-05", "truth": "opensearch-timeout", "expected": "INCOMPLETE"},
+    {"incident_id": "soak-06", "truth": "tui-offline", "expected": "BACKGROUND_CONTINUES"},
+    {"incident_id": "soak-07", "truth": "dispatcher-restart", "expected": "RESUME_WITHOUT_DUPLICATE"},
+    {"incident_id": "soak-08", "truth": "accepted-response-lost", "expected": "RECONCILING"},
+    {"incident_id": "soak-09", "truth": "resolved-probe-failed", "expected": "WAITING_VERIFICATION"},
+    {"incident_id": "soak-10", "truth": "controlled-recovery", "expected": "VERIFIED_RECOVERY"}
+  ],
+  "cleanup": {
+    "required": true,
+    "resources": ["temporary events", "fixture records", "temporary authorization", "outbox records"],
+    "preserve": ["unresolved external execution IDs", "unconfirmed deliveries"]
+  }
+}

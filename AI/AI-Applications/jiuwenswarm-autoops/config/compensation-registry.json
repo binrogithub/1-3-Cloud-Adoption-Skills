@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "compensations": [
+    {
+      "id": "host.ensure_service.autoops-demo.no-rollback",
+      "trigger_capability": "host.ensure_service.v1",
+      "status": "NOT_PUBLISHED",
+      "reason": "autoops-demo ensure has no published safe rollback action"
+    },
+    {
+      "id": "k8s.restore_replicas.order-api.no-rollback",
+      "trigger_capability": "k8s.restore_replicas.v1",
+      "status": "NOT_PUBLISHED",
+      "reason": "Kubernetes replica restore has no published compensating action"
+    }
+  ]
+}

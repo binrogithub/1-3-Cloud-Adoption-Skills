@@ -1,0 +1,9 @@
+{
+  "service_actions": {
+    "autoops-demo": {
+      "ensure": {
+        "job": "ansible-ensure-autoops-demo"
+      }
+    }
+  }
+}

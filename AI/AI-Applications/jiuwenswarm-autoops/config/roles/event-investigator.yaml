@@ -1,0 +1,17 @@
+id: event-investigator
+display_name: Event Investigator
+responsibility: Read configured OpenSearch event indices for bounded historical change and audit evidence.
+tools:
+  allow:
+    - events.search
+  deny:
+    - runbook.execute
+    - host.ensure_service
+    - ansible.playbook.run
+    - kubectl.apply
+    - kubectl.delete
+execution:
+  mode: inspect
+  max_model_rounds: 2
+  timeout_seconds: 60
+  require_structured_result: true

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "suite": "RO-14-02",
+  "scenarios": [
+    {"scenario_id": "RO14-01-log-24h", "class": "本机24小时日志初查", "expected_role": "log-investigator", "prompt": "#autoops-project-manager 排查本机 autoops-demo 最近24小时 Linux 日志，只读查询 E05，报告真实覆盖、异常和停止原因，不执行修复。service=autoops-demo; since-minutes=1440; limit=100"},
+    {"scenario_id": "RO14-02-podcast-log", "class": "podcast应用日志", "expected_role": "log-investigator", "prompt": "#autoops-project-manager 查询 podcast 应用最近24小时日志，只读使用 E05；如果没有数据明确报告 empty，不要误派 E03。service=podcast; since-minutes=1440; limit=100"},
+    {"scenario_id": "RO14-03-log-latency", "class": "日志与延迟联合调查", "expected_role": "", "prompt": "#autoops-project-manager 调查 autoops-demo 最近24小时日志异常，并在有异常时联动 E04 查询同窗口延迟指标；逐项报告 E05/E04 结果、profile 和证据，不执行写操作。service=autoops-demo; since-minutes=1440; limit=100"},
+    {"scenario_id": "RO14-04-pod-release", "class": "Pod日志与发布关联", "expected_role": "", "prompt": "#autoops-project-manager 对 autoops-demo 做 Pod 日志与发布关联调查：按 E03、E05、E06 交接，只读报告资源、日志和发布证据；数据源缺失时标记 PARTIAL，不执行恢复。service=autoops-demo; since-minutes=1440; limit=100"},
+    {"scenario_id": "RO14-05-page-down-clean-log", "class": "页面不可用但日志干净", "expected_role": "", "prompt": "#autoops-project-manager 调查 chatbot-ui 页面不可用但日志可能干净的事件：先查 E05，再按条件查询 E04 和 E09 业务探针；不能仅因日志干净完成诊断，全程只读。service=chatbot-ui; since-minutes=1440; limit=100"},
+    {"scenario_id": "RO14-06-history-traceback", "class": "异常日志触发历史回溯", "expected_role": "", "prompt": "#autoops-project-manager 调查 chatbot-ui 最近24小时异常日志，发现异常后以首个异常时间为锚点回溯之前窗口并查询 E06 变更事件；没有异常则停止，全程只读。service=chatbot-ui; since-minutes=1440; limit=100"},
+    {"scenario_id": "RO14-07-opensearch-unavailable", "class": "OpenSearch不可用", "expected_role": "", "prompt": "#autoops-project-manager 直接调用 E06 查询 order-api 最近24小时发布和变更事件，验证 OpenSearch 不可用时明确返回 unavailable，不把它当 empty；保持只读并返回数据源状态、时间窗口和证据引用。service=order-api; since-minutes=1440; limit=100; keyword=deploy; keyword=change"},
+    {"scenario_id": "RO14-08-service-recovery", "class": "已发布服务自动恢复", "expected_role": "", "prompt": "#autoops-project-manager 为 autoops-demo 生成服务恢复计划：PM 调用 E02 选择唯一 E01 host-basic-check 写 Job，并由 E09 做业务验证；默认只预览并等待审批，不直接执行。service=autoops-demo; target=local; mode=confirm"},
+    {"scenario_id": "RO14-09-k8s-replicas", "class": "k3s副本恢复", "expected_role": "", "prompt": "#autoops-project-manager 检查本机 k3s 中 autoops-demo Deployment 副本异常，按 E03→E01 生成恢复预览并由 E09 分离验证；识别 HPA 冲突则不执行写操作。cluster=local; namespace=autoops; workload=autoops-demo; mode=confirm"},
+    {"scenario_id": "RO14-10-verify-previous", "class": "验证前次恢复", "expected_role": "", "prompt": "#autoops-project-manager 验证之前 autoops-demo 恢复任务是否已生效，只关联原 task_id 和 operation_id，禁止重复提交恢复动作；必要时调用 E09，只读。service=autoops-demo; target=local; mode=read_only"},
+    {"scenario_id": "RO14-11-reconnect-restart", "class": "TUI重连和后端重启", "expected_role": "", "prompt": "#autoops-project-manager 对 task_id=ro14-reconnect-001 做重连和后端重启后的状态对账，先判断未知动作再决定是否恢复，禁止重复写入；报告任务终态或可解释等待。service=autoops-demo; target=local; mode=read_only"},
+    {"scenario_id": "RO14-12-watch-dedup", "class": "值守事件触发与去重", "expected_role": "", "prompt": "#autoops-project-manager 为 autoops-demo 创建值守事件处理计划，验证相同 incident 去重、暂停恢复和结果回传；只生成计划并等待审批，不执行恢复。service=autoops-demo; target=local; mode=confirm"}
+  ]
+}

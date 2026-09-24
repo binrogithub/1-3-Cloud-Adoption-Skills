@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "watch_id": "production-search-css-watch",
+  "profile_id": "production-search",
+  "poll_interval_seconds": 300,
+  "events_file": "/var/lib/jiuwenswarm-autoops/events.jsonl",
+  "state_dir": "/var/lib/jiuwenswarm-autoops/css-watch",
+  "history_file": "/var/lib/jiuwenswarm-autoops/css-watch/history.json",
+  "mode": "observe",
+  "dispatcher": "autoops_alert_dispatch.py",
+  "deduplication": "profile-decision-reason-codes",
+  "writes": "e01-runbook-only",
+  "unknown_data_source": "hold-and-alert",
+  "recovery_requires_fresh_samples": true
+}

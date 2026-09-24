@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "matrix_id": "jiuwenswarm-autoops-ro00-v1",
+  "integration_entrypoints": {
+    "tui_launcher": "scripts/Jiuwen_autoops_tui",
+    "native_workflow": "swarmflow/ro00-readonly-validation.py",
+    "preflight": "scripts/autoops-swarmflow-preflight.py",
+    "evidence": "scripts/autoops-native-evidence.py"
+  },
+  "contracts": [
+    {
+      "capability": "native_workflow",
+      "project_entry": "swarmflow/ro00-readonly-validation.py",
+      "upstream_extension": "swarmflow.agent / phase / human",
+      "evidence": "workflow.updated plus matching runtime tool spans",
+      "status": "supported",
+      "degradation": "ProjectManager keeps the request in PARTIAL/INCONCLUSIVE and does not claim expert execution"
+    },
+    {
+      "capability": "expert_handoff",
+      "project_entry": "ro00-readonly-validation.inspect -> diagnose",
+      "upstream_extension": "native worker with label and structured schema",
+      "evidence": "parent run, child run, phase, structured result and tool receipt",
+      "status": "supported",
+      "degradation": "A missing structured result blocks the next required phase"
+    },
+    {
+      "capability": "human_gate",
+      "project_entry": "ro00-readonly-validation.approval",
+      "upstream_extension": "swarmflow.human",
+      "evidence": "approval node remains waiting_for_human",
+      "status": "supported",
+      "degradation": "No recovery phase is entered"
+    },
+    {
+      "capability": "tui_history_activity",
+      "project_entry": "scripts/autoops-native-evidence.py",
+      "upstream_extension": "TUI workflow.updated activity field",
+      "evidence": "runtime OTEL trace is joined by session and parent run",
+      "status": "runtime_gap",
+      "degradation": "History alone is INCONCLUSIVE; runtime trace evidence is required"
+    },
+    {
+      "capability": "cross_process_resume",
+      "project_entry": "scripts/autoops-task-control.py",
+      "upstream_extension": "durable task identity and session binding",
+      "evidence": "TaskStore task_id plus actor/session binding",
+      "status": "partial",
+      "degradation": "Project adapter tasks resume by TaskStore identity; native SwarmFlow handles are not resumable after backend exit, so reconnect returns a continuity gap and never replays"
+    }
+  ],
+  "known_runtime_gaps": [
+    "TUI history does not persist workflow.updated activity in the locked JiuwenSwarm runtime.",
+    "RO-00 client disconnect is safe, but native SwarmFlow backend-exit recovery is unsupported by the locked runtime and requires a durable workflow query/resume extension.",
+    "MaaS model identity is environment supplied and must be recorded by the deployment without storing the API key."
+  ]
+}

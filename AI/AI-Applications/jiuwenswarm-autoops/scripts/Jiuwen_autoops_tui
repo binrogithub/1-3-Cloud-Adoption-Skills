@@ -1,0 +1,364 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd -- "$(dirname -- "$SCRIPT_PATH")" && pwd)"
+SESSION="autoops-tui-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+request=""
+skip_install=0
+once=0
+control_action=""
+control_state_dir=""
+control_state_db=""
+control_events_file=""
+control_task_id=""
+control_interval=""
+control_max_updates=""
+
+# The native TUI uses an alternate screen and 24-bit ANSI colours.  Some shell
+# launch environments inherit TERM=dumb or NO_COLOR, which suppresses the
+# yellow JiuwenSwarm renderer even though the child has an interactive pty.
+if [[ -t 0 && -t 1 ]]; then
+  [[ "${TERM:-}" == "dumb" || -z "${TERM:-}" ]] && export TERM="xterm-256color"
+  unset NO_COLOR
+  export FORCE_COLOR=3
+fi
+
+backend_ready() {
+  local ports
+  ports="$(ss -ltnH 2>/dev/null | awk '{print $4}')"
+  grep -qx '127\.0\.0\.1:18092' <<<"$ports" &&
+    grep -qx '127\.0\.0\.1:19001' <<<"$ports"
+}
+
+ensure_backend() {
+  if backend_ready; then
+    return 0
+  fi
+  command -v jiuwenswarm-start >/dev/null 2>&1 || {
+    printf 'JiuwenSwarm backend is not listening on 127.0.0.1:19001 and jiuwenswarm-start was not found.\n' >&2
+    return 1
+  }
+  runtime_dir="${runtime_root:-${SCRIPT_DIR}/..}/.runtime"
+  mkdir -p "$runtime_dir"
+  printf 'JiuwenSwarm backend is not running; starting it now...\n' >&2
+  command -v setsid >/dev/null 2>&1 || {
+    printf 'setsid is required to detach the JiuwenSwarm supervisor safely.\n' >&2
+    return 1
+  }
+  # start_services.py is a foreground supervisor.  Detach both its session
+  # and stdin so the backend is not reaped when this launcher shell exits.
+  setsid nohup jiuwenswarm-start app \
+    >"${runtime_dir}/jiuwenswarm-backend.log" 2>&1 </dev/null &
+  backend_pid=$!
+  for _ in $(seq 1 90); do
+    if ! kill -0 "$backend_pid" 2>/dev/null && ! backend_ready; then
+      printf 'JiuwenSwarm backend supervisor exited. See %s/jiuwenswarm-backend.log\n' "$runtime_dir" >&2
+      return 1
+    fi
+    if backend_ready; then
+      # Require a second successful probe so a half-started gateway is not
+      # reported as ready while AgentServer is still unavailable.
+      sleep 1
+      backend_ready && return 0
+    fi
+    sleep 1
+  done
+  printf 'JiuwenSwarm backend did not become ready on 127.0.0.1:18092 and 127.0.0.1:19001. See %s/jiuwenswarm-backend.log\n' "$runtime_dir" >&2
+  return 1
+}
+
+usage() {
+  cat <<'EOF'
+Usage: Jiuwen_autoops_tui [--session NAME] [--no-install] [--once] [REQUEST]
+       Jiuwen_autoops_tui --control status|progress|budget|follow|health|pause|resume|stop [options]
+
+Starts the JiuwenSwarm TUI with every initial request routed through the
+AutoOps Project Manager. If REQUEST is omitted, the native TUI opens first and
+prefills the ProjectManager route in its input box.
+Examples:
+  Jiuwen_autoops_tui
+  Jiuwen_autoops_tui '排查本机 Linux 日志；service=chatbot-ui; since-minutes=15'
+  Jiuwen_autoops_tui --control status
+  Jiuwen_autoops_tui --control progress --task-id TASK_ID
+  Jiuwen_autoops_tui --control follow --task-id TASK_ID
+  Jiuwen_autoops_tui --control health
+  Jiuwen_autoops_tui --control pause --state-dir /var/lib/jiuwenswarm-autoops/watch
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --session)
+      [[ $# -ge 2 && -n "${2:-}" ]] || { printf '%s\n' '--session requires a value' >&2; exit 2; }
+      SESSION="$2"; shift 2 ;;
+    --no-install) skip_install=1; shift ;;
+    --once) once=1; shift ;;
+    --control)
+      [[ $# -ge 2 && -n "${2:-}" ]] || { printf '%s\n' '--control requires an action' >&2; exit 2; }
+      case "$2" in
+        status|progress|budget|follow|health|pause|resume|stop) control_action="$2" ;;
+        *) printf '%s\n' '--control action is invalid' >&2; exit 2 ;;
+      esac
+      shift 2 ;;
+    --state-dir)
+      [[ $# -ge 2 && -n "${2:-}" ]] || { printf '%s\n' '--state-dir requires a value' >&2; exit 2; }
+      control_state_dir="$2"; shift 2 ;;
+    --state-db)
+      [[ $# -ge 2 && -n "${2:-}" ]] || { printf '%s\n' '--state-db requires a value' >&2; exit 2; }
+      control_state_db="$2"; shift 2 ;;
+    --events-file)
+      [[ $# -ge 2 && -n "${2:-}" ]] || { printf '%s\n' '--events-file requires a value' >&2; exit 2; }
+      control_events_file="$2"; shift 2 ;;
+    --task-id)
+      [[ $# -ge 2 && -n "${2:-}" ]] || { printf '%s\n' '--task-id requires a value' >&2; exit 2; }
+      control_task_id="$2"; shift 2 ;;
+    --interval)
+      [[ $# -ge 2 && -n "${2:-}" ]] || { printf '%s\n' '--interval requires a value' >&2; exit 2; }
+      control_interval="$2"; shift 2 ;;
+    --max-updates)
+      [[ $# -ge 2 && -n "${2:-}" ]] || { printf '%s\n' '--max-updates requires a value' >&2; exit 2; }
+      control_max_updates="$2"; shift 2 ;;
+    --help|-h) usage; exit 0 ;;
+    --) shift; request="$*"; break ;;
+    *) request="${request:+${request} }$1"; shift ;;
+  esac
+done
+
+if [[ -n "$control_action" ]]; then
+  [[ -z "$request" && "$once" == 0 && "$skip_install" == 0 ]] || {
+    printf '%s\n' '--control cannot be combined with a request, --once, or --no-install' >&2
+    exit 2
+  }
+  control_args=(--action "$control_action")
+  [[ -n "$control_state_dir" ]] && control_args+=(--state-dir "$control_state_dir")
+  [[ -n "$control_state_db" ]] && control_args+=(--state-db "$control_state_db")
+  [[ -n "$control_events_file" ]] && control_args+=(--events-file "$control_events_file")
+  [[ -n "$control_task_id" ]] && control_args+=(--task-id "$control_task_id")
+  [[ -n "$control_interval" ]] && control_args+=(--interval "$control_interval")
+  [[ -n "$control_max_updates" ]] && control_args+=(--max-updates "$control_max_updates")
+  exec python3 "${SCRIPT_DIR}/autoops-control.py" "${control_args[@]}"
+fi
+
+[[ "$SESSION" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]] || {
+  printf 'invalid session name\n' >&2; exit 2;
+}
+for required_command in expect ss jiuwenswarm-tui; do
+  command -v "$required_command" >/dev/null 2>&1 || {
+    printf 'missing required TUI command: %s\n' "$required_command" >&2
+    exit 1
+  }
+done
+if (( skip_install == 0 )); then
+  runtime_root="${AUTOOPS_LAUNCHER_RUNTIME_ROOT:-${SCRIPT_DIR}/..}"
+  runtime_root="$(readlink -f -- "$runtime_root")"
+  runtime_dir="${runtime_root}/.runtime"
+  manifest="${runtime_root}/autoops-install-manifest.json"
+  runtime_ready=1
+  for required_asset in \
+    "${runtime_root}/scripts/autoops_runtime_config.py" \
+    "${runtime_root}/skills/autoops-project-manager/SKILL.md" \
+    "${runtime_root}/config/autoops-agent-bootstrap.md" \
+    "${manifest}"; do
+    [[ -f "$required_asset" ]] || runtime_ready=0
+  done
+  if (( runtime_ready == 0 )); then
+    mkdir -p "$runtime_dir"
+    if ! python3 "${SCRIPT_DIR}/install-autoops-runtime.py" >"${runtime_dir}/autoops-install.log" 2>&1; then
+      cat "${runtime_dir}/autoops-install.log" >&2
+      exit 1
+    fi
+  fi
+  skill_dir="${JIUWENSWARM_AGENT_SKILLS_DIR:-${HOME}/.jiuwenswarm/agent/workspace/skills}"
+  if [[ ! -f "${skill_dir}/autoops-project-manager/SKILL.md" || "${AUTOOPS_FORCE_SKILL_INSTALL:-0}" == "1" ]]; then
+    python3 "${SCRIPT_DIR}/install-jiuwenswarm-autoops-skills.py"
+  fi
+fi
+ensure_backend
+if (( once == 1 )) && [[ -z "$request" ]]; then
+  printf '%s\n' '--once requires REQUEST' >&2
+  exit 2
+fi
+
+swarm_home="${JIUWENSWARM_HOME:-${HOME}/.jiuwenswarm}"
+session_dir="${JIUWENSWARM_SESSION_DIR:-${swarm_home}/agent/sessions}"
+history_file="${session_dir}/${SESSION}/history.jsonl"
+export AUTOOPS_PROMPT="#autoops-project-manager ${request}"
+export AUTOOPS_SESSION="$SESSION"
+export AUTOOPS_ACTOR_ID="${AUTOOPS_ACTOR_ID:-tui}"
+export AUTOOPS_HISTORY="$history_file"
+export AUTOOPS_MACHINE_OUTPUT=1
+export AUTOOPS_ONCE="$once"
+export AUTOOPS_HISTORY_CHECKER="${SCRIPT_DIR}/tui-history-completion-check.py"
+export AUTOOPS_SESSION_BINDER="${SCRIPT_DIR}/autoops-session-bind.py"
+export AUTOOPS_AWAIT_INPUT="$([[ -z "$request" ]] && printf 1 || printf 0)"
+# Read the expect program from a separate file descriptor so stdin remains the
+# user's terminal for the interactive TUI after the bootstrap message.
+expect <(cat <<'EOF'
+  log_user 1
+  set timeout 5
+  spawn -noecho jiuwenswarm-tui --persist-session --session $env(AUTOOPS_SESSION)
+  if {$env(AUTOOPS_AWAIT_INPUT) eq "1"} {
+    # Keep the native TUI's first render visible, then prefill its editor.
+    # The operator supplies the remaining text and presses Enter in the TUI.
+    set prefill_at [expr {[clock seconds] + 12}]
+    while {[clock seconds] < $prefill_at} {
+      # Drain alternate-screen redraw output so the native renderer never
+      # blocks before the prefixed editor is ready.
+      expect -timeout 0 {
+        -re {.+} {}
+        timeout {}
+      }
+      after 250
+    }
+    send -- "#autoops-project-manager "
+    puts "\n\[AutoOps\] ProjectManager route is ready in the TUI input. Enter the operation request and press Enter."
+    interact
+    exit 0
+  }
+  set deadline [expr {[clock seconds] + 180}]
+  set next_send [expr {[clock seconds] + 12}]
+  set bootstrap_sent 0
+  set send_attempts 0
+  set accepted 0
+  while {[clock seconds] < $deadline} {
+    # Drain alternate-screen redraw output; otherwise the child can block on
+    # a full pty before the WebSocket session accepts the initial message.
+    expect -timeout 0 {
+      -re {.+} {}
+      timeout {}
+    }
+    if {[clock seconds] >= $next_send && !$accepted && $send_attempts < 3} {
+      if {!$bootstrap_sent} {
+        # The explicit CLI session is already new. Set the mode and enable
+        # SwarmFlow for this session, but do not replay /new: the current
+        # upstream backend rejects that ID-less session.create compatibility
+        # path with "session_id is required".
+        send -- "/mode team\r"
+        after 1200
+        send -- "/swarmflow on\r"
+        after 1200
+        set bootstrap_sent 1
+      }
+      send -- "$env(AUTOOPS_PROMPT)\r"
+      incr send_attempts
+      set next_send [expr {[clock seconds] + 8}]
+    }
+    if {[file exists $env(AUTOOPS_HISTORY)]} {
+      set stream [open $env(AUTOOPS_HISTORY) r]
+      set history [read $stream]
+      close $stream
+      # History is the durable acknowledgement. Metadata can lag behind the
+      # WebSocket write and caused duplicate submissions in earlier tests.
+      if {[regexp {#autoops-project-manager} $history]} {
+        set accepted 1
+        break
+      }
+    }
+    after 1000
+  }
+  if {!$accepted} {
+    puts stderr "ProjectManager request was not accepted after $send_attempts attempts. Session: $env(AUTOOPS_SESSION)"
+    catch {close}
+    catch {wait}
+    exit 1
+  }
+  puts "\n\[AutoOps\] ProjectManager 已接收任务；后续由其选择并调用运维角色。"
+  if {$env(AUTOOPS_ONCE) eq "1"} {
+    set result_deadline [expr {[clock seconds] + 180}]
+    set operational_call_seen 0
+    set stable_since 0
+    set last_history_size -1
+    while {[clock seconds] < $result_deadline} {
+      expect -timeout 0 {
+        -re {.+} {}
+        timeout {}
+      }
+      if {[file exists $env(AUTOOPS_HISTORY)]} {
+        set stream [open $env(AUTOOPS_HISTORY) r]
+        set history [read $stream]
+        close $stream
+        set history_size [string length $history]
+        if {$history_size != $last_history_size} {
+          set last_history_size $history_size
+          set stable_since [clock seconds]
+        }
+        # Skill loading also emits a successful tool result.  For an E2E
+        # check, wait for the ProjectManager's actual operational command and
+        # only accept a result recorded after that command.
+        # The installed skill text contains command examples too.  Anchor on
+        # the latest operational command. Complex observability requests use
+        # the native SwarmFlow tool; its workflow/phase events are the evidence.
+        set call_pos [string last "autoops-project-manager.py" $history]
+        set context_pos [string last "autoops-context-register.py" $history]
+        set flow_pos [string last "observability-investigate.py" $history]
+        set correlate_pos [string last "observability-correlate.py" $history]
+        set control_pos [string last "autoops-control.py" $history]
+        set native_workflow_pos [string last {"name": "swarmflow"} $history]
+        set continuity_pos [string last "Continuity Gap" $history]
+        if {$continuity_pos < 0} {
+          set continuity_pos [string last "连续性缺口" $history]
+        }
+        if {$flow_pos > $call_pos} {
+          set call_pos $flow_pos
+        }
+        if {$context_pos > $call_pos} {
+          set call_pos $context_pos
+        }
+        if {$correlate_pos > $call_pos} {
+          set call_pos $correlate_pos
+        }
+        if {$control_pos > $call_pos} {
+          set call_pos $control_pos
+        }
+        if {$native_workflow_pos > $call_pos} {
+          set call_pos $native_workflow_pos
+        }
+        if {$continuity_pos > $call_pos} {
+          set call_pos $continuity_pos
+        }
+        if {$call_pos >= 0} {
+          set operational_call_seen 1
+        }
+        # The checker validates the complete durable event order: a real
+        # operational call, its tool result, and a non-empty final after the
+        # last action.  It also rejects exploratory and unsafe tool calls.
+        # Keeping that contract in one Python checker avoids duplicating JSON
+        # parsing and status-token heuristics in Tcl.
+        set checker_ok 0
+        if {[catch {exec python3 $env(AUTOOPS_HISTORY_CHECKER) $env(AUTOOPS_HISTORY)} checker_output] == 0} {
+          if {[regexp {"ready": true} $checker_output]} {
+            set checker_ok 1
+          }
+        }
+        if {$operational_call_seen && $checker_ok && [expr {[clock seconds] - $stable_since}] >= 3} {
+          catch {exec python3 $env(AUTOOPS_SESSION_BINDER) \
+            --history $env(AUTOOPS_HISTORY) \
+            --session-id $env(AUTOOPS_SESSION) \
+            --actor-id $env(AUTOOPS_ACTOR_ID) \
+            --wait-seconds 5}
+          puts "AUTOOPS_ONCE_RESULT=PASS"
+          puts "SESSION=$env(AUTOOPS_SESSION)"
+          puts "HISTORY=$env(AUTOOPS_HISTORY)"
+          catch {close}
+          catch {wait}
+          exit 0
+        }
+      }
+      after 1000
+    }
+    puts stderr "ProjectManager task did not complete before timeout. Session: $env(AUTOOPS_SESSION)"
+    catch {close}
+    catch {wait}
+    exit 1
+  }
+  # Bind the native TUI session after the operator leaves the screen.  The
+  # helper only updates the existing task row and never invokes an adapter.
+  interact
+  catch {exec python3 $env(AUTOOPS_SESSION_BINDER) \
+    --history $env(AUTOOPS_HISTORY) \
+    --session-id $env(AUTOOPS_SESSION) \
+    --actor-id $env(AUTOOPS_ACTOR_ID) \
+    --wait-seconds 10}
+EOF
+)

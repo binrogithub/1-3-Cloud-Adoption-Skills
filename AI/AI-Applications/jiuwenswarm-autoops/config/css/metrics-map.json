@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "namespace": "SYS.ES",
+  "cluster_dimension": "cluster_id",
+  "raw_period_seconds": 60,
+  "metrics": {
+    "cluster_status": {"ces_name": "status", "unit": "enum", "aggregation": "latest"},
+    "disk_usage_pct": {"ces_name": "disk_util", "unit": "percent", "aggregation": "latest"},
+    "jvm_heap_max": {"ces_name": "max_jvm_heap_usage", "unit": "percent", "aggregation": "latest"},
+    "cpu_max": {"ces_name": "max_cpu_usage", "unit": "percent", "aggregation": "latest"},
+    "search_rate": {"ces_name": "SearchRate", "unit": "ops_per_second", "aggregation": "latest"},
+    "search_latency": {"ces_name": "SearchLatency", "unit": "milliseconds", "aggregation": "latest"},
+    "indexing_rate": {"ces_name": "IndexingRate", "unit": "ops_per_second", "aggregation": "latest"},
+    "indexing_latency": {"ces_name": "IndexingLatency", "unit": "milliseconds", "aggregation": "latest"}
+  }
+}

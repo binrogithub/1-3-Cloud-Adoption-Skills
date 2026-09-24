@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "kind": "AutoOpsObservabilityFixture",
+  "mode": "isolated-data-fixture",
+  "application_template": "autoops-release-${RUN_ID}",
+  "service_template": "release-api-${RUN_ID}",
+  "target_template": "fixture-host-${RUN_ID}",
+  "environment": "release-test",
+  "scope_template": "release-${RUN_ID}",
+  "loki": {
+    "label": "service",
+    "endpoint_env": "LOKI_BASE_URL",
+    "query_contract": "logs.query.v2"
+  },
+  "prometheus": {
+    "job_template": "release-api-${RUN_ID}",
+    "endpoint_env": "PROMETHEUS_BASE_URL",
+    "query_contract": "metrics.query.v1"
+  },
+  "opensearch": {
+    "index_template": "autoops-release-events-${RUN_ID}",
+    "endpoint_env": "OPENSEARCH_BASE_URL",
+    "query_contract": "events.search.v1"
+  },
+  "limits": {
+    "max_records": 200,
+    "retention_seconds": 3600
+  }
+}

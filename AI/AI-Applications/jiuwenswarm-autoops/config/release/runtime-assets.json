@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "kind": "AutoOpsRuntimeAssetManifest",
+  "required": [
+    "scripts",
+    "skills",
+    "runbooks",
+    "swarmflow",
+    "config",
+    "components.env",
+    "config/autoops-agent-bootstrap.md",
+    "config/systemd",
+    "config/authorization/preauthorization.example.json"
+  ],
+  "customer_owned": [
+    "config-root/service-profiles",
+    "config-root/monitoring",
+    "config-root/authorization",
+    "config-root/*.env"
+  ],
+  "excluded": [
+    ".runtime",
+    "config/local",
+    "*.key",
+    "*.token",
+    "kubeconfig",
+    "session histories"
+  ]
+}

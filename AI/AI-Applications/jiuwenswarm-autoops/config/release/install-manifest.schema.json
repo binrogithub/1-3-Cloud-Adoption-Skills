@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jiuwenswarm-autoops.invalid/schemas/install-manifest-v2.json",
+  "title": "JiuwenSwarm AutoOps install manifest v2",
+  "type": "object",
+  "required": ["schema_version", "instance", "roots", "artifact", "file_records", "ownership", "manifest_sha256"],
+  "properties": {
+    "schema_version": {"const": 2},
+    "instance": {
+      "type": "object",
+      "required": ["instance_id", "runtime_file"],
+      "properties": {
+        "instance_id": {"type": "string", "minLength": 1},
+        "runtime_file": {"type": "string", "minLength": 1},
+        "deployment_mode": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "roots": {
+      "type": "object",
+      "required": ["install", "config", "state", "systemd"],
+      "additionalProperties": {"type": "string", "minLength": 1}
+    },
+    "artifact": {"type": "object", "required": ["kind", "source_root"]},
+    "artifact_sha256": {"type": ["string", "null"]},
+    "file_records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["root", "path", "relative_path", "sha256", "mode", "ownership"],
+        "properties": {
+          "root": {"type": "string"},
+          "path": {"type": "string"},
+          "relative_path": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "mode": {"type": "string", "pattern": "^[0-7]{4}$"},
+          "ownership": {
+            "type": "object",
+            "required": ["uid", "gid"],
+            "properties": {"uid": {"type": "integer"}, "gid": {"type": "integer"}},
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "ownership": {"type": "object"},
+    "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "capability_id", "revision", "provider", "provider_constraints"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "capability_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$"},
+    "revision": {"type": "integer", "minimum": 1},
+    "provider": {"type": "string", "minLength": 1},
+    "region": {"type": "string"},
+    "engine": {"type": "string"},
+    "node_type": {"type": "string"},
+    "provider_constraints": {
+      "type": "object",
+      "required": ["require_no_active_action", "shrink_rule", "supported_node_types", "supported_directions"],
+      "properties": {
+        "require_no_active_action": {"type": "boolean"},
+        "shrink_rule": {"type": "string", "minLength": 1},
+        "min_current_nodes_for_scale_in": {"type": "integer", "minimum": 1},
+        "supported_node_types": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+        "supported_directions": {"type": "array", "items": {"enum": ["scale_out", "scale_in"]}, "minItems": 1}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

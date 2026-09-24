@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "require_engine_health": true,
+  "require_business": true,
+  "minimum_samples": 10,
+  "stable_business_minutes": 10,
+  "probe_url": "https://customer-configured.example/health",
+  "method": "GET",
+  "expected_status": 200,
+  "expected_json": {"status": "ready"},
+  "tls_verify": true,
+  "max_error_rate": 0.01,
+  "max_p95_latency_ms": 500,
+  "sample_interval_seconds": 30,
+  "timeout_seconds": 10
+}

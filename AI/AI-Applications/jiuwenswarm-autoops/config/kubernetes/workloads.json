@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "clusters": {
+    "autoops-development": {
+      "enabled": false,
+      "context": "autoops-development",
+      "kubeconfig_env": "AUTOOPS_KUBECONFIG",
+      "workloads": {
+        "staging/orders/order-api": {
+          "namespace": "staging",
+          "kind": "Deployment",
+          "name": "order-api",
+          "selector": "app.kubernetes.io/name=order-api",
+          "baseline_replicas": 3,
+          "service": "order-api",
+          "restore_job": "k8s-restore-order-api"
+        }
+      }
+    }
+  }
+}

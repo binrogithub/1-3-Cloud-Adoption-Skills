@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "capabilities": {
+    "netops.incidents.read.v1": {
+      "role": "netops",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["network_incident"],
+      "invocation_kind": "adapter",
+      "adapter": "netops-noli.py",
+      "required": ["window_minutes", "limit"],
+      "prerequisites": ["noli_configured"]
+    },
+    "css.inspect.v1": {
+      "role": "css_auto",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["css_cluster"],
+      "invocation_kind": "adapter",
+      "adapter": "css-auto.py",
+      "required": ["cluster_ref"],
+      "prerequisites": ["css_credentials", "css_cluster_registered"]
+    },
+    "css.plan.v1": {
+      "role": "css_auto",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["css_cluster"],
+      "invocation_kind": "project_route",
+      "adapter": "css-auto.py",
+      "required": ["cluster_ref", "policy_ref"],
+      "prerequisites": ["css_credentials", "css_cluster_registered"]
+    },
+    "css.scale.v1": {
+      "role": "runbook-operator",
+      "effect": "write",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["css_cluster"],
+      "invocation_kind": "project_route",
+      "adapter": "css-scale-runbook.py",
+      "required": ["cluster_ref", "direction", "delta", "target_nodes"],
+      "prerequisites": ["css_credentials", "css_cluster_registered", "operator_approval"]
+    },
+    "css.operation.status.v1": {
+      "role": "css_auto",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["css_cluster"],
+      "invocation_kind": "adapter",
+      "adapter": "css-auto.py",
+      "required": ["cluster_ref", "task_id"],
+      "prerequisites": ["css_credentials", "css_cluster_registered"]
+    },
+    "css.verify.v1": {
+      "role": "recovery-verifier",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["css_cluster"],
+      "invocation_kind": "adapter",
+      "adapter": "css-auto.py",
+      "required": ["cluster_ref", "task_id"],
+      "prerequisites": ["css_credentials", "css_cluster_registered"]
+    },
+    "metrics.query.v1": {
+      "role": "metrics-observer",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["service", "host"],
+      "invocation_kind": "adapter",
+      "adapter": "prometheus-query.py",
+      "required": ["target", "service", "profile", "since_minutes", "limit"],
+      "prerequisites": ["prometheus_configured"]
+    },
+    "metrics.health.v1": {
+      "role": "metrics-observer",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["host", "service"],
+      "invocation_kind": "adapter",
+      "adapter": "prometheus-query.py",
+      "required": ["target"],
+      "prerequisites": ["prometheus_configured"]
+    },
+    "logs.query.v1": {
+      "role": "log-investigator",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["host", "service", "file"],
+      "invocation_kind": "adapter",
+      "adapter": "log-investigate.sh",
+      "required": ["target", "service", "since_minutes", "limit"],
+      "prerequisites": ["log_source_published"]
+    },
+    "logs.query.v2": {
+      "role": "log-investigator",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["host", "service", "file"],
+      "invocation_kind": "adapter",
+      "adapter": "log-investigate.sh",
+      "required": ["target", "service", "since_minutes", "limit"],
+      "prerequisites": ["log_source_published"]
+    },
+    "events.search.v1": {
+      "role": "event-investigator",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["service", "deployment", "event"],
+      "invocation_kind": "adapter",
+      "adapter": "opensearch-events-query.py",
+      "required": ["target", "service", "since_minutes", "limit"],
+      "prerequisites": ["opensearch_configured"]
+    },
+    "observability.investigate.v1": {
+      "role": "project-manager",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["service", "observability_window"],
+      "invocation_kind": "project_route",
+      "adapter": "observability-investigate.py",
+      "workflow_ref": "ro05-parallel-observability-v1",
+      "workflow_asset": "swarmflow/ro05-parallel-observability-v1.py",
+      "delegates_to": ["logs.query.v2", "metrics.query.v1", "events.search.v1"],
+      "required": ["target", "service", "since_minutes", "limit"],
+      "prerequisites": ["log_source_published"]
+    },
+    "host.inspect.v1": {
+      "role": "runbook-operator",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["host", "runbook"],
+      "invocation_kind": "project_route",
+      "job": "host-basic-check",
+      "required": ["target"],
+      "prerequisites": ["rundeck_registered"]
+    },
+    "host.ensure_service.v1": {
+      "role": "ansible-operator",
+      "effect": "write",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["host", "service"],
+      "invocation_kind": "project_route",
+      "job": "ansible-ensure-autoops-demo",
+      "service": "autoops-demo",
+      "required": ["target", "service"],
+      "prerequisites": ["ansible_configured", "operator_approval"]
+    },
+    "service.verify.v1": {
+      "role": "recovery-verifier",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["host", "service", "health_probe"],
+      "invocation_kind": "adapter",
+      "adapter": "verify-service-recovery.py",
+      "required": ["target", "service"],
+      "prerequisites": ["service_probe_published"]
+    },
+    "k8s.business_verify.v1": {
+      "role": "recovery-verifier",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["kubernetes_workload", "health_probe"],
+      "invocation_kind": "adapter",
+      "adapter": "verify-k8s-business.py",
+      "required": ["cluster", "workload", "action_completed_at"],
+      "prerequisites": ["kubernetes_enabled", "business_probe_published"]
+    },
+    "k8s.inspect.v1": {
+      "role": "kubernetes-operator",
+      "effect": "read",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["kubernetes_cluster", "kubernetes_workload"],
+      "invocation_kind": "adapter",
+      "adapter": "k8s-inspect.py",
+      "required": ["cluster", "workload"],
+      "prerequisites": ["kubernetes_enabled"]
+    },
+    "k8s.restore_replicas.v1": {
+      "role": "kubernetes-operator",
+      "effect": "write",
+      "input_schema_version": 1,
+      "result_schema_version": 1,
+      "resource_types": ["kubernetes_workload"],
+      "invocation_kind": "project_route",
+      "job": "k8s-restore-order-api",
+      "adapter": "k8s-restore-replicas.py",
+      "required": ["cluster", "workload", "target"],
+      "prerequisites": ["kubernetes_enabled", "operator_approval"]
+    }
+  }
+}

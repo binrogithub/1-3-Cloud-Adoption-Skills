@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "profile_id": "production-search",
+      "resource_type": "css_cluster",
+      "cluster_id": "00000000-0000-4000-8000-000000000000",
+      "cluster_name": "production-search",
+      "region": "cn-north-4",
+      "project_id": "replace-with-project-id",
+      "domain_id": "replace-with-domain-id",
+      "credential_ref": "css/credentials/default",
+      "api_adapter": "sdk",
+      "koo_cli_profile": "",
+      "koo_cli_mode": "AKSK",
+      "koo_cli_home": "",
+      "engine": "opensearch",
+      "mode": "observe",
+      "policy_ref": "css-default",
+      "aliases": [
+        "生产搜索"
+      ]
+    }
+  ]
+}

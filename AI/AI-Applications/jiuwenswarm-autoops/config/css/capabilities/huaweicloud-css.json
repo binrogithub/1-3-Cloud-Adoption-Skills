@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "capability_id": "huaweicloud-css",
+  "revision": 1,
+  "provider": "huaweicloud",
+  "provider_constraints": {
+    "require_no_active_action": true,
+    "shrink_rule": "reduced_nodes_less_than_half",
+    "supported_node_types": ["ess"],
+    "supported_directions": ["scale_out", "scale_in"]
+  }
+}

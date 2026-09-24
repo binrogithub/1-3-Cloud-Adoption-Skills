@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "role": "css_auto",
+  "required_inputs": ["region", "project_id", "cluster_id"],
+  "authentication": {
+    "alternatives": [
+      ["access_key_id", "secret_access_key"],
+      ["koo_cli_profile"]
+    ],
+    "adapter_values": ["sdk", "koo-cli"]
+  },
+  "secret_policy": {
+    "never_in_tui": true,
+    "never_in_task_result": true,
+    "credential_file_mode": "0600"
+  },
+  "cases": [
+    {"id": "CA-01", "kind": "route", "input": "查看已登记 CSS 集群的查询流量"},
+    {"id": "CA-04", "kind": "plan", "input": "CSS 写入压力持续升高，给出 data 节点扩容计划"},
+    {"id": "CA-07", "kind": "plan", "input": "CSS 低峰缩容一台 data 节点"},
+    {"id": "CA-10", "kind": "quality", "input": "CES 返回空样本"},
+    {"id": "CA-15", "kind": "reconcile", "input": "CSS API 回包丢失"},
+    {"id": "CA-21", "kind": "verify", "input": "扩容完成但业务延迟仍未恢复"}
+  ]
+}

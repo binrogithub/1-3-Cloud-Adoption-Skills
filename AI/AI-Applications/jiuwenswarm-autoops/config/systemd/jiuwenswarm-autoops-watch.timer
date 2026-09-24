@@ -1,0 +1,10 @@
+[Unit]
+Description=Run JiuwenSwarm AutoOps watcher every five minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

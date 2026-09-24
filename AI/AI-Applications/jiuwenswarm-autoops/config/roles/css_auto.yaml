@@ -1,0 +1,23 @@
+id: css_auto
+display_name: CSS 自动运维专家
+responsibility: Monitor Huawei Cloud CSS traffic, data capacity, health, and bounded ess data-node scaling.
+tools:
+  allow:
+    - css.inspect
+    - css.plan
+    - css.operation.status
+    - css.verify
+  deny:
+    - shell.execute
+    - arbitrary.css.api
+    - index.delete
+    - mapping.change
+    - flavor.change
+    - master.scale
+    - client.scale
+    - cold-node.scale
+execution:
+  mode: observe
+  require_structured_result: true
+  writes_via: runbook-operator
+  resource_type: css_cluster

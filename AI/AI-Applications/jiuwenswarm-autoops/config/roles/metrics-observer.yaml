@@ -1,0 +1,18 @@
+id: metrics-observer
+display_name: Metrics Observer
+responsibility: Read configured Prometheus metric profiles for one target and report bounded time-series evidence.
+tools:
+  allow:
+    - metrics.query
+    - metrics.health
+  deny:
+    - runbook.execute
+    - host.ensure_service
+    - ansible.playbook.run
+    - kubectl.apply
+    - kubectl.delete
+execution:
+  mode: inspect
+  max_model_rounds: 2
+  timeout_seconds: 60
+  require_structured_result: true

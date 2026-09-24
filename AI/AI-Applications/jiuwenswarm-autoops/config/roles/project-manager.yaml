@@ -1,0 +1,16 @@
+id: project-manager
+display_name: Project Manager
+responsibility: Classify a TUI AutoOps request and dispatch exactly one least-privileged specialist role.
+tools:
+  allow:
+    - autoops.project-manager
+    - css.project-manager
+  deny:
+    - shell.execute
+    - runbook.execute
+    - ansible.playbook.run
+    - host.ensure_service
+execution:
+  mode: coordinate
+  require_explicit_action_confirmation: true
+  require_structured_result: true
