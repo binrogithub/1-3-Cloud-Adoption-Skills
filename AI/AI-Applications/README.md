@@ -21,6 +21,8 @@ This use case covers end-user and business-facing AI solutions such as chatbots,
 - [Contract Risk Analysis AI Skill](./Contract-Risk-Analysis-AI-Skill/): End-to-end OCR + LLM pipeline for document risk scoring with serverless architecture on Huawei Cloud.
 - [Dify NL2SQL Docker](./dify-nl2sql-docker/README.md): Build and operate a local Dify Workflow that converts natural language into safe read-only SQL through Docker Compose, LiteLLM/OpenAI-compatible models, and a PostgreSQL query gateway.
 
+- [JiuwenSwarm AutoOps](./jiuwenswarm-autoops/README.md): Multi-role operations assistant for log, metrics, event, Kubernetes, CSS, and network investigations, integrated through the native JiuwenSwarm TUI.
+
 ## Expected Outputs
 
 - AI application solution pattern

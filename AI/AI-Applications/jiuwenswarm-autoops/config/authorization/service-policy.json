@@ -1,0 +1,6 @@
+{
+  "allowed_hosts": ["test-host-01"],
+  "allowed_services": ["autoops-demo.service"],
+  "actions": ["inspect", "ensure_running"],
+  "expires_at": "replace-with-rfc3339-expiry"
+}

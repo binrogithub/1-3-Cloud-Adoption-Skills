@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "default_scope": "host_system",
+  "default_target": "local",
+  "default_window_minutes": 1440,
+  "default_timezone": "Asia/Shanghai",
+  "max_window_minutes": 1440
+}

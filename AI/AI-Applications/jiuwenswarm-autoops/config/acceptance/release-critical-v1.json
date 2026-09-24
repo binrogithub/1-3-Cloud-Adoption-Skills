@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "AutoOpsReleaseCriticalCases",
+  "manifest_id": "release-critical-v1",
+  "repeat": 3,
+  "groups": [
+    {"group_id": "REL-01", "name": "独立安装与启动", "case_ids": ["AO50-43"]},
+    {"group_id": "REL-02", "name": "配置、升级与回退", "case_ids": ["AO50-44", "AO50-45"]},
+    {"group_id": "REL-03", "name": "数据源覆盖与接入", "case_ids": ["AO50-46", "AO50-47", "AO50-48"]},
+    {"group_id": "REL-04", "name": "结果契约与对账", "case_ids": ["AO50-31", "AO50-32", "AO50-38"]},
+    {"group_id": "REL-05", "name": "执行模式与凭据", "case_ids": ["AO50-30"]},
+    {"group_id": "REL-06", "name": "真实 TUI 与业务验收", "case_ids": ["AO50-18", "AO50-50"]},
+    {"group_id": "REL-07", "name": "长期值守与恢复", "case_ids": ["AO50-35", "AO50-36"]},
+    {"group_id": "REL-08", "name": "制品与发布门禁", "case_ids": ["AO50-43", "AO50-45"]}
+  ]
+}

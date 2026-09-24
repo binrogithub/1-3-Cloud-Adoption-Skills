@@ -1,0 +1,17 @@
+---
+- name: Ensure one preauthorized service is running
+  hosts: test_hosts
+  gather_facts: false
+  vars:
+    allowed_service: autoops-demo.service
+  tasks:
+    - name: Ensure the fixed service is started
+      ansible.builtin.systemd_service:
+        name: "{{ allowed_service }}"
+        state: started
+    - name: Verify fixed service state
+      ansible.builtin.systemd_service:
+        name: "{{ allowed_service }}"
+      register: service_state
+      changed_when: false
+      failed_when: service_state.status.ActiveState | default('unknown') != 'active'

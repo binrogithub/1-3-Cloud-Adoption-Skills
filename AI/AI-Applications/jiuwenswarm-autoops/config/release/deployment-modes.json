@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "default_mode": "preserve-existing",
+  "modes": {
+    "preserve-existing": {
+      "permission_behavior": "leave existing JiuwenSwarm permission fields unchanged",
+      "repeat_install_behavior": "preserve customer policy"
+    },
+    "full-access-test": {
+      "permission_behavior": "set project test policy: permissions disabled and published paths allowed",
+      "repeat_install_behavior": "apply explicitly requested test policy"
+    }
+  }
+}

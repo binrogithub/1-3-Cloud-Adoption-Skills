@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "expected_region": "la-south-2",
+  "poll_interval_seconds": 60,
+  "max_css_actions": 2,
+  "load": {
+    "url": "",
+    "method": "GET",
+    "headers_file": "pressure-headers.json",
+    "body_file": "",
+    "timeout_seconds": 10,
+    "concurrency": 4,
+    "tls_verify": true
+  },
+  "business_config_file": "business.example.json",
+  "phases": [
+    {"name": "warmup", "duration_seconds": 900, "requests_per_second": 1, "concurrency": 2},
+    {"name": "normal", "duration_seconds": 7200, "requests_per_second": 2, "concurrency": 4},
+    {"name": "burst", "duration_seconds": 1800, "requests_per_second": 10, "concurrency": 10},
+    {"name": "recovery", "duration_seconds": 1800, "requests_per_second": 1, "concurrency": 2},
+    {"name": "steady", "duration_seconds": 2700, "requests_per_second": 3, "concurrency": 6}
+  ],
+  "guardrails": {
+    "max_error_rate": 0.2,
+    "max_p95_latency_ms": 5000,
+    "bad_cycles": 3
+  }
+}

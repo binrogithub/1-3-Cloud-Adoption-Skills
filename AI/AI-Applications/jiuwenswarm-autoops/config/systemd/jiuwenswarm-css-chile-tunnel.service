@@ -1,0 +1,19 @@
+[Unit]
+Description=JiuwenSwarm AutoOps SSH tunnel from controller to Chile ECS CSS endpoint
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+EnvironmentFile=/etc/jiuwenswarm-autoops/css-chile-tunnel.env
+ExecStart=/usr/bin/ssh -N -T -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ConnectTimeout=10 -L 127.0.0.1:19200:${CSS_REMOTE_HOST}:9200 root@${CSS_ECS_SSH_HOST}
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

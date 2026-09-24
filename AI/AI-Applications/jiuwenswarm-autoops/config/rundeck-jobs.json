@@ -1,0 +1,35 @@
+{
+  "jobs": [
+    {
+      "name": "host-basic-check",
+      "id": "replace-with-published-rundeck-job-id",
+      "options": {
+        "target": "^test-host-01$"
+      }
+    },
+    {
+      "name": "ansible-ensure-autoops-demo",
+      "id": "replace-with-published-rundeck-e02-job-id",
+      "options": {
+        "target": "^test-host-01$"
+      }
+    },
+    {
+      "name": "k8s-restore-order-api",
+      "id": "replace-with-published-rundeck-k8s-restore-job-id",
+      "options": {
+        "target": "^test-host-01$"
+      }
+    },
+    {
+      "name": "css-ess-data-node-scale",
+      "id": "replace-with-published-rundeck-css-scale-job-id",
+      "options": {
+        "target": "^css:[A-Za-z0-9][A-Za-z0-9._-]{0,62}$",
+        "profile_id": "^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$",
+        "direction": "^(scale_out|scale_in)$",
+        "delta": "^[1-9][0-9]*$"
+      }
+    }
+  ]
+}

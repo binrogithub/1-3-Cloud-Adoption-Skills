@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "reference_commit": "29c67881d970aec3ecd2421f202c39b7c0662ced",
+  "source_license_status": "UNCONFIRMED_NO_DIRECT_SOURCE_COPY",
+  "supported_matrix": [
+    {
+      "provider": "huaweicloud",
+      "service": "CSS",
+      "engine": "opensearch",
+      "region": "customer-configured",
+      "mode": "observe",
+      "api_adapters": ["sdk", "koo-cli"],
+      "status": "IMPLEMENTED_UNVERIFIED"
+    }
+  ],
+  "requires_real_validation": [
+    "region",
+    "engine_version",
+    "billing_mode",
+    "availability_zone_topology",
+    "css_ces_sdk_version",
+    "iam_permissions"
+  ]
+}

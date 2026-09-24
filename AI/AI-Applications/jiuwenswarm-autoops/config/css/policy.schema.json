@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "policy_id",
+    "revision",
+    "mode",
+    "min_data_nodes",
+    "max_data_nodes",
+    "scale_out_step",
+    "scale_in_step"
+  ],
+  "properties": {
+    "schema_version": {"enum": [1, 2, 3]},
+    "policy_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$"},
+    "revision": {"type": "integer", "minimum": 1},
+    "mode": {"enum": ["observe", "recommend", "auto"]},
+    "min_data_nodes": {"type": "integer", "minimum": 1},
+    "max_data_nodes": {"type": "integer", "minimum": 1},
+    "scale_out_step": {"type": "integer", "minimum": 1},
+    "scale_in_step": {"type": "integer", "minimum": 1},
+    "scale_out_cooldown_minutes": {"type": "integer", "minimum": 0},
+    "scale_in_cooldown_minutes": {"type": "integer", "minimum": 0},
+    "scale_in_delay_after_scale_out_minutes": {"type": "integer", "minimum": 0},
+    "scale_out_cpu_percent": {"type": "number", "minimum": 0, "maximum": 100},
+    "scale_in_cpu_percent": {"type": "number", "minimum": 0, "maximum": 100},
+    "scale_out_disk_percent": {"type": "number", "minimum": 0, "maximum": 100},
+    "scale_in_disk_percent": {"type": "number", "minimum": 0, "maximum": 100},
+    "scale_in_max_search_rate": {"type": "number", "minimum": 0},
+    "scale_in_max_indexing_rate": {"type": "number", "minimum": 0},
+    "scale_in_max_search_latency": {"type": "number", "minimum": 0},
+    "scale_in_max_indexing_latency": {"type": "number", "minimum": 0},
+    "scale_in_max_jvm_heap": {"type": "number", "minimum": 0, "maximum": 100},
+    "scale_in_min_history_minutes": {"type": "integer", "minimum": 1},
+    "sample_freshness_seconds": {"type": "integer", "minimum": 1},
+    "enforce_sustained_windows": {"type": "boolean"},
+    "scale_out_window_minutes": {"type": "integer", "minimum": 1},
+    "scale_out_required_samples": {"type": "integer", "minimum": 1},
+    "scale_in_required_samples": {"type": "integer", "minimum": 1},
+    "strict_scale_in_evidence": {"type": "boolean"},
+    "fresh_precheck_required": {"type": "boolean"},
+    "require_snapshot_for_scale_in": {"type": "boolean"},
+    "allow_scale_out": {"type": "boolean"},
+    "allow_scale_in": {"type": "boolean"},
+    "provider_constraints": {
+      "type": "object",
+      "properties": {
+        "require_no_active_action": {"type": "boolean"},
+        "shrink_rule": {"type": "string"},
+        "min_current_nodes_for_scale_in": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": true
+    }
+  }
+}

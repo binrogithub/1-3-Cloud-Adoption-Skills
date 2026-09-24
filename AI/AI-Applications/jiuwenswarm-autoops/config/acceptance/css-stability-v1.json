@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "suite": "css-stability-v1",
+  "spec": "docs/css-stability-50-scenarios-spec.md",
+  "case_count": 50,
+  "stop_on_unexpected_result": true,
+  "statuses": ["PASS", "FAIL", "SKIPPED", "UNKNOWN", "NOT_READY"],
+  "required_real_business_cases": ["CSS-S49", "CSS-S50"],
+  "release_gate": "scripts/css_stability_release_gate.py",
+  "minimum_real_wall_clock_hours": 24,
+  "minimum_collection_reduction_ratio": 0.5,
+  "required_evidence": [
+    "run_id", "execution_level", "resource_key", "task_id", "operation_id",
+    "policy_revision", "api_calls", "expected", "actual", "reason_codes",
+    "business_window", "business_verification", "cleanup", "role_chain"
+  ]
+}

@@ -1,0 +1,13 @@
+id: ansible-operator
+display_name: Ansible Operator
+responsibility: Request a preauthorized service action through the E01 Rundeck execution boundary.
+tools:
+  allow:
+    - host.ensure_service
+  deny:
+    - shell.execute
+    - ansible.playbook.run
+    - runbook.execute
+execution:
+  mode: execute
+  require_preauthorization: true

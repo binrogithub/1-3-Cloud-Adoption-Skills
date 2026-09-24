@@ -1,0 +1,28 @@
+[Unit]
+Description=JiuwenSwarm AutoOps local k3s acceptance cluster for E03
+Documentation=https://docs.k3s.io/
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/opt/JiuwenSwarm/bin/k3s
+ConditionPathExists=/var/lib/jiuwenswarm-autoops/k3s-e03-v134/server
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/opt/JiuwenSwarm/bin/k3s server \
+  --data-dir=/var/lib/jiuwenswarm-autoops/k3s-e03-v134 \
+  --https-listen-port=16443 \
+  --write-kubeconfig=/etc/jiuwenswarm-autoops/kubernetes/autoops-development.kubeconfig \
+  --write-kubeconfig-mode=0640 \
+  --write-kubeconfig-group=rundeck
+ExecStartPost=/bin/sh -c 'i=0; while [ "$i" -lt 120 ]; do /opt/JiuwenSwarm/bin/kubectl --kubeconfig=/etc/jiuwenswarm-autoops/kubernetes/autoops-development.kubeconfig config get-contexts default >/dev/null 2>&1 && /opt/JiuwenSwarm/bin/kubectl --kubeconfig=/etc/jiuwenswarm-autoops/kubernetes/autoops-development.kubeconfig config rename-context default autoops-development && exit 0; i=$((i+1)); sleep 1; done; exit 1'
+Restart=on-failure
+RestartSec=5s
+KillMode=control-group
+Delegate=yes
+TimeoutStartSec=0
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target

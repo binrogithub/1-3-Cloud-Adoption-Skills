@@ -1,0 +1,20 @@
+id: ops-leader
+display_name: Ops Leader
+responsibility: Normalize a TUI task, coordinate specialist roles, and present the final result.
+model:
+  provider: huawei-maas-openai-compatible
+  base_url_env: API_BASE
+  api_key_env: API_KEY
+  model_env: MODEL_NAME
+tools:
+  allow:
+    - system.connection-check
+  deny:
+    - runbook.execute
+    - host.ensure_service
+    - k8s.restore_replicas
+execution:
+  mode: inspect
+  max_model_rounds: 3
+  timeout_seconds: 60
+  require_structured_result: true

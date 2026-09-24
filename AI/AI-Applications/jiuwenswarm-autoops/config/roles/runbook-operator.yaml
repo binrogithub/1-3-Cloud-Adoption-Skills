@@ -1,0 +1,14 @@
+id: runbook-operator
+display_name: Runbook Operator
+responsibility: Execute only a published allowlisted Rundeck runbook and report its external execution status.
+tools:
+  allow:
+    - runbook.execute
+  deny:
+    - shell.execute
+    - ansible.playbook.run
+    - kubectl.apply
+execution:
+  mode: execute
+  max_model_rounds: 2
+  timeout_seconds: 90

@@ -1,0 +1,4 @@
+# Required only for the sdk adapter. The koo-cli adapter uses the host's hcloud binary.
+huaweicloudsdkcore==3.1.215
+huaweicloudsdkcss==3.1.215
+huaweicloudsdkces==3.1.215

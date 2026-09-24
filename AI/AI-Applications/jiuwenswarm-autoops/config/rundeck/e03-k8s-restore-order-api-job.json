@@ -1,0 +1,31 @@
+[
+  {
+    "name": "k8s-restore-order-api",
+    "group": "AutoOps/E03",
+    "project": "autoops",
+    "description": "Restore the published staging/orders/order-api Deployment to three replicas and verify rollout.",
+    "executionEnabled": true,
+    "scheduleEnabled": false,
+    "nodeFilterEditable": false,
+    "options": [
+      {
+        "name": "target",
+        "required": true,
+        "enforced": true,
+        "regex": "^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$",
+        "value": "test-host-01",
+        "values": ["test-host-01"],
+        "valuesListDelimiter": ","
+      }
+    ],
+    "sequence": {
+      "keepgoing": false,
+      "strategy": "node-first",
+      "commands": [
+        {
+          "exec": "test -r /etc/jiuwenswarm-autoops/kubernetes/autoops-development.kubeconfig && /opt/JiuwenSwarm/bin/kubectl --kubeconfig /etc/jiuwenswarm-autoops/kubernetes/autoops-development.kubeconfig --context autoops-development --namespace staging scale deployment/order-api --replicas=3 && /opt/JiuwenSwarm/bin/kubectl --kubeconfig /etc/jiuwenswarm-autoops/kubernetes/autoops-development.kubeconfig --context autoops-development --namespace staging rollout status deployment/order-api --timeout=120s"
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,16 @@
+id: kubernetes-operator
+display_name: Kubernetes Operator
+responsibility: Inspect one published Kubernetes workload through the read-only API boundary and request only a published recovery action.
+tools:
+  allow:
+    - k8s.inspect
+  deny:
+    - shell.execute
+    - kubectl.apply
+    - kubectl.delete
+    - kubectl.exec
+    - runbook.execute
+    - host.ensure_service
+execution:
+  mode: inspect
+  require_structured_result: true

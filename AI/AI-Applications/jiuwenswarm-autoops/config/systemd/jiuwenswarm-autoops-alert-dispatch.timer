@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the AutoOps Alertmanager incident dispatcher
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+Unit=jiuwenswarm-autoops-alert-dispatch.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

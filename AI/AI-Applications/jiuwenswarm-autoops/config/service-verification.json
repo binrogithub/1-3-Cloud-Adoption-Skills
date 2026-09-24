@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "services": {
+    "autoops-demo": {
+      "systemd_unit": "autoops-demo.service",
+      "health_url": "http://127.0.0.1:18080/health",
+      "targets": ["test-host-01"],
+      "target_aliases": {"local": "test-host-01"},
+      "probe_attempts": 7,
+      "probe_interval_seconds": 10,
+      "observation_seconds": 60,
+      "max_http_error_rate": 0.0,
+      "require_restart_counter": true
+    }
+  }
+}

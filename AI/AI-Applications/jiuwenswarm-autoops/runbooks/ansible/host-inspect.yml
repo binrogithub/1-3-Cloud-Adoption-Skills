@@ -1,0 +1,19 @@
+---
+- name: Inspect one allowlisted service without changing host state
+  hosts: test_hosts
+  gather_facts: false
+  vars:
+    allowed_service: autoops-demo.service
+  tasks:
+    - name: Read service state
+      ansible.builtin.systemd_service:
+        name: "{{ allowed_service }}"
+      register: service_state
+      changed_when: false
+      failed_when: false
+    - name: Return deterministic inspection evidence
+      ansible.builtin.debug:
+        msg:
+          service: "{{ allowed_service }}"
+          state: "{{ service_state.status.ActiveState | default('unknown') }}"
+          unit_exists: "{{ service_state.status.LoadState | default('not-found') }}"

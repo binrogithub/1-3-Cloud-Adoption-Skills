@@ -1,0 +1,15 @@
+{
+  "apiVersion": "autoops.jiuwen/v1",
+  "kind": "MonitoringPolicy",
+  "metadata": {"name": "autoops-demo-watch", "revision": 1},
+  "spec": {
+    "profile_ref": "autoops-demo-test",
+    "poll_interval_seconds": 300,
+    "max_events_per_run": 100,
+    "incident": {"source": "alertmanager", "deduplication": "source-alert-target-starts_at"},
+    "investigation": {"initial_window_minutes": 1440, "max_backtrace_minutes": 10080,
+      "watermark_overlap_minutes": 2, "max_backfill_minutes": 1440},
+    "recovery": {"mode": "inspect", "capability": "host.ensure_service.v1", "max_actions_per_incident": 1},
+    "verification": {"profile_ref": "autoops-demo-health-v1", "stable_window_seconds": 60}
+  }
+}

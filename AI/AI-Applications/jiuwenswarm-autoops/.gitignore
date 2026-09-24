@@ -1,0 +1,10 @@
+.ai-dlc/
+.env
+.env.*
+!.env.example
+config/local/
+.runtime/
+var/log-investigator/
+logs/
+__pycache__/
+*.py[cod]

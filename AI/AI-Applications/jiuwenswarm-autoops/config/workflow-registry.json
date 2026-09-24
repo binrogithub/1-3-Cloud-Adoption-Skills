@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "workflows": {
+    "service-recovery-v1": {
+      "asset": "swarmflow/service-recovery-v1.py",
+      "invocation_kind": "native_workflow",
+      "capabilities": ["host.inspect.v1", "logs.query.v1", "host.ensure_service.v1", "service.verify.v1"],
+      "write_requires_approval": true
+    },
+    "ro00-readonly-validation": {
+      "asset": "swarmflow/ro00-readonly-validation.py",
+      "invocation_kind": "native_workflow",
+      "capabilities": ["host.inspect.v1", "logs.query.v1"],
+      "write_requires_approval": true
+    },
+    "ro05-parallel-observability-v1": {
+      "asset": "swarmflow/ro05-parallel-observability-v1.py",
+      "invocation_kind": "native_workflow",
+      "capabilities": ["logs.query.v2", "metrics.query.v1", "events.search.v1"],
+      "write_requires_approval": true,
+      "human_gate": "optional_read_only",
+      "budget": {"max_steps": 3, "max_parallel_read_steps": 3, "max_replans": 1}
+    },
+    "e03-kubernetes-validation-v1": {
+      "asset": "swarmflow/e03-kubernetes-validation-v1.py",
+      "invocation_kind": "native_workflow",
+      "capabilities": ["k8s.inspect.v1"],
+      "write_requires_approval": true
+    },
+    "css-autoscale-v1": {
+      "asset": "swarmflow/css-autoscale-v1.py",
+      "invocation_kind": "native_workflow",
+      "capabilities": ["css.inspect.v1", "css.plan.v1", "css.scale.v1", "css.operation.status.v1", "css.verify.v1"],
+      "write_requires_approval": true,
+      "human_gate": "required_for_write"
+    }
+  }
+}

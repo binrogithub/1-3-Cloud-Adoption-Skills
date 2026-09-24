@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "expected_region": "la-south-2",
+  "poll_interval_seconds": 60,
+  "max_css_actions": 9,
+  "load": {
+    "url": "",
+    "method": "GET",
+    "headers_file": "pressure-headers.json",
+    "body_file": "",
+    "timeout_seconds": 10,
+    "concurrency": 4,
+    "tls_verify": true
+  },
+  "phases": [
+    {"name": "warmup", "duration_seconds": 900, "requests_per_second": 1, "concurrency": 2},
+    {"name": "normal", "duration_seconds": 7200, "requests_per_second": 2, "concurrency": 4},
+    {"name": "burst", "duration_seconds": 1800, "requests_per_second": 10, "concurrency": 10},
+    {"name": "recovery", "duration_seconds": 1800, "requests_per_second": 1, "concurrency": 2},
+    {"name": "steady", "duration_seconds": 2700, "requests_per_second": 3, "concurrency": 6}
+  ],
+  "node_wave": {
+    "targets": [2, 10, 2],
+    "hold_seconds": 900,
+    "max_actions": 9,
+    "max_cycles": 3,
+    "repeat": true,
+    "max_scale_in_step": 1
+  },
+  "max_css_actions": 27,
+  "business_config_file": "business.example.json",
+  "guardrails": {
+    "max_error_rate": 0.2,
+    "max_p95_latency_ms": 5000,
+    "bad_cycles": 3
+  }
+}

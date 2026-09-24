@@ -1,0 +1,21 @@
+[Unit]
+Description=JiuwenSwarm AutoOps CSS watcher
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=jiuwenswarm-autoops
+Group=jiuwenswarm-autoops
+EnvironmentFile=-/etc/jiuwenswarm-autoops/css.env
+Environment=AUTOOPS_CSS_ACTION_DB=/var/lib/jiuwenswarm-autoops/css-actions.sqlite3
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /opt/Jiuwenswarm_AutoOps/scripts/css-watch.py --profile-id ${AUTOOPS_CSS_PROFILE_ID} --config-dir /etc/jiuwenswarm-autoops/css --state-dir /var/lib/jiuwenswarm-autoops/css-watch --events-file /var/lib/jiuwenswarm-autoops/events.jsonl
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/jiuwenswarm-autoops
+
+[Install]
+WantedBy=multi-user.target

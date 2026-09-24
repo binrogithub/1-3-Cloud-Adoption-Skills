@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "AutoOpsReleaseGates",
+  "rc_required_tasks": [
+    "REL-01-01", "REL-01-02", "REL-01-03", "REL-01-04",
+    "REL-02-01", "REL-02-02", "REL-02-03", "REL-02-04",
+    "REL-04-01", "REL-04-02", "REL-04-03", "REL-04-04",
+    "REL-06-01", "REL-06-02", "REL-06-03", "REL-06-04",
+    "REL-08-01", "REL-08-02", "REL-08-03", "REL-08-04"
+  ],
+  "ga_required_tasks": [
+    "REL-01-01", "REL-01-02", "REL-01-03", "REL-01-04",
+    "REL-02-01", "REL-02-02", "REL-02-03", "REL-02-04",
+    "REL-03-01", "REL-03-02", "REL-03-03", "REL-03-04",
+    "REL-04-01", "REL-04-02", "REL-04-03", "REL-04-04",
+    "REL-05-01", "REL-05-02", "REL-05-03",
+    "REL-06-01", "REL-06-02", "REL-06-03", "REL-06-04",
+    "REL-07-01", "REL-07-02", "REL-07-03",
+    "REL-08-01", "REL-08-02", "REL-08-03", "REL-08-04"
+  ],
+  "task_requirements": {
+    "REL-07-01": {"mode": "deployed", "min_duration_seconds": 86400},
+    "REL-07-02": {"event_bearing": true},
+    "REL-07-03": {"restore_drill": true}
+  }
+}

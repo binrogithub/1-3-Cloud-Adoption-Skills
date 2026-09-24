@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "defaults": {
+    "max_window_minutes": 1440,
+    "max_limit": 200,
+    "timeout_seconds": 10
+  },
+  "prometheus": {
+    "service_label": "job",
+    "profiles": {
+      "service_up": {
+        "query": "up{{service_label}=\"{service}\"}",
+        "unit": "boolean"
+      },
+      "service_errors": {
+        "query": "sum(rate(http_requests_total{{service_label}=\"{service}\",status=~\"5..\"}[5m]))",
+        "unit": "requests_per_second"
+      },
+      "service_latency": {
+        "query": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{{service_label}=\"{service}\"}[5m])) by (le))",
+        "unit": "seconds"
+      }
+    },
+      "max_points": 2000,
+    "max_series": 50,
+    "max_staleness_seconds": 300
+  },
+  "opensearch": {
+    "index_patterns": ["autoops-events-*", "audit-events-*"],
+    "timestamp_fields": ["@timestamp", "timestamp", "event.created"],
+    "target_fields": ["service.name", "service", "labels.service"],
+    "message_fields": ["message", "event.reason", "error.message"],
+    "correlation_fields": ["trace.id", "span.id", "deployment.id", "change.id"],
+    "source_includes": [
+      "@timestamp", "timestamp", "event.*", "service.name", "service",
+      "labels.service", "message", "error.message", "deployment.id",
+      "change.id", "trace.id", "span.id", "host.name"
+    ],
+    "max_window_minutes": 10080,
+    "max_hits": 200,
+    "timeout_seconds": 10
+  }
+}

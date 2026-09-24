@@ -1,0 +1,16 @@
+id: recovery-verifier
+display_name: Recovery Verifier
+responsibility: Independently verify a published service recovery using read-only state and health probes.
+tools:
+  allow:
+    - service.verify
+    - k8s.business_verify
+    - css.verify
+  deny:
+    - shell.execute
+    - runbook.execute
+    - host.ensure_service
+    - ansible.playbook.run
+execution:
+  mode: inspect
+  require_structured_result: true
