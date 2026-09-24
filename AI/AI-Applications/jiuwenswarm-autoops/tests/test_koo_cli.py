@@ -27,12 +27,12 @@ class KooCliTests(unittest.TestCase):
             "region": "la-south-2",
             "project_id": "project-test",
             "domain_id": "domain-test",
-            "cluster_id": "57913cbd-01cc-49b6-b8d0-f3914b35659a",
+            "cluster_id": "12345678-1234-4123-8123-123456789abc",
         }
 
     def test_cluster_read_uses_hcloud_without_credentials(self):
         response = json.dumps({
-            "id": "57913cbd-01cc-49b6-b8d0-f3914b35659a",
+            "id": "12345678-1234-4123-8123-123456789abc",
             "status": "200",
             "instances": [
                 {"id": "node-1", "type": "ess", "status": "200", "availability_zone": "az1"},
@@ -46,7 +46,7 @@ class KooCliTests(unittest.TestCase):
         self.assertEqual(snapshot["api_adapter"], "koo-cli")
         self.assertIn("CSS", command)
         self.assertIn("ShowClusterDetail", command)
-        self.assertIn("--cluster_id=57913cbd-01cc-49b6-b8d0-f3914b35659a", command)
+        self.assertIn("--cluster_id=12345678-1234-4123-8123-123456789abc", command)
         self.assertIn("--cli-domain-id=domain-test", command)
         self.assertIn("--cli-mode=AKSK", command)
         self.assertNotIn("--cli-access-key", " ".join(command))
@@ -67,7 +67,7 @@ class KooCliTests(unittest.TestCase):
         scale_command = run.call_args_list[1].args[0]
         self.assertIn("CES", metric_command)
         self.assertIn("ShowMetricData", metric_command)
-        self.assertIn("--dim.0=cluster_id,57913cbd-01cc-49b6-b8d0-f3914b35659a", metric_command)
+        self.assertIn("--dim.0=cluster_id,12345678-1234-4123-8123-123456789abc", metric_command)
         self.assertIn("UpdateExtendInstanceStorage", scale_command)
         self.assertIn("--grow.1.type=ess", scale_command)
         self.assertIn("--grow.1.nodesize=1", scale_command)

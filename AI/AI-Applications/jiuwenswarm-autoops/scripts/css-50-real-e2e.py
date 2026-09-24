@@ -415,7 +415,7 @@ def _route(text: str) -> dict[str, Any]:
 def _dispatch_profile() -> dict[str, Any]:
     import autoops_alert_dispatch
     event = {"source": "css", "service": "css-autoops", "target": "css-santiago",
-             "profile_id": "css-santiago", "cluster_id": "57913cbd-01cc-49b6-b8d0-f3914b35659a"}
+             "profile_id": "css-santiago", "cluster_id": "12345678-1234-4123-8123-123456789abc"}
     completed = subprocess.CompletedProcess([], 0, stdout='{"status":"READY"}', stderr="")
     from unittest.mock import patch
     with patch.object(autoops_alert_dispatch.subprocess, "run", return_value=completed) as call:
