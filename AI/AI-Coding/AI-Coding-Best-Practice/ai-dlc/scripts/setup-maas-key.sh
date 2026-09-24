@@ -19,15 +19,24 @@ PY="$(command -v python3.12 || command -v python3 || echo ${HOME}/.local/bin/pyt
 
 DEFAULT_ENV_FILE="$HOME/.jiuwenswarm/config/.env"
 DEFAULT_BASE_URL="https://api-ap-southeast-1.modelarts-maas.com/v1"
-DEFAULT_MODEL_NAME="glm-5.2"
+# DeepSeek-v4.1-flash on Huawei Cloud ModelArts MaaS is the recommended
+# plane model: multimodal (the D0 design arbiter views candidate preview
+# renders through it) and fast enough for the 90s-arbiter budget.
+DEFAULT_MODEL_NAME="deepseek-v4.1-flash"
 
 ENV_FILE="${DEFAULT_ENV_FILE}"
 FORCE=0
+OVERRIDE_MODEL="${AI_DLC_MAAS_MODEL:-}"
+OVERRIDE_BASE_URL="${AI_DLC_MAAS_BASE_URL:-}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --env-file)    ENV_FILE="$2"; shift 2 ;;
     --env-file=*)  ENV_FILE="${1#--env-file=}"; shift ;;
+    --model)       OVERRIDE_MODEL="$2"; shift 2 ;;
+    --model=*)     OVERRIDE_MODEL="${1#--model=}"; shift ;;
+    --base-url)    OVERRIDE_BASE_URL="$2"; shift 2 ;;
+    --base-url=*)  OVERRIDE_BASE_URL="${1#--base-url=}"; shift ;;
     --force)       FORCE=1; shift ;;
     --help|-h)
       cat <<'USAGE'
@@ -35,6 +44,10 @@ setup-maas-key.sh — interactive MaaS credential entry for openjiuwen gateway
 
 Options:
   --env-file <path>  target .env file (default: ~/.jiuwenswarm/config/.env)
+  --model <name>     model written to MODEL_NAME (default: deepseek-v4.1-flash,
+                     the recommended multimodal plane model)
+  --base-url <url>   API base written to API_BASE (default: Huawei Cloud MaaS,
+                     https://api-ap-southeast-1.modelarts-maas.com/v1)
   --force            suppress the "existing value" warning
 USAGE
       exit 0 ;;
@@ -49,18 +62,20 @@ api_key=""
 
 if [[ -t 0 ]]; then
   # Interactive terminal: prompt for each value
-  read -r -p "Huawei Cloud MaaS API base URL [${DEFAULT_BASE_URL}]: " base_url
-  base_url="${base_url:-${DEFAULT_BASE_URL}}"
-  read -r -p "Model name [${DEFAULT_MODEL_NAME}]: " model_name
-  model_name="${model_name:-${DEFAULT_MODEL_NAME}}"
+  default_model="${OVERRIDE_MODEL:-${DEFAULT_MODEL_NAME}}"
+  default_base="${OVERRIDE_BASE_URL:-${DEFAULT_BASE_URL}}"
+  read -r -p "API base URL [${default_base}]: " base_url
+  base_url="${base_url:-${default_base}}"
+  read -r -p "Model name [${default_model}]: " model_name
+  model_name="${model_name:-${default_model}}"
   read -rs -p "Huawei Cloud MaaS API key (input hidden): " api_key
   echo
 else
   # Non-interactive (pipe/CI): read one line from stdin as the key
   IFS= read -r api_key || true
   api_key="${api_key%$'\r'}"
-  base_url="${DEFAULT_BASE_URL}"
-  model_name="${DEFAULT_MODEL_NAME}"
+  base_url="${OVERRIDE_BASE_URL:-${DEFAULT_BASE_URL}}"
+  model_name="${OVERRIDE_MODEL:-${DEFAULT_MODEL_NAME}}"
 fi
 
 # Reject empty / whitespace-only key

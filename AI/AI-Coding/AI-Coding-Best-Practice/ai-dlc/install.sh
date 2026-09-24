@@ -172,17 +172,27 @@ print("\n".join(json.loads(sys.argv[1])["writable_extras"]))' "$audit" \
         fi
       done
 
-  # MaaS gateway credentials: warn (not fail) if API_KEY is empty in the
-  # gateway .env — the gateway can still run for non-MaaS models, but the
-  # planning dispatch to GLM-5.2 will fail without it.
+  # MaaS gateway credentials and model: warn (not fail) if API_KEY is
+  # empty in the gateway .env — the gateway can still run for non-MaaS
+  # models, but the planning dispatch will fail without it. The
+  # configured MODEL_NAME is reported beside the key so a stale model
+  # (anything that is not the recommended deepseek-v4.1-flash) is
+  # visible at doctor time, not at first dispatch.
   local env_file="${AI_DLC_ENV_FILE:-$HOME/.jiuwenswarm/config/.env}"
   if [[ -f "${env_file}" ]]; then
-    local maas_key=""
+    local maas_key="" maas_model=""
     maas_key="$(grep '^API_KEY=' "${env_file}" 2>/dev/null | head -1 | cut -d= -f2- || true)"
+    maas_model="$(grep '^MODEL_NAME=' "${env_file}" 2>/dev/null | head -1 | cut -d= -f2- || true)"
     if [[ -n "${maas_key}" ]]; then
       ok "MaaS API_KEY present in ${env_file}"
+      if [[ -n "${maas_model}" ]]; then
+        ok "MaaS model: ${maas_model}"
+        if [[ "${maas_model}" != "deepseek-v4.1-flash" ]]; then
+          warn "MaaS model is '${maas_model}' — the recommended plane model is deepseek-v4.1-flash (multimodal; the design arbiter's visual pass needs it). Re-run: ./install.sh --setup-maas-key"
+        fi
+      fi
     else
-      warn "MaaS API_KEY empty or missing in ${env_file} — gateway dispatch to GLM-5.2 will fail. Run: ./install.sh --setup-maas-key"
+      warn "MaaS API_KEY empty or missing in ${env_file} — gateway dispatch will fail. Run: ./install.sh --setup-maas-key"
     fi
   else
     warn "gateway .env not found at ${env_file} — run: ./install.sh --setup-maas-key"
