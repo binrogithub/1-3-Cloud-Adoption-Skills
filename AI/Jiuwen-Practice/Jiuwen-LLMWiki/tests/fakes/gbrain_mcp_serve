@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""Fake `gbrain serve` (MCP stdio) replaying the shapes probed on 247 (PRD V6 AG-M2).
+Env knobs: FAKE_MCP_DIR (pages as <slug-with-dashes>.md mirror files); kill via FAKE_MCP_DIE_AFTER."""
+import json, os, sys, select, time
+
+PAGES = {
+    "services/obs": {"slug": "services/obs", "id": 1, "type": "service",
+                     "title": "Object Storage Service (OBS)",
+                     "compiled_truth": "# Object Storage Service (OBS)\n\n## Compiled truth\nOBS max object 48.8 TB [S:aaaaaaaaaaaaaaaa]."},
+    "regions/la-sao-paulo1": {"slug": "regions/la-sao-paulo1", "id": 2, "type": "region",
+                              "title": "LA-Sao Paulo1", "compiled_truth": "3 AZs [S:bbbbbbbbbbbbbbbb]."},
+}
+
+die_after = float(os.environ.get("FAKE_MCP_DIE_AFTER", "0") or 0)
+t0 = time.time()
+
+def reply(rid, result):
+    sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": rid, "result": result}) + "\n")
+    sys.stdout.flush()
+
+def text(rid, s):
+    reply(rid, {"content": [{"type": "text", "text": s}], "isError": False})
+
+for line in sys.stdin:
+    if die_after and time.time() - t0 > die_after:
+        sys.exit(1)
+    try:
+        msg = json.loads(line)
+    except Exception:
+        continue
+    m, rid = msg.get("method"), msg.get("id")
+    if m == "initialize":
+        reply(rid, {"protocolVersion": "2024-11-05",
+                    "serverInfo": {"name": "gbrain-fake", "version": "0.53"}})
+    elif m == "tools/call":
+        name = (msg.get("params") or {}).get("name")
+        args = (msg.get("params") or {}).get("arguments") or {}
+        if name == "search":
+            q = args.get("query", "").lower()
+            hits = [dict(p, chunk_text=p["compiled_truth"]) for p in PAGES.values()
+                    if any(w in p["compiled_truth"].lower() or w in p["title"].lower()
+                           for w in q.split())]
+            text(rid, json.dumps(hits[:args.get("limit", 6)], ensure_ascii=False))
+        elif name == "get_page":
+            slug = args.get("slug", "")
+            if slug in PAGES:
+                text(rid, json.dumps(PAGES[slug], ensure_ascii=False))
+            else:   # replay real gbrain 0.53 shape: isError + page_not_found
+                reply(rid, {"content": [{"type": "text", "text": json.dumps(
+                    {"error": "page_not_found", "message": f"Page not found: {slug}"})}],
+                    "isError": True})
+        elif name == "list_pages":
+            text(rid, json.dumps([{"slug": s} for s in PAGES], ensure_ascii=False))
+        elif name == "put_page":
+            text(rid, json.dumps({"ok": True, "slug": args.get("slug"), "forced": bool(args.get("force"))}))
+        else:
+            reply(rid, {"content": [], "isError": True})

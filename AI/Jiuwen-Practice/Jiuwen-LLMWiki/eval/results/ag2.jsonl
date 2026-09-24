@@ -1,0 +1,5 @@
+{"answers": 15, "detection": 0.26666666666666666, "orig_pass": 1.0, "pass": false, "at": "2026-09-23T20:12:30Z"}
+{"answers": 20, "detection": 0.7, "orig_pass": 1.0, "pass": false, "at": "2026-09-23T20:19:55Z"}
+{"answers": 20, "detection": 1.0, "orig_pass": 1.0, "pass": true, "at": "2026-09-23T20:20:45Z"}
+{"answers": 20, "detection": 1.0, "orig_pass": 1.0, "pass": true, "at": "2026-09-23T23:59:29Z"}
+{"answers": 20, "detection": 1.0, "orig_pass": 1.0, "pass": true, "at": "2026-09-24T09:52:58Z"}

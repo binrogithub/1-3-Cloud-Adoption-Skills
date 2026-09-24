@@ -1,0 +1,6 @@
+[Unit]
+Description=LLMWiki nightly lint + reverify
+
+[Service]
+Type=oneshot
+ExecStart=/root/HuaweiCloudLatam_LLMWiki/deploy/lint-nightly.sh

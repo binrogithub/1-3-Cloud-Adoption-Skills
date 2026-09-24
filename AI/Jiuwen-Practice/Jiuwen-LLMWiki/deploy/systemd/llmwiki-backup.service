@@ -1,0 +1,6 @@
+[Unit]
+Description=LLMWiki nightly backup (pg_dump + L1/mirror tarball)
+
+[Service]
+Type=oneshot
+ExecStart=/root/HuaweiCloudLatam_LLMWiki/deploy/backup.sh

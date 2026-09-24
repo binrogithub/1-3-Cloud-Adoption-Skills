@@ -1,0 +1,18 @@
+{
+  "title": "LLMWiki",
+  "uid": "llmwiki",
+  "schemaVersion": 39,
+  "panels": [
+    {"type": "timeseries", "title": "Asks total", "gridPos": {"x": 0, "y": 0, "w": 8, "h": 8},
+     "targets": [{"expr": "llmwiki_asks_total"}]},
+    {"type": "timeseries", "title": "Ask verdicts by status", "gridPos": {"x": 8, "y": 0, "w": 8, "h": 8},
+     "targets": [{"expr": "sum by (status) (llmwiki_ask_status_total)"}]},
+    {"type": "timeseries", "title": "Tokens per ask (last)", "gridPos": {"x": 16, "y": 0, "w": 8, "h": 8},
+     "targets": [{"expr": "llmwiki_ask_input_tokens_total"}, {"expr": "llmwiki_ask_output_tokens_total"}]},
+    {"type": "stat", "title": "TTFT ms (last ask)", "gridPos": {"x": 0, "y": 8, "w": 8, "h": 6},
+     "targets": [{"expr": "llmwiki_ask_ttft_ms"}]},
+    {"type": "stat", "title": "Service up", "gridPos": {"x": 8, "y": 8, "w": 8, "h": 6},
+     "targets": [{"expr": "llmwiki_up"}]}
+  ],
+  "description": "Scrape http://127.0.0.1:20080/metrics (existing Prometheus, E9-S5). Counters reset on web restart by design; ask.jsonl is the durable log."
+}

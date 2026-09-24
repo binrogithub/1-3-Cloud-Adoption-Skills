@@ -1,0 +1,16 @@
+[Unit]
+Description=LLMWiki web UI + API (stdlib, glue only)
+After=network-online.target
+
+[Service]
+Type=simple
+Environment=HOME=/root
+Environment=LLMWIKI_BIND_EXTRA=172.20.0.1
+Environment=PATH=/root/.local/bin:/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+WorkingDirectory=/root/HuaweiCloudLatam_LLMWiki
+ExecStart=/root/HuaweiCloudLatam_LLMWiki/bin/llmwiki serve --host 127.0.0.1 --port 20080
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

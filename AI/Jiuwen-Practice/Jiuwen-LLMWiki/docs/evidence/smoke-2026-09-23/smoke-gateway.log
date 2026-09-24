@@ -1,0 +1,30 @@
+2026-09-24 02:35:18.954 INFO jiuwenswarm.gateway: [App] Gateway starting, connecting AgentServer: ws://127.0.0.1:20092
+2026-09-24 02:35:18.979 INFO jiuwenswarm.common.utils: [ExtensionLoader] 开始搜索扩展路径: [PosixPath('/root/.local/share/uv/tools/jiuwenswarm/lib/python3.12/site-packages/jiuwenswarm/extensions')]
+2026-09-24 02:35:18.980 INFO jiuwenswarm.common.utils: [ExtensionManager] 发现扩展路径: [PosixPath('/root/.local/share/uv/tools/jiuwenswarm/lib/python3.12/site-packages/jiuwenswarm/extensions/symphony'), PosixPath('/root/.local/share/uv/tools/jiuwenswarm/lib/python3.12/site-packages/jiuwenswarm/extensions/agent_client')]
+2026-09-24 02:35:18.983 INFO jiuwenswarm.common.utils: [ExtensionLoader] 扩展 symphony 依赖 json-repair 已安装
+2026-09-24 02:35:18.984 INFO jiuwenswarm.common.utils: [ExtensionLoader] 扩展 symphony 依赖 rich 已安装
+2026-09-24 02:35:19.030 INFO jiuwenswarm.common.utils: [ExtensionManager] 加载 [<jiuwenswarm.loaded_extension.symphony.SymphonyExtension object at 0x7c74192bbef0>]
+2026-09-24 02:35:19.056 INFO jiuwenswarm.gateway: [App] extensions loaded: 1
+2026-09-24 02:35:19.057 INFO jiuwenswarm.gateway.routing.agent_client: [WebSocketAgentServerClient] 正在连接: ws://127.0.0.1:20092
+2026-09-24 02:35:19.061 INFO jiuwenswarm.gateway.routing.agent_client: [WebSocketAgentServerClient] 已连接: ws://127.0.0.1:20092
+2026-09-24 02:35:19.062 INFO jiuwenswarm.gateway.routing.agent_client: [WebSocketAgentServerClient] connect 首帧(raw): {"type": "event", "event": "connection.ack", "payload": {"status": "ready"}}
+2026-09-24 02:35:19.063 INFO jiuwenswarm.gateway.routing.agent_client: [WebSocketAgentServerClient] connect 首帧(parsed): {"event": "connection.ack", "payload": {"status": "ready"}, "type": "event"}
+2026-09-24 02:35:19.064 INFO jiuwenswarm.gateway.routing.agent_client: [WebSocketAgentServerClient] 收到 connection.ack，AgentServer 已就绪
+2026-09-24 02:35:19.064 INFO jiuwenswarm.gateway.routing.agent_client: [WebSocketAgentServerClient] 消息接收任务已启动
+2026-09-24 02:35:19.065 INFO jiuwenswarm.gateway: [App] connected to AgentServer: ws://127.0.0.1:20092
+2026-09-24 02:35:19.111 INFO jiuwenswarm.gateway.message_handler.message_handler: [MessageHandler] 转发循环已启动 (_user_messages -> AgentServer -> _robot_messages)
+2026-09-24 02:35:19.160 INFO jiuwenswarm.gateway.heartbeat.heartbeat: Gateway heartbeat started (every 3600.0s)
+2026-09-24 02:35:19.161 INFO jiuwenswarm.common.cleanup: background_cleanup: started (first_delay=600s, interval=86400s, retention=30d)
+2026-09-24 02:35:19.162 INFO jiuwenswarm.gateway.channel_manager.channel_manager: [ChannelManager] 已注册 Channel: channel_id=a2a, 当前共 4 个
+2026-09-24 02:35:19.162 INFO jiuwenswarm.gateway: [App] channels.dingtalk.enabled = false, DingTalkChannel disabled
+2026-09-24 02:35:19.163 INFO jiuwenswarm.gateway: [App] channels.telegram.enabled = false, TelegramChannel disabled
+2026-09-24 02:35:19.163 INFO jiuwenswarm.gateway: [App] channels.discord.enabled = false, DiscordChannel disabled
+2026-09-24 02:35:19.164 INFO jiuwenswarm.gateway: [App] channels.whatsapp.enabled = false, WhatsAppChannel disabled
+2026-09-24 02:35:19.164 INFO jiuwenswarm.gateway: [App] channels.wecom.enabled = false, WecomChannel disabled
+2026-09-24 02:35:19.165 INFO jiuwenswarm.gateway: [App] channels.wechat.enabled = false, WechatChannel disabled
+2026-09-24 02:35:19.165 INFO jiuwenswarm.gateway.channel_manager.channel_manager: [ChannelManager] 出队派发循环已启动 (robot_messages -> Channel.send)
+2026-09-24 02:35:19.166 INFO jiuwenswarm.gateway.cron.scheduler: [Cron] scheduler started
+2026-09-24 02:35:19.190 INFO jiuwenswarm.gateway.channel_manager.protocol.a2a.a2a_connect: [A2AChannel] disabled by config
+2026-09-24 02:35:19.190 INFO jiuwenswarm.gateway: [App] Gateway server started: ws://127.0.0.1:20001 [/acp, /tui]
+2026-09-24 02:35:19.191 INFO jiuwenswarm.gateway: [App] started: Web ws://127.0.0.1:20000/ws  AgentServer: ws://127.0.0.1:20092  Press Ctrl+C to exit.
+2026-09-24 02:35:19.191 INFO jiuwenswarm.gateway.channel_manager.web.web_connect: WebChannel 已启动: ws://127.0.0.1:20000/ws

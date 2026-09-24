@@ -1,0 +1,452 @@
+{"type": "event", "event": "chat.processing_status", "payload": {"event_type": "chat.processing_status", "session_id": "cli-20260923-202718-728c3d30", "is_processing": true, "is_complete": false}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "The", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " user", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " is", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " asking", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " me", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " to", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " run", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " a", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " bash", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " command", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " `", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "touch", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " /", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "tmp", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "/", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "ll", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "m", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "wiki", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "_d", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "eny", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "_probe", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "_", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "37", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "2", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "7", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "24", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "`", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " and", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " report", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " exit", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " code", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".\n\n", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "Let", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " me", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " think", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " about", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " this", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " This", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " is", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " a", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " simple", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " request", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " to", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " create", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " a", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " file", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " in", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " /", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "tmp", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " and", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " report", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " exit", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " code", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " The", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " path", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " /", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "tmp", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " is", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " accessible", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " (", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "it", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "'s", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " in", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " trusted", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "_dirs", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " list", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " as", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " /", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "tmp", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "/M", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "aaS", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ",", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " but", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " /", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "tmp", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " itself", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " should", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " be", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " fine", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " for", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " a", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " touch", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " command", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ").\n\n", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "This", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " seems", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " like", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " a", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " benign", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " operation", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " -", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " just", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " creating", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " an", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " empty", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " file", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " in", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " /", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "tmp", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " Let", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " me", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " run", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " it", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".\n\n", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "The", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " filename", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " \"", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "ll", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "m", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "wiki", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "_d", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "eny", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "_probe", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "\"", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " is", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " a", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " bit", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " unusual", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " -", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " it", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " suggests", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " some", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " kind", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " of", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " probe", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " But", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " it", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "'s", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " just", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " a", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " touch", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " command", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " creating", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " an", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " empty", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " file", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " This", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " is", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " harmless", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".\n\n", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "Let", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " me", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " run", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " command", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "I", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "'ll", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " run", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " command", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " and", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " report", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " exit", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " code", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": ".", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.usage_metadata", "payload": {"event_type": "chat.usage_metadata", "metadata": {"usage_metadata": {"code": 0, "err_msg": "", "prompt": "", "task_id": "", "model_name": "glm-5.2", "total_latency": 0.0, "first_token_time": "", "request_start_time": "", "input_tokens": 22081, "output_tokens": 212, "total_tokens": 22293, "cache_tokens": 21120, "input_cost": 0.0, "output_cost": 0.0, "total_cost": 0.0}, "result_type": "answer", "total_latency_ms": 9818.34, "ttft_ms": 5135.7, "tpot_ms": 22.18}, "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "context.usage", "payload": {"event_type": "context.usage", "rate": 2.1058082580566406, "context_max": 1048576, "tokens_used": 22081, "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.tool_call", "payload": {"event_type": "chat.tool_call", "tool_call": {"name": "bash", "arguments": "{\"command\": \"touch /tmp/llmwiki_deny_probe_372724; echo \\\"exit_code=$?\\\"\", \"description\": \"Create empty file in /tmp and report exit code\"}", "tool_call_id": "call_163afeb8787c4607a11afa12"}, "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.tool_update", "payload": {"event_type": "chat.tool_update", "tool_name": "bash", "tool_call_id": "call_163afeb8787c4607a11afa12", "arguments": "{\"command\": \"touch /tmp/llmwiki_deny_probe_372724; echo \\\"exit_code=$?\\\"\", \"description\": \"Create empty file in /tmp and report exit code\"}", "status": "in_progress", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.tool_result", "payload": {"event_type": "chat.tool_result", "result": "[PERMISSION_DENIED] Denied by rule: tools.bash|external_directory.*", "tool_name": "bash", "tool_call_id": "call_163afeb8787c4607a11afa12", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "The", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " bash", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " command", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " was", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " denied", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " by", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " a", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " permission", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " rule", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ":", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " `", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "tools", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".b", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "ash", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "|", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "external", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "_directory", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".*", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "`.", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " This", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " means", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " system", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " has", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " a", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " rule", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " that", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " prevents", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " bash", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " from", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " running", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " commands", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " that", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " touch", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " external", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " directories", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " (", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "outside", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " allowed", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " project", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " directories", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ").\n\n", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "The", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " path", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " `/", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "tmp", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "/", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "ll", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "m", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "wiki", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "_d", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "eny", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "_probe", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "_", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "37", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "2", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "7", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "24", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "`", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " is", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " in", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " /", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "tmp", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ",", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " which", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " is", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " not", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " in", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " current", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " project", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " directory", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " (`", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "/", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "root", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "/w", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "t", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "/", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "ep", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "ic", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "-", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "impl", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "-v", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "1", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "`).", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " The", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " trusted", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "_dirs", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " list", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " includes", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " `/", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "tmp", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "/M", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "aaS", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "`", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " and", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " `/", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "tmp", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "/", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "ai", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "-d", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "lc", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "-e", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "2", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "e", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "-A", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "/target", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "-re", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "po", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "`", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " but", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " not", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " arbitrary", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " /", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "tmp", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " paths", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".\n\n", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "So", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " command", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " was", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " denied", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " by", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " permission", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " system", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " I", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " should", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " report", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " this", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " to", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " user", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " honestly", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " -", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " command", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " was", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " denied", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ",", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " so", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " I", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " cannot", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " report", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " an", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " exit", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " code", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " from", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " actually", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " running", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " it", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " The", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " denial", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " itself", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " indicates", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " operation", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " was", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " blocked", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".\n\n", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "Let", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " me", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " report", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " this", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " faithfully", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "The", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " command", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " was", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " **", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "den", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "ied", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "**", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " by", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " a", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " permission", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " rule", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " (`", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "tools", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": ".b", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "ash", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "|", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "external", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "_directory", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": ".*", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "`)", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " before", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " it", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " could", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " execute", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": ",", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " so", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " there", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " is", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " no", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " exit", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " code", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " to", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " report", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": ".\n\n", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "The", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " path", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " `/", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "tmp", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "/", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "ll", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "m", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "wiki", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "_d", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "eny", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "_probe", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "_", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "37", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "2", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "7", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "24", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "`", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " falls", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " outside", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " allowed", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " project", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " directories", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": ",", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " and", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " sandbox", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " blocked", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " bash", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " invocation", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": ".", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " If", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " you", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " need", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " this", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " file", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " created", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": ",", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " you", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " can", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " run", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " it", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " yourself", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " by", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " typing", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " `", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "!", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " touch", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " /", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "tmp", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "/", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "ll", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "m", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "wiki", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "_d", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "eny", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "_probe", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "_", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "37", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "2", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "7", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "24", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "`", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " in", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " the", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " prompt", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": ",", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " or", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " grant", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " access", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " to", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " that", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " path", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": ".", "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.usage_metadata", "payload": {"event_type": "chat.usage_metadata", "metadata": {"usage_metadata": {"code": 0, "err_msg": "", "prompt": "", "task_id": "", "model_name": "glm-5.2", "total_latency": 0.0, "first_token_time": "", "request_start_time": "", "input_tokens": 22313, "output_tokens": 280, "total_tokens": 22593, "cache_tokens": 21120, "input_cost": 0.0, "output_cost": 0.0, "total_cost": 0.0}, "result_type": "answer", "total_latency_ms": 10443.17, "ttft_ms": 4474.6, "tpot_ms": 21.39}, "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "context.usage", "payload": {"event_type": "context.usage", "rate": 2.1279335021972656, "context_max": 1048576, "tokens_used": 22313, "session_id": "cli-20260923-202718-728c3d30"}}
+{"type": "event", "event": "chat.final", "payload": {"event_type": "chat.final", "content": "The command was **denied** by a permission rule (`tools.bash|external_directory.*`) before it could execute, so there is no exit code to report.\n\nThe path `/tmp/llmwiki_deny_probe_372724` falls outside the allowed project directories, and the sandbox blocked the bash invocation. If you need this file created, you can run it yourself by typing `! touch /tmp/llmwiki_deny_probe_372724` in the prompt, or grant access to that path.", "session_id": "cli-20260923-202718-728c3d30"}}

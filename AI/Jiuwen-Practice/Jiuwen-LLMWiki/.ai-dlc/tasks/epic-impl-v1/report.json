@@ -1,0 +1,113 @@
+{
+  "outcome": "merge_pending",
+  "task_id": "epic-impl-v1",
+  "route": "planned",
+  "base_sha": "8e0f2fa78985e06c17d7574316392fd1deddac9c",
+  "gates": [
+    "G-DELIVER-1",
+    "MERGE_GATE"
+  ],
+  "repo_head": "8e0f2fa78985e06c17d7574316392fd1deddac9c",
+  "head_advanced": false,
+  "landed_files": 60,
+  "landed_bytes": 363505,
+  "work_ref": {
+    "ref": "refs/heads/task/epic-impl-v1",
+    "kind": "task_branch",
+    "resolved_by": "recorded",
+    "sha": "327a1625568bbc6068862ffd61ffdb4cc0d6a8d4",
+    "convention": "task/epic-impl-v1",
+    "recorded_branch": "task/epic-impl-v1",
+    "other_task_branches": [],
+    "mismatch": null
+  },
+  "measured_ref": "refs/heads/task/epic-impl-v1",
+  "ref_kind": "task_branch",
+  "files": [
+    "EPICS_HUAWEICLOUD_LATAM_LLMWIKI_V1.md",
+    "deploy/backup.sh",
+    "deploy/caddy-llmwiki.conf",
+    "deploy/grafana-dashboard.json",
+    "deploy/lint-nightly.sh",
+    "deploy/resource_check.sh",
+    "deploy/restore-test.sh",
+    "deploy/systemd/llmwiki-backup.service",
+    "deploy/systemd/llmwiki-backup.timer",
+    "deploy/systemd/llmwiki-lint.service"
+  ],
+  "route_check": {
+    "route": "planned",
+    "threshold": 4,
+    "threshold_source": "/root/.zcode/skills/ai-dlc/config/collapsed.config.yaml",
+    "measured_files": 60,
+    "files": [
+      "EPICS_HUAWEICLOUD_LATAM_LLMWIKI_V1.md",
+      "deploy/backup.sh",
+      "deploy/caddy-llmwiki.conf",
+      "deploy/grafana-dashboard.json",
+      "deploy/lint-nightly.sh",
+      "deploy/resource_check.sh",
+      "deploy/restore-test.sh",
+      "deploy/systemd/llmwiki-backup.service",
+      "deploy/systemd/llmwiki-backup.timer",
+      "deploy/systemd/llmwiki-lint.service"
+    ],
+    "excluded_patterns": [
+      ".ai-dlc/**",
+      "CLAUDE.md",
+      "findings.json",
+      "__pycache__/**",
+      "*.pyc",
+      ".pytest_cache/**",
+      "audits/**",
+      ".ctx-echo",
+      ".skill-echo",
+      "blueprint.json",
+      "openspec/**",
+      "evidence/**",
+      ".agent_history/**",
+      "coding_memory/**",
+      "prompt_attachment/**"
+    ],
+    "excluded_count": 0,
+    "work_ref": {
+      "ref": "refs/heads/task/epic-impl-v1",
+      "kind": "task_branch",
+      "resolved_by": "recorded",
+      "sha": "327a1625568bbc6068862ffd61ffdb4cc0d6a8d4",
+      "convention": "task/epic-impl-v1",
+      "recorded_branch": "task/epic-impl-v1",
+      "other_task_branches": [],
+      "mismatch": null
+    }
+  },
+  "spec": {
+    "spec_valid": true,
+    "spec_state": "spec_valid",
+    "validator_rc": 0,
+    "verdict_ts": "2026-09-23T20:37:05Z",
+    "session": "validate-epic-impl-v1-4"
+  },
+  "design_auto_skipped": "not_applicable",
+  "design": {
+    "design_state": "design_not_applicable",
+    "surface": {
+      "applicable": false,
+      "classes": [],
+      "surface_files": [],
+      "surface_files_total": 0,
+      "measured_files": 60
+    }
+  },
+  "delivered": false,
+  "correctness": {
+    "machine_checked": false,
+    "criteria_applied": [
+      "spec validity (openspec validate --strict)",
+      "human merge approval",
+      "design state (visible information — v2 product-side artifacts and D3 verify checks, never a merge gate)"
+    ],
+    "why": "no machine judges artifact correctness — the human reads the deliverable; this report does not imply verification"
+  },
+  "human_state": "Needs your decision"
+}

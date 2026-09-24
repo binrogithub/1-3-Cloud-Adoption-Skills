@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+"""Fake `jiuwenswarm chat --jsonl` emitting the event shape captured on 247 (2026-09-23).
+
+FAKE_OUT         file whose content is the agent's final answer
+FAKE_RC          exit code (default 0; 3 = gateway down)
+FAKE_NO_DISPATCH if set, no tool_call naming the llmwiki sub-agent is emitted
+FAKE_PROMPT_LOG  if set, the prompt (last argv) is written there
+FAKE_MAIN_TEXT   if set, the main agent's chat.final differs from the role output (paraphrase)
+"""
+import json
+import os
+import sys
+
+rc = int(os.environ.get("FAKE_RC", "0"))
+if os.environ.get("FAKE_PROMPT_LOG"):
+    open(os.environ["FAKE_PROMPT_LOG"], "w").write(sys.argv[-1])
+if rc == 3:
+    print("gateway unreachable", file=sys.stderr)
+    sys.exit(3)
+sid = "cli-fake"
+out = open(os.environ["FAKE_OUT"]).read() if os.environ.get("FAKE_OUT") and os.path.exists(os.environ["FAKE_OUT"]) else ""
+
+
+def ev(name, **payload):
+    payload.update(event_type=name, session_id=sid)
+    print(json.dumps({"type": "event", "event": name, "payload": payload}, ensure_ascii=False))
+
+
+ev("chat.processing_status", is_processing=True, is_complete=False)
+if os.environ.get("FAKE_REASONING", "1") != "off":
+    for chunk in ("Let me ", "check the evidence pack ", "for the relevant page. "):
+        ev("chat.reasoning", content=chunk)
+    ev("chat.tool_update", update="llmwiki sub-agent running")
+if not os.environ.get("FAKE_NO_DISPATCH"):
+    ev("chat.tool_call", tool_call={"name": "Agent", "arguments": json.dumps({"description": "x", "prompt": "..."}),
+                                    "tool_call_id": "call_1"})
+    data = {"output": out, "agent_id": "llmwiki"}
+    ev("chat.tool_result", result=f"success=True data={data!r} error=None", tool_name="Agent", tool_call_id="call_1")
+out = os.environ.get("FAKE_MAIN_TEXT", out)
+for i in range(0, len(out), 7):
+    ev("chat.delta", content=out[i:i + 7])
+ev("chat.usage_metadata", metadata={"usage_metadata": {"input_tokens": 1234, "output_tokens": 56},
+                                    "total_latency_ms": 900.0, "ttft_ms": 120.0})
+ev("chat.final", content=out)
+sys.exit(rc)

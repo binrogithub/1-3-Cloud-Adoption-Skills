@@ -1,0 +1,177 @@
+{"type": "event", "event": "chat.processing_status", "payload": {"event_type": "chat.processing_status", "session_id": "cli-20260923-183259-ee4e95c6", "is_processing": true, "is_complete": false}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "The", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " user", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " wants", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " me", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " to", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " delegate", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " this", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " whole", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " request", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " to", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " ll", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "m", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "wiki", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " sub", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "-agent", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " ver", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "batim", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " and", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " return", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " its", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " output", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " ver", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "batim", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " The", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " request", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " contains", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " a", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " L", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "LM", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "W", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "IK", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "I", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "_TASK", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " with", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " a", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " question", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " about", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " maximum", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " OBS", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " object", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " size", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ",", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " with", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " an", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " evidence", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " pack", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".\n\n", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "Let", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " me", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " delegate", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " this", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " to", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " ll", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "m", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "wiki", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " agent", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.usage_metadata", "payload": {"event_type": "chat.usage_metadata", "metadata": {"usage_metadata": {"code": 0, "err_msg": "", "prompt": "", "task_id": "", "model_name": "glm-5.2", "total_latency": 0.0, "first_token_time": "", "request_start_time": "", "input_tokens": 21606, "output_tokens": 172, "total_tokens": 21778, "cache_tokens": 0, "input_cost": 0.0, "output_cost": 0.0, "total_cost": 0.0}, "result_type": "answer", "total_latency_ms": 9789.25, "ttft_ms": 6210.18, "tpot_ms": 20.38}, "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "context.usage", "payload": {"event_type": "context.usage", "rate": 2.0605087280273438, "context_max": 1048576, "tokens_used": 21606, "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.tool_call", "payload": {"event_type": "chat.tool_call", "tool_call": {"name": "Agent", "arguments": "{\"description\": \"Answer OBS object size question\", \"prompt\": \"LLMWIKI_TASK: answer\\nDelegate this whole request to the llmwiki sub-agent verbatim and return its output verbatim.\\nANSWER_LANGUAGE: en\\nQUESTION: What is the maximum OBS object size?\\nEVIDENCE PACK:\\n<<<PAGE slug=services/obs stale=false>>>\\nA single object can be up to 48.8 TB [S:aaaaaaaaaaaaaaaa].\\n<<<END PAGE>>>\", \"subagent_type\": \"llmwiki\"}", "tool_call_id": "call_7cbf6e63a19444de815a2cf2"}, "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.tool_update", "payload": {"event_type": "chat.tool_update", "tool_name": "Agent", "tool_call_id": "call_7cbf6e63a19444de815a2cf2", "arguments": "{\"description\": \"Answer OBS object size question\", \"prompt\": \"LLMWIKI_TASK: answer\\nDelegate this whole request to the llmwiki sub-agent verbatim and return its output verbatim.\\nANSWER_LANGUAGE: en\\nQUESTION: What is the maximum OBS object size?\\nEVIDENCE PACK:\\n<<<PAGE slug=services/obs stale=false>>>\\nA single object can be up to 48.8 TB [S:aaaaaaaaaaaaaaaa].\\n<<<END PAGE>>>\", \"subagent_type\": \"llmwiki\"}", "status": "in_progress", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "The", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " user", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " is", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " asking me to", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " answer a question", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " about the", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " maximum OBS object", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " size, using", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the evidence", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " pack provided.\n\n", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "The evidence pack", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " contains:\n", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "-", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " Page slug:", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " services/obs", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ", stale:", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " false\n-", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " Content: \"", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "A single object", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " can be up", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " to 48", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".8 TB", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " [S:", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "aaaaaaaaaaaaaaaa].", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "\"\n\nThe", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " question is", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ": \"What", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " is the maximum", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " OBS object size", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "?\"\n\n", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "The answer is", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " in the evidence", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " pack: A", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " single object can", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " be up to", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " 48.", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "8 TB.\n\n", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "I need to", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ":\n1.", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " Write the", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " answer in English", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "2. Keep", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " Huawei", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " Cloud product names", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " in official", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " English form\n", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "3. End", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " every", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " factual sentence with", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the citation in", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " the form [", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "W:<", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "slug>]\n", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "4. Copy", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " numbers exactly", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " as they appear", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "\n\nSo the", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " answer should be", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ": A", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " single object can", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " be up to", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " 48.", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "8 TB [", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "W:services", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "/obs].", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "A", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " single object can", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " be up to", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " 48.", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "8 TB [", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "W:services", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "/obs].", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.usage_metadata", "payload": {"event_type": "chat.usage_metadata", "metadata": {"usage_metadata": {"code": 0, "err_msg": "", "prompt": "", "task_id": "", "model_name": "glm-5.2", "total_latency": 0.0, "first_token_time": "", "request_start_time": "", "input_tokens": 992, "output_tokens": 193, "total_tokens": 1185, "cache_tokens": 0, "input_cost": 0.0, "output_cost": 0.0, "total_cost": 0.0}, "result_type": "answer", "total_latency_ms": 10143.84, "ttft_ms": 5742.9, "tpot_ms": 22.91}, "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.tool_result", "payload": {"event_type": "chat.tool_result", "result": "success=True data={'output': 'A single object can be up to 48.8 TB [W:services/obs].', 'agent_id': 'llmwiki'} error=None", "tool_name": "Agent", "tool_call_id": "call_7cbf6e63a19444de815a2cf2", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "The", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " ll", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "m", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "wiki", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " agent", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " returned", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " its", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " output", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " I", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " need", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " to", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " return", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " it", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": " ver", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": "batim", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.reasoning", "payload": {"event_type": "chat.reasoning", "content": ".", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "A", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " single", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " object", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " can", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " be", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " up", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " to", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "48", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": ".", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "8", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " TB", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": " [", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "W", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": ":", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "services", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "/", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "obs", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.delta", "payload": {"event_type": "chat.delta", "content": "].", "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.usage_metadata", "payload": {"event_type": "chat.usage_metadata", "metadata": {"usage_metadata": {"code": 0, "err_msg": "", "prompt": "", "task_id": "", "model_name": "glm-5.2", "total_latency": 0.0, "first_token_time": "", "request_start_time": "", "input_tokens": 21820, "output_tokens": 38, "total_tokens": 21858, "cache_tokens": 21376, "input_cost": 0.0, "output_cost": 0.0, "total_cost": 0.0}, "result_type": "answer", "total_latency_ms": 6315.18, "ttft_ms": 5539.61, "tpot_ms": 19.13}, "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "context.usage", "payload": {"event_type": "context.usage", "rate": 2.0809173583984375, "context_max": 1048576, "tokens_used": 21820, "session_id": "cli-20260923-183259-ee4e95c6"}}
+{"type": "event", "event": "chat.final", "payload": {"event_type": "chat.final", "content": "A single object can be up to 48.8 TB [W:services/obs].", "session_id": "cli-20260923-183259-ee4e95c6"}}

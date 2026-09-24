@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# LLMWiki CLI launcher (stdlib-only Python >= 3.11).
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PY="${LLMWIKI_PYTHON:-$(command -v python3.12 || command -v python3)}"
+exec env PYTHONPATH="$here${PYTHONPATH:+:$PYTHONPATH}" "$PY" -m llmwiki.cli "$@"
