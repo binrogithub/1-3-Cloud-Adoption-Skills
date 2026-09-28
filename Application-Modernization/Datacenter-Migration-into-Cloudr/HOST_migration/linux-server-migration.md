@@ -81,7 +81,8 @@ systemctl list-units --type=service --state=running
 
 ```bash
 # Download and install agent
-wget https://sms-agent-package-url
+wget "https://sms-resource-intl-ap-southeast-3.obs.ap-southeast-3.myhuaweicloud.com/SMS-Agent.tar.gz" -O SMS-Agent.tar.gz
+tar xzf SMS-Agent.tar.gz
 sudo dpkg -i sms-agent.deb  # Debian/Ubuntu
 # or
 sudo rpm -ivh sms-agent.rpm  # RHEL/CentOS
