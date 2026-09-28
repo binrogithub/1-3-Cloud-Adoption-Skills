@@ -26,8 +26,8 @@ The SMS service is only available in specific regions. The endpoint determines w
 
 ```bash
 # On the source server, download the SMS Agent tarball
-# The URL is region-specific — check HuaweiCloud SMS console for the correct URL
-wget "https://sms-agent.ap-southeast-3.myhuaweicloud.com/SMS-Agent.tar.gz" -O SMS-Agent.tar.gz
+# Region-specific URL — ap-southeast-3 bucket. For other regions, check the SMS console.
+wget "https://sms-resource-intl-ap-southeast-3.obs.ap-southeast-3.myhuaweicloud.com/SMS-Agent.tar.gz" -O SMS-Agent.tar.gz
 tar xzf SMS-Agent.tar.gz
 cd SMS-Agent
 ```
