@@ -35,19 +35,15 @@ Set up **OpenCode** to use **LiteLLM proxy** as a unified gateway to Huawei Clou
 
 **Minimum resources:** 512 MB RAM, 200 MB disk (for venv + litellm packages).
 
-## Available MaaS Models (July 2026)
+## Available MaaS Models (October 2026)
 
 | Model | Context | Max Output | Deep Thinking | Cost Tier |
 |-------|---------|------------|---------------|-----------|
-| DeepSeek-V3.1-Terminus | 128K | 32K | Configurable | $ |
-| DeepSeek-V3 | 128K | 64K | No | $ |
-| DeepSeek-V3.2 | 160K | 32K | Configurable | $$ |
-| DeepSeek-V4-Flash | 1M | 128K | Configurable | $$$ |
+| DeepSeek-V4-Flash | 1M | 128K | Configurable | $$ |
+| DeepSeek-V4.1-Flash | 1M | 128K | Configurable | $$$ |
+| GLM-5.1 | 198K | 128K | Configurable | $$$ |
 | GLM-5.2 | 198K | 128K | Configurable | $$$ |
-| GLM-5.1 | 198K | 128K | Configurable | $$$$ |
-| GLM-5 | 198K | 64K | Configurable | $$$$ |
-| DeepSeek-V4-Pro | 1M | 128K | Configurable | $$$$$ |
-| DeepSeek-R1 | 128K | 32K | Always active | $$$$$ |
+| GLM-5.3 | 198K | 128K | Configurable | $$$$ |
 
 All MaaS models tolerate `reasoning_content` in history, so they are **mutually compatible** in fallback chains (unlike Groq/Cerebras which break on thinking tokens).
 
@@ -55,11 +51,11 @@ All MaaS models tolerate `reasoning_content` in history, so they are **mutually 
 
 | Group | Fallback Chain | Use Case | Alias |
 |-------|---------------|----------|-------|
-| `economy` | V3.1-Terminus → V3 → V3.2 | Simple tasks, minimize cost | `cheap` |
-| `fast` | V3.1-Terminus → V3.2 → GLM-5.2 | Quick edits, simple questions | — |
-| `coding` | V4-Flash → GLM-5.2 → V3.2 | General coding (default) | `default` |
-| `coding-heavy` | V4-Pro → GLM-5.2 → V4-Flash | Complex refactors, architecture | `heavy` |
-| `reasoning` | R1 → GLM-5.1 → V4-Pro | Deep reasoning | — |
+| `economy` | V4-Flash | Simple tasks, minimize cost | `cheap` |
+| `fast` | V4.1-Flash → V4-Flash | Quick edits, simple questions | — |
+| `coding` | V4-Flash → GLM-5.2 | General coding (default) | `default` |
+| `coding-heavy` | GLM-5.2 → V4.1-Flash | Complex refactors, architecture | `heavy` |
+| `reasoning` | GLM-5.3 → GLM-5.1 | Deep reasoning | — |
 
 **Cross-group fallbacks:**
 
@@ -126,17 +122,15 @@ Create the LiteLLM proxy config with all MaaS models organized by routing group:
 # All MaaS models tolerate reasoning_content in history,
 # so ALL are mutually compatible in fallbacks.
 #
-# Available models (July 2026):
-#   Deep Thinking configurable: glm-5.2, glm-5.1, glm-5,
-#     deepseek-v4-pro, deepseek-v4-flash, deepseek-v3.2, deepseek-v3.1-terminus
-#   Deep Thinking always active: deepseek-r1-250528
-#   Without Deep Thinking: DeepSeek-V3
+# Available models (October 2026):
+#   Deep Thinking configurable: deepseek-v4-flash, deepseek-v4.1-flash,
+#     glm-5.1, glm-5.2, glm-5.3
 #
 # Cost order (cheap → expensive):
-#   v3.1-terminus < V3 < v3.2 < v4-flash < glm-5.2 < glm-5.1 < glm-5 < v4-pro < r1
+#   v4-flash < v4.1-flash < glm-5.1 < glm-5.2 < glm-5.3
 #
 # Groups:
-#   economy:      Cheap models rotating, simple tasks
+#   economy:      Cheap model, simple tasks
 #   fast:         Quick edits with decent quality
 #   coding:       General coding (default)
 #   coding-heavy: Complex refactors, architecture
@@ -144,42 +138,22 @@ Create the LiteLLM proxy config with all MaaS models organized by routing group:
 
 model_list:
   # ── ECONOMY: simple tasks, minimize cost ──
-  # DeepSeek-V3 NO deep thinking = fewer output tokens
-  # Rotate among the 3 cheapest
   - model_name: economy
     litellm_params:
-      model: custom_openai/deepseek-v3.1-terminus
-      api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
-      api_key: os.environ/MAAS_API_KEY
-
-  - model_name: economy
-    litellm_params:
-      model: custom_openai/DeepSeek-V3
-      api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
-      api_key: os.environ/MAAS_API_KEY
-
-  - model_name: economy
-    litellm_params:
-      model: custom_openai/deepseek-v3.2
+      model: custom_openai/deepseek-v4-flash
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
   # ── FAST: quick edits, simple questions with quality ──
   - model_name: fast
     litellm_params:
-      model: custom_openai/deepseek-v3.1-terminus
+      model: custom_openai/deepseek-v4.1-flash
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
   - model_name: fast
     litellm_params:
-      model: custom_openai/deepseek-v3.2
-      api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
-      api_key: os.environ/MAAS_API_KEY
-
-  - model_name: fast
-    litellm_params:
-      model: custom_openai/glm-5.2
+      model: custom_openai/deepseek-v4-flash
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
@@ -196,19 +170,7 @@ model_list:
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
-  - model_name: coding
-    litellm_params:
-      model: custom_openai/deepseek-v3.2
-      api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
-      api_key: os.environ/MAAS_API_KEY
-
   # ── CODING-HEAVY: complex refactors, architecture ──
-  - model_name: coding-heavy
-    litellm_params:
-      model: custom_openai/deepseek-v4-pro
-      api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
-      api_key: os.environ/MAAS_API_KEY
-
   - model_name: coding-heavy
     litellm_params:
       model: custom_openai/glm-5.2
@@ -217,26 +179,20 @@ model_list:
 
   - model_name: coding-heavy
     litellm_params:
-      model: custom_openai/deepseek-v4-flash
+      model: custom_openai/deepseek-v4.1-flash
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
   # ── REASONING: deep reasoning ──
   - model_name: reasoning
     litellm_params:
-      model: custom_openai/deepseek-r1-250528
+      model: custom_openai/glm-5.3
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
   - model_name: reasoning
     litellm_params:
       model: custom_openai/glm-5.1
-      api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
-      api_key: os.environ/MAAS_API_KEY
-
-  - model_name: reasoning
-    litellm_params:
-      model: custom_openai/deepseek-v4-pro
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
