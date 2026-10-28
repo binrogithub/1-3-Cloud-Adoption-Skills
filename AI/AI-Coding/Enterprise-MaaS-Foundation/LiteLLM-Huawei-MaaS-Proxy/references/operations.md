@@ -152,7 +152,7 @@ curl -s http://localhost:4000/v1/chat/completions \
 curl -s http://localhost:4000/v1/chat/completions \
   -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model": "deepseek-v4-pro", "messages": [{"role": "user", "content": "Solve step by step."}], "extra_body": {"thinking": {"type": "enabled"}}}'
+  -d '{"model": "glm-5.3", "messages": [{"role": "user", "content": "Solve step by step."}], "extra_body": {"thinking": {"type": "enabled"}}}'
 ```
 
 ### Python SDK

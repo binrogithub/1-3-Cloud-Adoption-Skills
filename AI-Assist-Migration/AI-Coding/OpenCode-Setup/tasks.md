@@ -102,14 +102,14 @@ https://console-intl.huaweicloud.com/apiexplorer/#/endpoint/OBS
             "output": 131072
           }
         },
-        "deepseek-v3.2": {
+        "deepseek-v4.1-flash": {
           "name": "DeepSeek-V3.2",
           "limit": {
             "context": 163840,
             "output": 32768
           }
         },
-        "deepseek-v3.1-terminus": {
+        "deepseek-v4-flash": {
           "name": "DeepSeek-V3.1",
           "limit": {
             "context": 131072,
@@ -123,14 +123,14 @@ https://console-intl.huaweicloud.com/apiexplorer/#/endpoint/OBS
             "output": 131072
           }
         },
-        "deepseek-r1-250528": {
+        "glm-5.3": {
           "name": "DeepSeek-R1-0528",
           "limit": {
             "context": 131072,
             "output": 32768
           }
         },
-        "glm-5": {
+        "glm-5.2": {
           "name": "GLM-5",
           "limit": {
             "context": 202752,
@@ -226,14 +226,14 @@ I developed this MCP server just to be a wrapper around KooCLI terminal tool, it
             "output": 131072
           }
         },
-        "deepseek-v3.2": {
+        "deepseek-v4.1-flash": {
           "name": "DeepSeek-V3.2",
           "limit": {
             "context": 163840,
             "output": 32768
           }
         },
-        "deepseek-v3.1-terminus": {
+        "deepseek-v4-flash": {
           "name": "DeepSeek-V3.1",
           "limit": {
             "context": 131072,
@@ -247,14 +247,14 @@ I developed this MCP server just to be a wrapper around KooCLI terminal tool, it
             "output": 131072
           }
         },
-        "deepseek-r1-250528": {
+        "glm-5.3": {
           "name": "DeepSeek-R1-0528",
           "limit": {
             "context": 131072,
             "output": 32768
           }
         },
-        "glm-5": {
+        "glm-5.2": {
           "name": "GLM-5",
           "limit": {
             "context": 202752,

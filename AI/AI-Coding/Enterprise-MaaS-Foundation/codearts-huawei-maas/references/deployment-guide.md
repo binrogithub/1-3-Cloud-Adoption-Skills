@@ -75,9 +75,9 @@ Expected:
 - Models include:
   - `huaweicloud-maas/glm-5.1`
   - `huaweicloud-maas/claude-opus-4-6`
-  - `huaweicloud-maas/deepseek-v4-pro`
+  - `huaweicloud-maas/glm-5.3`
   - `huaweicloud-maas/deepseek-v4-flash`
-  - `huaweicloud-maas/deepseek-v3.2`
+  - `huaweicloud-maas/deepseek-v4.1-flash`
 - English prompt returns English.
 - Chinese prompt can return Chinese.
 

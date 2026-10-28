@@ -197,9 +197,9 @@ model_list:
       api_key: os.environ/MAAS_API_KEY
 
   # ── Individual models (direct access) ──
-  - model_name: deepseek-v4-pro
+  - model_name: deepseek-v4.1-flash
     litellm_params:
-      model: custom_openai/deepseek-v4-pro
+      model: custom_openai/deepseek-v4.1-flash
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
@@ -209,15 +209,15 @@ model_list:
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
-  - model_name: deepseek-v3.2
+  - model_name: deepseek-v4.1-flash
     litellm_params:
-      model: custom_openai/deepseek-v3.2
+      model: custom_openai/deepseek-v4.1-flash
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
-  - model_name: deepseek-v3.1-terminus
+  - model_name: deepseek-v4-flash
     litellm_params:
-      model: custom_openai/deepseek-v3.1-terminus
+      model: custom_openai/deepseek-v4-flash
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
@@ -227,9 +227,9 @@ model_list:
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
-  - model_name: deepseek-r1
+  - model_name: glm-5.3
     litellm_params:
-      model: custom_openai/deepseek-r1-250528
+      model: custom_openai/glm-5.3
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
@@ -245,9 +245,9 @@ model_list:
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
-  - model_name: glm-5
+  - model_name: glm-5.2
     litellm_params:
-      model: custom_openai/glm-5
+      model: custom_openai/glm-5.2
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
@@ -351,7 +351,7 @@ Replace any existing provider (e.g. `huawei-maas`) with the `litellm` provider:
           "name": "Reasoning (R1 → GLM-5.1 → V4-Pro)",
           "limit": { "context": 131072, "output": 32000 }
         },
-        "deepseek-v4-pro": {
+        "deepseek-v4.1-flash": {
           "name": "DeepSeek-V4-Pro (direct)",
           "limit": { "context": 1048576, "output": 131072 }
         },
@@ -359,11 +359,11 @@ Replace any existing provider (e.g. `huawei-maas`) with the `litellm` provider:
           "name": "DeepSeek-V4-Flash (direct)",
           "limit": { "context": 1048576, "output": 131072 }
         },
-        "deepseek-v3.2": {
+        "deepseek-v4.1-flash": {
           "name": "DeepSeek-V3.2 (direct)",
           "limit": { "context": 163840, "output": 32768 }
         },
-        "deepseek-v3.1-terminus": {
+        "deepseek-v4-flash": {
           "name": "DeepSeek-V3.1-Terminus (direct)",
           "limit": { "context": 131072, "output": 32768 }
         },
@@ -371,7 +371,7 @@ Replace any existing provider (e.g. `huawei-maas`) with the `litellm` provider:
           "name": "DeepSeek-V3 no CoT (direct)",
           "limit": { "context": 131072, "output": 65536 }
         },
-        "deepseek-r1": {
+        "glm-5.3": {
           "name": "DeepSeek-R1 (direct)",
           "limit": { "context": 131072, "output": 32768 }
         },
@@ -383,7 +383,7 @@ Replace any existing provider (e.g. `huawei-maas`) with the `litellm` provider:
           "name": "GLM-5.1 (direct)",
           "limit": { "context": 202752, "output": 131072 }
         },
-        "glm-5": {
+        "glm-5.2": {
           "name": "GLM-5 (direct)",
           "limit": { "context": 202752, "output": 65536 }
         }

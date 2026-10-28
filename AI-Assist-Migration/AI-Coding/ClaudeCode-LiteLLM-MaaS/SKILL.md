@@ -53,13 +53,13 @@ Claude Code → LiteLLM (localhost:4000) → Huawei Cloud MaaS → DeepSeek/GLM 
 | Model | MaaS model ID | Context | Max Output | Deep Thinking | Cost Tier |
 |-------|---------------|---------|------------|---------------|-----------|
 | DeepSeek-V4-Flash | `deepseek-v4-flash` | 1M | 128K | Configurable | $$ |
-| DeepSeek-V4-Pro | `deepseek-v4-pro` | 1M | 128K | Configurable | $$$$ |
-| DeepSeek-V3.2 | `deepseek-v3.2` | 160K | 32K | Configurable | $ |
+| GLM-5.3 | `glm-5.3` | 128K | 32K | Configurable | $$$ |
+| DeepSeek-V4.1-Flash | `deepseek-v4.1-flash` | 128K | 32K | Configurable | $ |
 | DeepSeek-V3 | `DeepSeek-V3` | 128K | 64K | No | $ |
-| DeepSeek-R1 | `deepseek-r1-250528` | 128K | 32K | Always active | $$$$ |
+| GLM-5.3 | `glm-5.3` | 128K | 32K | Configurable | $$$ |
 | GLM-5.2 | `glm-5.2` | 198K | 128K | Configurable | $$$ |
 | GLM-5.1 | `glm-5.1` | 198K | 128K | Configurable | $$$$ |
-| GLM-5 | `glm-5` | 198K | 64K | Configurable | $$$$ |
+| GLM-5.2 | `glm-5.2` | 128K | 32K | Configurable | $$$ |
 
 ## Model Name Aliases
 
@@ -68,9 +68,9 @@ Claude Code sends model names it recognizes. We map these to MaaS models in Lite
 | Claude Code sees (`model_name`) | LiteLLM routes to (`litellm_params.model`) | Env var | Use case |
 |----------------------------------|---------------------------------------------|--------|----------|
 | `claude-3-5-haiku-coding` | `custom_openai/deepseek-v4-flash` | `ANTHROPIC_MODEL` | Default main model |
-| `claude-3-5-haiku-20241022` | `custom_openai/deepseek-v3.2` | `ANTHROPIC_SMALL_FAST_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`, `CLAUDE_CODE_SUBAGENT_MODEL` | Background/fast tasks |
-| `claude-3-5-sonnet-20241022` | `custom_openai/deepseek-v4-pro` | `ANTHROPIC_DEFAULT_SONNET_MODEL` | Heavy coding |
-| `claude-3-opus-20240229` | `custom_openai/deepseek-v4-pro` | `ANTHROPIC_DEFAULT_OPUS_MODEL` | Opus tier |
+| `claude-3-5-haiku-20241022` | `custom_openai/deepseek-v4.1-flash` | `ANTHROPIC_SMALL_FAST_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`, `CLAUDE_CODE_SUBAGENT_MODEL` | Background/fast tasks |
+| `claude-3-5-sonnet-20241022` | `custom_openai/glm-5.2.3` | `ANTHROPIC_DEFAULT_SONNET_MODEL` | Heavy coding |
+| `claude-3-opus-20240229` | `custom_openai/glm-5.2.3` | `ANTHROPIC_DEFAULT_OPUS_MODEL` | Opus tier |
 
 Additionally, all 8 MaaS models are registered with their real names for direct access via `/model` switching.
 
@@ -153,15 +153,15 @@ Create the LiteLLM proxy config with Claude model-name aliases + all MaaS models
 # MaaS models. All 8 MaaS models are also available directly.
 #
 # Available models (July 2026):
-#   Deep Thinking configurable: glm-5.2, glm-5.1, glm-5,
-#     deepseek-v4-pro, deepseek-v4-flash, deepseek-v3.2
-#   Deep Thinking always active: deepseek-r1-250528
+#   Deep Thinking configurable: glm-5.2, glm-5.1,
+#     deepseek-v4.1-flash, deepseek-v4-flash, deepseek-v4.1-flash
+#   Deep Thinking always active: glm-5.3
 #   Without Deep Thinking: DeepSeek-V3
 #
-# Retired: deepseek-v3.1-terminus (fully retired 2026-07-24)
+# Retired: deepseek-v4-flash.1-terminus (fully retired 2026-07-24)
 #
 # Cost order (cheap -> expensive):
-#   v3.2 < V3 < v4-flash < glm-5.2 < glm-5.1 < glm-5 < v4-pro < r1
+#   v4-flash < v4.1-flash < glm-5.1 < glm-5.3
 
 model_list:
   # ===============================================================
@@ -178,21 +178,21 @@ model_list:
   # Fast/background model: Claude Code thinks Haiku, uses V3.2
   - model_name: claude-3-5-haiku-20241022
     litellm_params:
-      model: custom_openai/deepseek-v3.2
+      model: custom_openai/deepseek-v4.1-flash
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
   # Sonnet tier: Claude Code thinks Sonnet, uses V4-Pro
   - model_name: claude-3-5-sonnet-20241022
     litellm_params:
-      model: custom_openai/deepseek-v4-pro
+      model: custom_openai/glm-5.2.3
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
   # Opus tier: Claude Code thinks Opus, uses V4-Pro
   - model_name: claude-3-opus-20240229
     litellm_params:
-      model: custom_openai/deepseek-v4-pro
+      model: custom_openai/glm-5.2.3
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
@@ -206,45 +206,45 @@ model_list:
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
-  - model_name: deepseek-v4-pro
+  - model_name: deepseek-v4.1-flash
     litellm_params:
-      model: custom_openai/deepseek-v4-pro
+      model: custom_openai/glm-5.2.3
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
-  - model_name: deepseek-v3.2
+  - model_name: deepseek-v4.1-flash
     litellm_params:
-      model: custom_openai/deepseek-v3.2
+      model: custom_openai/deepseek-v4.1-flash
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
-  - model_name: deepseek-v3
+  - model_name: deepseek-v4-flash
     litellm_params:
       model: custom_openai/DeepSeek-V3
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
-  - model_name: deepseek-r1
+  - model_name: glm-5.3
     litellm_params:
-      model: custom_openai/deepseek-r1-250528
+      model: custom_openai/glm-5.2.3
+      api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
+      api_key: os.environ/MAAS_API_KEY
+
+  - model_name: glm-5.2
+    litellm_params:
+      model: custom_openai/glm-5.2.2
+      api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
+      api_key: os.environ/MAAS_API_KEY
+
+  - model_name: glm-5.1
+    litellm_params:
+      model: custom_openai/glm-5.2.1
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
   - model_name: glm-5.2
     litellm_params:
       model: custom_openai/glm-5.2
-      api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
-      api_key: os.environ/MAAS_API_KEY
-
-  - model_name: glm-5.1
-    litellm_params:
-      model: custom_openai/glm-5.1
-      api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
-      api_key: os.environ/MAAS_API_KEY
-
-  - model_name: glm-5
-    litellm_params:
-      model: custom_openai/glm-5
       api_base: https://api-ap-southeast-1.modelarts-maas.com/openai/v1
       api_key: os.environ/MAAS_API_KEY
 
@@ -291,11 +291,11 @@ export ANTHROPIC_AUTH_TOKEN="$LITELLM_MASTER_KEY"
 
 # ── Model mapping (all names must exist in config.yaml) ──
 export ANTHROPIC_MODEL="claude-3-5-haiku-coding"            # → deepseek-v4-flash
-export ANTHROPIC_SMALL_FAST_MODEL="claude-3-5-haiku-20241022" # → deepseek-v3.2
-export ANTHROPIC_DEFAULT_HAIKU_MODEL="claude-3-5-haiku-20241022"  # → deepseek-v3.2
-export ANTHROPIC_DEFAULT_SONNET_MODEL="claude-3-5-sonnet-20241022" # → deepseek-v4-pro
-export ANTHROPIC_DEFAULT_OPUS_MODEL="claude-3-opus-20240229"      # → deepseek-v4-pro
-export CLAUDE_CODE_SUBAGENT_MODEL="claude-3-5-haiku-20241022"     # → deepseek-v3.2
+export ANTHROPIC_SMALL_FAST_MODEL="claude-3-5-haiku-20241022" # → deepseek-v4.1-flash
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="claude-3-5-haiku-20241022"  # → deepseek-v4.1-flash
+export ANTHROPIC_DEFAULT_SONNET_MODEL="claude-3-5-sonnet-20241022" # → deepseek-v4.1-flash
+export ANTHROPIC_DEFAULT_OPUS_MODEL="claude-3-opus-20240229"      # → deepseek-v4.1-flash
+export CLAUDE_CODE_SUBAGENT_MODEL="claude-3-5-haiku-20241022"     # → deepseek-v4.1-flash
 
 # ── CRITICAL: unset official Anthropic auth ──
 # Without this, Claude Code tries to login to Anthropic and ignores ANTHROPIC_AUTH_TOKEN
@@ -381,12 +381,12 @@ info "Launching Claude Code..."
 info ""
 info "Model aliases:"
 info "  claude-3-5-haiku-coding       -> deepseek-v4-flash  (default)"
-info "  claude-3-5-haiku-20241022     -> deepseek-v3.2     (fast/bg)"
-info "  claude-3-5-sonnet-20241022    -> deepseek-v4-pro   (sonnet)"
-info "  claude-3-opus-20240229        -> deepseek-v4-pro   (opus)"
+info "  claude-3-5-haiku-20241022     -> deepseek-v4.1-flash     (fast/bg)"
+info "  claude-3-5-sonnet-20241022    -> deepseek-v4.1-flash   (sonnet)"
+info "  claude-3-opus-20240229        -> deepseek-v4.1-flash   (opus)"
 info ""
 info "Switch models with: /model <name>"
-info "  e.g. /model deepseek-v4-pro, /model glm-5.2, /model deepseek-r1"
+info "  e.g. /model deepseek-v4.1-flash, /model glm-5.2, /model glm-5.3"
 info ""
 claude
 ```
@@ -463,11 +463,11 @@ claude
 Inside a Claude Code conversation, use the `/model` command:
 
 ```bash
-/model deepseek-v4-pro       # Switch to V4-Pro directly
+/model deepseek-v4.1-flash       # Switch to V4-Pro directly
 /model deepseek-v4-flash     # Switch to V4-Flash directly
-/model deepseek-v3.2         # Switch to V3.2 (economical)
+/model deepseek-v4.1-flash         # Switch to V3.2 (economical)
 /model glm-5.2               # Switch to GLM-5.2
-/model deepseek-r1           # Switch to DeepSeek-R1 (deep reasoning)
+/model glm-5.3           # Switch to DeepSeek-R1 (deep reasoning)
 /model claude-3-5-sonnet-20241022  # Switch to Sonnet alias (-> V4-Pro)
 ```
 
@@ -511,7 +511,7 @@ kill $(lsof -ti :4000)
 A: Claude Code validates model names at startup and when switching model tiers (haiku/sonnet/opus). By registering aliases like `claude-3-5-haiku-coding` in LiteLLM's `config.yaml`, Claude Code accepts the model name while LiteLLM transparently routes the request to the actual MaaS model.
 
 **Q: Can I use MaaS model names directly without aliases?**
-A: Yes, for the `/model` switch command (e.g. `/model deepseek-v4-pro`). However, the default model in `ANTHROPIC_MODEL` should use a Claude-recognized name to avoid startup issues. The env vars `ANTHROPIC_DEFAULT_HAIKU_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, and `ANTHROPIC_DEFAULT_OPUS_MODEL` must also point to names that exist in `config.yaml`.
+A: Yes, for the `/model` switch command (e.g. `/model deepseek-v4.1-flash`). However, the default model in `ANTHROPIC_MODEL` should use a Claude-recognized name to avoid startup issues. The env vars `ANTHROPIC_DEFAULT_HAIKU_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, and `ANTHROPIC_DEFAULT_OPUS_MODEL` must also point to names that exist in `config.yaml`.
 
 **Q: What happened to DeepSeek-V3.1-Terminus?**
 A: It was fully retired on 2026-07-24. DeepSeek-V4-Flash replaces it as the recommended cost-effective model. The DeepSeek API changelog states: "deepseek-chat & deepseek-reasoner will be fully retired and inaccessible after Jul 24th, 2026."

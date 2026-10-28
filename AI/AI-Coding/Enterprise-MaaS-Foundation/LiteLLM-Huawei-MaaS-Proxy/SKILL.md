@@ -480,10 +480,10 @@ For an existing deployment, run in order:
 | Name | in / out | RPM | TPM | Cost (in/out per token) |
 |---|---|---|---|---|
 | `glm-5.1` | 192K / 128K | 30 | 500K | $1.078 / $3.774 × 10⁻⁶ |
-| `glm-5` | 192K / 64K | 30 | 500K | $0.809 / $2.965 × 10⁻⁶ |
-| `deepseek-v4-pro` | 1M / 128K | 3 | 30K | $1.617 / $3.235 × 10⁻⁶ |
+| `glm-5.2` | 128K / 32K | 30 | 500K | $0.270 / $0.404 × 10⁻⁶ |
+| `glm-5.3` | 128K / 32K | 30 | 500K | $0.809 / $2.965 × 10⁻⁶ |
 | `deepseek-v4-flash` | 1M / 128K | 3 | 30K | $0.135 / $0.270 × 10⁻⁶ |
-| `deepseek-v3.2` | 128K / 32K | 700 | 500K | $0.270 / $0.404 × 10⁻⁶ |
+| `deepseek-v4.1-flash` | 128K / 32K | 700 | 500K | $0.270 / $0.404 × 10⁻⁶ |
 
 ### Model configuration structure
 
@@ -615,7 +615,7 @@ curl -s http://localhost:4000/v1/chat/completions \
 curl -s http://localhost:4000/v1/chat/completions \
   -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model": "deepseek-v4-pro", "messages": [{"role": "user", "content": "Solve step by step."}], "extra_body": {"thinking": {"type": "enabled"}}}'
+  -d '{"model": "glm-5.3", "messages": [{"role": "user", "content": "Solve step by step."}], "extra_body": {"thinking": {"type": "enabled"}}}'
 ```
 
 ### Python SDK
@@ -988,9 +988,9 @@ model_list:
       input_cost_per_token: 0.000001078
       output_cost_per_token: 0.000003774
 
-  - model_name: glm-5
+  - model_name: glm-5.2
     litellm_params:
-      model: openai/glm-5
+      model: openai/glm-5.2
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY
       tpm: 500000
@@ -1002,9 +1002,9 @@ model_list:
       input_cost_per_token: 0.000000809
       output_cost_per_token: 0.000002965
 
-  - model_name: deepseek-v4-pro
+  - model_name: glm-5.3
     litellm_params:
-      model: openai/deepseek-v4-pro
+      model: openai/glm-5.3
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY
       tpm: 30000
@@ -1030,9 +1030,9 @@ model_list:
       input_cost_per_token: 0.000000135
       output_cost_per_token: 0.00000027
 
-  - model_name: deepseek-v3.2
+  - model_name: deepseek-v4.1-flash
     litellm_params:
-      model: openai/deepseek-v3.2
+      model: openai/deepseek-v4.1-flash
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY
       tpm: 500000

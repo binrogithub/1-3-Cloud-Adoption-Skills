@@ -196,10 +196,10 @@ docker compose up -d
 | Name | Context (in/out) | RPM (per-key) | TPM (per-key) | Cost (in/out per token) |
 |---|---|---|---|---|
 | `glm-5.1` | 192K / 128K | 30 | 500K | $1.078 / $3.774 × 10⁻⁶ |
-| `glm-5` | 192K / 64K | 30 | 500K | $0.809 / $2.965 × 10⁻⁶ |
-| `deepseek-v4-pro` | 1M / 128K | 3 | 30K | $1.617 / $3.235 × 10⁻⁶ |
+| `glm-5.2` | 128K / 32K | 30 | 500K | $0.270 / $0.404 × 10⁻⁶ |
+| `glm-5.3` | 128K / 32K | 30 | 500K | $0.809 / $2.965 × 10⁻⁶ |
 | `deepseek-v4-flash` | 1M / 128K | 3 | 30K | $0.135 / $0.270 × 10⁻⁶ |
-| `deepseek-v3.2` | 128K / 32K | 700 | 500K | $0.270 / $0.404 × 10⁻⁶ |
+| `deepseek-v4.1-flash` | 128K / 32K | 700 | 500K | $0.270 / $0.404 × 10⁻⁶ |
 | `claude-glm1` | 192K / 128K | 30 | 500K | Alias to `glm-5.1` for Claude Code router clients |
 | `claude-opus-4-6` | 192K / 128K | 30 | 500K | Compatibility alias to `glm-5.1` |
 | `vision-openrouter` | Provider-dependent | 50-100 | 400K-800K | OpenRouter fallback group for image prompts |

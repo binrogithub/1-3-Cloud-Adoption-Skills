@@ -45,9 +45,9 @@ Claude Code → LiteLLM Proxy (localhost:4000) → Huawei Cloud MaaS → DeepSee
 | Claude Code sees | LiteLLM routes to | Use case |
 |-------------------|-------------------|----------|
 | `claude-3-5-haiku-coding` | `deepseek-v4-flash` | Default main model |
-| `claude-3-5-haiku-20241022` | `deepseek-v3.2` | Background/fast tasks |
-| `claude-3-5-sonnet-20241022` | `deepseek-v4-pro` | Heavy coding |
-| `claude-3-opus-20240229` | `deepseek-v4-pro` | Opus tier |
+| `claude-3-5-haiku-20241022` | `deepseek-v4.1-flash` | Background/fast tasks |
+| `claude-3-5-sonnet-20241022` | `glm-5.3` | Heavy coding |
+| `claude-3-opus-20240229` | `glm-5.3` | Opus tier |
 
 ## Prerequisites
 
