@@ -21,8 +21,11 @@ Always get the latest schema — the provider evolves fast and training data is 
 5. **Batch parallel discoveries** — call multiple independent HCloud tools at once. Only serialize when there's a dependency (subnets need VPC, RDS flavors need engine).
 6. **Batch questions** — ask related questions together, not one at a time.
 7. **Recommend defaults** — when intent is clear but value isn't specified, recommend a sensible default and show alternatives.
-8. **Reuse existing infrastructure** — before creating new VPCs/subnets/SGs, check if existing ones match. Ask "use existing X or create new?" Default to reuse.
+8. **Reuse existing infrastructure** — before creating new VPCs/subnets/SGs, check if existing ones match. Ask "use existing X or create new?" **Never default to reuse without explicit user confirmation.** In headless/non-interactive mode, prefer creating new with a unique name.
 9. **Don't ask when only 1 option** — just use it and tell the user.
+10. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override. Even for "obvious" values like flavor, OS, disk type/size, runtime, and network mode — present the options and let the user choose.
+11. **NEVER reuse existing resources** — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step (e.g. infra created in an earlier migration phase). When in doubt, create new.
+12. **Use a unique prefix for all resource names** — ask the user for a project prefix (e.g. `myproj-`) and use it for every resource name to avoid collisions with existing infrastructure.
 
 ## Workflow
 

@@ -28,6 +28,9 @@ Migrate a Kubernetes application from a local **Kind** cluster to **Huawei Cloud
 12. **ALWAYS decode SWR auth before creating secrets** — `SWR CreateAuthorizationToken` returns base64-encoded `auth` field. Decode with `echo "$AUTH" | base64 -d`, then split into `username:password` for `kubectl create secret docker-registry`.
 13. **Kubeconfig re-generation may need retries** — After binding EIP, `CCE CreateKubernetesClusterCert` may fail transiently with EOF error. Retry after 15-30 seconds.
 14. **ALWAYS verify each step before proceeding** — After cluster creation, node pool, EIP bind, ELB create, Helm install, and app deploy — run the corresponding verification command. Never assume success.
+15. **Ask the user for each parameter** — don't assume defaults without confirming. For container CIDR, OS image, node flavor, ELB flavors (L4/L7), SWR namespace, cluster flavor, disk type/size, and ingress configuration — present the discovered options and let the user choose. Offer a recommended default and let the user accept or override.
+16. **NEVER reuse existing resources** — if a resource with the same name already exists (VPC, subnet, keypair, cluster, ELB, SWR namespace, etc.), use a different name. The only exception is if the resource was explicitly created for this project in a previous step. When in doubt, create new.
+17. **Use a unique prefix for all resource names** — ask the user for a project prefix (e.g. `myproj-`) and use it for every resource name to avoid collisions with existing infrastructure.
 
 ## Prerequisites
 

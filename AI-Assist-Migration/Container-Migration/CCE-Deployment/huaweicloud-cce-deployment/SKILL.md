@@ -24,6 +24,9 @@ Deploy CCE clusters imperatively using `hcloud` KooCLI and Huawei Cloud MCP tool
 8. **Container CIDR must not overlap VPC CIDR** — if the VPC is `192.168.0.0/16`, use `172.16.0.0/16` or `10.0.0.0/16` for the container network. The API will reject overlapping ranges.
 9. **Match cluster flavor to node count** — `cce.s1.small` = 1 control + max 50 workers. `cce.s1.medium` = 1 control + max 200. Choose the flavor that supports your maximum node count.
 10. **Recommend `containerd` + `ipvs`** — for clusters v1.25+, use `--spec.nodeTemplate.runtime.name=containerd` (docker is deprecated) and `--spec.kubeProxyMode=ipvs` (better performance with many services).
+11. **Ask the user for each parameter** — don't assume defaults without confirming. For flavor, OS image, disk type/size, runtime, network mode, container CIDR, cluster flavor, node count, and billing mode — present the discovered options and let the user choose. Offer a recommended default and let the user accept or override.
+12. **NEVER reuse existing resources** — if a resource with the same name already exists (VPC, subnet, keypair, cluster, etc.), use a different name. The only exception is if the resource was explicitly created for this project in a previous step. When in doubt, create new.
+13. **Use a unique prefix for all resource names** — ask the user for a project prefix (e.g. `myproj-`) and use it for every resource name (VPC, subnet, cluster, node pool, keypair, ELB) to avoid collisions with existing infrastructure.
 
 ## Workflow
 
