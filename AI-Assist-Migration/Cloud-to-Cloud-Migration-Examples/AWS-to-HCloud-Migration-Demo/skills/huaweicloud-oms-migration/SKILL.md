@@ -24,6 +24,9 @@ Migrate objects from AWS S3, Azure Blob, Aliyun OSS, Tencent COS, GCP GCS, or HT
 8. **PROVIDER NEEDS EXPLICIT AK/SK** — the `huaweicloud` Terraform provider does not fall back to ECS metadata service (IMDS) like the AWS provider does. Always set `access_key` and `secret_key` in the `provider "huaweicloud"` block (from sensitive variables), or export `HW_ACCESS_KEY`/`HW_SECRET_KEY` environment variables.
 9. **REFRESH STATE TO CHECK REAL STATUS** — `terraform output oms_task_status` reads from the local state file, which is a snapshot at apply time. To see the live task status, run `terraform refresh` first (or `terraform apply -refresh-only`). Status codes: `1`=waiting, `2`=migrating, `3`=paused, `4`=failed, `5`=succeeded.
 10. **VERIFY WITH ETAGS, NOT JUST COUNTS** — after migration, compare object counts AND ETags between source and destination. Matching ETags guarantee byte-level integrity. Also inspect the `oms/` folder that OMS creates in the destination bucket — it contains the failed-object list (empty on success).
+11. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override. Even for migration type (one-time vs sync), bucket naming, and bandwidth — present the options and let the user choose.
+12. **NEVER reuse existing resources** — if an OBS bucket or OMS task with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step.
+13. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every OBS bucket and OMS task name.
 
 ## Workflow Overview
 
@@ -98,7 +101,7 @@ Decide configuration values:
 | Restore archive | `false` | `true` if source has ARCHIVE/GLACIER objects |
 | KMS encryption | `false` | `true` if destination should be encrypted |
 
-Ask the user only about decisions not implied by their request. Batch questions.
+Ask the user about every decision. Present the recommended default from the table above and let the user accept or override. Batch related questions.
 
 ## Phase 3: TERRAFORM
 
