@@ -141,8 +141,9 @@ Execute the Terraform workflow:
 
 ```bash
 terraform init
-terraform plan
-terraform apply
+terraform plan -out=tfplan
+# Review the plan with the user. Get explicit confirmation before applying.
+terraform apply -auto-approve tfplan
 ```
 
 **`terraform init`** — downloads the `huaweicloud/huaweicloud` provider.
@@ -391,7 +392,7 @@ output "kubeconfig" {
 }
 ```
 
-5. **APPLY:** `terraform init` → `terraform plan` (3 to add) → `terraform apply` (~8 min total).
+5. **APPLY:** `terraform init` → `terraform plan -out=tfplan` (3 to add) → confirm with user → `terraform apply -auto-approve tfplan` (~8 min total).
 
 6. **VALIDATE:** `terraform output` confirms `cluster_status=Available`. Save kubeconfig: `terraform output -raw kubeconfig > ~/.kube/config-cce-cluster-tf`.
 

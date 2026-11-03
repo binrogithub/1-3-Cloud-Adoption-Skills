@@ -72,15 +72,15 @@ Run in order:
 
 ```bash
 terraform init
-terraform plan
+terraform plan -out=tfplan
 # Review the plan with the user. Get explicit confirmation before applying.
-terraform apply
+terraform apply -auto-approve tfplan
 ```
 
 If apply returns `No changes` for `terraform_data.mgc_region_migration` (same run fingerprint), force one execution:
 
 ```bash
-terraform apply -replace=terraform_data.mgc_region_migration  # Get explicit user confirmation before applying
+terraform apply -auto-approve -replace=terraform_data.mgc_region_migration tfplan
 ```
 
 Expect Terraform local-exec to map tfvars into runtime env vars and call:
