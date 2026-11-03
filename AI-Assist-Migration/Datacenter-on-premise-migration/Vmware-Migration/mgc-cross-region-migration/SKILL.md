@@ -80,7 +80,7 @@ terraform apply
 If apply returns `No changes` for `terraform_data.mgc_region_migration` (same run fingerprint), force one execution:
 
 ```bash
-terraform apply -replace=terraform_data.mgc_region_migration -auto-approve
+terraform apply -replace=terraform_data.mgc_region_migration  # Get explicit user confirmation before applying
 ```
 
 Expect Terraform local-exec to map tfvars into runtime env vars and call:
