@@ -9,7 +9,7 @@ from typing import Any
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent, Tool
+from mcp.types import CallToolResult, ListToolsResult, TextContent, Tool, ToolAnnotations
 
 from .config import ServerConfig, load_config
 from .safety import is_destructive_command, is_obs_command, is_obs_destructive_command
@@ -70,57 +70,66 @@ class HCloudMCPServer:
 
         self.server = Server(
             name="hcloud-mcp-server",
-            version="0.3.0",
+            version="0.4.0",
             instructions=(
-                "Huawei Cloud MCP Server. "
+                "Huawei Cloud MCP Server (v0.4.0). "
                 "Use structured read-only tools (hcloud_list_servers, hcloud_list_vpcs, hcloud_list_flavors, "
-                "hcloud_list_images, hcloud_obs_ls, etc.) for infrastructure discovery and planning. "
+                "hcloud_list_images, hcloud_list_vpn_gateways, hcloud_list_drs_jobs, hcloud_list_swr_repositories, "
+                "hcloud_obs_ls, etc.) for infrastructure discovery and planning. "
                 "Use the hcloud_cli tool for any write operation or operations not covered by structured tools. "
                 "For OBS, use hcloud_obs_ls, hcloud_obs_stat, hcloud_obs_cat for read access, "
                 "or the generic hcloud_cli for write operations."
             ),
+            on_list_tools=self._list_tools,
+            on_call_tool=self._call_tool,
         )
-        self._register_handlers()
 
-    def _register_handlers(self):
-        @self.server.list_tools()
-        async def list_tools() -> list[Tool]:
-            tools = [t.to_mcp_tool() for t in self.structured_tools]
-            tools.append(Tool(
-                name="hcloud_cli",
-                description=CLI_TOOL_DESCRIPTION,
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "command": {
-                            "type": "string",
-                            "description": "hcloud CLI arguments (everything after 'hcloud'). Examples: '--help', 'IAM --help', 'IAM ListCustomPolicies --help', 'IAM ListCustomPolicies', 'IAM DeleteCustomPolicy --role_id=abc123', 'obs help', 'obs help ls', 'obs ls --cli-region=la-north-2', 'obs rm obs://bucket/key'",
-                        },
-                        "confirm": {
-                            "type": "boolean",
-                            "default": False,
-                            "description": "Set to true to execute destructive operations. If false (default), destructive commands run in --dryrun mode (or are refused for OBS commands without dry-run support).",
-                        },
+    async def _list_tools(self, ctx, params=None) -> ListToolsResult:
+        tools = [t.to_mcp_tool() for t in self.structured_tools]
+        tools.append(Tool(
+            name="hcloud_cli",
+            title="Huawei Cloud CLI (generic)",
+            description=CLI_TOOL_DESCRIPTION,
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "command": {
+                        "type": "string",
+                        "description": "hcloud CLI arguments (everything after 'hcloud'). Examples: '--help', 'IAM --help', 'IAM ListCustomPolicies --help', 'IAM ListCustomPolicies', 'IAM DeleteCustomPolicy --role_id=abc123', 'obs help', 'obs help ls', 'obs ls --cli-region=la-north-2', 'obs rm obs://bucket/key'",
                     },
-                    "required": ["command"],
+                    "confirm": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Set to true to execute destructive operations. If false (default), destructive commands run in --dryrun mode (or are refused for OBS commands without dry-run support).",
+                    },
                 },
-            ))
-            return tools
+                "required": ["command"],
+            },
+            annotations=ToolAnnotations(
+                title="Huawei Cloud CLI (generic)",
+                destructive_hint=True,
+                open_world_hint=True,
+            ),
+        ))
+        return ListToolsResult(tools=tools)
 
-        @self.server.call_tool()
-        async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
-            if name == "hcloud_cli":
-                return await self._handle_cli_tool(arguments)
-            if name in self.tool_map:
-                return await self._handle_structured_tool(name, arguments)
-            return [TextContent(type="text", text=f"Unknown tool: {name}")]
+    async def _call_tool(self, ctx, params) -> CallToolResult:
+        name = params.name
+        arguments = params.arguments or {}
+        if name == "hcloud_cli":
+            content = await self._handle_cli_tool(arguments)
+        elif name in self.tool_map:
+            content = await self._handle_structured_tool(name, arguments)
+        else:
+            content = [TextContent(type="text", text=f"Unknown tool: {name}")]
+        return CallToolResult(content=content)
 
     async def _handle_structured_tool(self, name: str, arguments: dict[str, Any]) -> list[TextContent]:
         tool_def = self.tool_map[name]
         command = tool_def.build(arguments)
         is_obs = tool_def.is_obs
 
-        stdout, stderr, returncode = execute_command(
+        stdout, stderr, returncode = await execute_command(
             command, self.config.execution
         )
         output = self._format_output(stdout, stderr, returncode, is_obs=is_obs)
@@ -147,7 +156,7 @@ class HCloudMCPServer:
                         break
 
         if is_help or not is_destructive:
-            stdout, stderr, returncode = execute_command(
+            stdout, stderr, returncode = await execute_command(
                 command, self.config.execution
             )
             output = self._format_output(stdout, stderr, returncode, is_obs=is_obs_command(command))
@@ -156,14 +165,14 @@ class HCloudMCPServer:
             return [TextContent(type="text", text=output)]
 
         if is_obs_command(command):
-            return self._execute_obs_command(command, confirm, obs_supports_dryrun)
+            return await self._execute_obs_command(command, confirm, obs_supports_dryrun)
 
         if is_destructive and not confirm:
             dryrun_command = command
             if "--dryrun" not in dryrun_command:
                 dryrun_command = f"{dryrun_command} --dryrun"
 
-            stdout, stderr, returncode = execute_command(
+            stdout, stderr, returncode = await execute_command(
                 dryrun_command, self.config.execution
             )
             output = self._format_output(stdout, stderr, returncode, is_obs=False)
@@ -173,13 +182,13 @@ class HCloudMCPServer:
                 f"{output}"
             ))]
 
-        stdout, stderr, returncode = execute_command(
+        stdout, stderr, returncode = await execute_command(
             command, self.config.execution
         )
         output = self._format_output(stdout, stderr, returncode, is_obs=False)
         return [TextContent(type="text", text=f"✅ Executed (confirmed destructive operation):\n\n{output}")]
 
-    def _execute_obs_command(self, command: str, confirm: bool, supports_dryrun: bool) -> list[TextContent]:
+    async def _execute_obs_command(self, command: str, confirm: bool, supports_dryrun: bool) -> list[TextContent]:
         if not supports_dryrun:
             if not confirm:
                 return [TextContent(type="text", text=(
@@ -187,7 +196,7 @@ class HCloudMCPServer:
                     f"This is a destructive operation. Set confirm=true to execute for real.\n"
                     f"Command: {command}"
                 ))]
-            stdout, stderr, returncode = execute_command(
+            stdout, stderr, returncode = await execute_command(
                 command, self.config.execution
             )
             output = self._format_output(stdout, stderr, returncode, is_obs=True)
@@ -198,7 +207,7 @@ class HCloudMCPServer:
             if "-dryRun" not in dryrun_command:
                 dryrun_command = f"{dryrun_command} -dryRun"
 
-            stdout, stderr, returncode = execute_command(
+            stdout, stderr, returncode = await execute_command(
                 dryrun_command, self.config.execution
             )
             output = self._format_output(stdout, stderr, returncode, is_obs=True)
@@ -208,7 +217,7 @@ class HCloudMCPServer:
                 f"{output}"
             ))]
 
-        stdout, stderr, returncode = execute_command(
+        stdout, stderr, returncode = await execute_command(
             command, self.config.execution
         )
         output = self._format_output(stdout, stderr, returncode, is_obs=True)
@@ -219,7 +228,7 @@ class HCloudMCPServer:
 
         if stdout.strip():
             if is_obs:
-                parts.append(stdout.strip())
+                parts.append(self._truncate(stdout.strip()))
             else:
                 try:
                     data = json.loads(stdout.strip())
@@ -227,9 +236,10 @@ class HCloudMCPServer:
                         parts.append(f"Error: {data.get('error_msg', 'Unknown error')}")
                         parts.append(f"Error code: {data.get('error_code')}")
                     else:
-                        parts.append(json.dumps(data, indent=2, ensure_ascii=False))
+                        formatted = json.dumps(data, indent=2, ensure_ascii=False)
+                        parts.append(self._truncate(formatted))
                 except json.JSONDecodeError:
-                    parts.append(stdout.strip())
+                    parts.append(self._truncate(stdout.strip()))
 
         if stderr.strip() and returncode != 0:
             error_text = stderr.strip()
@@ -253,6 +263,18 @@ class HCloudMCPServer:
                     parts.append(stderr.strip())
 
         return "\n".join(parts)
+
+    @staticmethod
+    def _truncate(text: str, max_chars: int = 50000) -> str:
+        if len(text) <= max_chars:
+            return text
+        half = max_chars // 2
+        return (
+            text[:half]
+            + f"\n\n... [truncated {len(text) - max_chars} chars — "
+            f"use limit/offset params to paginate] ...\n\n"
+            + text[-half:]
+        )
 
     def _filter_help_versions(self, output: str) -> str:
         if "Available Operations:" not in output:

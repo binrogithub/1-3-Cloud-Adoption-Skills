@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from mcp.types import Tool
+from mcp.types import Tool, ToolAnnotations
 
 
 @dataclass
@@ -14,6 +14,8 @@ class ToolDefinition:
     build_command: Callable[[dict[str, Any]], str]
     required: list[str] = field(default_factory=list)
     is_obs: bool = False
+    title: str | None = None
+    is_destructive: bool = False
 
     def to_mcp_tool(self) -> Tool:
         properties: dict[str, Any] = {}
@@ -29,14 +31,24 @@ class ToolDefinition:
                 prop["default"] = pdef["default"]
             properties[pname] = prop
 
+        annotations = ToolAnnotations(
+            title=self.title or self.name,
+            read_only_hint=True if not self.is_destructive else None,
+            destructive_hint=True if self.is_destructive else None,
+            idempotent_hint=True if not self.is_destructive else None,
+            open_world_hint=True,
+        )
+
         return Tool(
             name=self.name,
+            title=self.title or self.name,
             description=self.description,
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": properties,
                 "required": self.required,
             },
+            annotations=annotations,
         )
 
     def build(self, arguments: dict[str, Any]) -> str:
@@ -106,6 +118,23 @@ def collect_all_tools() -> list[ToolDefinition]:
     from .dcs import TOOLS as dcs_tools
     from .dds import TOOLS as dds_tools
     from .smn import TOOLS as smn_tools
+    from .vpn import TOOLS as vpn_tools
+    from .drs import TOOLS as drs_tools
+    from .swr import TOOLS as swr_tools
+    from .oms import TOOLS as oms_tools
+    from .sms import TOOLS as sms_tools
+    from .cbr import TOOLS as cbr_tools
+    from .cci import TOOLS as cci_tools
+    from .mrs import TOOLS as mrs_tools
+    from .dws import TOOLS as dws_tools
+    from .gaussdb import TOOLS as gaussdb_tools
+    from .er import TOOLS as er_tools
+    from .cfw import TOOLS as cfw_tools
+    from .codearts import TOOLS as codearts_tools
+    from .dataarts import TOOLS as dataarts_tools
+    from .organizations import TOOLS as organizations_tools
+    from .lts import TOOLS as lts_tools
+    from .bss import TOOLS as bss_tools
 
     all_tools: list[ToolDefinition] = []
     all_tools.extend(ecs_tools)
@@ -126,4 +155,21 @@ def collect_all_tools() -> list[ToolDefinition]:
     all_tools.extend(dcs_tools)
     all_tools.extend(dds_tools)
     all_tools.extend(smn_tools)
+    all_tools.extend(vpn_tools)
+    all_tools.extend(drs_tools)
+    all_tools.extend(swr_tools)
+    all_tools.extend(oms_tools)
+    all_tools.extend(sms_tools)
+    all_tools.extend(cbr_tools)
+    all_tools.extend(cci_tools)
+    all_tools.extend(mrs_tools)
+    all_tools.extend(dws_tools)
+    all_tools.extend(gaussdb_tools)
+    all_tools.extend(er_tools)
+    all_tools.extend(cfw_tools)
+    all_tools.extend(codearts_tools)
+    all_tools.extend(dataarts_tools)
+    all_tools.extend(organizations_tools)
+    all_tools.extend(lts_tools)
+    all_tools.extend(bss_tools)
     return all_tools

@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hcloud-mcp-server"
-version = "0.3.0"
-description = "MCP server for Huawei Cloud (hcloud) CLI"
+version = "0.4.0"
+description = "MCP server for Huawei Cloud (hcloud) CLI — 150 tools, 34 services, annotations, truncation"
 requires-python = ">=3.10"
 dependencies = [
-    "mcp>=1.27.0",
+    "mcp>=2.0",
     "pyyaml>=6.0",
 ]
 

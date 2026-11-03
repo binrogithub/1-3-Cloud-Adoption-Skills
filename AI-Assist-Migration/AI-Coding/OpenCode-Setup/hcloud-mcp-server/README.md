@@ -1,48 +1,79 @@
 # hcloud-mcp-server
 
-An MCP (Model Context Protocol) server that exposes the Huawei Cloud CLI (`hcloud`) as a single tool that AI assistants can navigate interactively — just like a human would.
+An MCP (Model Context Protocol) server that exposes Huawei Cloud infrastructure through **150 structured tools** plus a generic `hcloud_cli` catch-all — for AI assistants to discover and manage Huawei Cloud resources.
+
+> **150 tools · 34 services · 1 server** — ECS, VPC, CCE, RDS, VPN, OBS, IAM, and 27 more.
 
 ## How It Works
 
-The server registers **one tool**: `hcloud_cli`. The AI navigates hcloud using `--help` at each level:
+The server registers **150 tools**: 149 structured read-only tools for infrastructure discovery + 1 generic `hcloud_cli` for write operations and anything not covered by structured tools.
 
 ```
-hcloud_cli("--help")                        → list all services
-hcloud_cli("IAM --help")                    → list IAM operations
-hcloud_cli("IAM ListCustomPolicies --help") → show parameters
-hcloud_cli("IAM ListCustomPolicies")        → execute
+hcloud_list_servers(region="la-north-2")           → structured tool, type-safe
+hcloud_list_vpn_gateways(region="la-north-2")      → new VPN v5 tools
+hcloud_list_drs_jobs(region="la-north-2")           → new DRS tools
+hcloud_cli("IAM CreateCustomPolicy --name=...")    → generic CLI for writes
 ```
 
-This mirrors how a human discovers and uses the CLI, requires only 1 tool definition in the LLM context (~300 tokens), and works within any model's context window.
+Structured tools provide type-safe parameters, JSON schema validation, and MCP annotations (`readOnlyHint=True`). The generic `hcloud_cli` handles write operations with a safety layer (dry-run by default, `confirm=true` for execution).
 
 ## Features
 
-- **Single tool** — minimal context footprint, works with any model size
-- **Interactive discovery** — AI navigates `--help` menus naturally
-- **Safety layer** — destructive operations (Delete, Detach, Revoke, etc.) require `confirm=true`; default is dry-run mode
-- **Structured output** — JSON output forced automatically (`--cli-output=json`)
+- **150 tools** — 149 structured read-only + 1 generic CLI catch-all
+- **35 services covered** — ECS, VPC, EIP, EVS, IAM, ELB, RDS, CCE, AS, OBS, DNS, KMS, CES, IMS, NAT, DCS, DDS, SMN, VPN, DRS, SWR, OMS, SMS, CBR, CCI, MRS, DWS, GaussDB, ER, CFW, CodeArts, DataArts, Organizations, LTS, BSS
+- **MCP annotations** — `readOnlyHint=True` on structured tools, `destructiveHint=True` on `hcloud_cli`, `title` on all tools
+- **Output truncation** — large responses truncated to 50KB with pagination hint
+- **Safety layer** — destructive operations require `confirm=true`; default is dry-run mode
+- **Help deduplication** — older API versions hidden from `--help` output
 - **Configurable** — timeout, binary path, safety settings
 
 ## Requirements
 
 - Python 3.10+
-- [hcloud CLI](https://support.huaweicloud.com/intl/en-us/productdesc-hcli/hcli_01.html) installed and configured with authentication
+- [hcloud CLI (KooCLI)](https://support.huaweicloud.com/intl/en-us/productdesc-hcli/hcli_01.html) installed and configured with authentication
+
+### Install KooCLI
+
+```bash
+curl -LO https://ap-southeast-3-hwcloudcli.obs.ap-southeast-3.myhuaweicloud.com/cli/latest/huaweicloud-cli-linux-amd64.tar.gz
+tar xzf huaweicloud-cli-linux-amd64.tar.gz
+sudo mv hcloud /usr/local/bin/
+hcloud --version
+```
+
+### Configure credentials
+
+```bash
+hcloud configure set --cli-mode=AKSK --cli-region=la-north-2 --cli-agree-privacy-statement=true
+hcloud configure set --cli-access-key=YOUR_AK --cli-secret-key=YOUR_SK
+hcloud configure set --cli-region=la-north-2
+echo y | hcloud IAM ListCustomPolicies   # verify (first run needs privacy agreement)
+```
+
+Get your AK/SK from the Huawei Cloud console: **My Credentials → Access Keys**.
 
 ## Installation
 
-```bash
-pip install hcloud-mcp-server
-```
-
-Or from source:
+### Option A: From GitHub (recommended)
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/binrogithub/hcloud-mcp-server.git
 cd hcloud-mcp-server
-pip install -e .
+pip install --upgrade pip setuptools   # needed on older systems (e.g. Ubuntu 22.04)
+pip install .
 ```
 
-Verify:
+### Option B: From source tarball
+
+```bash
+curl -LO http://huaweilatam.com/downloads/hcloud-mcp-server.tar.gz
+tar xzf hcloud-mcp-server.tar.gz
+cd hcloud-mcp-server
+pip install --upgrade pip setuptools   # needed on older systems (e.g. Ubuntu 22.04)
+pip install .
+```
+
+### Verify
 
 ```bash
 hcloud-mcp --help
