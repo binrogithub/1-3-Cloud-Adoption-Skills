@@ -246,7 +246,7 @@ terraform plan -out=tfplan \
 # 4. Get EXPLICIT user confirmation before applying
 
 # 5. Apply
-terraform apply -auto-approve tfplan
+terraform apply tfplan
 ```
 
 **Always get explicit yes/no confirmation before `terraform apply`.** The apply creates real infrastructure (OBS bucket + OMS task) and starts the migration immediately if `start_task = true`.
