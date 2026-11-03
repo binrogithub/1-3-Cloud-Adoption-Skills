@@ -352,7 +352,8 @@ Show the plan and summarise it in plain language.
 Request explicit approval. Re-confirm executing mode.
 
 ```
-terraform apply
+terraform plan -out=tfplan
+terraform apply -auto-approve tfplan
 ```
 
 The RDS instance takes about five minutes.

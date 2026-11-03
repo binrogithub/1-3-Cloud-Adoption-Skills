@@ -245,9 +245,9 @@ resource "huaweicloud_sms_task" "task" {
 
 ```bash
 terraform init
-terraform plan
-# Show the plan to the user. Get EXPLICIT confirmation before applying.
-terraform apply
+terraform plan -out=tfplan
+# Show the plan, Get EXPLICIT confirmation before applying.
+terraform apply -auto-approve tfplan
 ```
 
 Monitor the task:
