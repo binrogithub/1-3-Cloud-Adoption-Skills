@@ -71,7 +71,7 @@ This skill is usage-and-exposure-focused. It does not manage databases/schemas/u
 # Optional inputs
 
 - eip_id (reuse an already-deployed EIP instead of creating a new one)
-- eip_type (5_bgp or 5_sbgp; defaults to 5_bgp where unspecified)
+- eip_type (5_bgp or 5_sbgp; suggest 5_bgp as the default EIP type, but ask the user to confirm or override before applying)
 - bandwidth_size, bandwidth_share_type, bandwidth_charge_mode (defaults: dedicated (PER), traffic-billed, size supplied by the approval owner)
 - enterprise_project_id
 
@@ -132,6 +132,10 @@ None. All operations across all five database services and the EIP service are p
 14. Each of the five database-service modules, and the EIP module, is independent: a request scoped to one service must not require having exercised any other service's workflow first (beyond the EIP itself needing to be deployed once before any bind step), and must not silently issue commands against a different service to compensate for a gap. [INFERRED] (explicit design requirement carried over from the companion deployment skill)
 
 15. This skill was authored and verified from the official public API Reference pages for EIP (V1 create, V3 query/associate/disassociate), GeminiDB/NoSQL, and TaurusDB/GaussDBforMySQL, each with a full parameter table independently fetched and read; from a regional mirror of the standard DDS API Reference for DDS; and from RDS's own user guide plus the official Terraform provider's documented pattern for RDS (since RDS has no dedicated bind API of its own). GaussDB could not be confirmed at the public-cloud level at all. It was **not** executed against a live hcloud CLI installation or a live Huawei Cloud tenant. The first real use of this skill for any given service in any environment MUST start with that service's discovery probe (`hcloud <SERVICE_NAME> --help`) before relying on any operation not in its confirmed-operations table. [NOT_LIVE_TESTED]
+
+16. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override.
+
+17. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
 
 # Prerequisites
 

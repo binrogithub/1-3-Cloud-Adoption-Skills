@@ -139,6 +139,12 @@ None. All operations across all seven services are performed via hcloud CLI.
 
 15. This skill was authored and verified from the official public CodeArts API Reference pages for each of the seven services (specifically each operation's own "Online Debugging"/"CLI Examples" link, which exposes the literal `hcloud` service name). It was **not** executed against a live hcloud CLI installation or a live Huawei Cloud tenant. The first real use of this skill for any given service in any environment MUST start with that service's discovery probe (`hcloud <SERVICE_NAME> --help`) before relying on any operation not in its confirmed-operations table. [NOT_LIVE_TESTED]
 
+16. Ask the user for each parameter — don't assume defaults without confirming. Offer a recommended default and let the user accept or override. [INFERRED]
+
+17. NEVER reuse existing resources — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step. [INFERRED]
+
+18. Use a unique prefix for all resource names — ask the user for a project prefix and use it for every resource. [INFERRED]
+
 # Prerequisites
 
 | Tool or resource | Required | Purpose | Verification |

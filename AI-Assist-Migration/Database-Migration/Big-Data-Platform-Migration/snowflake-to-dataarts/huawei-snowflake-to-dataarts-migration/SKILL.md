@@ -48,7 +48,7 @@ Orchestrate or assist the migration of data pipelines and SQL workloads from Sno
 
 - job_name: DataArts Factory job name for the migration
 - artifact_dir: Path to migration artifacts directory (SQL, manifests)
-- dli_queue: DLI queue name (default: "default")
+- dli_queue: DLI queue name (ask the user; suggest "default" as a common value but do not apply without confirmation)
 
 # Optional inputs
 
@@ -110,6 +110,12 @@ Orchestrate or assist the migration of data pipelines and SQL workloads from Sno
 13. VERIFY AFTER EVERY STEP: validate migration status and equivalence after execution. [VERIFIED_FROM_CODE]
 
 14. Never include Snowflake credentials, DataArts credentials, or DLI credentials in commands, examples, or logs. [INFERRED]
+
+15. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override.
+
+16. **NEVER reuse existing resources** — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step.
+
+17. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
 
 # Prerequisites
 

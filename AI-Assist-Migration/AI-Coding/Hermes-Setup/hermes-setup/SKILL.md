@@ -48,6 +48,10 @@ The script is idempotent — safe to re-run. It skips steps that are already com
 - **Docker group**: After installing Docker, you may need to re-login for group permissions.
 - **Python versions**: Hermes needs Python 3.11+. Installed automatically by the script.
 
+## Rules
+
+1. **Ask the user for their API keys and endpoints before running install.sh** — do not proceed with placeholder values.
+
 ## Verification
 
 ```bash

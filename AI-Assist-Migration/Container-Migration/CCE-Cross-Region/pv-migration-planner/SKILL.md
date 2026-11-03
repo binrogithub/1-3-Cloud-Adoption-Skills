@@ -46,6 +46,9 @@ Velero's `s3ForcePathStyle=false` setting works for **metadata operations** (the
 7. **Do not scale down the destination deployment** — it is not necessary. The app writes to a fresh DB; overwriting files during copy causes at most a brief inconsistency. Restart the pod after copy so it picks up the restored data.
 8. **Clean up helper pods** — delete helper pods on both clusters after migration to free resources.
 9. **Validate data integrity** — after migration, verify file count, sizes, and application HTTP response. Compare source and destination PVC contents.
+10. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override.
+11. **NEVER reuse existing resources** — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step.
+12. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
 
 ## Prerequisites
 
@@ -55,7 +58,7 @@ Before starting, ensure the following are available:
 |---|---|
 | Source cluster kubeconfig | `~/.kube/config` pointing to the source CCE cluster |
 | Destination cluster kubeconfig | `~/.kube/config-destination` pointing to the destination CCE cluster |
-| OBS bucket | Existing bucket in the source region for data transfer (can reuse Velero's bucket with a different prefix) |
+| OBS bucket | Existing bucket in the source region for data transfer (ask the user whether to reuse Velero's bucket (with a different prefix) or create a new one) |
 | AK/SK | Huawei Cloud credentials with OBS read/write access to the bucket |
 | Source region | e.g. `la-north-2` — used for OBS endpoint |
 | PVC name | The name of the PersistentVolumeClaim in both clusters (must exist on destination before download) |
@@ -348,7 +351,7 @@ This example shows the actual commands used to migrate the `open-webui` workload
 | PVC name | `open-webui-data-pvc` (10Gi, csi-disk) |
 | Mount path | `/app/backend/data` |
 | Namespace | `default` |
-| AK | `HPUAZVPIR0EU2FNQ0MG9` |
+| AK | `<AK>` |
 | Data size | 2.61GB (101 files) |
 | App label | `app=open-webui` |
 | Destination EIPs | `94.74.70.219`, `94.74.74.204` |
@@ -397,7 +400,7 @@ kubectl exec -n default obsutil-helper -- sh -c "
 
 ```bash
 kubectl exec -n default obsutil-helper -- /tmp/obsutil_linux_amd64_5.8.3/obsutil config \
-  -i=HPUAZVPIR0EU2FNQ0MG9 \
+  -i=<AK> \
   -k=<SK> \
   -e=obs.la-north-2.myhuaweicloud.com
 
@@ -440,7 +443,7 @@ kubectl wait --for=condition=Ready pod/obsutil-helper -n default --timeout=180s
 
 ```bash
 kubectl exec -n default obsutil-helper -- /tmp/obsutil_linux_amd64_5.8.3/obsutil config \
-  -i=HPUAZVPIR0EU2FNQ0MG9 \
+  -i=<AK> \
   -k=<SK> \
   -e=obs.la-north-2.myhuaweicloud.com
 

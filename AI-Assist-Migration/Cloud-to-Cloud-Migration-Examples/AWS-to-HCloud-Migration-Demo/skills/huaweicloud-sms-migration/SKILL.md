@@ -35,6 +35,9 @@ Migrate servers from AWS, Azure, GCP, on-prem, or other clouds to Huawei Cloud E
 19. **S3 BUCKET CREATION IN us-east-1** — AWS S3 bucket creation in `us-east-1` must NOT include `CreateBucketConfiguration.LocationConstraint` (it's the default region). The `aws_image_path.py prep` script must be patched to skip this for `us-east-1`.
 20. **CLOUD-INIT USER NAME VARIES BY OS** — Amazon Linux 2 uses `ec2-user`, Ubuntu uses `ubuntu`, CentOS uses `centos`. The cloud-init `user_data` must write SSH keys to the correct user's `~/.ssh/authorized_keys`. Hardcoding `/home/ubuntu/` fails for Amazon Linux 2.
 21. **TERRAFORM PROVIDER QUIRKS FOR sa-brazil-1** — `sa-brazil-1` is not in the supported SMS CLI regions list. Use provider `region = "ap-southeast-3"` with `region = "sa-brazil-1"` and `project_id` overrides on each resource. Available volume types: ESSD2, ESSD, GPSSD2, SAS, GPSSD, SSD, SATA (no GP3). Flavor `c2.large` is sold out — use `s6.large.2` (2 vCPU, 4GB).
+22. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override.
+23. **NEVER reuse existing resources** — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step.
+24. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
 
 ## Workflow Overview
 
@@ -243,6 +246,7 @@ resource "huaweicloud_sms_task" "task" {
 ```bash
 terraform init
 terraform plan
+# Show the plan to the user. Get EXPLICIT confirmation before applying.
 terraform apply
 ```
 

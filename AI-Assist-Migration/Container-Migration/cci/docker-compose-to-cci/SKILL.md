@@ -47,6 +47,10 @@ The parser handles YAML mechanics (anchors, merge keys, multi-line). The AI hand
 8. **Ask the user first** — before deploying, confirm the translation plan with the user. Show what will be created.
 9. **Warn on impossible features** — if the Compose uses privileged, host network, devices, etc., warn the user and suggest alternatives. See `references/cci-limitations.md`.
 
+10. **NEVER reuse existing resources** — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step.
+
+11. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
+
 ## Prerequisites
 
 ### From `huaweicloud-cci-cli-deploy` skill:

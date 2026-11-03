@@ -134,6 +134,10 @@ None. All operations are performed via hcloud CLI.
 
 14. This skill was authored and verified from MRS's own official public "API V2" API Reference pages for CreateCluster, AddComponent, and ListNodes — each with a full parameter table independently fetched and read, and ListNodes additionally confirmed via its own API Explorer CLI Examples link. It was **not** executed against a live hcloud CLI installation or a live Huawei Cloud tenant. The first real use of this skill in any environment MUST start with `hcloud MRS --help` before relying on any operation name exactly as written here, and MUST re-confirm before using any operation beyond CreateCluster/AddComponent/ListNodes, and especially before assuming any list/show/delete-cluster capability exists for an MRS 3.x cluster. [NOT_LIVE_TESTED]
 
+15. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override.
+
+16. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
+
 # Prerequisites
 
 | Tool or resource | Required | Purpose | Verification |

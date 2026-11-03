@@ -76,6 +76,10 @@ Read `references/client-communication.md` before Step 0. In short:
 5. **Explicit approval before every write**, at the gate numbers below. Fixed numbers.
 6. **Verify after every step.**
 
+7. **NEVER reuse existing resources** — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step.
+
+8. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
+
 ### Approval gates
 
 | Gate | Operation | Step |

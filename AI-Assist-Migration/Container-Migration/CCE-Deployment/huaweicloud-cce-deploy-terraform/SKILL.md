@@ -24,6 +24,9 @@ Deploy CCE clusters declaratively using Terraform with the `huaweicloud` provide
 8. **Recommend `containerd` + `ipvs`** — for clusters v1.25+, use `runtime = "containerd"` (docker is deprecated) and `kube_proxy_mode = "ipvs"` (better performance with many services).
 9. **Use `kube_config_raw` for kubeconfig** — the `huaweicloud_cce_cluster` resource exposes `kube_config_raw` as an attribute. No separate API call or JSON-to-YAML conversion needed (unlike KooCLI).
 10. **Provider timeouts handle waiting** — the provider has built-in timeouts (30 min for cluster, 20 min for node pool). No manual polling or sleep loops needed.
+11. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override.
+12. **NEVER reuse existing resources** — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step.
+13. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
 
 ## Workflow
 
@@ -43,7 +46,7 @@ Extract from the user's request:
 - **Container network mode** — `overlay_l2` (tunnel), `vpc-router` (underlay), `eni` (Turbo only). Default: `overlay_l2`.
 - **Container CIDR** — must not overlap with VPC CIDR. Default: `172.16.0.0/16`.
 - **Node OS** — e.g. `EulerOS 2.9`, `Ubuntu 22.04`. Default: `EulerOS 2.9`.
-- **VPC strategy** — use existing or create new. Default: use existing.
+- **VPC strategy** — use existing or create new. Ask the user: use existing VPC (user must specify which) or create new. Do NOT default to reuse.
 - **Auth method** — SSH keypair (recommended) or password.
 - **Autoscaling** — enabled? min/max node counts.
 - **Disk sizes** — root volume (default 40 GB SAS) and data volume (default 100 GB SAS).
@@ -87,7 +90,7 @@ hcloud_list_subnets(region, vpc_id)
 
 | Need | Source | Notes |
 |------|--------|-------|
-| AZ | `hcloud_list_availability_zones` | Use zones with `available: true`. If only 1 AZ, use it without asking. |
+| AZ | `hcloud_list_availability_zones` | Use zones with `available: true`. If only 1 AZ, inform the user and proceed with that AZ (no choice to offer). |
 | Worker flavor | `hcloud_list_flavors` | Filter by vCPU/RAM. Prefer flavors with `cond:operation:az` containing `(normal)`. Avoid `(sellout)`. |
 | VPC | `hcloud_list_vpcs` | Show name + CIDR. If user said "use existing", list them. |
 | Subnet | `hcloud_list_subnets` | Show name + CIDR + available IPs. |
@@ -139,7 +142,7 @@ Execute the Terraform workflow:
 ```bash
 terraform init
 terraform plan
-terraform apply -auto-approve
+terraform apply
 ```
 
 **`terraform init`** — downloads the `huaweicloud/huaweicloud` provider.
@@ -388,7 +391,7 @@ output "kubeconfig" {
 }
 ```
 
-5. **APPLY:** `terraform init` → `terraform plan` (3 to add) → `terraform apply -auto-approve` (~8 min total).
+5. **APPLY:** `terraform init` → `terraform plan` (3 to add) → `terraform apply` (~8 min total).
 
 6. **VALIDATE:** `terraform output` confirms `cluster_status=Available`. Save kubeconfig: `terraform output -raw kubeconfig > ~/.kube/config-cce-cluster-tf`.
 

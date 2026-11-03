@@ -22,6 +22,9 @@ Deploy CCI serverless containers **entirely from the terminal** using the CCI v2
 6. **NAT gateway needed for internet** — CCI pods cannot reach external registries without SNAT. SWR internal endpoint (100.125.x.x) may also be unreachable — use Docker Hub or VPC endpoint.
 7. **All pay-per-use** — EIP with `share_type=PER`, NAT with `spec=1`, CCI pods billed per-second.
 8. **Signing is SDK-HMAC-SHA256** — single HMAC with SK as key, NOT AWS-style derived keys. See `references/huaweicloud-signing.md`.
+9. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override.
+10. **NEVER reuse existing resources** — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step.
+11. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
 
 ## Prerequisites
 
@@ -59,6 +62,8 @@ Extract:
 - VPC CIDR (e.g. `192.168.0.0/16`)
 
 ### Step 2: CREATE NAMESPACE (cci/v2)
+
+> **Confirm:** Present the namespace name and network plan to the user. Get explicit confirmation before creating.
 
 ```python
 POST https://cci.<region>.myhuaweicloud.com/apis/cci/v2/namespaces

@@ -24,6 +24,9 @@ Migrate databases from AWS RDS, self-built MySQL, or other clouds to Huawei Clou
 8. **REVERT TEMP CHANGES** — any temporary changes on the source (public access, SG rules, IGW routes, binlog) must be reverted after cutover. Document every temp change and its revert command.
 9. **MONITOR RPO AFTER START** — once the full transfer completes and incremental sync begins, track RPO delay via `BatchListRposAndRtos`. Cutover is safe only when RPO = 0s.
 10. **NEVER GUESS PASSWORDS OR ENDPOINTS** — always ask the user for source DB credentials. Never extract them from state files, logs, or environment variables.
+11. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override.
+12. **NEVER reuse existing resources** — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step.
+13. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
 
 ## Workflow Overview
 
@@ -229,7 +232,7 @@ Create the DRS job as a Terraform resource.
 
 ### SG strategy for DRS node
 
-The DRS node needs to connect to the target RDS. Instead of creating a new SG, **reuse the ECS SG** for the DRS node (`node_info.vpc.security_group_id`). This way, the existing RDS SG rule (allow MySQL from ECS SG) already covers the DRS node — no additional SG rules needed.
+The DRS node needs to connect to the target RDS. **Ask the user whether to reuse the ECS SG for the DRS node or create a dedicated one; do not reuse without explicit confirmation.** If reusing, set `node_info.vpc.security_group_id` to the ECS SG — the existing RDS SG rule (allow MySQL from ECS SG) already covers the DRS node — no additional SG rules needed.
 
 ### Template
 

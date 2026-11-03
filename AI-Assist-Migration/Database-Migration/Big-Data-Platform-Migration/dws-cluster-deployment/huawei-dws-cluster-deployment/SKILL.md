@@ -194,6 +194,12 @@ The following rules are candidates and must be validated against the specific re
 
 34. **No secrets or customer data**: Never include secrets, customer names, or real cluster IDs. [INFERRED]
 
+35. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override.
+
+36. **NEVER reuse existing resources** — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step.
+
+37. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
+
 # Prerequisites
 
 | Tool or resource | Required | Purpose | Verification |
@@ -274,7 +280,7 @@ Do NOT display secrets.
 - **Failure action**: STOP on ambiguous match
 - **Evidence artifact**: `artifacts/dws-existing-clusters.json`
 
-Results: 0 matches = proceed to planning; 1 exact match = evaluate reuse or conflict; multiple matches = STOP.
+Results: 0 matches = proceed to planning; 1 exact match = STOP and ask the user whether to reuse the existing cluster or choose a different name; never reuse without explicit confirmation; multiple matches = STOP.
 
 ## STEP 4 — DISCOVER VERSIONS, NODE TYPES AND CAPABILITIES
 

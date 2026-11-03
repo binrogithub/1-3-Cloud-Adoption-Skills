@@ -128,6 +128,12 @@ None. No SDRS MCP exists. SDRS operations are performed via MANUAL console execu
 
 9. Do not continue when multiple ambiguous matches exist for a resource. Present all matches and request clarification. [INFERRED]
 
+10. Ask the user for each parameter — don't assume defaults without confirming. Offer a recommended default and let the user accept or override. [INFERRED]
+
+11. NEVER reuse existing resources — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step. [INFERRED]
+
+12. Use a unique prefix for all resource names — ask the user for a project prefix and use it for every resource. [INFERRED]
+
 # Prerequisites
 
 | Tool or resource | Required | Purpose | Verification |
@@ -342,7 +348,7 @@ Verify at DR site:
 
 **Mechanism**: MANUAL_CONSOLE.
 
-**Approval requirement**: None (cleanup of temporary resources).
+**Approval requirement**: EXPLICIT — confirm with user before cleanup; they may want to inspect drill resources first. (cleanup of temporary resources).
 
 **Verification**: All drill resources removed. DR site returned to pre-drill state.
 

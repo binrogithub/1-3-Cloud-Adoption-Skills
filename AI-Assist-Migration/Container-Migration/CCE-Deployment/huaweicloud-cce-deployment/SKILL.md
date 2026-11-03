@@ -46,7 +46,7 @@ Extract from the user's request:
 - **Container network mode** — `overlay_l2` (tunnel), `vpc-router` (underlay), `eni` (Turbo only). Default: `overlay_l2`.
 - **Container CIDR** — must not overlap with VPC CIDR. Default: `172.16.0.0/16`.
 - **Node OS** — e.g. `EulerOS 2.9`, `Ubuntu 22.04`. Default: `EulerOS 2.9`.
-- **VPC strategy** — use existing or create new. Default: use existing.
+- **VPC strategy** — Ask the user: use existing VPC (user must specify which) or create new. Do NOT default to reuse.
 - **Auth method** — SSH keypair (recommended) or password.
 - **Autoscaling** — enabled? min/max node counts.
 - **Disk sizes** — root volume (default 40 GB SAS) and data volume (default 100 GB SAS).
@@ -77,7 +77,7 @@ hcloud_list_subnets(region, vpc_id)
 
 | Need | Source | Notes |
 |------|--------|-------|
-| AZ | `hcloud_list_availability_zones` | Use zones with `available: true`. If only 1 AZ, use it without asking. |
+| AZ | `hcloud_list_availability_zones` | Use zones with `available: true`. If only 1 AZ, inform the user and proceed with that AZ (no choice to offer). |
 | Worker flavor | `hcloud_list_flavors` | Filter by vCPU/RAM. Prefer flavors with `cond:operation:az` containing `(normal)`. Avoid `(sellout)`. |
 | VPC | `hcloud_list_vpcs` | Show name + CIDR. If user said "use existing", list them. |
 | Subnet | `hcloud_list_subnets` | Show name + CIDR + available IPs. Note `neutron_subnet_id` (needed for `eniNetwork`). |

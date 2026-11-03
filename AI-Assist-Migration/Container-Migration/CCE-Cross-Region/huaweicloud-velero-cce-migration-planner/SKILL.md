@@ -26,9 +26,12 @@ Migrate CCE workloads across clusters (including different regions) using Velero
 10. **Kubeconfig switching** — always use `~/.kube/config` for the source cluster and `~/.kube/config-destination` for the destination cluster. Switch between them using `export KUBECONFIG=~/.kube/config` (source) or `export KUBECONFIG=~/.kube/config-destination` (destination).
 11. **Cross-region SWR migration** — when migrating between different regions, the container image will NOT be available in the destination region's SWR. You MUST push the image to the destination SWR and update the deployment to reference it, otherwise pods will be in `ImagePullBackOff` state.
 12. **SWR secret for CCE** — CCE needs a `swr-secret` to pull images from SWR. Create it in every cluster/namespace where the workload is deployed: `kubectl create secret docker-registry swr-secret --from-file ~/.docker/config.json`.
-13. **docker login to SWR** — exists several ways to have a docker login, also you can use long term command `docker login -u <REGION>@HPUAZVPIR0EU2FNQ0MG9 -p f652a5f188b7831c3500ce170a071e8b5150ad1767a91b89832c307e75cef8fa swr.<REGION>.myhuaweicloud.com` to login, or ask the user for the long term login command.
+13. **docker login to SWR** — exists several ways to have a docker login, also you can use long term command `docker login -u <REGION>@<IAM_USER_ID> -p <SWR_LOGIN_TOKEN> swr.<REGION>.myhuaweicloud.com` to login, or ask the user for the long term login command.
 14. **EIPs are required for Velero on CCE** — CCE nodes without EIPs cannot pull Velero images from Docker Hub (the internal registry mirror at `100.125.x.x:20202` times out for public images). Always verify and assign EIPs to destination nodes before running `velero install`. This also means nodes with EIPs CAN pull from cross-region SWR, so `ImagePullBackOff` after restore is not guaranteed — but reconfiguring to the destination SWR (Step 7) is still required for long-term reliability.
 15. **Recreate swr-secret after restore** — the `swr-secret` restored by Velero may contain stale or incorrect credentials for the destination SWR (different AK/SK). Always delete and recreate it from `~/.docker/config.json` which has valid credentials for both regions.
+16. **NEVER reuse existing resources** — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step.
+17. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
+18. **NEVER hardcode credentials** — always ask the user for AK/SK, tokens, and passwords. Use environment variables, never inline values.
 
 ## Workflow
 

@@ -30,6 +30,11 @@ Use this skill when the user asks to:
 - Deploy per-account infrastructure (VPC, compute, networking)
 - Manage FinOps/security tagging across accounts
 
+## Rules
+
+1. **NEVER reuse existing resources** — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step.
+2. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
+
 ## Architecture
 
 ```
@@ -84,7 +89,7 @@ accounts/                        # Per-account infrastructure workspaces
 
 Ask the user these questions before generating any code:
 
-1. **Approach**: RGC-managed or raw Organizations? (RGC is recommended for new landing zones; raw Organizations for existing orgs or when RGC is not available)
+1. **Approach**: Ask the user: RGC-managed or raw Organizations? Present trade-offs and let them choose.
 2. **Region**: Home region (e.g., la-south-2)
 3. **Root OU ID**: The root organization unit ID
 4. **OU Structure**:

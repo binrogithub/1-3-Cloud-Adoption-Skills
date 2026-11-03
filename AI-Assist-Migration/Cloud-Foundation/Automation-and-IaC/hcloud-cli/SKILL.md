@@ -12,7 +12,7 @@ metadata:
 
 ## Rules
 
-1. **DISCOVER before ACT** — always query existing resources with `List`/`Show` operations before creating or modifying anything. Avoid duplicates. Reuse existing infrastructure when possible.
+1. **DISCOVER before ACT** — always query existing resources with `List`/`Show` operations before creating or modifying anything. Avoid duplicates. When existing resources match, ask the user whether to reuse or create new — never default to reuse without explicit confirmation.
 2. **DRYRUN before EXECUTE** — always `--dryrun` create/update/delete calls first. Show the user what will happen. Only execute after confirmation or when the user has explicitly asked to proceed.
 3. **Never hardcode IDs** — use resource names to look up IDs via list operations, then reference the IDs. In Terraform output, use data blocks or resource references.
 4. **Use JMESPath** — `--cli-query` to filter output and keep token usage minimal. Never dump full API responses when you only need a few fields.
@@ -21,6 +21,9 @@ metadata:
 7. **Batch independent queries** — call multiple independent list operations in parallel. Only serialize when there's a dependency (subnets need VPC ID, RDS flavors need engine).
 8. **Batch questions** — ask related questions together, not one at a time.
 9. **OBS is a separate tool** — `hcloud obs` is obsutil, not a standard hcloud API. It uses single-dash flags (`-flag=value`), `obs://bucket/key` URLs, its own config (`~/.obsutilconfig`), and has no JMESPath/JSON output. See [references/obs.md](references/obs.md).
+10. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override.
+11. **NEVER reuse existing resources without explicit user confirmation** — if a resource with the same name already exists, ask the user. The only exception is if the resource was explicitly created for this project in a previous step.
+12. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
 
 ## Quick Start
 

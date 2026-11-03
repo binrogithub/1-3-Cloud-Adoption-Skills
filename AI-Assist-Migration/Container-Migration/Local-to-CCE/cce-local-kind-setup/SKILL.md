@@ -22,6 +22,12 @@ Set up a local Kubernetes cluster using **Kind** (Kubernetes in Docker) that mir
 6. **Set `controller.kind=DaemonSet` and `controller.hostNetwork=true`** — For Kind clusters, a DaemonSet with hostNetwork gives the ingress controller direct access to node ports 80/443, matching CCE's ELB-based ingress behavior.
 7. **Match K8s version to target CCE** — Use `kindest/node:v1.30.0` (or whatever CCE version you target). Kind images are at https://github.com/kubernetes-sigs/kind/releases — check the supported node image tags.
 
+8. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override.
+
+9. **NEVER reuse existing resources** — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step.
+
+10. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
+
 ## Prerequisites
 
 | Tool | Min Version | Install |

@@ -174,6 +174,10 @@ None. All operations are performed via hcloud CLI.
 
 20. This skill was authored and verified from Huawei Cloud's own official public API Reference pages — MRS API V2 for CreateCluster, AddComponent, ListNodes, and CreateExecuteJob, and OMS APIs V2 for CreateTask — each with a full parameter table independently fetched and read. It was **not** executed against a live hcloud CLI installation or a live Huawei Cloud tenant, and no live migration was performed. The first real use MUST start with `hcloud MRS --help` and `hcloud OMS --help` before relying on any operation name exactly as written here. [NOT_LIVE_TESTED]
 
+21. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override.
+
+22. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
+
 # Prerequisites
 
 | Tool or resource | Required | Purpose | Verification |

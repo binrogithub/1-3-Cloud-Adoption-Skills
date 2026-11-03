@@ -97,6 +97,10 @@ install-msi.cmd app1.msi app2.msi
 12. **UAC elevation from bash** — PowerShell backtick line continuations are eaten by bash. Write a helper `.ps1` script and call it with `-File` instead of `-Command`.
 13. **Capturing elevated output** — `Start-Process -Verb RunAs` opens a new console whose output is not captured. Redirect inside the elevated process.
 
+## Rules
+
+1. **Ask the user before installing each MSI** — show the MSI name, version, and product code, and get explicit confirmation. Do not default to silent mode without asking the user first.
+
 ## Elevation Helpers
 
 Both scripts require Administrator rights. Helper scripts to launch elevated:

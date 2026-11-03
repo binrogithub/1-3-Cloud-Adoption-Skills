@@ -10,6 +10,12 @@ description: Execute and troubleshoot Huawei Cloud server migration with Terrafo
 Run the migration flow in this repo from precheck to task startup/result validation. Keep execution deterministic by following the exact command sequence and error-handling rules already implemented in `scripts/mgc_migrate.py`.
 Default policy is `SMS` first; when precheck/runtime indicates incompatible source (for example `SMS.6504`), switch to rsync phases (`full_sync -> incremental_sync -> cutover_sync`).
 
+## Rules
+
+1. **Ask the user for each parameter** — don't assume defaults without confirming. Offer a recommended default and let the user accept or override.
+2. **NEVER reuse existing resources** — if a resource with the same name already exists, use a different name. The only exception is if the resource was explicitly created for this project in a previous step.
+3. **Use a unique prefix for all resource names** — ask the user for a project prefix and use it for every resource.
+
 ## Workflow
 
 1. Confirm prerequisites before running any write operation.
@@ -66,7 +72,9 @@ Run in order:
 
 ```bash
 terraform init
-terraform apply -auto-approve
+terraform plan
+# Review the plan with the user. Get explicit confirmation before applying.
+terraform apply
 ```
 
 If apply returns `No changes` for `terraform_data.mgc_region_migration` (same run fingerprint), force one execution:
@@ -126,7 +134,7 @@ Apply existing built-in fallbacks before manual changes:
 - If task creation returns `SMS.7605`, allow cleanup of failed task and retry.
 - If `SMS.7605` persists even after retry/new target ECS, check and delete historical tasks bound to the same source (including old `MIGRATE_SUCCESS` tasks), then retry.
 - If `SMS.6603` appears, stop and require SMS-Agent installation/start on source host.
-- If migration project creation returns `SMS.8115`, clean old migration projects (prefer auto-generated `mgc*` projects) to bring total count below 50, then rerun `terraform apply`.
+- If migration project creation returns `SMS.8115`, ask the user to confirm which old migration projects to delete, then clean old migration projects (prefer auto-generated `mgc*` projects) to bring total count below 50, then rerun `terraform apply`.
 - If VPC creation fails with `VPC.0114` (quota exceeded), stop and free quota first (delete unused VPC or increase quota), then rerun `terraform apply`.
 - If task query returns `SMS.7703` (`Task doesn't exist`), do not trust stale `task_id`; query live task list by source and continue with the current task.
 - If task is `RUNNING` but `progress` is null, keep polling by task `state` and verify target ECS status in parallel.

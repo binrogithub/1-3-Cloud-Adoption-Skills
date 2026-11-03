@@ -95,8 +95,8 @@ Link-local /30 addresses for the tunnel endpoints:
 
 | Parameter | Default | Notes |
 |-----------|---------|-------|
-| Tunnel local | `169.254.70.1/30` | VGW side |
-| Tunnel peer | `169.254.70.2/30` | Customer side |
+| Tunnel local | `169.254.70.1/30` (ask the user for a /30 from the 169.254.0.0/16 link-local range) | VGW side |
+| Tunnel peer | `169.254.70.2/30` (ask the user for a /30 from the 169.254.0.0/16 link-local range) | Customer side |
 
 For a second connection (EIP2 in active-active), use a different /30 (e.g. `169.254.71.1/30` - `169.254.71.2/30`).
 
